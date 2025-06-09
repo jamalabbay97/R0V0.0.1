@@ -352,56 +352,88 @@ class CamionReportState extends State<CamionReport> {
 
   // Add method to show General Info dialog
   Future<void> _showGeneralInfoDialog() async {
-    return showDialog(
+    int localStep = 0;
+    final page1Fields = [
+      ["Direction", "direction", true],
+      ["Division", "division", true],
+      ["OIB/EE", "oibEe", false],
+      ["Mine", "mine", false],
+    ];
+    final page2Fields = [
+      ["Sortie", "sortie", false],
+      ["Distance", "distance", false],
+      ["Qualité", "qualite", false],
+      ["Machine ou Engins", "machineEngins", false],
+    ];
+    final page3Fields = [
+      ["Défeuitage, Reprise ou Stérile", "DéfeuitageRepriseStérile", false],
+      ["Pionteur", "poiteur", false],
+    ];
+
+    await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            List<Widget> fields = [];
+            if (localStep == 0) {
+              for (var f in page1Fields) {
+                fields.add(_textField(f[0] as String, f[1] as String, isRequired: f[2] as bool));
+                fields.add(const SizedBox(height: 8));
+              }
+            } else if (localStep == 1) {
+              for (var f in page2Fields) {
+                fields.add(_textField(f[0] as String, f[1] as String, isRequired: f[2] as bool));
+                fields.add(const SizedBox(height: 8));
+              }
+            } else {
+              for (var f in page3Fields) {
+                fields.add(_textField(f[0] as String, f[1] as String, isRequired: f[2] as bool));
+                fields.add(const SizedBox(height: 8));
+              }
+            }
         return AlertDialog(
-          title: const Text("Informations Générales"),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: [
-                _textField("Direction", "direction", isRequired: true),
-                const SizedBox(height: 8),
-                _textField("Division", "division", isRequired: true),
-                const SizedBox(height: 8),
-                _textField("OIB/EE", "oibEe"),
-                const SizedBox(height: 8),
-                _textField("Mine", "mine"),
-                const SizedBox(height: 8),
-                _textField("Sortie", "sortie"),
-                const SizedBox(height: 8),
-                _textField("Distance", "distance", isNumeric: true),
-                const SizedBox(height: 8),
-                _textField("Qualité", "qualite"),
-                const SizedBox(height: 8),
-                _textField("Machine ou Engins", "machineEngins"),
-                const SizedBox(height: 8),
-                _textField("Défeuitage, Reprise ou Stérile", "DéfeuitageRepriseStérile", maxLines: 1),
-              ],
+                  children: fields,
             ),
           ),
           actions: [
+                if (localStep > 0)
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                      setStateDialog(() {
+                        localStep -= 1;
+                      });
               },
-              child: const Text("Annuler"),
+                    child: const Text("Retour"),
             ),
+                if (localStep < 2)
             ElevatedButton(
               onPressed: () {
-                if (widget.formKey.currentState!.validate()) {
+                      // Optionally add validation for each page here
+                      setStateDialog(() {
+                        localStep += 1;
+                      });
+                    },
+                    child: const Text("Suivant"),
+                  ),
+                if (localStep == 2)
+                  ElevatedButton(
+                    onPressed: () {
                   setState(() {
                     _isGeneralInfoComplete = true;
                     _currentStep = 1;
                   });
                   Navigator.of(context).pop();
-                }
               },
-              child: const Text("Terminé"),
+                    child: const Text("Terminer"),
             ),
           ],
+            );
+          },
         );
       },
     );
@@ -463,15 +495,6 @@ class CamionReportState extends State<CamionReport> {
                     content: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Direction: ${generalInfo["direction"]}'),
-                        Text('Division: ${generalInfo["division"]}'),
-                        Text('OIB/EE: ${generalInfo["oibEe"]}'),
-                        Text('Mine: ${generalInfo["mine"]}'),
-                        Text('Sortie: ${generalInfo["sortie"]}'),
-                        Text('Distance: ${generalInfo["distance"]}'),
-                        Text('Qualité: ${generalInfo["qualite"]}'),
-                        Text('Machine ou Engins: ${generalInfo["machineEngins"]}'),
-                        Text('Défeuitage, Reprise ou Stérile: ${_generalInfoControllers["DéfeuitageRepriseStérile"]}'),
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: _showGeneralInfoDialog,
@@ -658,14 +681,37 @@ class CamionReportState extends State<CamionReport> {
           border: const OutlineInputBorder(),
           errorMaxLines: 2,
         ),
-        maxLines: maxLines,
-        keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
+        maxLines: null,
+        minLines: 1,
+        textInputAction: TextInputAction.newline,
+        keyboardType: isNumeric ? TextInputType.number : TextInputType.multiline,
         validator: isRequired 
             ? validateRequired 
             : isNumeric 
                 ? validateNumeric 
                 : null,
-        onChanged: (value) => handleGeneralInfoChange(field, value),
+        onChanged: (value) {
+          final words = value.split(' ');
+          final lines = <String>[];
+          String currentLine = '';
+          
+          for (var word in words) {
+            if ((currentLine + word).length <= 20) {
+              currentLine += (currentLine.isEmpty ? '' : ' ') + word;
+            } else {
+              if (currentLine.isNotEmpty) {
+                lines.add(currentLine);
+              }
+              currentLine = word;
+            }
+          }
+          if (currentLine.isNotEmpty) {
+            lines.add(currentLine);
+          }
+          
+          _generalInfoControllers[field]?.text = lines.join('\n');
+          handleGeneralInfoChange(field, lines.join('\n'));
+        },
       ),
     );
   }
@@ -703,7 +749,33 @@ class CamionReportState extends State<CamionReport> {
         children: [
           TextFormField(
             controller: _truckControllers[truck['id']]!['driver1'],
-            onChanged: (val) => updateTruckData(truck['id'], 'driver1', val),
+            maxLines: null,
+            minLines: 1,
+            textInputAction: TextInputAction.newline,
+            keyboardType: TextInputType.multiline,
+            onChanged: (value) {
+              // Split text into lines of max 20 characters
+              final words = value.split(' ');
+              final lines = <String>[];
+              String currentLine = '';
+              
+              for (var word in words) {
+                if ((currentLine + word).length <= 20) {
+                  currentLine += (currentLine.isEmpty ? '' : ' ') + word;
+                } else {
+                  if (currentLine.isNotEmpty) {
+                    lines.add(currentLine);
+                  }
+                  currentLine = word;
+                }
+              }
+              if (currentLine.isNotEmpty) {
+                lines.add(currentLine);
+              }
+              
+              _truckControllers[truck['id']]!['driver1']!.text = lines.join('\n');
+              updateTruckData(truck['id'], 'driver1', lines.join('\n'));
+            },
             decoration: const InputDecoration(
               isDense: true,
               contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -716,7 +788,33 @@ class CamionReportState extends State<CamionReport> {
           const SizedBox(height: 8),
           TextFormField(
             controller: _truckControllers[truck['id']]!['driver2'],
-            onChanged: (val) => updateTruckData(truck['id'], 'driver2', val),
+            maxLines: null,
+            minLines: 1,
+            textInputAction: TextInputAction.newline,
+            keyboardType: TextInputType.multiline,
+            onChanged: (value) {
+              // Split text into lines of max 20 characters
+              final words = value.split(' ');
+              final lines = <String>[];
+              String currentLine = '';
+              
+              for (var word in words) {
+                if ((currentLine + word).length <= 20) {
+                  currentLine += (currentLine.isEmpty ? '' : ' ') + word;
+                } else {
+                  if (currentLine.isNotEmpty) {
+                    lines.add(currentLine);
+                  }
+                  currentLine = word;
+                }
+              }
+              if (currentLine.isNotEmpty) {
+                lines.add(currentLine);
+              }
+              
+              _truckControllers[truck['id']]!['driver2']!.text = lines.join('\n');
+              updateTruckData(truck['id'], 'driver2', lines.join('\n'));
+            },
             decoration: const InputDecoration(
               isDense: true,
               contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -730,7 +828,33 @@ class CamionReportState extends State<CamionReport> {
     } else if (field == 'lieu') {
       return TextFormField(
         controller: _truckControllers[truck['id']]![field],
-        onChanged: (val) => updateTruckData(truck['id'], field, val),
+        maxLines: null,
+        minLines: 1,
+        textInputAction: TextInputAction.newline,
+        keyboardType: TextInputType.multiline,
+        onChanged: (value) {
+          // Split text into lines of max 20 characters
+          final words = value.split(' ');
+          final lines = <String>[];
+          String currentLine = '';
+          
+          for (var word in words) {
+            if ((currentLine + word).length <= 20) {
+              currentLine += (currentLine.isEmpty ? '' : ' ') + word;
+            } else {
+              if (currentLine.isNotEmpty) {
+                lines.add(currentLine);
+              }
+              currentLine = word;
+            }
+          }
+          if (currentLine.isNotEmpty) {
+            lines.add(currentLine);
+          }
+          
+          _truckControllers[truck['id']]![field]!.text = lines.join('\n');
+          updateTruckData(truck['id'], field, lines.join('\n'));
+        },
         decoration: const InputDecoration(
           isDense: true,
           contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -742,14 +866,43 @@ class CamionReportState extends State<CamionReport> {
 
     return TextFormField(
       controller: _truckControllers[truck['id']]![field],
-      onChanged: (val) => updateTruckData(truck['id'], field, val),
+      maxLines: null,
+      minLines: 1,
+      textInputAction: TextInputAction.newline,
+      keyboardType: isNumeric ? TextInputType.number : TextInputType.multiline,
+      onChanged: (value) {
+        if (!isNumeric) {
+          // Split text into lines of max 20 characters
+          final words = value.split(' ');
+          final lines = <String>[];
+          String currentLine = '';
+          
+          for (var word in words) {
+            if ((currentLine + word).length <= 20) {
+              currentLine += (currentLine.isEmpty ? '' : ' ') + word;
+            } else {
+              if (currentLine.isNotEmpty) {
+                lines.add(currentLine);
+              }
+              currentLine = word;
+            }
+          }
+          if (currentLine.isNotEmpty) {
+            lines.add(currentLine);
+          }
+          
+          _truckControllers[truck['id']]![field]!.text = lines.join('\n');
+          updateTruckData(truck['id'], field, lines.join('\n'));
+        } else {
+          updateTruckData(truck['id'], field, value);
+        }
+      },
       decoration: InputDecoration(
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         border: const OutlineInputBorder(),
         errorMaxLines: 2,
       ),
-      keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
       validator: isRequired 
           ? validateRequired 
           : isNumeric 
@@ -796,7 +949,33 @@ class CamionReportState extends State<CamionReport> {
 
     return TextFormField(
       controller: _truckControllers[truck['id']]!['count${i}_$field'],
-      onChanged: (val) => updateTruckData(truck['id'], "counts", val, i, field),
+      maxLines: null,
+      minLines: 1,
+      textInputAction: TextInputAction.newline,
+      keyboardType: TextInputType.multiline,
+      onChanged: (value) {
+        // Split text into lines of max 20 characters
+        final words = value.split(' ');
+        final lines = <String>[];
+        String currentLine = '';
+        
+        for (var word in words) {
+          if ((currentLine + word).length <= 20) {
+            currentLine += (currentLine.isEmpty ? '' : ' ') + word;
+          } else {
+            if (currentLine.isNotEmpty) {
+              lines.add(currentLine);
+            }
+            currentLine = word;
+          }
+        }
+        if (currentLine.isNotEmpty) {
+          lines.add(currentLine);
+        }
+        
+        _truckControllers[truck['id']]!['count${i}_$field']!.text = lines.join('\n');
+        updateTruckData(truck['id'], "counts", lines.join('\n'), i, field);
+      },
       decoration: InputDecoration(
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -1170,34 +1349,6 @@ class CamionReportState extends State<CamionReport> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        // General Information Section
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Informations Générales',
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const Divider(height: 16),
-                                _buildInfoRow('Direction', generalInfo['direction']),
-                                _buildInfoRow('Division', generalInfo['division']),
-                                _buildInfoRow('OIB/EE', generalInfo['oibEe']),
-                                _buildInfoRow('Mine', generalInfo['mine']),
-                                _buildInfoRow('Sortie', generalInfo['sortie']),
-                                _buildInfoRow('Distance', generalInfo['distance']),
-                                _buildInfoRow('Qualité', generalInfo['qualite']),
-                                _buildInfoRow('Machine/Engins', generalInfo['machineEngins']),
-                                _buildInfoRow('Défeuitage, Reprise ou Stérile', generalInfo['DéfeuitageRepriseStérile']), 
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        
                         // Trucks Section
                         Card(
                           margin: EdgeInsets.zero,
