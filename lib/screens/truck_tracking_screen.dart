@@ -671,7 +671,7 @@ class CamionReportState extends State<CamionReport> {
   }
 
   Widget _textField(String label, String field, 
-      {int maxLines = 1, bool isRequired = false, bool isNumeric = false}) {
+      {bool isRequired = false, bool isNumeric = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: TextFormField(
@@ -680,38 +680,19 @@ class CamionReportState extends State<CamionReport> {
           labelText: label,
           border: const OutlineInputBorder(),
           errorMaxLines: 2,
+          counterText: '', // Hide character counter
         ),
-        maxLines: null,
-        minLines: 1,
-        textInputAction: TextInputAction.newline,
+        maxLines: null, // Allow unlimited lines
+        minLines: 1, // Start with at least one line
+        maxLength: null, // Remove max length restriction
         keyboardType: isNumeric ? TextInputType.number : TextInputType.multiline,
         validator: isRequired 
             ? validateRequired 
             : isNumeric 
                 ? validateNumeric 
                 : null,
-        onChanged: (value) {
-          final words = value.split(' ');
-          final lines = <String>[];
-          String currentLine = '';
-          
-          for (var word in words) {
-            if ((currentLine + word).length <= 20) {
-              currentLine += (currentLine.isEmpty ? '' : ' ') + word;
-            } else {
-              if (currentLine.isNotEmpty) {
-                lines.add(currentLine);
-              }
-              currentLine = word;
-            }
-          }
-          if (currentLine.isNotEmpty) {
-            lines.add(currentLine);
-          }
-          
-          _generalInfoControllers[field]?.text = lines.join('\n');
-          handleGeneralInfoChange(field, lines.join('\n'));
-        },
+        onChanged: (value) => handleGeneralInfoChange(field, value),
+        style: const TextStyle(height: 1.5), // Add some line spacing
       ),
     );
   }
@@ -749,33 +730,7 @@ class CamionReportState extends State<CamionReport> {
         children: [
           TextFormField(
             controller: _truckControllers[truck['id']]!['driver1'],
-            maxLines: null,
-            minLines: 1,
-            textInputAction: TextInputAction.newline,
-            keyboardType: TextInputType.multiline,
-            onChanged: (value) {
-              // Split text into lines of max 20 characters
-              final words = value.split(' ');
-              final lines = <String>[];
-              String currentLine = '';
-              
-              for (var word in words) {
-                if ((currentLine + word).length <= 20) {
-                  currentLine += (currentLine.isEmpty ? '' : ' ') + word;
-                } else {
-                  if (currentLine.isNotEmpty) {
-                    lines.add(currentLine);
-                  }
-                  currentLine = word;
-                }
-              }
-              if (currentLine.isNotEmpty) {
-                lines.add(currentLine);
-              }
-              
-              _truckControllers[truck['id']]!['driver1']!.text = lines.join('\n');
-              updateTruckData(truck['id'], 'driver1', lines.join('\n'));
-            },
+            onChanged: (val) => updateTruckData(truck['id'], 'driver1', val),
             decoration: const InputDecoration(
               isDense: true,
               contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -783,38 +738,15 @@ class CamionReportState extends State<CamionReport> {
               hintText: 'Conducteur 1',
               errorMaxLines: 2,
             ),
+            maxLines: null,
+            minLines: 1,
+            style: const TextStyle(height: 1.5),
             validator: isRequired ? validateRequired : null,
           ),
           const SizedBox(height: 8),
           TextFormField(
             controller: _truckControllers[truck['id']]!['driver2'],
-            maxLines: null,
-            minLines: 1,
-            textInputAction: TextInputAction.newline,
-            keyboardType: TextInputType.multiline,
-            onChanged: (value) {
-              // Split text into lines of max 20 characters
-              final words = value.split(' ');
-              final lines = <String>[];
-              String currentLine = '';
-              
-              for (var word in words) {
-                if ((currentLine + word).length <= 20) {
-                  currentLine += (currentLine.isEmpty ? '' : ' ') + word;
-                } else {
-                  if (currentLine.isNotEmpty) {
-                    lines.add(currentLine);
-                  }
-                  currentLine = word;
-                }
-              }
-              if (currentLine.isNotEmpty) {
-                lines.add(currentLine);
-              }
-              
-              _truckControllers[truck['id']]!['driver2']!.text = lines.join('\n');
-              updateTruckData(truck['id'], 'driver2', lines.join('\n'));
-            },
+            onChanged: (val) => updateTruckData(truck['id'], 'driver2', val),
             decoration: const InputDecoration(
               isDense: true,
               contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -822,87 +754,41 @@ class CamionReportState extends State<CamionReport> {
               hintText: 'Conducteur 2 (optionnel)',
               errorMaxLines: 2,
             ),
+            maxLines: null,
+            minLines: 1,
+            style: const TextStyle(height: 1.5),
           ),
         ],
       );
     } else if (field == 'lieu') {
       return TextFormField(
         controller: _truckControllers[truck['id']]![field],
-        maxLines: null,
-        minLines: 1,
-        textInputAction: TextInputAction.newline,
-        keyboardType: TextInputType.multiline,
-        onChanged: (value) {
-          // Split text into lines of max 20 characters
-          final words = value.split(' ');
-          final lines = <String>[];
-          String currentLine = '';
-          
-          for (var word in words) {
-            if ((currentLine + word).length <= 20) {
-              currentLine += (currentLine.isEmpty ? '' : ' ') + word;
-            } else {
-              if (currentLine.isNotEmpty) {
-                lines.add(currentLine);
-              }
-              currentLine = word;
-            }
-          }
-          if (currentLine.isNotEmpty) {
-            lines.add(currentLine);
-          }
-          
-          _truckControllers[truck['id']]![field]!.text = lines.join('\n');
-          updateTruckData(truck['id'], field, lines.join('\n'));
-        },
+        onChanged: (val) => updateTruckData(truck['id'], field, val),
         decoration: const InputDecoration(
           isDense: true,
           contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           border: OutlineInputBorder(),
           hintText: 'Lieu',
         ),
+        maxLines: null,
+        minLines: 1,
+        style: const TextStyle(height: 1.5),
       );
     }
 
     return TextFormField(
       controller: _truckControllers[truck['id']]![field],
-      maxLines: null,
-      minLines: 1,
-      textInputAction: TextInputAction.newline,
-      keyboardType: isNumeric ? TextInputType.number : TextInputType.multiline,
-      onChanged: (value) {
-        if (!isNumeric) {
-          // Split text into lines of max 20 characters
-          final words = value.split(' ');
-          final lines = <String>[];
-          String currentLine = '';
-          
-          for (var word in words) {
-            if ((currentLine + word).length <= 20) {
-              currentLine += (currentLine.isEmpty ? '' : ' ') + word;
-            } else {
-              if (currentLine.isNotEmpty) {
-                lines.add(currentLine);
-              }
-              currentLine = word;
-            }
-          }
-          if (currentLine.isNotEmpty) {
-            lines.add(currentLine);
-          }
-          
-          _truckControllers[truck['id']]![field]!.text = lines.join('\n');
-          updateTruckData(truck['id'], field, lines.join('\n'));
-        } else {
-          updateTruckData(truck['id'], field, value);
-        }
-      },
+      onChanged: (val) => updateTruckData(truck['id'], field, val),
       decoration: InputDecoration(
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         border: const OutlineInputBorder(),
         errorMaxLines: 2,
       ),
+      maxLines: null,
+      minLines: 1,
+      style: const TextStyle(height: 1.5),
+      keyboardType: isNumeric ? TextInputType.number : TextInputType.multiline,
       validator: isRequired 
           ? validateRequired 
           : isNumeric 
@@ -949,39 +835,16 @@ class CamionReportState extends State<CamionReport> {
 
     return TextFormField(
       controller: _truckControllers[truck['id']]!['count${i}_$field'],
-      maxLines: null,
-      minLines: 1,
-      textInputAction: TextInputAction.newline,
-      keyboardType: TextInputType.multiline,
-      onChanged: (value) {
-        // Split text into lines of max 20 characters
-        final words = value.split(' ');
-        final lines = <String>[];
-        String currentLine = '';
-        
-        for (var word in words) {
-          if ((currentLine + word).length <= 20) {
-            currentLine += (currentLine.isEmpty ? '' : ' ') + word;
-          } else {
-            if (currentLine.isNotEmpty) {
-              lines.add(currentLine);
-            }
-            currentLine = word;
-          }
-        }
-        if (currentLine.isNotEmpty) {
-          lines.add(currentLine);
-        }
-        
-        _truckControllers[truck['id']]!['count${i}_$field']!.text = lines.join('\n');
-        updateTruckData(truck['id'], "counts", lines.join('\n'), i, field);
-      },
+      onChanged: (val) => updateTruckData(truck['id'], "counts", val, i, field),
       decoration: InputDecoration(
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         border: const OutlineInputBorder(),
         hintText: 'Lieu',
       ),
+      maxLines: null,
+      minLines: 1,
+      style: const TextStyle(height: 1.5),
     );
   }
 

@@ -56,7 +56,7 @@ class HomeScreen extends StatelessWidget {
             Icons.assessment,
             () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const ActivityReportScreen()),
+              MaterialPageRoute(builder: (context) => ActivityReportScreen(selectedDate: DateTime.now())),
             ),
           ),
           _buildMenuCard(
