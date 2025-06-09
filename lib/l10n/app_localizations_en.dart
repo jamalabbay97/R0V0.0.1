@@ -109,4 +109,61 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get no => 'No';
+
+  @override
+  String get generalInformation => 'General Information';
+
+  @override
+  String get direction => 'Direction';
+
+  @override
+  String get division => 'Division';
+
+  @override
+  String get oibEe => 'OIB/EE';
+
+  @override
+  String get mine => 'Mine';
+
+  @override
+  String get sortie => 'Sortie';
+
+  @override
+  String get distance => 'Distance';
+
+  @override
+  String get qualite => 'Qualité';
+
+  @override
+  String get machineEngins => 'Machine/Engins';
+
+  @override
+  String get arretsExplication => 'Arrêts Explication';
+
+  @override
+  String get addTruck => 'Add Truck';
+
+  @override
+  String get addCount => 'Add Count';
+
+  @override
+  String get truck => 'Truck';
+
+  @override
+  String get truckNumber => 'Truck Number';
+
+  @override
+  String get driver1 => 'Driver 1';
+
+  @override
+  String get driver2 => 'Driver 2';
+
+  @override
+  String get lieu => 'Location';
+
+  @override
+  String get total => 'Total';
+
+  @override
+  String get location => 'Location';
 }

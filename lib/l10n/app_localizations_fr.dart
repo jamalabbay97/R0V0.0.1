@@ -36,10 +36,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get activityReport => 'Rapport d\'activité';
 
   @override
-  String get dailyReport => 'Rapport quotidien';
+  String get dailyReport => 'Rapport Journalier';
 
   @override
-  String get truckTracking => 'Suivi des camions';
+  String get truckTracking => 'Suivi des Camions';
 
   @override
   String get noData => 'Aucune donnée';
@@ -109,4 +109,61 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get no => 'Non';
+
+  @override
+  String get generalInformation => 'Informations Générales';
+
+  @override
+  String get direction => 'Direction';
+
+  @override
+  String get division => 'Division';
+
+  @override
+  String get oibEe => 'OIB/EE';
+
+  @override
+  String get mine => 'Mine';
+
+  @override
+  String get sortie => 'Sortie';
+
+  @override
+  String get distance => 'Distance';
+
+  @override
+  String get qualite => 'Qualité';
+
+  @override
+  String get machineEngins => 'Machine/Engins';
+
+  @override
+  String get arretsExplication => 'Arrêts Explication';
+
+  @override
+  String get addTruck => 'Ajouter un Camion';
+
+  @override
+  String get addCount => 'Ajouter un Comptage';
+
+  @override
+  String get truck => 'Camion';
+
+  @override
+  String get truckNumber => 'Numéro du Camion';
+
+  @override
+  String get driver1 => 'Chauffeur 1';
+
+  @override
+  String get driver2 => 'Chauffeur 2';
+
+  @override
+  String get lieu => 'Lieu';
+
+  @override
+  String get total => 'Total';
+
+  @override
+  String get location => 'Emplacement';
 }

@@ -301,6 +301,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No'**
   String get no;
+
+  /// No description provided for @generalInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'General Information'**
+  String get generalInformation;
+
+  /// No description provided for @direction.
+  ///
+  /// In en, this message translates to:
+  /// **'Direction'**
+  String get direction;
+
+  /// No description provided for @division.
+  ///
+  /// In en, this message translates to:
+  /// **'Division'**
+  String get division;
+
+  /// No description provided for @oibEe.
+  ///
+  /// In en, this message translates to:
+  /// **'OIB/EE'**
+  String get oibEe;
+
+  /// No description provided for @mine.
+  ///
+  /// In en, this message translates to:
+  /// **'Mine'**
+  String get mine;
+
+  /// No description provided for @sortie.
+  ///
+  /// In en, this message translates to:
+  /// **'Sortie'**
+  String get sortie;
+
+  /// No description provided for @distance.
+  ///
+  /// In en, this message translates to:
+  /// **'Distance'**
+  String get distance;
+
+  /// No description provided for @qualite.
+  ///
+  /// In en, this message translates to:
+  /// **'Qualité'**
+  String get qualite;
+
+  /// No description provided for @machineEngins.
+  ///
+  /// In en, this message translates to:
+  /// **'Machine/Engins'**
+  String get machineEngins;
+
+  /// No description provided for @arretsExplication.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrêts Explication'**
+  String get arretsExplication;
+
+  /// No description provided for @addTruck.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Truck'**
+  String get addTruck;
+
+  /// No description provided for @addCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Count'**
+  String get addCount;
+
+  /// No description provided for @truck.
+  ///
+  /// In en, this message translates to:
+  /// **'Truck'**
+  String get truck;
+
+  /// No description provided for @truckNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Truck Number'**
+  String get truckNumber;
+
+  /// No description provided for @driver1.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver 1'**
+  String get driver1;
+
+  /// No description provided for @driver2.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver 2'**
+  String get driver2;
+
+  /// No description provided for @lieu.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get lieu;
+
+  /// No description provided for @total.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get total;
+
+  /// No description provided for @location.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get location;
 }
 
 class _AppLocalizationsDelegate
