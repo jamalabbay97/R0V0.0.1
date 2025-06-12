@@ -39,7 +39,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.dailyReport),
+        title: const Text('Daily Report TSUD'),
         actions: [
           IconButton(
             icon: const Icon(Icons.calendar_today),
@@ -386,90 +386,128 @@ class DailyReportState extends State<DailyReport> {
                 title: const Text('Totaux Fonctionnement'),
                 content: Column(
                   children: [
-          Card(
-            color: Colors.grey.shade100,
-            child: Padding(
-                        padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                            const Text(
-                              'Temps de Fonctionnement (24h - Arrêts)',
-                      style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Colors.blue,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                // TODO: Implement save draft functionality
+                              },
+                              icon: const Icon(Icons.save),
+                              label: const Text('Enregistrer Brouillon'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               ),
                             ),
-                            const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                          child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                                      const Text(
-                                        'Module 1',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        formatMinutesToHoursMinutes(module1OperatingTime),
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          color: Colors.green,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                          Text(
-                                        'Arrêts: ${formatMinutesToHoursMinutes(module1TotalDowntime)}',
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.red,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                      Expanded(
-                          child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                                      const Text(
-                                        'Module 2',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        formatMinutesToHoursMinutes(module2OperatingTime),
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          color: Colors.green,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                          Text(
-                                        'Arrêts: ${formatMinutesToHoursMinutes(module2TotalDowntime)}',
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.red,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                            const SizedBox(height: 8),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                // TODO: Implement submit report functionality
+                              },
+                              icon: const Icon(Icons.send),
+                              label: const Text('Soumettre Rapport'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              ),
                             ),
-                ],
-              ),
-            ),
-          ),
+                          ],
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Card(
+                            color: Colors.grey.shade100,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Temps de Fonctionnement (24h - Arrêts)',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Module 1',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              formatMinutesToHoursMinutes(module1OperatingTime),
+                                              style: const TextStyle(
+                                                fontSize: 18,
+                                                color: Colors.green,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              'Arrêts: ${formatMinutesToHoursMinutes(module1TotalDowntime)}',
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.red,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Module 2',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              formatMinutesToHoursMinutes(module2OperatingTime),
+                                              style: const TextStyle(
+                                                fontSize: 18,
+                                                color: Colors.green,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              'Arrêts: ${formatMinutesToHoursMinutes(module2TotalDowntime)}',
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.red,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
                 isActive: _currentStep >= 3,

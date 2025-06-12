@@ -1,252 +1,130 @@
 import 'package:flutter/material.dart';
-import 'package:r0_app/l10n/app_localizations.dart';
-import 'package:r0_app/models/report.dart';
-import 'package:r0_app/services/database_helper.dart';
-import 'package:r0_app/widgets/report_form.dart';
 
-class R0ReportScreen extends StatefulWidget {
-  const R0ReportScreen({super.key});
-
-  @override
-  State<R0ReportScreen> createState() => _R0ReportScreenState();
+// Data models
+class IndexCompteurPoste {
+  String debut;
+  String fin;
+  IndexCompteurPoste({this.debut = '', this.fin = ''});
 }
 
-class _R0ReportScreenState extends State<R0ReportScreen> {
-  final DatabaseHelper _databaseHelper = DatabaseHelper();
-  List<Report> _reports = [];
-  bool _isLoading = true;
-  DateTime selectedDate = DateTime.now();
+class VentilationItem {
+  int code;
+  String label;
+  String duree;
+  String note;
+  VentilationItem({required this.code, required this.label, this.duree = '', this.note = ''});
+}
+
+class RepartitionItem {
+  String chantier;
+  String temps;
+  String imputation;
+  RepartitionItem({this.chantier = '', this.temps = '', this.imputation = ''});
+}
+
+class R0ReportFormData {
+  String entree = '';
+  String secteur = '';
+  String rapportNo = '';
+  String machineEngins = '';
+  String sa = '';
+  String unite = '';
+  List<IndexCompteurPoste> indexCompteurs = List.generate(3, (_) => IndexCompteurPoste());
+  List<String> shifts = List.generate(3, (_) => '');
+  List<VentilationItem> ventilation = [];
+  String arretsExplication = '';
+  Map<String, String> exploitation = {};
+  List<String> bulls = List.generate(3, (_) => '');
+  List<RepartitionItem> repartitionTravail = List.generate(3, (_) => RepartitionItem());
+  // ... add other fields as needed
+}
+
+class R0Report extends StatefulWidget {
+  final DateTime selectedDate;
+  final String? previousDayThirdShiftEnd;
+
+  R0Report({required this.selectedDate, this.previousDayThirdShiftEnd});
+
+  @override
+  _R0ReportState createState() => _R0ReportState();
+}
+
+class _R0ReportState extends State<R0Report> {
+  final _formKey = GlobalKey<FormState>();
+  R0ReportFormData formData = R0ReportFormData();
+
+  final posteOrder = ["1er", "2ème", "3ème"];
+  final posteTimes = {
+    "1er": "06:30 - 14:30",
+    "2ème": "14:30 - 22:30",
+    "3ème": "22:30 - 06:30",
+  };
 
   @override
   void initState() {
     super.initState();
-    _loadReports();
+    // Initialize ventilation data, etc.
+    formData.ventilation = [
+      VentilationItem(code: 121, label: "ARRET CARREAU INDUSTRIEL"),
+      // ... Add all your ventilation items here
+    ];
   }
 
-  Future<void> _loadReports() async {
+  // Example: handle input change for a text field
+  void _onTextChanged(String value, void Function(String) update) {
     setState(() {
-      _isLoading = true;
+      update(value);
     });
-
-    try {
-      final reports = await _databaseHelper.getReportsByType('r0');
-      setState(() {
-        _reports = reports;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading reports: $e')),
-        );
-      }
-    }
   }
 
-  Future<void> _handleSubmit(Report report) async {
-    try {
-      if (report.id == null) {
-        await _databaseHelper.insertReport(report);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context)!.reportSaved)),
-          );
-        }
-      } else {
-        await _databaseHelper.updateReport(report);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context)!.reportUpdated)),
-          );
-        }
-      }
-      _loadReports();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.errorSavingReport),
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _handleDelete(Report report) async {
-    final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.confirmDelete),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.no),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l10n.yes),
-          ),
-        ],
-      ),
+  // Example UI building for a section of the form
+  Widget _buildEnteteSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          decoration: InputDecoration(labelText: "Entrée"),
+          initialValue: formData.entree,
+          onChanged: (v) => _onTextChanged(v, (v) => formData.entree = v),
+        ),
+        TextFormField(
+          decoration: InputDecoration(labelText: "Secteur"),
+          initialValue: formData.secteur,
+          onChanged: (v) => _onTextChanged(v, (v) => formData.secteur = v),
+        ),
+        // Add other TextFormFields similarly
+      ],
     );
-
-    if (confirmed == true && report.id != null) {
-      try {
-        await _databaseHelper.deleteReport(report.id!);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.reportDeleted)),
-          );
-        }
-        _loadReports();
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.errorDeletingReport)),
-          );
-        }
-      }
-    }
-  }
-
-  void _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null && picked != selectedDate) {
-      setState(() {
-        selectedDate = picked;
-      });
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
+    String formattedDate = "${widget.selectedDate.day}/${widget.selectedDate.month}/${widget.selectedDate.year}";
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.r0Report),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_today),
-            tooltip: 'Choisir la date',
-            onPressed: _pickDate,
+      appBar: AppBar(title: Text("Rapport Journalier Détaillé (R0)")),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              Text(formattedDate, style: TextStyle(fontSize: 16)),
+              _buildEnteteSection(),
+              // Add other sections: indexCompteurs, shifts, ventilation, etc.
+              SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  // Validate and submit
+                  if (_formKey.currentState?.validate() ?? false) {
+                    // Submit logic here
+                  }
+                },
+                child: Text("Soumettre Rapport"),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _reports.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        l10n.noDataMessage,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () {
-                          showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            builder: (context) => Padding(
-                              padding: EdgeInsets.only(
-                                bottom: MediaQuery.of(context).viewInsets.bottom,
-                              ),
-                              child: SingleChildScrollView(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: ReportForm(
-                                    reportType: 'r0',
-                                    onSubmit: _handleSubmit,
-                                    availableGroups: const [
-                                      'Group A',
-                                      'Group B',
-                                      'Group C',
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                        child: Text(l10n.addReport),
-                      ),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _reports.length,
-                  itemBuilder: (context, index) {
-                    final report = _reports[index];
-                    return Card(
-                      child: ListTile(
-                        title: Text(report.description),
-                        subtitle: Text(
-                          '${report.group} - ${report.date.toString()}',
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit),
-                              onPressed: () {
-                                showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  builder: (context) => Padding(
-                                    padding: EdgeInsets.only(
-                                      bottom: MediaQuery.of(context)
-                                          .viewInsets
-                                          .bottom,
-                                    ),
-                                    child: SingleChildScrollView(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(16.0),
-                                        child: ReportForm(
-                                          initialReport: report,
-                                          reportType: 'r0',
-                                          onSubmit: _handleSubmit,
-                                          availableGroups: const [
-                                            'Group A',
-                                            'Group B',
-                                            'Group C',
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete),
-                              onPressed: () => _handleDelete(report),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-      floatingActionButton: _reports.isNotEmpty
-          ? FloatingActionButton.extended(
-              onPressed: _pickDate,
-              icon: const Icon(Icons.calendar_month),
-              label: const Text('Changer la date'),
-            )
-          : null,
     );
   }
 } 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:r0_app/l10n/app_localizations.dart';
 import 'package:r0_app/screens/r0_report_screen.dart';
-import 'package:r0_app/screens/add_report_screen.dart';
 import 'package:r0_app/screens/reports_screen.dart';
 import 'package:r0_app/screens/settings_screen.dart';
 import 'package:r0_app/screens/activity_report_screen.dart';
@@ -29,25 +28,7 @@ class HomeScreen extends StatelessWidget {
             Icons.assignment,
             () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const R0ReportScreen()),
-            ),
-          ),
-          _buildMenuCard(
-            context,
-            l10n.addReport,
-            Icons.add_circle,
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AddReportScreen()),
-            ),
-          ),
-          _buildMenuCard(
-            context,
-            l10n.reports,
-            Icons.list_alt,
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ReportsScreen()),
+              MaterialPageRoute(builder: (context) => R0Report(selectedDate: DateTime.now())),
             ),
           ),
           _buildMenuCard(
@@ -75,6 +56,15 @@ class HomeScreen extends StatelessWidget {
             () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const TruckTrackingScreen()),
+            ),
+          ),
+          _buildMenuCard(
+            context,
+            l10n.reports,
+            Icons.list_alt,
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ReportsScreen()),
             ),
           ),
           _buildMenuCard(
