@@ -81,6 +81,8 @@ class DailyReport extends StatefulWidget {
 class DailyReportState extends State<DailyReport> {
   static const totalPeriodMinutes = 24 * 60; // Total minutes in a day
   final uuid = Uuid();
+  int _currentStep = 0;
+  DateTime selectedDate = DateTime.now();
 
   // Form fields
   String entree = '';
@@ -97,6 +99,20 @@ class DailyReportState extends State<DailyReport> {
   int module2OperatingTime = totalPeriodMinutes;
 
   final Map<String, TextEditingController> _controllers = {};
+
+  void _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        selectedDate = picked;
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -158,14 +174,88 @@ class DailyReportState extends State<DailyReport> {
   }
 
   void addStop(int module) {
+    String tempDuration = '';
+    String tempNature = '';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Ajouter un arrêt - Module $module'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              decoration: const InputDecoration(
+                labelText: 'Durée (ex: 1h 30)',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => tempDuration = value,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              decoration: const InputDecoration(
+                labelText: 'Nature',
+                border: OutlineInputBorder(),
+                hintText: 'Maximum 20 caractères par ligne',
+              ),
+              maxLines: 5,
+              onChanged: (value) {
+                // Split text into lines of max 20 characters
+                final words = value.split(' ');
+                final lines = <String>[];
+                String currentLine = '';
+                
+                for (var word in words) {
+                  if ((currentLine + ' ' + word).trim().length <= 20) {
+                    currentLine += (currentLine.isEmpty ? '' : ' ') + word;
+                  } else {
+                    if (currentLine.isNotEmpty) {
+                      lines.add(currentLine);
+                    }
+                    currentLine = word;
+                  }
+                }
+                if (currentLine.isNotEmpty) {
+                  lines.add(currentLine);
+                }
+                
+                tempNature = lines.join('\n');
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (tempDuration.isNotEmpty && tempNature.isNotEmpty) {
     setState(() {
       if (module == 1) {
-        module1Stops.add(ModuleStop(id: uuid.v4()));
+                    module1Stops.add(ModuleStop(
+                      id: uuid.v4(),
+                      duration: tempDuration,
+                      nature: tempNature,
+                    ));
       } else {
-        module2Stops.add(ModuleStop(id: uuid.v4()));
+                    module2Stops.add(ModuleStop(
+                      id: uuid.v4(),
+                      duration: tempDuration,
+                      nature: tempNature,
+                    ));
       }
       _calculateTotals();
     });
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Ajouter'),
+          ),
+        ],
+      ),
+    );
   }
 
   void deleteStop(int module, String id) {
@@ -220,67 +310,172 @@ class DailyReportState extends State<DailyReport> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          buildModuleStops(1, module1Stops),
-          const SizedBox(height: 16),
-          buildModuleStops(2, module2Stops),
-          const SizedBox(height: 16),
+          Stepper(
+            currentStep: _currentStep,
+            onStepContinue: () {
+              if (_currentStep < 3) {
+                setState(() {
+                  _currentStep += 1;
+                });
+              }
+            },
+            onStepCancel: () {
+              if (_currentStep > 0) {
+                setState(() {
+                  _currentStep -= 1;
+                });
+              }
+            },
+            controlsBuilder: (context, details) {
+              return Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: Row(
+                children: [
+                    if (_currentStep > 0)
+                      OutlinedButton(
+                        onPressed: details.onStepCancel,
+                        child: Text(AppLocalizations.of(context)!.cancel),
+                    ),
+                    if (_currentStep > 0)
+                      const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: details.onStepContinue,
+                      child: Text(_currentStep == 3 ? AppLocalizations.of(context)!.save : 'Suivant'),
+                    ),
+                  ],
+                ),
+              );
+            },
+            steps: [
+              Step(
+                title: const Text('Date du Rapport'),
+                content: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Sélectionnez la date du rapport',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 16),
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.calendar_today),
+                        title: Text(
+                          '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+                          style: const TextStyle(fontSize: 18),
+                        ),
+                        trailing: const Icon(Icons.arrow_forward_ios),
+                        onTap: _pickDate,
+                      ),
+                    ),
+                  ],
+                ),
+                isActive: _currentStep >= 0,
+              ),
+              Step(
+                title: const Text('Module 1 - Arrêts'),
+                content: buildModuleStops(1, module1Stops),
+                isActive: _currentStep >= 1,
+              ),
+              Step(
+                title: const Text('Module 2 - Arrêts'),
+                content: buildModuleStops(2, module2Stops),
+                isActive: _currentStep >= 2,
+              ),
+              Step(
+                title: const Text('Totaux Fonctionnement'),
+                content: Column(
+                  children: [
           Card(
             color: Colors.grey.shade100,
             child: Padding(
-              padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Totaux Temps de Fonctionnement (24h - Arrêts)',
+                            const Text(
+                              'Temps de Fonctionnement (24h - Arrêts)',
                       style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 8),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.blue,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
                           child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Module 1 Fonctionnement'),
+                                      const Text(
+                                        'Module 1',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        formatMinutesToHoursMinutes(module1OperatingTime),
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          color: Colors.green,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
                           Text(
-                              formatMinutesToHoursMinutes(
-                                  module1OperatingTime),
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold)),
-                        ],
-                      )),
+                                        'Arrêts: ${formatMinutesToHoursMinutes(module1TotalDowntime)}',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.red,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                       Expanded(
                           child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Module 2 Fonctionnement'),
+                                      const Text(
+                                        'Module 2',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        formatMinutesToHoursMinutes(module2OperatingTime),
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          color: Colors.green,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
                           Text(
-                              formatMinutesToHoursMinutes(
-                                  module2OperatingTime),
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold)),
-                        ],
-                      )),
-                    ],
-                  )
+                                        'Arrêts: ${formatMinutesToHoursMinutes(module2TotalDowntime)}',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.red,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              ElevatedButton(
-                onPressed: () {
-                if (widget.formKey.currentState!.validate()) {
-                  // TODO: Implement save functionality
-                }
-              },
-              child: Text(AppLocalizations.of(context)!.save),
+                  ],
                 ),
+                isActive: _currentStep >= 3,
+              ),
             ],
-          )
+          ),
         ],
       ),
     );
@@ -288,58 +483,211 @@ class DailyReportState extends State<DailyReport> {
 
   Widget buildModuleStops(int module, List<ModuleStop> stops) {
     return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Module $module - Arrêts',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
-            TextButton.icon(
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () => addStop(module),
               icon: const Icon(Icons.add),
-              label: const Text('Ajouter Arrêt'),
-              onPressed: () => addStop(module),
+                label: const Text('Ajouter un arrêt'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue[900],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
             ),
           ],
         ),
-        DataTable(
-          columns: const [
-            DataColumn(label: Text('Durée')),
-            DataColumn(label: Text('Nature')),
-            DataColumn(label: SizedBox.shrink()),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _showStopsList(module, stops),
+                icon: const Icon(Icons.list),
+                label: const Text('Voir les arrêts'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.blue[900],
+                  side: BorderSide(color: Colors.blue[900]!),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
           ],
-          rows: stops.map((stop) {
-            return DataRow(cells: [
-              DataCell(TextFormField(
-                controller: _controllers['${module}_${stop.id}_duration'],
-                decoration: const InputDecoration(hintText: "ex: 1h 30"),
-                onChanged: (val) {
-                  updateStop(module, stop.id, 'duration', val);
-                },
-              )),
-              DataCell(TextFormField(
-                controller: _controllers['${module}_${stop.id}_nature'],
-                decoration: const InputDecoration(hintText: "Nature"),
-                onChanged: (val) {
-                  updateStop(module, stop.id, 'nature', val);
-                },
-              )),
-              DataCell(IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => deleteStop(module, stop.id),
-              )),
-            ]);
-          }).toList(),
-        ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: Text(
-            'Total Arrêts: ${formatMinutesToHoursMinutes(module == 1 ? module1TotalDowntime : module2TotalDowntime)}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
         ),
       ],
+    );
+  }
+
+  void _showStopsList(int module, List<ModuleStop> stops) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Liste des arrêts - Module $module'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: stops.length,
+            itemBuilder: (context, index) {
+              final stop = stops[index];
+              return ListTile(
+                title: Text('Durée: ${stop.duration}'),
+                subtitle: Text('Nature: ${stop.nature}'),
+                trailing: PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_horiz, size: 20),
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  position: PopupMenuPosition.under,
+                  itemBuilder: (BuildContext context) => [
+                    PopupMenuItem<String>(
+                      value: 'edit',
+                      height: 36,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Modifier',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'delete',
+                      height: 36,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Supprimer',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      Navigator.pop(context);
+                      _showEditStopDialog(module, stop);
+                    } else if (value == 'delete') {
+                      setState(() {
+                        deleteStop(module, stop.id);
+                      });
+                      Navigator.pop(context);
+                      _showStopsList(module, stops);
+                    }
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditStopDialog(int module, ModuleStop stop) {
+    String tempDuration = stop.duration;
+    String tempNature = stop.nature;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Modifier l\'arrêt - Module $module'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              decoration: const InputDecoration(
+                labelText: 'Durée (ex: 1h 30)',
+                border: OutlineInputBorder(),
+              ),
+              controller: TextEditingController(text: tempDuration),
+              onChanged: (value) => tempDuration = value,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              decoration: const InputDecoration(
+                labelText: 'Nature',
+                border: OutlineInputBorder(),
+                hintText: 'Maximum 20 caractères par ligne',
+              ),
+              controller: TextEditingController(text: tempNature),
+              maxLines: 5,
+              onChanged: (value) {
+                // Split text into lines of max 20 characters
+                final words = value.split(' ');
+                final lines = <String>[];
+                String currentLine = '';
+                
+                for (var word in words) {
+                  if ((currentLine + ' ' + word).trim().length <= 20) {
+                    currentLine += (currentLine.isEmpty ? '' : ' ') + word;
+                  } else {
+                    if (currentLine.isNotEmpty) {
+                      lines.add(currentLine);
+                    }
+                    currentLine = word;
+                  }
+                }
+                if (currentLine.isNotEmpty) {
+                  lines.add(currentLine);
+                }
+                
+                tempNature = lines.join('\n');
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (tempDuration.isNotEmpty && tempNature.isNotEmpty) {
+                setState(() {
+                  updateStop(module, stop.id, 'duration', tempDuration);
+                  updateStop(module, stop.id, 'nature', tempNature);
+                  _calculateTotals();
+                });
+                Navigator.pop(context);
+                _showStopsList(module, module == 1 ? module1Stops : module2Stops);
+              }
+            },
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
     );
   }
 } 

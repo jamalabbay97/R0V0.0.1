@@ -1,1 +1,0 @@
- /home/brahim/Desktop/R0V0.1/lib/l10n/app_localizations_en.dart /home/brahim/Desktop/R0V0.1/lib/l10n/app_localizations_fr.dart /home/brahim/Desktop/R0V0.1/lib/l10n/app_localizations.dart:  /home/brahim/Desktop/R0V0.1/l10n.yaml /home/brahim/Desktop/R0V0.1/lib/l10n/app_en.arb /home/brahim/Desktop/R0V0.1/lib/l10n/app_fr.arb
