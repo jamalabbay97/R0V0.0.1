@@ -66,6 +66,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get description => 'Description';
 
   @override
+  String get type => 'Type';
+
+  @override
   String get group => 'Groupe';
 
   @override

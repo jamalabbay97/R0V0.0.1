@@ -18,6 +18,7 @@
   "date": "Date",
   "time": "Time",
   "description": "Description",
+  "type": "Type",
   "group": "Group",
   "selectGroup": "Select Group",
   "language": "Language",

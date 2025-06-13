@@ -52,10 +52,10 @@ class R0Report extends StatefulWidget {
   }
 
   @override
-  _R0ReportState createState() => _R0ReportState();
+  R0ReportState createState() => R0ReportState();
 }
 
-class _R0ReportState extends State<R0Report> {
+class R0ReportState extends State<R0Report> {
   final _formKey = GlobalKey<FormState>();
   final _databaseHelper = DatabaseHelper();
   R0ReportFormData formData = R0ReportFormData();

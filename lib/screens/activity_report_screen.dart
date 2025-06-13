@@ -120,13 +120,13 @@ double? validateAndParseCounterValue(String value) {
   return double.tryParse(cleaned);
 }
 
-const TOTAL_PERIOD_MINUTES = 24 * 60;
-const MAX_HOURS_PER_POSTE = 8;
-
 class ActivityReportScreen extends StatefulWidget {
   final DateTime selectedDate;
   final String? previousDayThirdShiftEnd;
   const ActivityReportScreen({super.key, required this.selectedDate, this.previousDayThirdShiftEnd});
+
+  static const int totalPeriodMinutes = 24 * 60; // 24 hours in minutes
+  static const int maxHoursPerPoste = 12; // Maximum hours per poste
 
   @override
   State<ActivityReportScreen> createState() => _ActivityReportScreenState();
@@ -140,7 +140,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
   List<StockEntry> stockEntries = [];
 
   int totalDowntime = 0;
-  int operatingTime = TOTAL_PERIOD_MINUTES;
+  int operatingTime = ActivityReportScreen.totalPeriodMinutes;
   int totalVibratorMinutes = 0;
   int totalLiaisonMinutes = 0;
 
@@ -176,7 +176,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
   void recalculateTimes() {
     setState(() {
       totalDowntime = stops.fold(0, (acc, s) => acc + parseDurationToMinutes(s.duration));
-      operatingTime = max(TOTAL_PERIOD_MINUTES - totalDowntime, 0);
+      operatingTime = max(ActivityReportScreen.totalPeriodMinutes - totalDowntime, 0);
 
       // Validate and calculate counters (simplified)
       totalVibratorMinutes = calculateTotalCounterMinutes(vibratorCounters);

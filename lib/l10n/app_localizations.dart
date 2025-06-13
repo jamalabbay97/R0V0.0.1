@@ -212,6 +212,12 @@ abstract class AppLocalizations {
   /// **'Description'**
   String get description;
 
+  /// No description provided for @type.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get type;
+
   /// No description provided for @group.
   ///
   /// In en, this message translates to:
