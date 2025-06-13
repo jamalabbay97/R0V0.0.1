@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:r0_app/services/database_helper.dart';
+import 'package:r0_app/models/report.dart';
+import 'package:r0_app/l10n/app_localizations.dart';
+import 'package:intl/intl.dart';
 
 // Data models
 class IndexCompteurPoste {
@@ -53,6 +57,7 @@ class R0Report extends StatefulWidget {
 
 class _R0ReportState extends State<R0Report> {
   final _formKey = GlobalKey<FormState>();
+  final _databaseHelper = DatabaseHelper();
   R0ReportFormData formData = R0ReportFormData();
 
   final posteOrder = ["1er", "2ème", "3ème"];
@@ -99,6 +104,57 @@ class _R0ReportState extends State<R0Report> {
     );
   }
 
+  Future<void> _saveReport() async {
+    try {
+      final report = Report(
+        description: 'R0 Report - ${DateFormat('yyyy-MM-dd').format(widget.selectedDate)}',
+        date: widget.selectedDate,
+        group: 'R0',
+        type: 'r0_report',
+        additionalData: {
+          'entree': formData.entree,
+          'secteur': formData.secteur,
+          'rapportNo': formData.rapportNo,
+          'machineEngins': formData.machineEngins,
+          'sa': formData.sa,
+          'unite': formData.unite,
+          'indexCompteurs': formData.indexCompteurs.map((ic) => {
+            'debut': ic.debut,
+            'fin': ic.fin,
+          }).toList(),
+          'shifts': formData.shifts,
+          'ventilation': formData.ventilation.map((v) => {
+            'code': v.code,
+            'label': v.label,
+            'duree': v.duree,
+            'note': v.note,
+          }).toList(),
+          'arretsExplication': formData.arretsExplication,
+          'exploitation': formData.exploitation,
+          'bulls': formData.bulls,
+          'repartitionTravail': formData.repartitionTravail.map((r) => {
+            'chantier': r.chantier,
+            'temps': r.temps,
+            'imputation': r.imputation,
+          }).toList(),
+        },
+      );
+
+      await _databaseHelper.insertReport(report);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.reportSaved)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.errorSavingReport)),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     String formattedDate = "${widget.selectedDate.day}/${widget.selectedDate.month}/${widget.selectedDate.year}";
@@ -114,14 +170,19 @@ class _R0ReportState extends State<R0Report> {
               _buildEnteteSection(),
               // Add other sections: indexCompteurs, shifts, ventilation, etc.
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  // Validate and submit
-                  if (_formKey.currentState?.validate() ?? false) {
-                    // Submit logic here
-                  }
-                },
-                child: const Text("Soumettre Rapport"),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (_formKey.currentState?.validate() ?? false) {
+                          _saveReport();
+                        }
+                      },
+                      child: const Text("Soumettre Rapport"),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

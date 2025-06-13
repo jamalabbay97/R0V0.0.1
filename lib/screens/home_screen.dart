@@ -55,7 +55,12 @@ class HomeScreen extends StatelessWidget {
             Icons.local_shipping,
             () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const TruckTrackingScreen()),
+              MaterialPageRoute(
+                builder: (context) => TruckTrackingScreen(
+                  selectedDate: DateTime.now(),
+                  formKey: GlobalKey<FormState>(),
+                ),
+              ),
             ),
           ),
           _buildMenuCard(

@@ -1,28 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:r0_app/l10n/app_localizations.dart';
+import 'package:r0_app/services/database_helper.dart';
+import 'package:r0_app/models/report.dart';
 
 class TruckTrackingScreen extends StatefulWidget {
-  const TruckTrackingScreen({super.key});
+  final DateTime selectedDate;
+  final GlobalKey<FormState> formKey;
+
+  const TruckTrackingScreen({
+    super.key,
+    required this.selectedDate,
+    required this.formKey,
+  });
 
   @override
   State<TruckTrackingScreen> createState() => _TruckTrackingScreenState();
 }
 
 class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
-  DateTime selectedDate = DateTime.now();
-  final _formKey = GlobalKey<FormState>();
+  late DateTime _selectedDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDate = widget.selectedDate;
+  }
 
   void _pickDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: selectedDate,
+      initialDate: _selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
-    if (picked != null && picked != selectedDate) {
+    if (picked != null && picked != _selectedDate) {
       setState(() {
-        selectedDate = picked;
+        _selectedDate = picked;
       });
     }
   }
@@ -41,10 +55,10 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
         ],
       ),
       body: Form(
-        key: _formKey,
+        key: widget.formKey,
         child: CamionReport(
-          selectedDate: selectedDate,
-          formKey: _formKey,
+          selectedDate: _selectedDate,
+          formKey: widget.formKey,
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -441,231 +455,210 @@ class CamionReportState extends State<CamionReport> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     String formattedDate = "${widget.selectedDate.day.toString().padLeft(2, '0')}/${widget.selectedDate.month.toString().padLeft(2, '0')}/${widget.selectedDate.year}";
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppLocalizations.of(context)!.generalInformation,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          Text(formattedDate,
+            style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 16),
 
-    return Card(
-      margin: const EdgeInsets.all(16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('POINTAGE DES CAMIONS',
-                    style: Theme.of(context).textTheme.titleLarge),
-                Text(formattedDate,
-                    style: Theme.of(context).textTheme.bodySmall),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Step indicator
-            if (!_isGeneralInfoComplete)
-              ElevatedButton.icon(
-                onPressed: _showGeneralInfoDialog,
-                icon: const Icon(Icons.info_outline),
-                label: const Text("Commencer par les Informations Générales"),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 48),
+          // Step indicator
+          if (!_isGeneralInfoComplete)
+            ElevatedButton.icon(
+              onPressed: _showGeneralInfoDialog,
+              icon: const Icon(Icons.info_outline),
+              label: const Text("Commencer par les Informations Générales"),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 48),
+              ),
+            )
+          else
+            Stepper(
+              currentStep: _currentStep,
+              onStepContinue: () {
+                setState(() {
+                  if (_currentStep < 2) {
+                    _currentStep += 1;
+                  }
+                });
+              },
+              onStepCancel: () {
+                setState(() {
+                  if (_currentStep > 0) {
+                    _currentStep -= 1;
+                  }
+                });
+              },
+              steps: [
+                Step(
+                  title: const Text('Informations Générales'),
+                  content: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _showGeneralInfoDialog,
+                        child: const Text("Modifier les Informations Générales"),
+                      ),
+                    ],
+                  ),
+                  isActive: _currentStep >= 0,
                 ),
-              )
-            else
-              Stepper(
-                currentStep: _currentStep,
-                onStepContinue: () {
-                  setState(() {
-                    if (_currentStep < 2) {
-                      _currentStep += 1;
-                    }
-                  });
-                },
-                onStepCancel: () {
-                  setState(() {
-                    if (_currentStep > 0) {
-                      _currentStep -= 1;
-                    }
-                  });
-                },
-                steps: [
-                  Step(
-                    title: const Text('Informations Générales'),
-                    content: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                Step(
+                  title: const Text('Camions'),
+                  content: SingleChildScrollView(
+                    child: Column(
                       children: [
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: _showGeneralInfoDialog,
-                          child: const Text("Modifier les Informations Générales"),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Column(
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  _showTruckDialog(context);
+                                },
+                                icon: const Icon(Icons.add),
+                                label: const Text("Ajouter un camion"),
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size(double.infinity, 36),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return Dialog(
+                                        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                                        child: ConstrainedBox(
+                                          constraints: BoxConstraints(
+                                            maxHeight: MediaQuery.of(context).size.height * 0.8,
+                                          ),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Padding(
+                                                padding: const EdgeInsets.all(16),
+                                                child: Row(
+                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                  children: [
+                                                    Text(
+                                                      "Liste des camions",
+                                                      style: Theme.of(context).textTheme.titleLarge,
+                                                    ),
+                                                    IconButton(
+                                                      icon: const Icon(Icons.close),
+                                                      onPressed: () => Navigator.of(context).pop(),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const Divider(height: 1),
+                                              Flexible(
+                                                child: SingleChildScrollView(
+                                                  padding: const EdgeInsets.all(16),
+                                                  child: Column(
+                                                    children: truckData.map((truck) {
+                                                      return Card(
+                                                        margin: const EdgeInsets.only(bottom: 8),
+                                                        child: ListTile(
+                                                          title: Text("Camion ${truck['truckNumber']}"),
+                                                          subtitle: Column(
+                                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                                            children: [
+                                                              Text("Chauffeur: ${truck['driver1']}"),
+                                                              if (truck['trips'] != null && (truck['trips'] as List).isNotEmpty)
+                                                                ...(truck['trips'] as List).map((trip) {
+                                                                  return Padding(
+                                                                    padding: const EdgeInsets.only(top: 4),
+                                                                    child: Text(
+                                                                      "📍 ${trip['location']}",
+                                                                      style: const TextStyle(
+                                                                        fontSize: 12,
+                                                                        color: Colors.grey,
+                                                                      ),
+                                                                    ),
+                                                                  );
+                                                                }),
+                                                            ],
+                                                          ),
+                                                          trailing: IconButton(
+                                                            icon: const Icon(Icons.edit),
+                                                            onPressed: () {
+                                                              Navigator.of(context).pop();
+                                                              _showTruckDialog(context, truck);
+                                                            },
+                                                          ),
+                                                        ),
+                                                      );
+                                                    }).toList(),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                                icon: const Icon(Icons.list),
+                                label: const Text("Voir la liste des camions"),
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size(double.infinity, 36),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                    isActive: _currentStep >= 0,
                   ),
-                  Step(
-                    title: const Text('Camions'),
-                    content: SingleChildScrollView(
-                      child: Column(
+                  isActive: _currentStep >= 1,
+                ),
+                Step(
+                  title: const Text('Vérification'),
+                  content: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Vérifiez avant de soumettre:",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () => _showVerificationDialog(context),
+                        icon: const Icon(Icons.visibility),
+                        label: const Text("Voir tous les détails"),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 48),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Column(
-                              children: [
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    _showTruckDialog(context);
-                                  },
-                                  icon: const Icon(Icons.add),
-                                  label: const Text("Ajouter un camion"),
-                                  style: ElevatedButton.styleFrom(
-                                    minimumSize: const Size(double.infinity, 36),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (BuildContext context) {
-                                        return Dialog(
-                                          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-                                          child: ConstrainedBox(
-                                            constraints: BoxConstraints(
-                                              maxHeight: MediaQuery.of(context).size.height * 0.8,
-                                            ),
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Padding(
-                                                  padding: const EdgeInsets.all(16),
-                                                  child: Row(
-                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                    children: [
-                                                      Text(
-                                                        "Liste des camions",
-                                                        style: Theme.of(context).textTheme.titleLarge,
-                                                      ),
-                                                      IconButton(
-                                                        icon: const Icon(Icons.close),
-                                                        onPressed: () => Navigator.of(context).pop(),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                const Divider(height: 1),
-                                                Flexible(
-                                                  child: SingleChildScrollView(
-                                                    padding: const EdgeInsets.all(16),
-                                                    child: Column(
-                                                      children: truckData.map((truck) {
-                                                        return Card(
-                                                          margin: const EdgeInsets.only(bottom: 8),
-                                                          child: ListTile(
-                                                            title: Text("Camion ${truck['truckNumber']}"),
-                                                            subtitle: Column(
-                                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                                              children: [
-                                                                Text("Chauffeur: ${truck['driver1']}"),
-                                                                if (truck['trips'] != null && (truck['trips'] as List).isNotEmpty)
-                                                                  ...(truck['trips'] as List).map((trip) {
-                                                                    return Padding(
-                                                                      padding: const EdgeInsets.only(top: 4),
-                                                                      child: Text(
-                                                                        "📍 ${trip['location']}",
-                                                                        style: const TextStyle(
-                                                                          fontSize: 12,
-                                                                          color: Colors.grey,
-                                                                        ),
-                                                                      ),
-                                                                    );
-                                                                  }),
-                                                              ],
-                                                            ),
-                                                            trailing: IconButton(
-                                                              icon: const Icon(Icons.edit),
-                                                              onPressed: () {
-                                                                Navigator.of(context).pop();
-                                                                _showTruckDialog(context, truck);
-                                                              },
-                                                            ),
-                                                          ),
-                                                        );
-                                                      }).toList(),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    );
-                                  },
-                                  icon: const Icon(Icons.list),
-                                  label: const Text("Voir la liste des camions"),
-                                  style: ElevatedButton.styleFrom(
-                                    minimumSize: const Size(double.infinity, 36),
-                                  ),
-                                ),
-                              ],
-                            ),
+                          ElevatedButton(
+                            onPressed: () => _saveReport(false),
+                            child: const Text("Soumettre"),
                           ),
                         ],
                       ),
-                    ),
-                    isActive: _currentStep >= 1,
+                    ],
                   ),
-                  Step(
-                    title: const Text('Vérification'),
-                    content: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Vérifiez avant de soumettre:",
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: () => _showVerificationDialog(context),
-                          icon: const Icon(Icons.visibility),
-                          label: const Text("Voir tous les détails"),
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 48),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            OutlinedButton(
-                              onPressed: () {
-                                if (widget.formKey.currentState!.validate()) {
-                                  // TODO: Implement save functionality
-                                }
-                              },
-                              child: Text(l10n.save),
-                            ),
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              onPressed: () {
-                                if (widget.formKey.currentState!.validate()) {
-                                  // TODO: Implement submit functionality
-                                }
-                              },
-                              child: const Text("Soumettre"),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    isActive: _currentStep >= 2,
-                  ),
-                ],
-              ),
-          ],
-        ),
+                  isActive: _currentStep >= 2,
+                ),
+              ],
+            ),
+        ],
       ),
     );
   }
@@ -1271,5 +1264,47 @@ class CamionReportState extends State<CamionReport> {
         );
       },
     );
+  }
+
+  Future<void> _saveReport(bool isDraft) async {
+    if (!widget.formKey.currentState!.validate()) {
+      return;
+    }
+
+    try {
+      final report = Report(
+        description: 'Rapport de suivi des camions',
+        date: widget.selectedDate,
+        group: 'Truck Tracking',
+        type: isDraft ? 'draft' : 'submitted',
+        additionalData: {
+          'generalInfo': generalInfo,
+          'truckData': truckData,
+        },
+      );
+
+      final dbHelper = DatabaseHelper();
+      await dbHelper.insertReport(report);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isDraft 
+              ? 'Brouillon enregistré avec succès'
+              : 'Rapport soumis avec succès'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 } 

@@ -333,69 +333,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                   state: _currentStep > 3 ? StepState.complete : StepState.indexed,
                 ),
                 Step(
-                  title: const Text('Voir tous les détails'),
-                  content: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Résumé des données',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue[900],
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              _buildSummaryRow('Temps d\'arrêt total:', formatMinutesToHoursMinutes(totalDowntime)),
-                              _buildSummaryRow('Temps de fonctionnement:', formatMinutesToHoursMinutes(operatingTime)),
-                              _buildSummaryRow('Temps vibreurs:', formatMinutesToHoursMinutes(totalVibratorMinutes)),
-                              _buildSummaryRow('Temps liaison:', formatMinutesToHoursMinutes(totalLiaisonMinutes)),
-                              const SizedBox(height: 8),
-                              _buildSummaryRow('Nombre d\'arrêts:', stops.length.toString()),
-                              _buildSummaryRow('Nombre de compteurs vibreurs:', vibratorCounters.length.toString()),
-                              _buildSummaryRow('Nombre de compteurs liaison:', liaisonCounters.length.toString()),
-                              _buildSummaryRow('Nombre d\'entrées stock:', stockEntries.length.toString()),
-                            ],
-                          ),
-                        ),
-                      ),
-                      if (hasVibratorErrors || hasLiaisonErrors || hasStockErrors) ...[
-                        const SizedBox(height: 16),
-                        Card(
-                          color: Colors.red[50],
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Erreurs détectées',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.red[900],
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                if (hasVibratorErrors)
-                                  Text('• Erreurs dans les compteurs vibreurs', style: TextStyle(color: Colors.red[900])),
-                                if (hasLiaisonErrors)
-                                  Text('• Erreurs dans les compteurs liaison', style: TextStyle(color: Colors.red[900])),
-                                if (hasStockErrors)
-                                  Text('• Erreurs dans les entrées stock', style: TextStyle(color: Colors.red[900])),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
+                  title: const Text('Vérification'),
+                  content: buildVerificationSection(),
                   isActive: _currentStep >= 4,
                   state: _currentStep > 4 ? StepState.complete : StepState.indexed,
                 ),
@@ -406,12 +345,6 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.phone),
-                    label: const Text("Enregistrer Brouillon"),
-                  ),
-                  const SizedBox(height: 14),
                   ElevatedButton(
                     onPressed: (hasVibratorErrors || hasLiaisonErrors || hasStockErrors)
                       ? null
@@ -627,6 +560,31 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     );
   }
 
+  Widget buildVerificationSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'ÉTAPE 5: VÉRIFICATION',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.blue[900],
+          ),
+        ),
+        const SizedBox(height: 16),
+        OutlinedButton.icon(
+          onPressed: () => _showVerificationDialog(),
+          icon: const Icon(Icons.visibility),
+          label: const Text("Voir tous les détails"),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+          ),
+        ),
+      ],
+    );
+  }
+
   void _showVerificationDialog() {
     showDialog(
       context: context,
@@ -702,6 +660,19 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Fermer'),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -1673,19 +1644,6 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
             },
             child: const Text('Enregistrer'),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),
     );
