@@ -69,6 +69,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final l10n = AppLocalizations.of(context)!;
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
+    // Get the steps from additionalData
+    final steps = report.additionalData?.entries.toList() ?? [];
+    
     // First show the list of steps
     await showDialog(
       context: context,
@@ -78,6 +81,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Basic report info
               ListTile(
                 title: Text(l10n.description),
                 subtitle: Text(report.description),
@@ -169,6 +173,33 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   );
                 },
               ),
+              const Divider(),
+              // Additional data steps
+              ...steps.map((step) => ListTile(
+                title: Text(step.key),
+                subtitle: Text(step.value.toString()),
+                onTap: () async {
+                  Navigator.pop(dialogContext);
+                  await _editStep(
+                    context: context,
+                    title: step.key,
+                    initialValue: step.value.toString(),
+                    onSave: (value) async {
+                      final updatedAdditionalData = Map<String, dynamic>.from(report.additionalData ?? {});
+                      updatedAdditionalData[step.key] = value;
+                      final updatedReport = Report(
+                        id: report.id,
+                        description: report.description,
+                        type: report.type,
+                        group: report.group,
+                        date: report.date,
+                        additionalData: updatedAdditionalData,
+                      );
+                      await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                    },
+                  );
+                },
+              )).toList(),
             ],
           ),
         ),
@@ -431,7 +462,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       ),
                     );
                   },
-                ),
+      ),
     );
   }
 } 
