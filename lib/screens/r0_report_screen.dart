@@ -43,7 +43,9 @@ class R0Report extends StatefulWidget {
   final DateTime selectedDate;
   final String? previousDayThirdShiftEnd;
 
-  R0Report({required this.selectedDate, this.previousDayThirdShiftEnd});
+  R0Report({super.key, required this.selectedDate, this.previousDayThirdShiftEnd}) {
+    // TODO: implement R0Report
+  }
 
   @override
   _R0ReportState createState() => _R0ReportState();
@@ -83,12 +85,12 @@ class _R0ReportState extends State<R0Report> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextFormField(
-          decoration: InputDecoration(labelText: "Entrée"),
+          decoration: const InputDecoration(labelText: "Entrée"),
           initialValue: formData.entree,
           onChanged: (v) => _onTextChanged(v, (v) => formData.entree = v),
         ),
         TextFormField(
-          decoration: InputDecoration(labelText: "Secteur"),
+          decoration: const InputDecoration(labelText: "Secteur"),
           initialValue: formData.secteur,
           onChanged: (v) => _onTextChanged(v, (v) => formData.secteur = v),
         ),
@@ -101,17 +103,17 @@ class _R0ReportState extends State<R0Report> {
   Widget build(BuildContext context) {
     String formattedDate = "${widget.selectedDate.day}/${widget.selectedDate.month}/${widget.selectedDate.year}";
     return Scaffold(
-      appBar: AppBar(title: Text("Rapport Journalier Détaillé (R0)")),
+      appBar: AppBar(title: const Text("Rapport Journalier Détaillé (R0)")),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
-              Text(formattedDate, style: TextStyle(fontSize: 16)),
+              Text(formattedDate, style: const TextStyle(fontSize: 16)),
               _buildEnteteSection(),
               // Add other sections: indexCompteurs, shifts, ventilation, etc.
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () {
                   // Validate and submit
@@ -119,7 +121,7 @@ class _R0ReportState extends State<R0Report> {
                     // Submit logic here
                   }
                 },
-                child: Text("Soumettre Rapport"),
+                child: const Text("Soumettre Rapport"),
               ),
             ],
           ),

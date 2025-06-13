@@ -24,9 +24,7 @@ class Report {
       'date': DateFormat('yyyy-MM-dd HH:mm:ss').format(date),
       'group_name': group,
       'type': type,
-      'additional_data': additionalData != null
-          ? additionalData.toString()
-          : null,
+      'additional_data': additionalData?.toString(),
     };
   }
 

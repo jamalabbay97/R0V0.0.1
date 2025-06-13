@@ -80,7 +80,7 @@ class DailyReport extends StatefulWidget {
 
 class DailyReportState extends State<DailyReport> {
   static const totalPeriodMinutes = 24 * 60; // Total minutes in a day
-  final uuid = Uuid();
+  static const uuid = Uuid();
   int _currentStep = 0;
   DateTime selectedDate = DateTime.now();
 
@@ -90,8 +90,8 @@ class DailyReportState extends State<DailyReport> {
   String rapportNo = '';
   String machineEngins = '';
 
-  List<ModuleStop> module1Stops = [ModuleStop(id: Uuid().v4())];
-  List<ModuleStop> module2Stops = [ModuleStop(id: Uuid().v4())];
+  List<ModuleStop> module1Stops = [ModuleStop(id: const Uuid().v4())];
+  List<ModuleStop> module2Stops = [ModuleStop(id: const Uuid().v4())];
 
   int module1TotalDowntime = 0;
   int module2TotalDowntime = 0;
@@ -206,7 +206,7 @@ class DailyReportState extends State<DailyReport> {
                 String currentLine = '';
                 
                 for (var word in words) {
-                  if ((currentLine + ' ' + word).trim().length <= 20) {
+                  if (('$currentLine $word').trim().length <= 20) {
                     currentLine += (currentLine.isEmpty ? '' : ' ') + word;
                   } else {
                     if (currentLine.isNotEmpty) {
@@ -687,7 +687,7 @@ class DailyReportState extends State<DailyReport> {
                 String currentLine = '';
                 
                 for (var word in words) {
-                  if ((currentLine + ' ' + word).trim().length <= 20) {
+                  if (('$currentLine $word').trim().length <= 20) {
                     currentLine += (currentLine.isEmpty ? '' : ' ') + word;
                   } else {
                     if (currentLine.isNotEmpty) {

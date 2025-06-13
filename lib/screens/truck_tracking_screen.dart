@@ -88,7 +88,7 @@ class CamionReportState extends State<CamionReport> {
 
   List<Map<String, dynamic>> truckData = [
     {
-      "id": Uuid().v4(),
+      "id": const Uuid().v4(),
       "truckNumber": "",
       "driver1": "",
       "driver2": "",
@@ -257,25 +257,25 @@ class CamionReportState extends State<CamionReport> {
   }
 
   void addTrip(String truckId) {
-    print('Adding trip for truck: $truckId'); // Debug print
+    // Debug print
     setState(() {
       try {
         final truck = truckData.firstWhere((t) => t['id'] == truckId);
-        print('Found truck: ${truck['truckNumber']}'); // Debug print
+        // Debug print
         
         final tripIndex = truck['counts'].length;
-        print('Current trip count: $tripIndex'); // Debug print
+        // Debug print
         
         // Add new trip
         truck['counts'].add({
           "time": "",
           "location": "",
         });
-        print('Added new trip, new count: ${truck['counts'].length}'); // Debug print
+        // Debug print
         
         // Initialize controllers for the new trip
         if (_truckControllers[truckId] == null) {
-          print('Error: No controllers found for truck $truckId'); // Debug print
+          // Debug print
           return;
         }
         
@@ -283,13 +283,13 @@ class CamionReportState extends State<CamionReport> {
             TextEditingController();
         _truckControllers[truckId]!['count${tripIndex}_location'] = 
             TextEditingController();
-        print('Initialized controllers for new trip'); // Debug print
+        // Debug print
         
         // Update total
         truck["total"] = calculateTotal(truck);
-        print('Updated total: ${truck["total"]}'); // Debug print
+        // Debug print
       } catch (e) {
-        print('Error in addTrip: $e'); // Debug print
+        // Debug print
       }
     });
   }
@@ -580,7 +580,7 @@ class CamionReportState extends State<CamionReport> {
                                                                         ),
                                                                       ),
                                                                     );
-                                                                  }).toList(),
+                                                                  }),
                                                               ],
                                                             ),
                                                             trailing: IconButton(
@@ -704,10 +704,10 @@ class CamionReportState extends State<CamionReport> {
         value: _truckControllers[truck['id']]![field]!.text.isEmpty 
             ? null 
             : _truckControllers[truck['id']]![field]!.text,
-        decoration: InputDecoration(
+        decoration: const InputDecoration(
           isDense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          border: const OutlineInputBorder(),
+          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          border: OutlineInputBorder(),
           errorMaxLines: 2,
         ),
         items: predefinedTrucks.map((String truckNumber) {
@@ -779,10 +779,10 @@ class CamionReportState extends State<CamionReport> {
     return TextFormField(
       controller: _truckControllers[truck['id']]![field],
       onChanged: (val) => updateTruckData(truck['id'], field, val),
-      decoration: InputDecoration(
+      decoration: const InputDecoration(
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        border: const OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        border: OutlineInputBorder(),
         errorMaxLines: 2,
       ),
       maxLines: null,
@@ -836,10 +836,10 @@ class CamionReportState extends State<CamionReport> {
     return TextFormField(
       controller: _truckControllers[truck['id']]!['count${i}_$field'],
       onChanged: (val) => updateTruckData(truck['id'], "counts", val, i, field),
-      decoration: InputDecoration(
+      decoration: const InputDecoration(
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        border: const OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        border: OutlineInputBorder(),
         hintText: 'Lieu',
       ),
       maxLines: null,
@@ -849,7 +849,7 @@ class CamionReportState extends State<CamionReport> {
   }
 
   Future<void> _showTruckDialog(BuildContext context, [Map<String, dynamic>? existingTruck]) async {
-    final truckId = existingTruck?['id'] ?? Uuid().v4();
+    final truckId = existingTruck?['id'] ?? const Uuid().v4();
     if (existingTruck == null) {
       truckData.add({
         "id": truckId,
@@ -1256,7 +1256,7 @@ class CamionReportState extends State<CamionReport> {
                                     ],
                                     const Divider(height: 16),
                                   ],
-                                )).toList(),
+                                )),
                               ],
                             ),
                           ),

@@ -1,5 +1,10 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:r0_app/models/report.dart';
+import 'package:r0_app/services/database_helper.dart';
+import 'package:r0_app/l10n/app_localizations.dart';
+import 'package:intl/intl.dart';
 
 enum Poste { premier, deuxieme, troisieme }
 enum Park { park1, park2, park3 }
@@ -61,8 +66,7 @@ class Counter {
 }
 
 class LiaisonCounter extends Counter {
-  LiaisonCounter({required String id, Poste? poste, String start = '', String end = '', String? error})
-    : super(id: id, poste: poste, start: start, end: end, error: error);
+  LiaisonCounter({required super.id, super.poste, super.start, super.end, super.error});
 }
 
 class StockEntry {
@@ -96,7 +100,9 @@ int parseDurationToMinutes(String duration) {
     minutes = int.parse(match3.group(1)!);
     return minutes;
   }
-  print('Could not parse duration: "$duration"');
+  if (kDebugMode) {
+    print('Could not parse duration: "$duration"');
+  }
   return 0;
 }
 
@@ -120,13 +126,14 @@ const MAX_HOURS_PER_POSTE = 8;
 class ActivityReportScreen extends StatefulWidget {
   final DateTime selectedDate;
   final String? previousDayThirdShiftEnd;
-  const ActivityReportScreen({Key? key, required this.selectedDate, this.previousDayThirdShiftEnd}) : super(key: key);
+  const ActivityReportScreen({super.key, required this.selectedDate, this.previousDayThirdShiftEnd});
 
   @override
   State<ActivityReportScreen> createState() => _ActivityReportScreenState();
 }
 
 class _ActivityReportScreenState extends State<ActivityReportScreen> {
+  final DatabaseHelper _databaseHelper = DatabaseHelper();
   List<Stop> stops = [];
   List<Counter> vibratorCounters = [];
   List<LiaisonCounter> liaisonCounters = [];
@@ -195,20 +202,75 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     return (totalHours * 60).round();
   }
 
+  Future<void> _saveReport() async {
+    try {
+      final report = Report(
+        description: 'Activity Report - ${DateFormat('yyyy-MM-dd').format(widget.selectedDate)}',
+        date: widget.selectedDate,
+        group: 'Activity',
+        type: 'activity_report',
+        additionalData: {
+          'stops': stops.map((stop) => {
+            'id': stop.id,
+            'duration': stop.duration,
+            'nature': stop.nature,
+          }).toList(),
+          'vibratorCounters': vibratorCounters.map((counter) => {
+            'id': counter.id,
+            'poste': counter.poste?.index,
+            'start': counter.start,
+            'end': counter.end,
+          }).toList(),
+          'liaisonCounters': liaisonCounters.map((counter) => {
+            'id': counter.id,
+            'poste': counter.poste?.index,
+            'start': counter.start,
+            'end': counter.end,
+          }).toList(),
+          'stockEntries': stockEntries.map((entry) => {
+            'id': entry.id,
+            'poste': entry.poste?.index,
+            'park': entry.park?.index,
+            'type': entry.type?.index,
+            'quantity': entry.quantity,
+            'startTime': entry.startTime,
+          }).toList(),
+          'totalDowntime': totalDowntime,
+          'operatingTime': operatingTime,
+          'totalVibratorMinutes': totalVibratorMinutes,
+          'totalLiaisonMinutes': totalLiaisonMinutes,
+        },
+      );
+
+      await _databaseHelper.insertReport(report);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.reportSaved)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.errorSavingReport)),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     String formattedDate = "${widget.selectedDate.day.toString().padLeft(2, '0')}/"
       "${widget.selectedDate.month.toString().padLeft(2, '0')}/${widget.selectedDate.year}";
 
     return Scaffold(
-      appBar: AppBar(title: Text("RAPPORT D'ACTIVITÉ TNR")),
+      appBar: AppBar(title: const Text("RAPPORT D'ACTIVITÉ TNR")),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text("Date: $formattedDate", style: TextStyle(color: Colors.grey[600])),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Stepper(
               currentStep: _currentStep,
               onStepContinue: () {
@@ -233,10 +295,10 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                       if (_currentStep > 0)
                         OutlinedButton(
                           onPressed: details.onStepCancel,
-                          child: Text('Précédent'),
+                          child: const Text('Précédent'),
                         ),
                       if (_currentStep > 0)
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                       ElevatedButton(
                         onPressed: details.onStepContinue,
                         child: Text(_currentStep == 4 ? 'Terminer' : 'Suivant'),
@@ -247,56 +309,114 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
               },
               steps: [
                 Step(
-                  title: Text('Arrêts'),
+                  title: const Text('Arrêts'),
                   content: buildStopsSection(),
                   isActive: _currentStep >= 0,
                   state: _currentStep > 0 ? StepState.complete : StepState.indexed,
                 ),
                 Step(
-                  title: Text('Compteurs Vibreurs'),
+                  title: const Text('Compteurs Vibreurs'),
                   content: buildCountersSection(),
                   isActive: _currentStep >= 1,
                   state: _currentStep > 1 ? StepState.complete : StepState.indexed,
                 ),
                 Step(
-                  title: Text('Compteurs Liaison'),
+                  title: const Text('Compteurs Liaison'),
                   content: buildLiaisonCountersSection(),
                   isActive: _currentStep >= 2,
                   state: _currentStep > 2 ? StepState.complete : StepState.indexed,
                 ),
                 Step(
-                  title: Text('Stock'),
+                  title: const Text('Stock'),
                   content: buildStockSection(),
                   isActive: _currentStep >= 3,
                   state: _currentStep > 3 ? StepState.complete : StepState.indexed,
                 ),
                 Step(
-                  title: Text('Vérification'),
-                  content: buildVerificationSection(),
+                  title: const Text('Voir tous les détails'),
+                  content: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Résumé des données',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue[900],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              _buildSummaryRow('Temps d\'arrêt total:', formatMinutesToHoursMinutes(totalDowntime)),
+                              _buildSummaryRow('Temps de fonctionnement:', formatMinutesToHoursMinutes(operatingTime)),
+                              _buildSummaryRow('Temps vibreurs:', formatMinutesToHoursMinutes(totalVibratorMinutes)),
+                              _buildSummaryRow('Temps liaison:', formatMinutesToHoursMinutes(totalLiaisonMinutes)),
+                              const SizedBox(height: 8),
+                              _buildSummaryRow('Nombre d\'arrêts:', stops.length.toString()),
+                              _buildSummaryRow('Nombre de compteurs vibreurs:', vibratorCounters.length.toString()),
+                              _buildSummaryRow('Nombre de compteurs liaison:', liaisonCounters.length.toString()),
+                              _buildSummaryRow('Nombre d\'entrées stock:', stockEntries.length.toString()),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (hasVibratorErrors || hasLiaisonErrors || hasStockErrors) ...[
+                        const SizedBox(height: 16),
+                        Card(
+                          color: Colors.red[50],
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Erreurs détectées',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red[900],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                if (hasVibratorErrors)
+                                  Text('• Erreurs dans les compteurs vibreurs', style: TextStyle(color: Colors.red[900])),
+                                if (hasLiaisonErrors)
+                                  Text('• Erreurs dans les compteurs liaison', style: TextStyle(color: Colors.red[900])),
+                                if (hasStockErrors)
+                                  Text('• Erreurs dans les entrées stock', style: TextStyle(color: Colors.red[900])),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                   isActive: _currentStep >= 4,
                   state: _currentStep > 4 ? StepState.complete : StepState.indexed,
                 ),
               ],
             ),
             if (_currentStep == 4) ...[
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   OutlinedButton.icon(
                     onPressed: () {},
-                    icon: Icon(Icons.phone),
-                    label: Text("Enregistrer Brouillon"),
+                    icon: const Icon(Icons.phone),
+                    label: const Text("Enregistrer Brouillon"),
                   ),
-                  SizedBox(height: 14),
+                  const SizedBox(height: 14),
                   ElevatedButton(
                     onPressed: (hasVibratorErrors || hasLiaisonErrors || hasStockErrors)
                       ? null
-                      : () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("Rapport soumis avec succès.")));
-                        },
-                    child: Text("Soumettre Rapport"),
+                      : _saveReport,
+                    child: const Text("Soumettre Rapport"),
                   ),
                 ],
               ),
@@ -507,87 +627,81 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     );
   }
 
-  Widget buildVerificationSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'ÉTAPE 5: VÉRIFICATION',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.blue[900],
-          ),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Résumé des données',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue[900],
+  void _showVerificationDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Vérification des données'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Résumé des données',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue[900],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildSummaryRow('Temps d\'arrêt total:', formatMinutesToHoursMinutes(totalDowntime)),
+                      _buildSummaryRow('Temps de fonctionnement:', formatMinutesToHoursMinutes(operatingTime)),
+                      _buildSummaryRow('Temps vibreurs:', formatMinutesToHoursMinutes(totalVibratorMinutes)),
+                      _buildSummaryRow('Temps liaison:', formatMinutesToHoursMinutes(totalLiaisonMinutes)),
+                      const SizedBox(height: 8),
+                      _buildSummaryRow('Nombre d\'arrêts:', stops.length.toString()),
+                      _buildSummaryRow('Nombre de compteurs vibreurs:', vibratorCounters.length.toString()),
+                      _buildSummaryRow('Nombre de compteurs liaison:', liaisonCounters.length.toString()),
+                      _buildSummaryRow('Nombre d\'entrées stock:', stockEntries.length.toString()),
+                    ],
                   ),
                 ),
+              ),
+              if (hasVibratorErrors || hasLiaisonErrors || hasStockErrors) ...[
                 const SizedBox(height: 16),
-                _buildSummaryRow('Temps d\'arrêt total:', formatMinutesToHoursMinutes(totalDowntime)),
-                _buildSummaryRow('Temps de fonctionnement:', formatMinutesToHoursMinutes(operatingTime)),
-                _buildSummaryRow('Temps vibreurs:', formatMinutesToHoursMinutes(totalVibratorMinutes)),
-                _buildSummaryRow('Temps liaison:', formatMinutesToHoursMinutes(totalLiaisonMinutes)),
-                const SizedBox(height: 8),
-                _buildSummaryRow('Nombre d\'arrêts:', stops.length.toString()),
-                _buildSummaryRow('Nombre de compteurs vibreurs:', vibratorCounters.length.toString()),
-                _buildSummaryRow('Nombre de compteurs liaison:', liaisonCounters.length.toString()),
-                _buildSummaryRow('Nombre d\'entrées stock:', stockEntries.length.toString()),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        if (hasVibratorErrors || hasLiaisonErrors || hasStockErrors)
-          Card(
-            color: Colors.red[50],
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Erreurs détectées',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red[900],
+                Card(
+                  color: Colors.red[50],
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Erreurs détectées',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red[900],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (hasVibratorErrors)
+                          Text('• Erreurs dans les compteurs vibreurs', style: TextStyle(color: Colors.red[900])),
+                        if (hasLiaisonErrors)
+                          Text('• Erreurs dans les compteurs liaison', style: TextStyle(color: Colors.red[900])),
+                        if (hasStockErrors)
+                          Text('• Erreurs dans les entrées stock', style: TextStyle(color: Colors.red[900])),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  if (hasVibratorErrors)
-                    Text('• Erreurs dans les compteurs vibreurs', style: TextStyle(color: Colors.red[900])),
-                  if (hasLiaisonErrors)
-                    Text('• Erreurs dans les compteurs liaison', style: TextStyle(color: Colors.red[900])),
-                  if (hasStockErrors)
-                    Text('• Erreurs dans les entrées stock', style: TextStyle(color: Colors.red[900])),
-                ],
-              ),
-            ),
+                ),
+              ],
+            ],
           ),
-      ],
-    );
-  }
-
-  Widget _buildSummaryRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fermer'),
+          ),
         ],
       ),
     );
@@ -623,7 +737,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                 String currentLine = '';
                 
                 for (var word in words) {
-                  if ((currentLine + ' ' + word).trim().length <= 20) {
+                  if (('$currentLine $word').trim().length <= 20) {
                     currentLine += (currentLine.isEmpty ? '' : ' ') + word;
                   } else {
                     if (currentLine.isNotEmpty) {
@@ -1559,6 +1673,19 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
             },
             child: const Text('Enregistrer'),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),
     );
