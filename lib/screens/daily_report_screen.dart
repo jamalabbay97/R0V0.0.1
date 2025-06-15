@@ -21,59 +21,29 @@ class DailyReportScreen extends StatefulWidget {
 }
 
 class _DailyReportScreenState extends State<DailyReportScreen> {
-  DateTime selectedDate = DateTime.now();
   final _formKey = GlobalKey<FormState>();
-
-  void _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null && picked != selectedDate) {
-      setState(() {
-        selectedDate = picked;
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Daily Report TSUD'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_today),
-            tooltip: AppLocalizations.of(context)!.date,
-            onPressed: _pickDate,
-          ),
-        ],
       ),
       body: Form(
         key: _formKey,
         child: DailyReport(
-          selectedDate: selectedDate,
           formKey: _formKey,
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _pickDate,
-        icon: const Icon(Icons.calendar_month),
-        label: Text(AppLocalizations.of(context)!.date),
       ),
     );
   }
 }
 
 class DailyReport extends StatefulWidget {
-  final DateTime selectedDate;
   final GlobalKey<FormState> formKey;
 
   const DailyReport({
     super.key, 
-    required this.selectedDate,
     required this.formKey,
   });
 
@@ -86,7 +56,7 @@ class DailyReportState extends State<DailyReport> {
   static const uuid = Uuid();
   final _databaseHelper = DatabaseHelper();
   int _currentStep = 0;
-  DateTime selectedDate = DateTime.now();
+  DateTime _selectedDate = DateTime.now();
 
   // Form fields
   String entree = '';
@@ -103,20 +73,6 @@ class DailyReportState extends State<DailyReport> {
   int module2OperatingTime = totalPeriodMinutes;
 
   final Map<String, TextEditingController> _controllers = {};
-
-  void _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null && picked != selectedDate) {
-      setState(() {
-        selectedDate = picked;
-      });
-    }
-  }
 
   @override
   void initState() {
@@ -310,8 +266,8 @@ class DailyReportState extends State<DailyReport> {
   Future<void> _saveReport() async {
     try {
       final report = Report(
-        description: 'Daily Report - ${DateFormat('yyyy-MM-dd').format(widget.selectedDate)}',
-        date: widget.selectedDate,
+        description: 'Daily Report - ${DateFormat('yyyy-MM-dd').format(DateTime.now())}',
+        date: DateTime.now(),
         group: 'Daily',
         type: 'daily_report',
         additionalData: {
@@ -338,14 +294,34 @@ class DailyReportState extends State<DailyReport> {
 
       await _databaseHelper.insertReport(report);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.reportSaved)),
+        final l10n = AppLocalizations.of(context)!;
+        // Show confirmation dialog
+        await showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text(l10n.reportConfirmationTitle),
+              content: Text(l10n.reportConfirmationMessage),
+              actions: [
+                TextButton(
+                  child: Text(l10n.done),
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close dialog
+                    Navigator.of(context).pop(); // Return to home
+                  },
+                ),
+              ],
+            );
+          },
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.errorSavingReport)),
+          SnackBar(
+            content: Text('Erreur: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -354,14 +330,21 @@ class DailyReportState extends State<DailyReport> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            AppLocalizations.of(context)!.dailyReport,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 16),
+
           Stepper(
             currentStep: _currentStep,
             onStepContinue: () {
-              if (_currentStep < 4) {
+              if (_currentStep < 3) {
                 setState(() {
                   _currentStep += 1;
                 });
@@ -375,6 +358,9 @@ class DailyReportState extends State<DailyReport> {
               }
             },
             controlsBuilder: (context, details) {
+              if (_currentStep == 2) {
+                return const SizedBox.shrink();
+              }
               return Padding(
                 padding: const EdgeInsets.only(top: 16.0),
                 child: Row(
@@ -388,7 +374,7 @@ class DailyReportState extends State<DailyReport> {
                       const SizedBox(width: 8),
                     ElevatedButton(
                       onPressed: details.onStepContinue,
-                      child: Text(_currentStep == 4 ? 'Terminer' : 'Suivant'),
+                      child: Text(_currentStep == 3 ? 'Terminer' : 'Suivant'),
                     ),
                   ],
                 ),
@@ -396,139 +382,176 @@ class DailyReportState extends State<DailyReport> {
             },
             steps: [
               Step(
-                title: const Text('Date du Rapport'),
-                content: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Sélectionnez la date du rapport',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 16),
-                    Card(
-                      child: ListTile(
-                        leading: const Icon(Icons.calendar_today),
-                        title: Text(
-                          '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
-                          style: const TextStyle(fontSize: 18),
-                        ),
-                        trailing: const Icon(Icons.arrow_forward_ios),
-                        onTap: _pickDate,
+                title: const Text('Date du rapport'),
+                content: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Sélectionnez la date du rapport',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      Card(
+                        child: InkWell(
+                          onTap: () async {
+                            final DateTime? picked = await showDatePicker(
+                              context: context,
+                              initialDate: _selectedDate,
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                              locale: const Locale('fr', 'FR'),
+                            );
+                            if (picked != null && picked != _selectedDate) {
+                              setState(() {
+                                _selectedDate = picked;
+                              });
+                            }
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.calendar_today),
+                                const SizedBox(width: 16),
+                                Text(
+                                  '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                                  style: const TextStyle(fontSize: 18),
+                                ),
+                                const Spacer(),
+                                const Icon(Icons.arrow_forward_ios),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 isActive: _currentStep >= 0,
               ),
               Step(
                 title: const Text('Module 1 - Arrêts'),
-                content: buildModuleStops(1, module1Stops),
+                content: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: buildModuleStops(1, module1Stops),
+                ),
                 isActive: _currentStep >= 1,
               ),
               Step(
                 title: const Text('Module 2 - Arrêts'),
-                content: buildModuleStops(2, module2Stops),
+                content: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: buildModuleStops(2, module2Stops),
+                ),
                 isActive: _currentStep >= 2,
               ),
               Step(
                 title: const Text('Totaux Fonctionnement'),
-                content: Column(
-                  children: [
-                    Card(
-                      color: Colors.grey.shade100,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Temps de Fonctionnement (24h - Arrêts)',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Colors.blue,
+                content: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: Column(
+                    children: [
+                      Card(
+                        color: Colors.grey.shade100,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Temps de Fonctionnement (24h - Arrêts)',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.blue,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Module 1',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Module 1',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        formatMinutesToHoursMinutes(module1OperatingTime),
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          color: Colors.green,
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          formatMinutesToHoursMinutes(module1OperatingTime),
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            color: Colors.green,
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Arrêts: ${formatMinutesToHoursMinutes(module1TotalDowntime)}',
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.red,
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Arrêts: ${formatMinutesToHoursMinutes(module1TotalDowntime)}',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.red,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Module 2',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Module 2',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        formatMinutesToHoursMinutes(module2OperatingTime),
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          color: Colors.green,
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          formatMinutesToHoursMinutes(module2OperatingTime),
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            color: Colors.green,
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Arrêts: ${formatMinutesToHoursMinutes(module2TotalDowntime)}',
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.red,
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Arrêts: ${formatMinutesToHoursMinutes(module2TotalDowntime)}',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.red,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 isActive: _currentStep >= 3,
               ),
               Step(
                 title: const Text('ÉTAPE 5: VÉRIFICATION'),
-                content: buildFinalStep(),
+                content: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: buildFinalStep(),
+                ),
                 isActive: _currentStep >= 4,
               ),
             ],
           ),
+          const SizedBox(height: 16),
         ],
       ),
     );

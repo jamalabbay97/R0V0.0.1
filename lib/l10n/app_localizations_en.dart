@@ -169,4 +169,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get location => 'Location';
+
+  @override
+  String get reportConfirmationTitle => 'Report Saved';
+
+  @override
+  String get reportConfirmationMessage =>
+      'When you click done, the report will be saved on the reports page. If you want to send this report to the company, go to the reports page and send it from there.';
+
+  @override
+  String get done => 'Done';
 }

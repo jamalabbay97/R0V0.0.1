@@ -52,5 +52,8 @@
   "driver2": "Chauffeur 2",
   "lieu": "Lieu",
   "total": "Total",
-  "location": "Emplacement"
+  "location": "Emplacement",
+  "reportConfirmationTitle": "Rapport Enregistré",
+  "reportConfirmationMessage": "Lorsque vous cliquez sur terminé, le rapport sera enregistré sur la page des rapports. Si vous souhaitez envoyer ce rapport à l'entreprise, allez sur la page des rapports et envoyez-le à partir de là.",
+  "done": "Terminé"
 } 

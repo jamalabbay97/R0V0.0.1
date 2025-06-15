@@ -169,4 +169,14 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get location => 'Emplacement';
+
+  @override
+  String get reportConfirmationTitle => 'Rapport Enregistré';
+
+  @override
+  String get reportConfirmationMessage =>
+      'Lorsque vous cliquez sur terminé, le rapport sera enregistré sur la page des rapports. Si vous souhaitez envoyer ce rapport à l\'entreprise, allez sur la page des rapports et envoyez-le à partir de là.';
+
+  @override
+  String get done => 'Terminé';
 }

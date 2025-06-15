@@ -70,7 +70,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     // Get the steps from additionalData
-    final steps = report.additionalData?.entries.toList() ?? [];
+    final steps = report.additionalData?.entries ?? [];
     
     // First show the list of steps
     await showDialog(
@@ -199,7 +199,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     },
                   );
                 },
-              )).toList(),
+              )),
             ],
           ),
         ),
@@ -368,101 +368,106 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     ],
                   ),
                 )
-              : ListView.builder(
-                  itemCount: _reports.length,
-                  itemBuilder: (context, index) {
-                    final report = _reports[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: ListTile(
-                        title: Text(report.description),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Type: ${report.type}'),
-                            Text('Date: ${DateFormat('yyyy-MM-dd HH:mm').format(report.date)}'),
-                            Text('Group: ${report.group}'),
-                          ],
-                        ),
-                        trailing: PopupMenuButton<String>(
-                          icon: const Icon(Icons.more_horiz, size: 20),
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+              : SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _reports.length,
+                    itemBuilder: (context, index) {
+                      final report = _reports[index];
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: ListTile(
+                          title: Text(report.description),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Type: ${report.type}'),
+                              Text('Date: ${DateFormat('yyyy-MM-dd HH:mm').format(report.date)}'),
+                              Text('Group: ${report.group}'),
+                            ],
                           ),
-                          position: PopupMenuPosition.under,
-                          itemBuilder: (BuildContext context) => [
-                            PopupMenuItem<String>(
-                              value: 'edit',
-                              height: 36,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Modifier',
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.primary,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                          trailing: PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_horiz, size: 20),
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            PopupMenuItem<String>(
-                              value: 'delete',
-                              height: 36,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Supprimer',
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.error,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                          onSelected: (String value) {
-                            if (value == 'delete') {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: Text(l10n.delete),
-                                  content: const Text('Are you sure you want to delete this report?'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: Text(l10n.cancel),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                        _deleteReport(report);
-                                      },
-                                      child: Text(l10n.delete),
+                            position: PopupMenuPosition.under,
+                            itemBuilder: (BuildContext context) => [
+                              PopupMenuItem<String>(
+                                value: 'edit',
+                                height: 36,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Modifier',
+                                      style: TextStyle(
+                                        color: Theme.of(context).colorScheme.primary,
+                                        fontSize: 14,
+                                      ),
                                     ),
                                   ],
                                 ),
-                              );
-                            } else if (value == 'edit') {
-                              _editReport(report);
-                            }
+                              ),
+                              PopupMenuItem<String>(
+                                value: 'delete',
+                                height: 36,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Supprimer',
+                                      style: TextStyle(
+                                        color: Theme.of(context).colorScheme.error,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            onSelected: (String value) {
+                              if (value == 'delete') {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: Text(l10n.delete),
+                                    content: const Text('Are you sure you want to delete this report?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: Text(l10n.cancel),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.pop(context);
+                                          _deleteReport(report);
+                                        },
+                                        child: Text(l10n.delete),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              } else if (value == 'edit') {
+                                _editReport(report);
+                              }
+                            },
+                          ),
+                          onTap: () {
+                            // TODO: Implement report details view
                           },
                         ),
-                        onTap: () {
-                          // TODO: Implement report details view
-                        },
-                      ),
-                    );
-                  },
-      ),
+                      );
+                    },
+                  ),
+                ),
     );
   }
 } 

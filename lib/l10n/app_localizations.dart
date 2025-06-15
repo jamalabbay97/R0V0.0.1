@@ -421,6 +421,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Location'**
   String get location;
+
+  /// No description provided for @reportConfirmationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Report Saved'**
+  String get reportConfirmationTitle;
+
+  /// No description provided for @reportConfirmationMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'When you click done, the report will be saved on the reports page. If you want to send this report to the company, go to the reports page and send it from there.'**
+  String get reportConfirmationMessage;
+
+  /// No description provided for @done.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get done;
 }
 
 class _AppLocalizationsDelegate

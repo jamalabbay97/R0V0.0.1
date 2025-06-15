@@ -5,12 +5,10 @@ import 'package:r0_app/services/database_helper.dart';
 import 'package:r0_app/models/report.dart';
 
 class TruckTrackingScreen extends StatefulWidget {
-  final DateTime selectedDate;
   final GlobalKey<FormState> formKey;
 
   const TruckTrackingScreen({
     super.key,
-    required this.selectedDate,
     required this.formKey,
   });
 
@@ -19,64 +17,27 @@ class TruckTrackingScreen extends StatefulWidget {
 }
 
 class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
-  late DateTime _selectedDate;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedDate = widget.selectedDate;
-  }
-
-  void _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.truckTracking),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_today),
-            tooltip: AppLocalizations.of(context)!.date,
-            onPressed: _pickDate,
-          ),
-        ],
       ),
       body: Form(
         key: widget.formKey,
         child: CamionReport(
-          selectedDate: _selectedDate,
           formKey: widget.formKey,
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _pickDate,
-        icon: const Icon(Icons.calendar_month),
-        label: Text(AppLocalizations.of(context)!.date),
       ),
     );
   }
 }
 
 class CamionReport extends StatefulWidget {
-  final DateTime selectedDate;
   final GlobalKey<FormState> formKey;
 
   const CamionReport({
     super.key, 
-    required this.selectedDate,
     required this.formKey,
   });
 
@@ -85,20 +46,8 @@ class CamionReport extends StatefulWidget {
 }
 
 class CamionReportState extends State<CamionReport> {
-  final Map<String, TextEditingController> _generalInfoControllers = {};
   final Map<String, Map<String, TextEditingController>> _truckControllers = {};
-
-  Map<String, dynamic> generalInfo = {
-    "direction": "",
-    "division": "",
-    "oibEe": "",
-    "mine": "",
-    "sortie": "",
-    "distance": "",
-    "qualite": "",
-    "machineEngins": "",
-    "DéfeuitageRepriseStérile": "",
-  };
+  DateTime _selectedDate = DateTime.now();
 
   List<Map<String, dynamic>> truckData = [
     {
@@ -127,8 +76,6 @@ class CamionReportState extends State<CamionReport> {
     'TEREX 32',
   ];
 
-  // Add new state variables
-  bool _isGeneralInfoComplete = false;
   int _currentStep = 0;
 
   @override
@@ -138,11 +85,6 @@ class CamionReportState extends State<CamionReport> {
   }
 
   void _initializeControllers() {
-    // Initialize general info controllers
-    for (var key in generalInfo.keys) {
-      _generalInfoControllers[key] = TextEditingController(text: generalInfo[key]);
-    }
-
     // Initialize truck controllers
     for (var truck in truckData) {
       _initializeTruckControllers(truck['id']);
@@ -171,9 +113,6 @@ class CamionReportState extends State<CamionReport> {
   @override
   void dispose() {
     // Dispose all controllers
-    for (var controller in _generalInfoControllers.values) {
-      controller.dispose();
-    }
     for (var truckControllers in _truckControllers.values) {
       for (var controller in truckControllers.values) {
         controller.dispose();
@@ -215,12 +154,6 @@ class CamionReportState extends State<CamionReport> {
     });
   }
 
-  void handleGeneralInfoChange(String field, String value) {
-    setState(() {
-      generalInfo[field] = value;
-    });
-  }
-
   String? validateRequired(String? value) {
     if (value == null || value.isEmpty) {
       return 'Ce champ est requis';
@@ -236,609 +169,31 @@ class CamionReportState extends State<CamionReport> {
     return null;
   }
 
-  Future<void> _selectTime(BuildContext context, Map<String, dynamic> truck, int index) async {
-    final TimeOfDay? picked = await showTimePicker(
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
       context: context,
-      initialTime: TimeOfDay.now(),
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
       builder: (BuildContext context, Widget? child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            alwaysUse24HourFormat: true,
-          ),
-          child: Theme(
-            data: Theme.of(context).copyWith(
-              timePickerTheme: TimePickerThemeData(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                hourMinuteTextStyle: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Theme.of(context).colorScheme.primary,
+              onPrimary: Colors.white,
+              surface: Theme.of(context).colorScheme.surface,
+              onSurface: Theme.of(context).colorScheme.onSurface,
             ),
-            child: child!,
           ),
+          child: child!,
         );
       },
     );
-
-    if (picked != null) {
-      final formattedTime = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-      _truckControllers[truck['id']]!['count${index}_time']!.text = formattedTime;
-      updateTruckData(truck['id'], "counts", formattedTime, index, "time");
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
     }
-  }
-
-  void addTrip(String truckId) {
-    // Debug print
-    setState(() {
-      try {
-        final truck = truckData.firstWhere((t) => t['id'] == truckId);
-        // Debug print
-        
-        final tripIndex = truck['counts'].length;
-        // Debug print
-        
-        // Add new trip
-        truck['counts'].add({
-          "time": "",
-          "location": "",
-        });
-        // Debug print
-        
-        // Initialize controllers for the new trip
-        if (_truckControllers[truckId] == null) {
-          // Debug print
-          return;
-        }
-        
-        _truckControllers[truckId]!['count${tripIndex}_time'] = 
-            TextEditingController();
-        _truckControllers[truckId]!['count${tripIndex}_location'] = 
-            TextEditingController();
-        // Debug print
-        
-        // Update total
-        truck["total"] = calculateTotal(truck);
-        // Debug print
-      } catch (e) {
-        // Debug print
-      }
-    });
-  }
-
-  void removeTrip(String truckId, int tripIndex) {
-    setState(() {
-      final truck = truckData.firstWhere((t) => t['id'] == truckId);
-      
-      // Dispose controllers for the trip
-      _truckControllers[truckId]!['count${tripIndex}_time']?.dispose();
-      _truckControllers[truckId]!['count${tripIndex}_location']?.dispose();
-      
-      // Remove the trip
-      truck['counts'].removeAt(tripIndex);
-      
-      // Reinitialize controllers for remaining trips
-      for (var i = tripIndex; i < truck['counts'].length; i++) {
-        _truckControllers[truckId]!['count${i}_time'] = 
-            TextEditingController(text: truck['counts'][i]['time']);
-        _truckControllers[truckId]!['count${i}_location'] = 
-            TextEditingController(text: truck['counts'][i]['location']);
-      }
-      
-      // Update total
-      truck["total"] = calculateTotal(truck);
-    });
-  }
-
-  Map<String, dynamic> calculateTotals() {
-    int totalTrips = 0;
-    Map<String, int> lieuCounts = {};
-    bool allLieusMatch = true;
-    String? firstLieu;
-
-    for (var truck in truckData) {
-      // Count total trips - explicitly convert to int
-      totalTrips += (truck['counts'] as List).length;
-      
-      // Count Lieu occurrences - safely handle the lieu value
-      final lieu = truck['lieu']?.toString() ?? '';
-      if (lieu.isNotEmpty) {
-        lieuCounts[lieu] = (lieuCounts[lieu] ?? 0) + 1;
-        
-        // Check if all Lieus match
-        if (firstLieu == null) {
-          firstLieu = lieu;
-        } else if (firstLieu != lieu) {
-          allLieusMatch = false;
-        }
-      }
-    }
-
-    return {
-      'totalTrips': totalTrips,
-      'lieuCounts': lieuCounts,
-      'allLieusMatch': allLieusMatch,
-      'firstLieu': firstLieu,
-    };
-  }
-
-  // Add method to show General Info dialog
-  Future<void> _showGeneralInfoDialog() async {
-    int localStep = 0;
-    final page1Fields = [
-      ["Direction", "direction", true],
-      ["Division", "division", true],
-      ["OIB/EE", "oibEe", false],
-      ["Mine", "mine", false],
-    ];
-    final page2Fields = [
-      ["Sortie", "sortie", false],
-      ["Distance", "distance", false],
-      ["Qualité", "qualite", false],
-      ["Machine ou Engins", "machineEngins", false],
-    ];
-    final page3Fields = [
-      ["Défeuitage, Reprise ou Stérile", "DéfeuitageRepriseStérile", false],
-      ["Pionteur", "poiteur", false],
-    ];
-
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            List<Widget> fields = [];
-            if (localStep == 0) {
-              for (var f in page1Fields) {
-                fields.add(_textField(f[0] as String, f[1] as String, isRequired: f[2] as bool));
-                fields.add(const SizedBox(height: 8));
-              }
-            } else if (localStep == 1) {
-              for (var f in page2Fields) {
-                fields.add(_textField(f[0] as String, f[1] as String, isRequired: f[2] as bool));
-                fields.add(const SizedBox(height: 8));
-              }
-            } else {
-              for (var f in page3Fields) {
-                fields.add(_textField(f[0] as String, f[1] as String, isRequired: f[2] as bool));
-                fields.add(const SizedBox(height: 8));
-              }
-            }
-        return AlertDialog(
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-                  children: fields,
-            ),
-          ),
-          actions: [
-                if (localStep > 0)
-            TextButton(
-              onPressed: () {
-                      setStateDialog(() {
-                        localStep -= 1;
-                      });
-              },
-                    child: const Text("Retour"),
-            ),
-                if (localStep < 2)
-            ElevatedButton(
-              onPressed: () {
-                      // Optionally add validation for each page here
-                      setStateDialog(() {
-                        localStep += 1;
-                      });
-                    },
-                    child: const Text("Suivant"),
-                  ),
-                if (localStep == 2)
-                  ElevatedButton(
-                    onPressed: () {
-                  setState(() {
-                    _isGeneralInfoComplete = true;
-                    _currentStep = 1;
-                  });
-                  Navigator.of(context).pop();
-              },
-                    child: const Text("Terminer"),
-            ),
-          ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    String formattedDate = "${widget.selectedDate.day.toString().padLeft(2, '0')}/${widget.selectedDate.month.toString().padLeft(2, '0')}/${widget.selectedDate.year}";
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            AppLocalizations.of(context)!.generalInformation,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          Text(formattedDate,
-            style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: 16),
-
-          // Step indicator
-          if (!_isGeneralInfoComplete)
-            ElevatedButton.icon(
-              onPressed: _showGeneralInfoDialog,
-              icon: const Icon(Icons.info_outline),
-              label: const Text("Commencer par les Informations Générales"),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
-              ),
-            )
-          else
-            Stepper(
-              currentStep: _currentStep,
-              onStepContinue: () {
-                setState(() {
-                  if (_currentStep < 2) {
-                    _currentStep += 1;
-                  }
-                });
-              },
-              onStepCancel: () {
-                setState(() {
-                  if (_currentStep > 0) {
-                    _currentStep -= 1;
-                  }
-                });
-              },
-              steps: [
-                Step(
-                  title: const Text('Informations Générales'),
-                  content: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _showGeneralInfoDialog,
-                        child: const Text("Modifier les Informations Générales"),
-                      ),
-                    ],
-                  ),
-                  isActive: _currentStep >= 0,
-                ),
-                Step(
-                  title: const Text('Camions'),
-                  content: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Column(
-                            children: [
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  _showTruckDialog(context);
-                                },
-                                icon: const Icon(Icons.add),
-                                label: const Text("Ajouter un camion"),
-                                style: ElevatedButton.styleFrom(
-                                  minimumSize: const Size(double.infinity, 36),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (BuildContext context) {
-                                      return Dialog(
-                                        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-                                        child: ConstrainedBox(
-                                          constraints: BoxConstraints(
-                                            maxHeight: MediaQuery.of(context).size.height * 0.8,
-                                          ),
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Padding(
-                                                padding: const EdgeInsets.all(16),
-                                                child: Row(
-                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                  children: [
-                                                    Text(
-                                                      "Liste des camions",
-                                                      style: Theme.of(context).textTheme.titleLarge,
-                                                    ),
-                                                    IconButton(
-                                                      icon: const Icon(Icons.close),
-                                                      onPressed: () => Navigator.of(context).pop(),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              const Divider(height: 1),
-                                              Flexible(
-                                                child: SingleChildScrollView(
-                                                  padding: const EdgeInsets.all(16),
-                                                  child: Column(
-                                                    children: truckData.map((truck) {
-                                                      return Card(
-                                                        margin: const EdgeInsets.only(bottom: 8),
-                                                        child: ListTile(
-                                                          title: Text("Camion ${truck['truckNumber']}"),
-                                                          subtitle: Column(
-                                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                                            children: [
-                                                              Text("Chauffeur: ${truck['driver1']}"),
-                                                              if (truck['trips'] != null && (truck['trips'] as List).isNotEmpty)
-                                                                ...(truck['trips'] as List).map((trip) {
-                                                                  return Padding(
-                                                                    padding: const EdgeInsets.only(top: 4),
-                                                                    child: Text(
-                                                                      "📍 ${trip['location']}",
-                                                                      style: const TextStyle(
-                                                                        fontSize: 12,
-                                                                        color: Colors.grey,
-                                                                      ),
-                                                                    ),
-                                                                  );
-                                                                }),
-                                                            ],
-                                                          ),
-                                                          trailing: IconButton(
-                                                            icon: const Icon(Icons.edit),
-                                                            onPressed: () {
-                                                              Navigator.of(context).pop();
-                                                              _showTruckDialog(context, truck);
-                                                            },
-                                                          ),
-                                                        ),
-                                                      );
-                                                    }).toList(),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
-                                icon: const Icon(Icons.list),
-                                label: const Text("Voir la liste des camions"),
-                                style: ElevatedButton.styleFrom(
-                                  minimumSize: const Size(double.infinity, 36),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  isActive: _currentStep >= 1,
-                ),
-                Step(
-                  title: const Text('Vérification'),
-                  content: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Vérifiez avant de soumettre:",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: () => _showVerificationDialog(context),
-                        icon: const Icon(Icons.visibility),
-                        label: const Text("Voir tous les détails"),
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(double.infinity, 48),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          ElevatedButton(
-                            onPressed: () => _saveReport(false),
-                            child: const Text("Soumettre"),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  isActive: _currentStep >= 2,
-                ),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _textField(String label, String field, 
-      {bool isRequired = false, bool isNumeric = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: TextFormField(
-        controller: _generalInfoControllers[field],
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-          errorMaxLines: 2,
-          counterText: '', // Hide character counter
-        ),
-        maxLines: null, // Allow unlimited lines
-        minLines: 1, // Start with at least one line
-        maxLength: null, // Remove max length restriction
-        keyboardType: isNumeric ? TextInputType.number : TextInputType.multiline,
-        validator: isRequired 
-            ? validateRequired 
-            : isNumeric 
-                ? validateNumeric 
-                : null,
-        onChanged: (value) => handleGeneralInfoChange(field, value),
-        style: const TextStyle(height: 1.5), // Add some line spacing
-      ),
-    );
-  }
-
-  Widget _truckCell(Map<String, dynamic> truck, String field, 
-      {bool isRequired = false, bool isNumeric = false}) {
-    if (field == 'truckNumber') {
-      return DropdownButtonFormField<String>(
-        value: _truckControllers[truck['id']]![field]!.text.isEmpty 
-            ? null 
-            : _truckControllers[truck['id']]![field]!.text,
-        decoration: const InputDecoration(
-          isDense: true,
-          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          border: OutlineInputBorder(),
-          errorMaxLines: 2,
-        ),
-        items: predefinedTrucks.map((String truckNumber) {
-          return DropdownMenuItem<String>(
-            value: truckNumber,
-            child: Text(truckNumber),
-          );
-        }).toList(),
-        onChanged: (String? newValue) {
-          if (newValue != null) {
-            _truckControllers[truck['id']]![field]!.text = newValue;
-            updateTruckData(truck['id'], field, newValue);
-          }
-        },
-        validator: isRequired ? validateRequired : null,
-      );
-    } else if (field == 'driver') {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextFormField(
-            controller: _truckControllers[truck['id']]!['driver1'],
-            onChanged: (val) => updateTruckData(truck['id'], 'driver1', val),
-            decoration: const InputDecoration(
-              isDense: true,
-              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              border: OutlineInputBorder(),
-              hintText: 'Conducteur 1',
-              errorMaxLines: 2,
-            ),
-            maxLines: null,
-            minLines: 1,
-            style: const TextStyle(height: 1.5),
-            validator: isRequired ? validateRequired : null,
-          ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _truckControllers[truck['id']]!['driver2'],
-            onChanged: (val) => updateTruckData(truck['id'], 'driver2', val),
-            decoration: const InputDecoration(
-              isDense: true,
-              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              border: OutlineInputBorder(),
-              hintText: 'Conducteur 2 (optionnel)',
-              errorMaxLines: 2,
-            ),
-            maxLines: null,
-            minLines: 1,
-            style: const TextStyle(height: 1.5),
-          ),
-        ],
-      );
-    } else if (field == 'lieu') {
-      return TextFormField(
-        controller: _truckControllers[truck['id']]![field],
-        onChanged: (val) => updateTruckData(truck['id'], field, val),
-        decoration: const InputDecoration(
-          isDense: true,
-          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          border: OutlineInputBorder(),
-          hintText: 'Lieu',
-        ),
-        maxLines: null,
-        minLines: 1,
-        style: const TextStyle(height: 1.5),
-      );
-    }
-
-    return TextFormField(
-      controller: _truckControllers[truck['id']]![field],
-      onChanged: (val) => updateTruckData(truck['id'], field, val),
-      decoration: const InputDecoration(
-        isDense: true,
-        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        border: OutlineInputBorder(),
-        errorMaxLines: 2,
-      ),
-      maxLines: null,
-      minLines: 1,
-      style: const TextStyle(height: 1.5),
-      keyboardType: isNumeric ? TextInputType.number : TextInputType.multiline,
-      validator: isRequired 
-          ? validateRequired 
-          : isNumeric 
-              ? validateNumeric 
-              : null,
-    );
-  }
-
-  Widget _truckCountCell(Map<String, dynamic> truck, int i, String field) {
-    final isTime = field == "time";
-    if (isTime) {
-      return InkWell(
-        onTap: () => _selectTime(context, truck, i),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _truckControllers[truck['id']]!['count${i}_$field'],
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                    border: InputBorder.none,
-                    hintText: 'Heure',
-                    hintStyle: TextStyle(color: Colors.grey[600]),
-                  ),
-                  validator: validateNumeric,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: const Icon(Icons.access_time, size: 20, color: Colors.blue),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return TextFormField(
-      controller: _truckControllers[truck['id']]!['count${i}_$field'],
-      onChanged: (val) => updateTruckData(truck['id'], "counts", val, i, field),
-      decoration: const InputDecoration(
-        isDense: true,
-        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        border: OutlineInputBorder(),
-        hintText: 'Lieu',
-      ),
-      maxLines: null,
-      minLines: 1,
-      style: const TextStyle(height: 1.5),
-    );
   }
 
   Future<void> _showTruckDialog(BuildContext context, [Map<String, dynamic>? existingTruck]) async {
@@ -1004,74 +359,6 @@ class CamionReportState extends State<CamionReport> {
                             ),
                           ],
                         ),
-                      ),
-                    ),
-                    const Divider(height: 1),
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: () {
-                              if (existingTruck == null) {
-                                deleteTruck(truckId);
-                              }
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text("Annuler"),
-                          ),
-                          if (existingTruck != null) ...[
-                            const SizedBox(width: 8),
-                            TextButton(
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    return AlertDialog(
-                                      title: const Text("Supprimer le camion"),
-                                      content: const Text("Êtes-vous sûr de vouloir supprimer ce camion ?"),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.of(context).pop(),
-                                          child: const Text("Annuler"),
-                                        ),
-                                        TextButton(
-                                          onPressed: () {
-                                            deleteTruck(truckId);
-                                            Navigator.of(context).pop(); // Close confirmation dialog
-                                            Navigator.of(context).pop(); // Close truck dialog
-                                          },
-                                          style: TextButton.styleFrom(
-                                            foregroundColor: Colors.red,
-                                          ),
-                                          child: const Text("Supprimer"),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-                              },
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.red,
-                              ),
-                              child: const Text("Supprimer"),
-                            ),
-                          ],
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () {
-                              if (widget.formKey.currentState!.validate()) {
-                                setState(() {
-                                  // Force a rebuild of the parent widget
-                                  this.setState(() {});
-                                });
-                                Navigator.of(context).pop();
-                              }
-                            },
-                            child: const Text("Terminé"),
-                          ),
-                        ],
                       ),
                     ),
                   ],
@@ -1274,11 +561,10 @@ class CamionReportState extends State<CamionReport> {
     try {
       final report = Report(
         description: 'Rapport de suivi des camions',
-        date: widget.selectedDate,
+        date: _selectedDate,
         group: 'Truck Tracking',
         type: isDraft ? 'draft' : 'submitted',
         additionalData: {
-          'generalInfo': generalInfo,
           'truckData': truckData,
         },
       );
@@ -1287,13 +573,25 @@ class CamionReportState extends State<CamionReport> {
       await dbHelper.insertReport(report);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isDraft 
-              ? 'Brouillon enregistré avec succès'
-              : 'Rapport soumis avec succès'),
-            backgroundColor: Colors.green,
-          ),
+        final l10n = AppLocalizations.of(context)!;
+        // Show confirmation dialog
+        await showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text(l10n.reportConfirmationTitle),
+              content: Text(l10n.reportConfirmationMessage),
+              actions: [
+                TextButton(
+                  child: Text(l10n.done),
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close dialog
+                    Navigator.of(context).pop(); // Return to home
+                  },
+                ),
+              ],
+            );
+          },
         );
       }
     } catch (e) {
@@ -1305,6 +603,486 @@ class CamionReportState extends State<CamionReport> {
           ),
         );
       }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppLocalizations.of(context)!.truckTracking,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 16),
+
+          Stepper(
+            currentStep: _currentStep,
+            onStepContinue: () {
+              if (_currentStep < 3) {
+                setState(() {
+                  _currentStep += 1;
+                });
+              }
+            },
+            onStepCancel: () {
+              if (_currentStep > 0) {
+                setState(() {
+                  _currentStep -= 1;
+                });
+              }
+            },
+            controlsBuilder: (context, details) {
+              if (_currentStep == 2) {
+                return const SizedBox.shrink();
+              }
+              return Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: Row(
+                  children: [
+                    if (_currentStep > 0)
+                      OutlinedButton(
+                        onPressed: details.onStepCancel,
+                        child: const Text('Précédent'),
+                      ),
+                    if (_currentStep > 0)
+                      const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: details.onStepContinue,
+                      child: Text(_currentStep == 3 ? 'Terminer' : 'Suivant'),
+                    ),
+                  ],
+                ),
+              );
+            },
+            steps: [
+              Step(
+                title: const Text('Date du rapport'),
+                content: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      InkWell(
+                        onTap: () => _selectDate(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                              const Icon(Icons.calendar_today),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                isActive: _currentStep >= 0,
+              ),
+              Step(
+                title: const Text('Sélection du camion'),
+                content: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Column(
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                _showTruckDialog(context);
+                              },
+                              icon: const Icon(Icons.add),
+                              label: const Text("Ajouter un camion"),
+                              style: ElevatedButton.styleFrom(
+                                minimumSize: const Size(double.infinity, 36),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return Dialog(
+                                      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                                      child: ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          maxHeight: MediaQuery.of(context).size.height * 0.8,
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Padding(
+                                              padding: const EdgeInsets.all(16),
+                                              child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                children: [
+                                                  Text(
+                                                    "Liste des camions",
+                                                    style: Theme.of(context).textTheme.titleLarge,
+                                                  ),
+                                                  IconButton(
+                                                    icon: const Icon(Icons.close),
+                                                    onPressed: () => Navigator.of(context).pop(),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const Divider(height: 1),
+                                            Flexible(
+                                              child: SingleChildScrollView(
+                                                padding: const EdgeInsets.all(16),
+                                                child: Column(
+                                                  children: truckData.map((truck) {
+                                                    return Card(
+                                                      margin: const EdgeInsets.only(bottom: 8),
+                                                      child: ListTile(
+                                                        title: Text("Camion ${truck['truckNumber']}"),
+                                                        subtitle: Column(
+                                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                                          children: [
+                                                            Text("Chauffeur: ${truck['driver1']}"),
+                                                            if (truck['trips'] != null && (truck['trips'] as List).isNotEmpty)
+                                                              ...(truck['trips'] as List).map((trip) {
+                                                                return Padding(
+                                                                  padding: const EdgeInsets.only(top: 4),
+                                                                  child: Text(
+                                                                    "📍 ${trip['location']}",
+                                                                    style: const TextStyle(
+                                                                      fontSize: 12,
+                                                                      color: Colors.grey,
+                                                                    ),
+                                                                  ),
+                                                                );
+                                                              }),
+                                                          ],
+                                                        ),
+                                                        trailing: IconButton(
+                                                          icon: const Icon(Icons.edit),
+                                                          onPressed: () {
+                                                            Navigator.of(context).pop();
+                                                            _showTruckDialog(context, truck);
+                                                          },
+                                                        ),
+                                                      ),
+                                                    );
+                                                  }).toList(),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                              icon: const Icon(Icons.list),
+                              label: const Text("Voir la liste des camions"),
+                              style: ElevatedButton.styleFrom(
+                                minimumSize: const Size(double.infinity, 36),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                isActive: _currentStep >= 1,
+              ),
+              Step(
+                title: const Text('Vérification'),
+                content: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: Column(
+                    children: [
+                      const Text(
+                        "Vérifiez avant de soumettre:",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () => _showVerificationDialog(context),
+                        icon: const Icon(Icons.visibility),
+                        label: const Text("Voir tous les détails"),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 48),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () => _saveReport(false),
+                            child: const Text("Soumettre"),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                isActive: _currentStep >= 2,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _truckCell(Map<String, dynamic> truck, String field, 
+      {bool isRequired = false, bool isNumeric = false}) {
+    if (field == 'truckNumber') {
+      return DropdownButtonFormField<String>(
+        value: _truckControllers[truck['id']]![field]!.text.isEmpty 
+            ? null 
+            : _truckControllers[truck['id']]![field]!.text,
+        decoration: const InputDecoration(
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          border: OutlineInputBorder(),
+          errorMaxLines: 2,
+        ),
+        items: predefinedTrucks.map((String truckNumber) {
+          return DropdownMenuItem<String>(
+            value: truckNumber,
+            child: Text(truckNumber),
+          );
+        }).toList(),
+        onChanged: (String? newValue) {
+          if (newValue != null) {
+            _truckControllers[truck['id']]![field]!.text = newValue;
+            updateTruckData(truck['id'], field, newValue);
+          }
+        },
+        validator: isRequired ? validateRequired : null,
+      );
+    } else if (field == 'driver') {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextFormField(
+            controller: _truckControllers[truck['id']]!['driver1'],
+            onChanged: (val) => updateTruckData(truck['id'], 'driver1', val),
+            decoration: const InputDecoration(
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              border: OutlineInputBorder(),
+              hintText: 'Conducteur 1',
+              errorMaxLines: 2,
+            ),
+            maxLines: null,
+            minLines: 1,
+            style: const TextStyle(height: 1.5),
+            validator: isRequired ? validateRequired : null,
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _truckControllers[truck['id']]!['driver2'],
+            onChanged: (val) => updateTruckData(truck['id'], 'driver2', val),
+            decoration: const InputDecoration(
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              border: OutlineInputBorder(),
+              hintText: 'Conducteur 2 (optionnel)',
+              errorMaxLines: 2,
+            ),
+            maxLines: null,
+            minLines: 1,
+            style: const TextStyle(height: 1.5),
+          ),
+        ],
+      );
+    } else if (field == 'lieu') {
+      return TextFormField(
+        controller: _truckControllers[truck['id']]![field],
+        onChanged: (val) => updateTruckData(truck['id'], field, val),
+        decoration: const InputDecoration(
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          border: OutlineInputBorder(),
+          hintText: 'Lieu',
+        ),
+        maxLines: null,
+        minLines: 1,
+        style: const TextStyle(height: 1.5),
+      );
+    }
+
+    return TextFormField(
+      controller: _truckControllers[truck['id']]![field],
+      onChanged: (val) => updateTruckData(truck['id'], field, val),
+      decoration: const InputDecoration(
+        isDense: true,
+        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        border: OutlineInputBorder(),
+        errorMaxLines: 2,
+      ),
+      maxLines: null,
+      minLines: 1,
+      style: const TextStyle(height: 1.5),
+      keyboardType: isNumeric ? TextInputType.number : TextInputType.multiline,
+      validator: isRequired 
+          ? validateRequired 
+          : isNumeric 
+              ? validateNumeric 
+              : null,
+    );
+  }
+
+  Widget _truckCountCell(Map<String, dynamic> truck, int i, String field) {
+    final isTime = field == "time";
+    if (isTime) {
+      return InkWell(
+        onTap: () => _selectTime(context, truck, i),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _truckControllers[truck['id']]!['count${i}_$field'],
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    border: InputBorder.none,
+                    hintText: 'Heure',
+                    hintStyle: TextStyle(color: Colors.grey[600]),
+                  ),
+                  validator: validateNumeric,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: const Icon(Icons.access_time, size: 20, color: Colors.blue),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return TextFormField(
+      controller: _truckControllers[truck['id']]!['count${i}_$field'],
+      onChanged: (val) => updateTruckData(truck['id'], "counts", val, i, field),
+      decoration: const InputDecoration(
+        isDense: true,
+        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        border: OutlineInputBorder(),
+        hintText: 'Lieu',
+      ),
+      maxLines: null,
+      minLines: 1,
+      style: const TextStyle(height: 1.5),
+    );
+  }
+
+  void addTrip(String truckId) {
+    setState(() {
+      try {
+        final truck = truckData.firstWhere((t) => t['id'] == truckId);
+        final tripIndex = truck['counts'].length;
+        
+        // Add new trip
+        truck['counts'].add({
+          "time": "",
+          "location": "",
+        });
+        
+        // Initialize controllers for the new trip
+        if (_truckControllers[truckId] == null) {
+          return;
+        }
+        
+        _truckControllers[truckId]!['count${tripIndex}_time'] = 
+            TextEditingController();
+        _truckControllers[truckId]!['count${tripIndex}_location'] = 
+            TextEditingController();
+        
+        // Update total
+        truck["total"] = calculateTotal(truck);
+      } catch (e) {
+        // Handle error
+      }
+    });
+  }
+
+  void removeTrip(String truckId, int tripIndex) {
+    setState(() {
+      final truck = truckData.firstWhere((t) => t['id'] == truckId);
+      
+      // Dispose controllers for the trip
+      _truckControllers[truckId]!['count${tripIndex}_time']?.dispose();
+      _truckControllers[truckId]!['count${tripIndex}_location']?.dispose();
+      
+      // Remove the trip
+      truck['counts'].removeAt(tripIndex);
+      
+      // Reinitialize controllers for remaining trips
+      for (var i = tripIndex; i < truck['counts'].length; i++) {
+        _truckControllers[truckId]!['count${i}_time'] = 
+            TextEditingController(text: truck['counts'][i]['time']);
+        _truckControllers[truckId]!['count${i}_location'] = 
+            TextEditingController(text: truck['counts'][i]['location']);
+      }
+      
+      // Update total
+      truck["total"] = calculateTotal(truck);
+    });
+  }
+
+  Future<void> _selectTime(BuildContext context, Map<String, dynamic> truck, int index) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      builder: (BuildContext context, Widget? child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            alwaysUse24HourFormat: true,
+          ),
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              timePickerTheme: TimePickerThemeData(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                hourMinuteTextStyle: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            child: child!,
+          ),
+        );
+      },
+    );
+
+    if (picked != null) {
+      final formattedTime = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      _truckControllers[truck['id']]!['count${index}_time']!.text = formattedTime;
+      updateTruckData(truck['id'], "counts", formattedTime, index, "time");
     }
   }
 } 

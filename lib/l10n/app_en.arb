@@ -52,5 +52,8 @@
   "driver2": "Driver 2",
   "lieu": "Location",
   "total": "Total",
-  "location": "Location"
+  "location": "Location",
+  "reportConfirmationTitle": "Report Saved",
+  "reportConfirmationMessage": "When you click done, the report will be saved on the reports page. If you want to send this report to the company, go to the reports page and send it from there.",
+  "done": "Done"
 } 

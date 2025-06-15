@@ -138,6 +138,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
   List<Counter> vibratorCounters = [];
   List<LiaisonCounter> liaisonCounters = [];
   List<StockEntry> stockEntries = [];
+  late DateTime _selectedDate;
 
   int totalDowntime = 0;
   int operatingTime = ActivityReportScreen.totalPeriodMinutes;
@@ -166,6 +167,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedDate = widget.selectedDate;
     stops = [];
     vibratorCounters = [];
     liaisonCounters = [];
@@ -205,8 +207,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
   Future<void> _saveReport() async {
     try {
       final report = Report(
-        description: 'Activity Report - ${DateFormat('yyyy-MM-dd').format(widget.selectedDate)}',
-        date: widget.selectedDate,
+        description: 'Activity Report - ${DateFormat('yyyy-MM-dd').format(_selectedDate)}',
+        date: _selectedDate,
         group: 'Activity',
         type: 'activity_report',
         additionalData: {
@@ -259,8 +261,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    String formattedDate = "${widget.selectedDate.day.toString().padLeft(2, '0')}/"
-      "${widget.selectedDate.month.toString().padLeft(2, '0')}/${widget.selectedDate.year}";
+    String formattedDate = "${_selectedDate.day.toString().padLeft(2, '0')}/"
+      "${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}";
 
     return Scaffold(
       appBar: AppBar(title: const Text("RAPPORT D'ACTIVITÉ TNR")),
@@ -274,7 +276,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
             Stepper(
               currentStep: _currentStep,
               onStepContinue: () {
-                if (_currentStep < 4) {
+                if (_currentStep < 6) {
                   setState(() {
                     _currentStep += 1;
                   });
@@ -301,7 +303,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                         const SizedBox(width: 8),
                       ElevatedButton(
                         onPressed: details.onStepContinue,
-                        child: Text(_currentStep == 4 ? 'Terminer' : 'Suivant'),
+                        child: Text(_currentStep == 6 ? 'Terminer' : 'Suivant'),
                       ),
                     ],
                   ),
@@ -309,38 +311,101 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
               },
               steps: [
                 Step(
-                  title: const Text('Arrêts'),
-                  content: buildStopsSection(),
+                  title: const Text('Date du rapport'),
+                  content: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'ÉTAPE 1: DATE DU RAPPORT',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue[900],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Sélection de la date du rapport",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      "Date sélectionnée: $formattedDate",
+                                      style: const TextStyle(fontSize: 16),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.calendar_today),
+                                    onPressed: () async {
+                                      final DateTime? picked = await showDatePicker(
+                                        context: context,
+                                        initialDate: _selectedDate,
+                                        firstDate: DateTime(2000),
+                                        lastDate: DateTime(2100),
+                                      );
+                                      if (picked != null && picked != _selectedDate) {
+                                        setState(() {
+                                          _selectedDate = picked;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   isActive: _currentStep >= 0,
                   state: _currentStep > 0 ? StepState.complete : StepState.indexed,
                 ),
                 Step(
-                  title: const Text('Compteurs Vibreurs'),
-                  content: buildCountersSection(),
+                  title: const Text('Arrêts'),
+                  content: buildStopsSection(),
                   isActive: _currentStep >= 1,
                   state: _currentStep > 1 ? StepState.complete : StepState.indexed,
                 ),
                 Step(
-                  title: const Text('Compteurs Liaison'),
-                  content: buildLiaisonCountersSection(),
+                  title: const Text('Compteurs Vibreurs'),
+                  content: buildCountersSection(),
                   isActive: _currentStep >= 2,
                   state: _currentStep > 2 ? StepState.complete : StepState.indexed,
                 ),
                 Step(
-                  title: const Text('Stock'),
-                  content: buildStockSection(),
+                  title: const Text('Compteurs Liaison'),
+                  content: buildLiaisonCountersSection(),
                   isActive: _currentStep >= 3,
                   state: _currentStep > 3 ? StepState.complete : StepState.indexed,
                 ),
                 Step(
-                  title: const Text('Vérification'),
-                  content: buildVerificationSection(),
+                  title: const Text('Stock'),
+                  content: buildStockSection(),
                   isActive: _currentStep >= 4,
                   state: _currentStep > 4 ? StepState.complete : StepState.indexed,
                 ),
+                Step(
+                  title: const Text('Vérification'),
+                  content: buildVerificationSection(),
+                  isActive: _currentStep >= 5,
+                  state: _currentStep > 5 ? StepState.complete : StepState.indexed,
+                ),
               ],
             ),
-            if (_currentStep == 4) ...[
+            if (_currentStep == 6) ...[
               const SizedBox(height: 24),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -365,7 +430,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'ÉTAPE 1: ARRÊTS',
+          'ÉTAPE 2: ARRÊTS',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -415,7 +480,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'ÉTAPE 2: COMPTEURS VIBREURS',
+          'ÉTAPE 3: COMPTEURS VIBREURS',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -465,7 +530,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'ÉTAPE 3: COMPTEURS LIAISON',
+          'ÉTAPE 4: COMPTEURS LIAISON',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -515,7 +580,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'ÉTAPE 4: STOCK',
+          'ÉTAPE 5: STOCK',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -565,7 +630,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'ÉTAPE 5: VÉRIFICATION',
+          'ÉTAPE 6: VÉRIFICATION',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
