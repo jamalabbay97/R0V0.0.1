@@ -246,14 +246,34 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
 
       await _databaseHelper.insertReport(report);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.reportSaved)),
+        final l10n = AppLocalizations.of(context)!;
+        // Show confirmation dialog
+        await showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text(l10n.reportConfirmationTitle),
+              content: Text(l10n.reportConfirmationMessage),
+              actions: [
+                TextButton(
+                  child: Text(l10n.done),
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close dialog
+                    Navigator.of(context).pop(); // Return to home
+                  },
+                ),
+              ],
+            );
+          },
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.errorSavingReport)),
+          SnackBar(
+            content: Text('Erreur lors de la sauvegarde du rapport: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -310,10 +330,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                         ElevatedButton(
                           onPressed: (hasVibratorErrors || hasLiaisonErrors || hasStockErrors)
                             ? null
-                            : () {
-                                setState(() {
-                                  _currentStep = 6;
-                                });
+                            : () async {
+                                await _saveReport();
                               },
                           child: const Text('Soumettre'),
                         ),
