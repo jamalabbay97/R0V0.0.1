@@ -276,7 +276,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
             Stepper(
               currentStep: _currentStep,
               onStepContinue: () {
-                if (_currentStep < 6) {
+                if (_currentStep < 5) {
                   setState(() {
                     _currentStep += 1;
                   });
@@ -301,10 +301,22 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                         ),
                       if (_currentStep > 0)
                         const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: details.onStepContinue,
-                        child: Text(_currentStep == 6 ? 'Terminer' : 'Suivant'),
-                      ),
+                      if (_currentStep < 5)
+                        ElevatedButton(
+                          onPressed: details.onStepContinue,
+                          child: const Text('Suivant'),
+                        ),
+                      if (_currentStep == 5)
+                        ElevatedButton(
+                          onPressed: (hasVibratorErrors || hasLiaisonErrors || hasStockErrors)
+                            ? null
+                            : () {
+                                setState(() {
+                                  _currentStep = 6;
+                                });
+                              },
+                          child: const Text('Soumettre'),
+                        ),
                     ],
                   ),
                 );
@@ -405,20 +417,6 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                 ),
               ],
             ),
-            if (_currentStep == 6) ...[
-              const SizedBox(height: 24),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ElevatedButton(
-                    onPressed: (hasVibratorErrors || hasLiaisonErrors || hasStockErrors)
-                      ? null
-                      : _saveReport,
-                    child: const Text("Soumettre Rapport"),
-                  ),
-                ],
-              ),
-            ],
           ],
         ),
       ),

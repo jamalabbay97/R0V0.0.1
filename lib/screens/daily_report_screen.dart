@@ -344,7 +344,7 @@ class DailyReportState extends State<DailyReport> {
           Stepper(
             currentStep: _currentStep,
             onStepContinue: () {
-              if (_currentStep < 3) {
+              if (_currentStep < 4) {
                 setState(() {
                   _currentStep += 1;
                 });
@@ -358,8 +358,23 @@ class DailyReportState extends State<DailyReport> {
               }
             },
             controlsBuilder: (context, details) {
-              if (_currentStep == 2) {
-                return const SizedBox.shrink();
+              if (_currentStep == 4) {  // Final step
+                return Padding(
+                  padding: const EdgeInsets.only(top: 16.0),
+                  child: Row(
+                    children: [
+                      OutlinedButton(
+                        onPressed: details.onStepCancel,
+                        child: const Text('Précédent'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () => _saveReport(),
+                        child: const Text('Soumettre'),
+                      ),
+                    ],
+                  ),
+                );
               }
               return Padding(
                 padding: const EdgeInsets.only(top: 16.0),
@@ -542,7 +557,7 @@ class DailyReportState extends State<DailyReport> {
                 isActive: _currentStep >= 3,
               ),
               Step(
-                title: const Text('ÉTAPE 5: VÉRIFICATION'),
+                title: const Text('VÉRIFICATION'),
                 content: SingleChildScrollView(
                   physics: const NeverScrollableScrollPhysics(),
                   child: buildFinalStep(),
@@ -787,17 +802,6 @@ class DailyReportState extends State<DailyReport> {
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
           ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () => _saveReport(),
-                child: const Text("Soumettre Rapport"),
-              ),
-            ),
-          ],
         ),
       ],
     );
