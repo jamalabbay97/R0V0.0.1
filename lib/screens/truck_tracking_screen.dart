@@ -216,7 +216,7 @@ class CamionReportState extends State<CamionReport> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return StatefulBuilder(
-          builder: (context, setState) {
+          builder: (context, setDialogState) {
             return Dialog(
               insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
               child: ConstrainedBox(
@@ -325,7 +325,7 @@ class CamionReportState extends State<CamionReport> {
                                               ],
                                               onSelected: (String value) {
                                                 if (value == 'delete') {
-                                                  _confirmDeleteTrip(context, truckId, i, setState);
+                                                  _confirmDeleteTrip(context, truckId, i, setDialogState);
                                                 }
                                                 // Add edit functionality here if needed
                                               },
@@ -344,7 +344,7 @@ class CamionReportState extends State<CamionReport> {
                                   padding: const EdgeInsets.symmetric(vertical: 8),
                                   child: ElevatedButton.icon(
                                     onPressed: () {
-                                      setState(() {
+                                      setDialogState(() {
                                         addTrip(truckId);
                                       });
                                     },
@@ -371,7 +371,7 @@ class CamionReportState extends State<CamionReport> {
     );
   }
 
-  Future<void> _confirmDeleteTrip(BuildContext context, String truckId, int tripIndex, StateSetter setState) async {
+  Future<void> _confirmDeleteTrip(BuildContext context, String truckId, int tripIndex, StateSetter setDialogState) async {
     return showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -385,7 +385,7 @@ class CamionReportState extends State<CamionReport> {
             ),
             TextButton(
               onPressed: () {
-                setState(() {
+                setDialogState(() {
                   removeTrip(truckId, tripIndex);
                 });
                 Navigator.of(context).pop();
