@@ -23,6 +23,25 @@ String qualiteTypeToString(QualiteType? t) {
   }
 }
 
+enum Poste {
+  premier,
+  deuxieme,
+  troisieme,
+}
+
+String posteToString(Poste? p) {
+  switch (p) {
+    case Poste.premier:
+      return "1er";
+    case Poste.deuxieme:
+      return "2eme";
+    case Poste.troisieme:
+      return "3eme";
+    default:
+      return "";
+  }
+}
+
 class TruckTrackingScreen extends StatefulWidget {
   final GlobalKey<FormState> formKey;
 
@@ -69,6 +88,7 @@ class CamionReportState extends State<CamionReport> {
   DateTime _selectedDate = DateTime.now();
   QualiteType? _selectedQualite;
   String? _selectedEquipment;
+  Poste? _selectedPoste;
 
   List<Map<String, dynamic>> truckData = [
     {
@@ -463,7 +483,7 @@ class CamionReportState extends State<CamionReport> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Vérification des informations',
+                        'Verification des informations',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -485,31 +505,61 @@ class CamionReportState extends State<CamionReport> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(8),
+                        // Date Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Date',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                _buildInfoRow('Date du rapport', '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}'),
+                              ],
+                            ),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Total des voyages:',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                        ),
+                        const SizedBox(height: 16),
+                        // Poste Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Poste',
+                                  style: Theme.of(context).textTheme.titleMedium,
                                 ),
-                              ),
-                              Text(
-                                '${truckData.fold<int>(0, (sum, truck) => sum + (truck['counts'] as List).length)}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: Theme.of(context).colorScheme.primary,
+                                const Divider(height: 16),
+                                _buildInfoRow('Poste selectionne', _selectedPoste != null ? posteToString(_selectedPoste) : '-'),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Equipment Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Equipement',
+                                  style: Theme.of(context).textTheme.titleMedium,
                                 ),
-                              ),
-                            ],
+                                const Divider(height: 16),
+                                _buildInfoRow('Type d\'equipement', _selectedEquipment ?? '-'),
+                                _buildInfoRow('Qualite de produits', _selectedQualite != null ? qualiteTypeToString(_selectedQualite) : '-'),
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -644,7 +694,7 @@ class CamionReportState extends State<CamionReport> {
           Stepper(
             currentStep: _currentStep,
             onStepContinue: () {
-              if (_currentStep < 4) {
+              if (_currentStep < 5) {
                 setState(() {
                   _currentStep += 1;
                 });
@@ -658,7 +708,7 @@ class CamionReportState extends State<CamionReport> {
               }
             },
             controlsBuilder: (context, details) {
-              if (_currentStep == 3) {
+              if (_currentStep == 4) {
                 return const SizedBox.shrink();
               }
               return Padding(
@@ -668,13 +718,13 @@ class CamionReportState extends State<CamionReport> {
                     if (_currentStep > 0)
                       OutlinedButton(
                         onPressed: details.onStepCancel,
-                        child: const Text('Précédent'),
+                        child: const Text('Precedent'),
                       ),
                     if (_currentStep > 0)
                       const SizedBox(width: 8),
                     ElevatedButton(
                       onPressed: details.onStepContinue,
-                      child: Text(_currentStep == 4 ? 'Terminer' : 'Suivant'),
+                      child: Text(_currentStep == 5 ? 'Terminer' : 'Suivant'),
                     ),
                   ],
                 ),
@@ -714,6 +764,51 @@ class CamionReportState extends State<CamionReport> {
                 isActive: _currentStep >= 0,
               ),
               Step(
+                title: const Text('Selection Poste'),
+                content: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Selection du Poste',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 16),
+                              DropdownButtonFormField<Poste>(
+                                value: _selectedPoste,
+                                decoration: const InputDecoration(
+                                  labelText: 'Poste',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: Poste.values.map((poste) {
+                                  return DropdownMenuItem(
+                                    value: poste,
+                                    child: Text(posteToString(poste)),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedPoste = value;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                isActive: _currentStep >= 1,
+              ),
+              Step(
                 title: const Text('Selection equipement'),
                 content: SingleChildScrollView(
                   physics: const NeverScrollableScrollPhysics(),
@@ -739,19 +834,19 @@ class CamionReportState extends State<CamionReport> {
                                 ),
                                 items: const [
                                   DropdownMenuItem(
-                                    value: 'Chargeuse K',
+                                    value: 'Chargeuse 992K',
                                     child: Text('Chargeuse 992K'),
                                   ),
                                   DropdownMenuItem(
-                                    value: 'Chargeuse H',
+                                    value: 'Chargeuse 994H',
                                     child: Text('Chargeuse 994H'),
                                   ),
                                   DropdownMenuItem(
-                                    value: 'PelleH',
+                                    value: 'Pelle Hy',
                                     child: Text('Pelle hydraulique'),
                                   ),
                                   DropdownMenuItem(
-                                    value: 'PelleB1',
+                                    value: 'Pelle B1',
                                     child: Text('Pelle electrique B1'),
                                   ),
                                 ],
@@ -787,10 +882,10 @@ class CamionReportState extends State<CamionReport> {
                     ],
                   ),
                 ),
-                isActive: _currentStep >= 1,
+                isActive: _currentStep >= 2,
               ),
               Step(
-                title: const Text('Sélection du camion'),
+                title: const Text('Selection du camion'),
                 content: SingleChildScrollView(
                   physics: const NeverScrollableScrollPhysics(),
                   child: Column(
@@ -901,23 +996,23 @@ class CamionReportState extends State<CamionReport> {
                     ],
                   ),
                 ),
-                isActive: _currentStep >= 2,
+                isActive: _currentStep >= 3,
               ),
               Step(
-                title: const Text('Vérification'),
+                title: const Text('Verification'),
                 content: SingleChildScrollView(
                   physics: const NeverScrollableScrollPhysics(),
                   child: Column(
                     children: [
                       const Text(
-                        "Vérifiez avant de soumettre:",
+                        "Verifiez avant de soumettre:",
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton.icon(
                         onPressed: () => _showVerificationDialog(context),
                         icon: const Icon(Icons.visibility),
-                        label: const Text("Voir tous les détails"),
+                        label: const Text("Voir tous les details"),
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 48),
                         ),
@@ -935,7 +1030,7 @@ class CamionReportState extends State<CamionReport> {
                     ],
                   ),
                 ),
-                isActive: _currentStep >= 3,
+                isActive: _currentStep >= 4,
               ),
             ],
           ),
