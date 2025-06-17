@@ -135,19 +135,21 @@ class CamionReportState extends State<CamionReport> {
   void _initializeTruckControllers(String truckId) {
     final truck = truckData.firstWhere((t) => t['id'] == truckId);
     _truckControllers[truckId] = {
-      'truckNumber': TextEditingController(text: truck['truckNumber']),
-      'driver1': TextEditingController(text: truck['driver1']),
-      'driver2': TextEditingController(text: truck['driver2']),
-      'lieu': TextEditingController(text: truck['lieu']),
-      'total': TextEditingController(text: truck['total']),
+      'truckNumber': TextEditingController(text: truck['truckNumber']?.toString() ?? ''),
+      'driver1': TextEditingController(text: truck['driver1']?.toString() ?? ''),
+      'driver2': TextEditingController(text: truck['driver2']?.toString() ?? ''),
+      'lieu': TextEditingController(text: truck['lieu']?.toString() ?? ''),
+      'total': TextEditingController(text: truck['total']?.toString() ?? '0'),
     };
     
     // Initialize count controllers for existing trips
-    for (var i = 0; i < truck['counts'].length; i++) {
-      _truckControllers[truckId]!['count${i}_time'] = 
-          TextEditingController(text: truck['counts'][i]['time']);
-      _truckControllers[truckId]!['count${i}_location'] = 
-          TextEditingController(text: truck['counts'][i]['location']);
+    if (truck['counts'] != null) {
+      for (var i = 0; i < truck['counts'].length; i++) {
+        _truckControllers[truckId]!['count${i}_time'] = 
+            TextEditingController(text: truck['counts'][i]['time']?.toString() ?? '0');
+        _truckControllers[truckId]!['count${i}_location'] = 
+            TextEditingController(text: truck['counts'][i]['location']?.toString() ?? '');
+      }
     }
   }
 
@@ -163,12 +165,17 @@ class CamionReportState extends State<CamionReport> {
   }
 
   String calculateTotal(Map<String, dynamic> truck) {
-    int countsSum = (truck['counts'] as List)
-        .map((c) => int.tryParse(c['time']) ?? 0)
-        .fold(0, (a, b) => a + b);
-    int tSudNum = int.tryParse(truck['tSud']) ?? 0;
-    int tNordNum = int.tryParse(truck['tNord']) ?? 0;
-    int stockNum = int.tryParse(truck['stock']) ?? 0;
+    int countsSum = 0;
+    if (truck['counts'] != null) {
+      countsSum = (truck['counts'] as List)
+          .map((c) => int.tryParse(c['time']?.toString() ?? '0') ?? 0)
+          .fold(0, (a, b) => a + b);
+    }
+    
+    int tSudNum = int.tryParse(truck['tSud']?.toString() ?? '0') ?? 0;
+    int tNordNum = int.tryParse(truck['tNord']?.toString() ?? '0') ?? 0;
+    int stockNum = int.tryParse(truck['stock']?.toString() ?? '0') ?? 0;
+    
     return (countsSum + tSudNum + tNordNum + stockNum).toString();
   }
 
@@ -187,6 +194,12 @@ class CamionReportState extends State<CamionReport> {
     setState(() {
       var truck = truckData.firstWhere((t) => t['id'] == id);
       if (field == "counts" && countIndex != null && countField != null) {
+        if (truck["counts"] == null) {
+          truck["counts"] = [];
+        }
+        while (truck["counts"].length <= countIndex) {
+          truck["counts"].add({"time": "0", "location": ""});
+        }
         truck["counts"][countIndex][countField] = value;
       } else {
         truck[field] = value;
@@ -709,7 +722,22 @@ class CamionReportState extends State<CamionReport> {
             },
             controlsBuilder: (context, details) {
               if (_currentStep == 4) {
-                return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      OutlinedButton(
+                        onPressed: details.onStepCancel,
+                        child: const Text('Precedent'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => _saveReport(false),
+                        child: const Text("Soumettre"),
+                      ),
+                    ],
+                  ),
+                );
               }
               return Padding(
                 padding: const EdgeInsets.only(top: 16.0),
@@ -1017,16 +1045,6 @@ class CamionReportState extends State<CamionReport> {
                           minimumSize: const Size(double.infinity, 48),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          ElevatedButton(
-                            onPressed: () => _saveReport(false),
-                            child: const Text("Soumettre"),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),
@@ -1194,28 +1212,38 @@ class CamionReportState extends State<CamionReport> {
     setState(() {
       try {
         final truck = truckData.firstWhere((t) => t['id'] == truckId);
+        if (truck['counts'] == null) {
+          truck['counts'] = [];
+        }
         final tripIndex = truck['counts'].length;
         
         // Add new trip
         truck['counts'].add({
-          "time": "",
+          "time": "0",
           "location": "",
         });
         
         // Initialize controllers for the new trip
         if (_truckControllers[truckId] == null) {
-          return;
+          _truckControllers[truckId] = {};
         }
         
         _truckControllers[truckId]!['count${tripIndex}_time'] = 
-            TextEditingController();
+            TextEditingController(text: "0");
         _truckControllers[truckId]!['count${tripIndex}_location'] = 
             TextEditingController();
         
         // Update total
         truck["total"] = calculateTotal(truck);
       } catch (e) {
-        // Handle error
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur lors de l\'ajout du voyage: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     });
   }
@@ -1234,9 +1262,9 @@ class CamionReportState extends State<CamionReport> {
       // Reinitialize controllers for remaining trips
       for (var i = tripIndex; i < truck['counts'].length; i++) {
         _truckControllers[truckId]!['count${i}_time'] = 
-            TextEditingController(text: truck['counts'][i]['time']);
+            TextEditingController(text: truck['counts'][i]['time']?.toString() ?? '0');
         _truckControllers[truckId]!['count${i}_location'] = 
-            TextEditingController(text: truck['counts'][i]['location']);
+            TextEditingController(text: truck['counts'][i]['location']?.toString() ?? '');
       }
       
       // Update total
