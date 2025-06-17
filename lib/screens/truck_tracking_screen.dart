@@ -252,6 +252,7 @@ class CamionReportState extends State<CamionReport> {
 
   Future<void> _showTruckDialog(BuildContext context, [Map<String, dynamic>? existingTruck]) async {
     final truckId = existingTruck?['id'] ?? const Uuid().v4();
+
     if (existingTruck == null) {
       truckData.add({
         "id": truckId,
@@ -265,157 +266,188 @@ class CamionReportState extends State<CamionReport> {
       _initializeTruckControllers(truckId);
     }
 
-    return showDialog(
+    await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            return Dialog(
-              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.8,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            existingTruck == null ? "Nouveau Camion" : "Modifier Camion",
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () {
-                              if (existingTruck == null) {
-                                deleteTruck(truckId);
-                              }
-                              Navigator.of(context).pop();
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Divider(height: 1),
-                    Flexible(
-                      child: SingleChildScrollView(
+            return WillPopScope(
+              onWillPop: () async {
+                if (existingTruck == null) {
+                  deleteTruck(truckId);
+                }
+                return true;
+              },
+              child: Dialog(
+                insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.8,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Padding(
                         padding: const EdgeInsets.all(16),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            _truckCell(truckData.firstWhere((t) => t['id'] == truckId), "truckNumber", isRequired: true),
-                            const SizedBox(height: 16),
-                            _truckCell(truckData.firstWhere((t) => t['id'] == truckId), "driver", isRequired: true),
-                            const SizedBox(height: 16),
-                            ExpansionTile(
-                              title: Text(
-                                "Voyages (${truckData.firstWhere((t) => t['id'] == truckId)['counts'].length})",
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              children: [
-                                ...List.generate(truckData.firstWhere((t) => t['id'] == truckId)['counts'].length, (i) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 16),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              "Voyage ${i + 1}",
-                                              style: const TextStyle(fontWeight: FontWeight.bold),
-                                            ),
-                                            PopupMenuButton<String>(
-                                              icon: const Icon(Icons.more_horiz, size: 20),
-                                              padding: EdgeInsets.zero,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              position: PopupMenuPosition.under,
-                                              itemBuilder: (BuildContext context) => [
-                                                PopupMenuItem<String>(
-                                                  value: 'edit',
-                                                  height: 36,
-                                                  child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
-                                                      const SizedBox(width: 8),
-                                                      Text(
-                                                        'Modifier',
-                                                        style: TextStyle(
-                                                          color: Theme.of(context).colorScheme.primary,
-                                                          fontSize: 14,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                PopupMenuItem<String>(
-                                                  value: 'delete',
-                                                  height: 36,
-                                                  child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
-                                                      const SizedBox(width: 8),
-                                                      Text(
-                                                        'Supprimer',
-                                                        style: TextStyle(
-                                                          color: Theme.of(context).colorScheme.error,
-                                                          fontSize: 14,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                              onSelected: (String value) {
-                                                if (value == 'delete') {
-                                                  _confirmDeleteTrip(context, truckId, i, setDialogState);
-                                                }
-                                                // Add edit functionality here if needed
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        _truckCountCell(truckData.firstWhere((t) => t['id'] == truckId), i, "time"),
-                                        const SizedBox(height: 8),
-                                        _truckCountCell(truckData.firstWhere((t) => t['id'] == truckId), i, "location"),
-                                      ],
-                                    ),
-                                  );
-                                }),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      setDialogState(() {
-                                        addTrip(truckId);
-                                      });
-                                    },
-                                    icon: const Icon(Icons.add),
-                                    label: const Text("Ajouter un voyage"),
-                                    style: ElevatedButton.styleFrom(
-                                      minimumSize: const Size(double.infinity, 36),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              existingTruck == null ? "Nouveau Camion" : "Modifier Camion",
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () {
+                                if (existingTruck == null) {
+                                  deleteTruck(truckId);
+                                }
+                                Navigator.of(context).pop();
+                              },
                             ),
                           ],
                         ),
                       ),
-                    ),
-                  ],
+                      const Divider(height: 1),
+                      Flexible(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _truckCell(truckData.firstWhere((t) => t['id'] == truckId), "truckNumber", isRequired: true),
+                              const SizedBox(height: 16),
+                              _truckCell(truckData.firstWhere((t) => t['id'] == truckId), "driver", isRequired: true),
+                              const SizedBox(height: 16),
+                              ExpansionTile(
+                                title: Text(
+                                  "Voyages (${truckData.firstWhere((t) => t['id'] == truckId)['counts'].length})",
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                children: [
+                                  ...List.generate(truckData.firstWhere((t) => t['id'] == truckId)['counts'].length, (i) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 16),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                "Voyage ${i + 1}",
+                                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                              ),
+                                              PopupMenuButton<String>(
+                                                icon: const Icon(Icons.more_horiz, size: 20),
+                                                padding: EdgeInsets.zero,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                position: PopupMenuPosition.under,
+                                                itemBuilder: (BuildContext context) => [
+                                                  PopupMenuItem<String>(
+                                                    value: 'edit',
+                                                    height: 36,
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
+                                                        const SizedBox(width: 8),
+                                                        Text(
+                                                          'Modifier',
+                                                          style: TextStyle(
+                                                            color: Theme.of(context).colorScheme.primary,
+                                                            fontSize: 14,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  PopupMenuItem<String>(
+                                                    value: 'delete',
+                                                    height: 36,
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
+                                                        const SizedBox(width: 8),
+                                                        Text(
+                                                          'Supprimer',
+                                                          style: TextStyle(
+                                                            color: Theme.of(context).colorScheme.error,
+                                                            fontSize: 14,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                                onSelected: (String value) {
+                                                  if (value == 'delete') {
+                                                    _confirmDeleteTrip(context, truckId, i, setDialogState);
+                                                  }
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          _truckCountCell(truckData.firstWhere((t) => t['id'] == truckId), i, "time"),
+                                          const SizedBox(height: 8),
+                                          _truckCountCell(truckData.firstWhere((t) => t['id'] == truckId), i, "location"),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {
+                                        setDialogState(() {
+                                          addTrip(truckId);
+                                        });
+                                      },
+                                      icon: const Icon(Icons.add),
+                                      label: const Text("Ajouter un voyage"),
+                                      style: ElevatedButton.styleFrom(
+                                        minimumSize: const Size(double.infinity, 36),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: () {
+                                if (existingTruck == null) {
+                                  deleteTruck(truckId);
+                                }
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text('Annuler'),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text('Enregistrer'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -992,11 +1024,59 @@ class CamionReportState extends State<CamionReport> {
                                                               }),
                                                           ],
                                                         ),
-                                                        trailing: IconButton(
-                                                          icon: const Icon(Icons.edit),
-                                                          onPressed: () {
-                                                            Navigator.of(context).pop();
-                                                            _showTruckDialog(context, truck);
+                                                        trailing: PopupMenuButton<String>(
+                                                          icon: const Icon(Icons.more_horiz, size: 20),
+                                                          padding: EdgeInsets.zero,
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius: BorderRadius.circular(8),
+                                                          ),
+                                                          position: PopupMenuPosition.under,
+                                                          itemBuilder: (BuildContext context) => [
+                                                            PopupMenuItem<String>(
+                                                              value: 'edit',
+                                                              height: 36,
+                                                              child: Row(
+                                                                mainAxisSize: MainAxisSize.min,
+                                                                children: [
+                                                                  Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
+                                                                  const SizedBox(width: 8),
+                                                                  Text(
+                                                                    'Modifier',
+                                                                    style: TextStyle(
+                                                                      color: Theme.of(context).colorScheme.primary,
+                                                                      fontSize: 14,
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                            PopupMenuItem<String>(
+                                                              value: 'delete',
+                                                              height: 36,
+                                                              child: Row(
+                                                                mainAxisSize: MainAxisSize.min,
+                                                                children: [
+                                                                  Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
+                                                                  const SizedBox(width: 8),
+                                                                  Text(
+                                                                    'Supprimer',
+                                                                    style: TextStyle(
+                                                                      color: Theme.of(context).colorScheme.error,
+                                                                      fontSize: 14,
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ],
+                                                          onSelected: (String value) {
+                                                            if (value == 'edit') {
+                                                              Navigator.of(context).pop();
+                                                              _showTruckDialog(context, truck);
+                                                            } else if (value == 'delete') {
+                                                              Navigator.of(context).pop();
+                                                              deleteTruck(truck['id']);
+                                                            }
                                                           },
                                                         ),
                                                       ),
