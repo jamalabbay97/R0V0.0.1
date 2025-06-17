@@ -4,6 +4,25 @@ import 'package:r0_app/l10n/app_localizations.dart';
 import 'package:r0_app/services/database_helper.dart';
 import 'package:r0_app/models/report.dart';
 
+enum QualiteType {
+  normal,
+  oceane,
+  pb30,
+}
+
+String qualiteTypeToString(QualiteType? t) {
+  switch (t) {
+    case QualiteType.normal:
+      return "NORMAL";
+    case QualiteType.oceane:
+      return "OCEANE";
+    case QualiteType.pb30:
+      return "PB30";
+    default:
+      return "";
+  }
+}
+
 class TruckTrackingScreen extends StatefulWidget {
   final GlobalKey<FormState> formKey;
 
@@ -48,6 +67,8 @@ class CamionReport extends StatefulWidget {
 class CamionReportState extends State<CamionReport> {
   final Map<String, Map<String, TextEditingController>> _truckControllers = {};
   DateTime _selectedDate = DateTime.now();
+  QualiteType? _selectedQualite;
+  String? _selectedEquipment;
 
   List<Map<String, dynamic>> truckData = [
     {
@@ -623,7 +644,7 @@ class CamionReportState extends State<CamionReport> {
           Stepper(
             currentStep: _currentStep,
             onStepContinue: () {
-              if (_currentStep < 3) {
+              if (_currentStep < 4) {
                 setState(() {
                   _currentStep += 1;
                 });
@@ -637,7 +658,7 @@ class CamionReportState extends State<CamionReport> {
               }
             },
             controlsBuilder: (context, details) {
-              if (_currentStep == 2) {
+              if (_currentStep == 3) {
                 return const SizedBox.shrink();
               }
               return Padding(
@@ -653,7 +674,7 @@ class CamionReportState extends State<CamionReport> {
                       const SizedBox(width: 8),
                     ElevatedButton(
                       onPressed: details.onStepContinue,
-                      child: Text(_currentStep == 3 ? 'Terminer' : 'Suivant'),
+                      child: Text(_currentStep == 4 ? 'Terminer' : 'Suivant'),
                     ),
                   ],
                 ),
@@ -691,6 +712,82 @@ class CamionReportState extends State<CamionReport> {
                   ),
                 ),
                 isActive: _currentStep >= 0,
+              ),
+              Step(
+                title: const Text('Selection equipement'),
+                content: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Equipement et Qualite de Produits',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 16),
+                              DropdownButtonFormField<String>(
+                                value: _selectedEquipment,
+                                decoration: const InputDecoration(
+                                  labelText: 'Type d\'equipement',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'Chargeuse K',
+                                    child: Text('Chargeuse 992K'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'Chargeuse H',
+                                    child: Text('Chargeuse 994H'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'PelleH',
+                                    child: Text('Pelle hydraulique'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'PelleB1',
+                                    child: Text('Pelle electrique B1'),
+                                  ),
+                                ],
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedEquipment = value;
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              DropdownButtonFormField<QualiteType>(
+                                value: _selectedQualite,
+                                decoration: const InputDecoration(
+                                  labelText: 'Qualite de Produits',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: QualiteType.values.map((type) {
+                                  return DropdownMenuItem(
+                                    value: type,
+                                    child: Text(qualiteTypeToString(type)),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedQualite = value;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                isActive: _currentStep >= 1,
               ),
               Step(
                 title: const Text('Sélection du camion'),
@@ -804,7 +901,7 @@ class CamionReportState extends State<CamionReport> {
                     ],
                   ),
                 ),
-                isActive: _currentStep >= 1,
+                isActive: _currentStep >= 2,
               ),
               Step(
                 title: const Text('Vérification'),
@@ -838,7 +935,7 @@ class CamionReportState extends State<CamionReport> {
                     ],
                   ),
                 ),
-                isActive: _currentStep >= 2,
+                isActive: _currentStep >= 3,
               ),
             ],
           ),
