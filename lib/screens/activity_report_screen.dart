@@ -341,66 +341,53 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
               },
               steps: [
                 Step(
-                  title: const Text('Date du rapport'),
-                  content: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                title: const Text('Date du rapport'),
+                content: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: Column(
                     children: [
-                      Text(
-                        'ÉTAPE 1: DATE DU RAPPORT',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue[900],
-                        ),
+                      const Text(
+                        'Sélectionnez la date du rapport',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 16),
                       Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Sélection de la date du rapport",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                        child: InkWell(
+                          onTap: () async {
+                            final DateTime? picked = await showDatePicker(
+                              context: context,
+                              initialDate: _selectedDate,
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                              locale: const Locale('fr', 'FR'),
+                            );
+                            if (picked != null && picked != _selectedDate) {
+                              setState(() {
+                                _selectedDate = picked;
+                              });
+                            }
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.calendar_today),
+                                const SizedBox(width: 16),
+                                Text(
+                                  '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                                  style: const TextStyle(fontSize: 18),
                                 ),
-                              ),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      "Date sélectionnée: $formattedDate",
-                                      style: const TextStyle(fontSize: 16),
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.calendar_today),
-                                    onPressed: () async {
-                                      final DateTime? picked = await showDatePicker(
-                                        context: context,
-                                        initialDate: _selectedDate,
-                                        firstDate: DateTime(2000),
-                                        lastDate: DateTime(2100),
-                                      );
-                                      if (picked != null && picked != _selectedDate) {
-                                        setState(() {
-                                          _selectedDate = picked;
-                                        });
-                                      }
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ],
+                                const Spacer(),
+                                const Icon(Icons.arrow_forward_ios),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  isActive: _currentStep >= 0,
+                ),
+                isActive: _currentStep >= 0,
                   state: _currentStep > 0 ? StepState.complete : StepState.indexed,
                 ),
                 Step(
