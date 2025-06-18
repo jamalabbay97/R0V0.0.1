@@ -144,11 +144,9 @@ class CamionReportState extends State<CamionReport> {
     
     // Initialize count controllers for existing trips
     if (truck['counts'] != null) {
-      for (var i = 0; i < truck['counts'].length; i++) {
-        _truckControllers[truckId]!['count${i}_time'] = 
+    for (var i = 0; i < truck['counts'].length; i++) {
+      _truckControllers[truckId]!['count${i}_time'] = 
             TextEditingController(text: truck['counts'][i]['time']?.toString() ?? '0');
-        _truckControllers[truckId]!['count${i}_location'] = 
-            TextEditingController(text: truck['counts'][i]['location']?.toString() ?? '');
       }
     }
   }
@@ -169,7 +167,7 @@ class CamionReportState extends State<CamionReport> {
     if (truck['counts'] != null) {
       countsSum = (truck['counts'] as List)
           .map((c) => int.tryParse(c['time']?.toString() ?? '0') ?? 0)
-          .fold(0, (a, b) => a + b);
+        .fold(0, (a, b) => a + b);
     }
     
     int tSudNum = int.tryParse(truck['tSud']?.toString() ?? '0') ?? 0;
@@ -198,7 +196,7 @@ class CamionReportState extends State<CamionReport> {
           truck["counts"] = [];
         }
         while (truck["counts"].length <= countIndex) {
-          truck["counts"].add({"time": "0", "location": ""});
+          truck["counts"].add({"time": "0"});
         }
         truck["counts"][countIndex][countField] = value;
       } else {
@@ -252,6 +250,7 @@ class CamionReportState extends State<CamionReport> {
 
   Future<void> _showTruckDialog(BuildContext context, [Map<String, dynamic>? existingTruck]) async {
     final truckId = existingTruck?['id'] ?? const Uuid().v4();
+    int dialogStep = 0;
 
     if (existingTruck == null) {
       truckData.add({
@@ -272,176 +271,234 @@ class CamionReportState extends State<CamionReport> {
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            return WillPopScope(
-              onWillPop: () async {
-                if (existingTruck == null) {
+            void goNext() {
+              setDialogState(() {
+                dialogStep++;
+              });
+            }
+            void goPrev() {
+              setDialogState(() {
+                dialogStep--;
+              });
+            }
+            return PopScope(
+              canPop: true,
+              onPopInvokedWithResult: (didPop, result) {
+                if (!didPop && existingTruck == null) {
                   deleteTruck(truckId);
+                  Navigator.of(context).pop();
+                } else if (!didPop) {
+                  Navigator.of(context).pop();
                 }
-                return true;
               },
               child: Dialog(
-                insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.8,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              existingTruck == null ? "Nouveau Camion" : "Modifier Camion",
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close),
-                              onPressed: () {
-                                if (existingTruck == null) {
-                                  deleteTruck(truckId);
-                                }
-                                Navigator.of(context).pop();
-                              },
-                            ),
-                          ],
-                        ),
+              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.8,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            existingTruck == null ? "Nouveau Camion" : "Modifier Camion",
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () {
+                              if (existingTruck == null) {
+                                deleteTruck(truckId);
+                              }
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                        ],
                       ),
-                      const Divider(height: 1),
-                      Flexible(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _truckCell(truckData.firstWhere((t) => t['id'] == truckId), "truckNumber", isRequired: true),
-                              const SizedBox(height: 16),
-                              _truckCell(truckData.firstWhere((t) => t['id'] == truckId), "driver", isRequired: true),
-                              const SizedBox(height: 16),
-                              ExpansionTile(
-                                title: Text(
-                                  "Voyages (${truckData.firstWhere((t) => t['id'] == truckId)['counts'].length})",
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                children: [
-                                  ...List.generate(truckData.firstWhere((t) => t['id'] == truckId)['counts'].length, (i) {
-                                    return Padding(
-                                      padding: const EdgeInsets.only(bottom: 16),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Text(
-                                                "Voyage ${i + 1}",
-                                                style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const Divider(height: 1),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(16),
+                          child: Builder(
+                            builder: (context) {
+                              if (dialogStep == 0) {
+                                // Step 1: Select truck
+                                return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                                    Text("Selectionner un camion", style: Theme.of(context).textTheme.titleMedium),
+                                    const SizedBox(height: 16),
+                            _truckCell(truckData.firstWhere((t) => t['id'] == truckId), "truckNumber", isRequired: true),
+                                  ],
+                                );
+                              } else if (dialogStep == 1) {
+                                // Step 2: Enter driver(s) and details
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text("Informations sur le conducteur", style: Theme.of(context).textTheme.titleMedium),
+                            const SizedBox(height: 16),
+                            _truckCell(truckData.firstWhere((t) => t['id'] == truckId), "driver", isRequired: true),
+                                    const SizedBox(height: 16),
+                                    _truckCell(truckData.firstWhere((t) => t['id'] == truckId), "lieu"),
+                                  ],
+                                );
+                              } else {
+                                // Step 3: Add trips
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text("Voyages", style: Theme.of(context).textTheme.titleMedium),
+                            const SizedBox(height: 16),
+                            ExpansionTile(
+                                      initiallyExpanded: true,
+                              title: Text(
+                                "Voyages (${truckData.firstWhere((t) => t['id'] == truckId)['counts'].length})",
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              children: [
+                                ...List.generate(truckData.firstWhere((t) => t['id'] == truckId)['counts'].length, (i) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 16),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              "Voyage ${i + 1}",
+                                              style: const TextStyle(fontWeight: FontWeight.bold),
+                                            ),
+                                            PopupMenuButton<String>(
+                                              icon: const Icon(Icons.more_horiz, size: 20),
+                                              padding: EdgeInsets.zero,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(8),
                                               ),
-                                              PopupMenuButton<String>(
-                                                icon: const Icon(Icons.more_horiz, size: 20),
-                                                padding: EdgeInsets.zero,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(8),
+                                              position: PopupMenuPosition.under,
+                                              itemBuilder: (BuildContext context) => [
+                                                PopupMenuItem<String>(
+                                                  value: 'edit',
+                                                  height: 36,
+                                                  child: Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
+                                                      const SizedBox(width: 8),
+                                                      Text(
+                                                        'Modifier',
+                                                        style: TextStyle(
+                                                          color: Theme.of(context).colorScheme.primary,
+                                                          fontSize: 14,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
-                                                position: PopupMenuPosition.under,
-                                                itemBuilder: (BuildContext context) => [
-                                                  PopupMenuItem<String>(
-                                                    value: 'edit',
-                                                    height: 36,
-                                                    child: Row(
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      children: [
-                                                        Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
-                                                        const SizedBox(width: 8),
-                                                        Text(
-                                                          'Modifier',
-                                                          style: TextStyle(
-                                                            color: Theme.of(context).colorScheme.primary,
-                                                            fontSize: 14,
-                                                          ),
+                                                PopupMenuItem<String>(
+                                                  value: 'delete',
+                                                  height: 36,
+                                                  child: Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
+                                                      const SizedBox(width: 8),
+                                                      Text(
+                                                        'Supprimer',
+                                                        style: TextStyle(
+                                                          color: Theme.of(context).colorScheme.error,
+                                                          fontSize: 14,
                                                         ),
-                                                      ],
-                                                    ),
+                                                      ),
+                                                    ],
                                                   ),
-                                                  PopupMenuItem<String>(
-                                                    value: 'delete',
-                                                    height: 36,
-                                                    child: Row(
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      children: [
-                                                        Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
-                                                        const SizedBox(width: 8),
-                                                        Text(
-                                                          'Supprimer',
-                                                          style: TextStyle(
-                                                            color: Theme.of(context).colorScheme.error,
-                                                            fontSize: 14,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ],
-                                                onSelected: (String value) {
-                                                  if (value == 'delete') {
-                                                    _confirmDeleteTrip(context, truckId, i, setDialogState);
-                                                  }
-                                                },
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          _truckCountCell(truckData.firstWhere((t) => t['id'] == truckId), i, "time"),
-                                          const SizedBox(height: 8),
-                                          _truckCountCell(truckData.firstWhere((t) => t['id'] == truckId), i, "location"),
-                                        ],
-                                      ),
-                                    );
-                                  }),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                    child: ElevatedButton.icon(
-                                      onPressed: () {
-                                        setDialogState(() {
-                                          addTrip(truckId);
-                                        });
-                                      },
-                                      icon: const Icon(Icons.add),
-                                      label: const Text("Ajouter un voyage"),
-                                      style: ElevatedButton.styleFrom(
-                                        minimumSize: const Size(double.infinity, 36),
-                                      ),
+                                                ),
+                                              ],
+                                              onSelected: (String value) {
+                                                Navigator.of(context).pop();
+                                                if (value == 'edit') {
+                                                  _showTruckDialog(context, truckData.firstWhere((t) => t['id'] == truckId));
+                                                } else if (value == 'delete') {
+                                                  Future.delayed(const Duration(milliseconds: 100), () {
+                                                    deleteTruck(truckId);
+                                                  });
+                                                }
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        _truckCountCell(truckData.firstWhere((t) => t['id'] == truckId), i, "time"),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                              setDialogState(() {
+                                        addTrip(truckId);
+                                      });
+                                    },
+                                    icon: const Icon(Icons.add),
+                                    label: const Text("Ajouter un voyage"),
+                                    style: ElevatedButton.styleFrom(
+                                      minimumSize: const Size(double.infinity, 36),
                                     ),
                                   ),
-                                ],
-                              ),
-                            ],
+                                ),
+                              ],
+                            ),
+                          ],
+                                );
+                              }
+                            },
                           ),
                         ),
                       ),
                       Padding(
                         padding: const EdgeInsets.all(16),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            TextButton(
-                              onPressed: () {
-                                if (existingTruck == null) {
-                                  deleteTruck(truckId);
-                                }
-                                Navigator.of(context).pop();
-                              },
-                              child: const Text('Annuler'),
-                            ),
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              },
-                              child: const Text('Enregistrer'),
+                            if (dialogStep > 0)
+                              TextButton(
+                                onPressed: goPrev,
+                                child: const Text('Precedent'),
+                              ),
+                            Row(
+                              children: [
+                                TextButton(
+                                  onPressed: () {
+                                    if (existingTruck == null) {
+                                      deleteTruck(truckId);
+                                    }
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: const Text('Annuler'),
+                                ),
+                                const SizedBox(width: 8),
+                                if (dialogStep < 2)
+                                  ElevatedButton(
+                                    onPressed: goNext,
+                                    child: const Text('Suivant'),
+                                  ),
+                                if (dialogStep == 2)
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                    child: const Text('Enregistrer'),
+                                  ),
+                              ],
                             ),
                           ],
                         ),
@@ -452,36 +509,6 @@ class CamionReportState extends State<CamionReport> {
               ),
             );
           },
-        );
-      },
-    );
-  }
-
-  Future<void> _confirmDeleteTrip(BuildContext context, String truckId, int tripIndex, StateSetter setDialogState) async {
-    return showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Supprimer le voyage"),
-          content: const Text("Êtes-vous sûr de vouloir supprimer ce voyage ?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Annuler"),
-            ),
-            TextButton(
-              onPressed: () {
-                setDialogState(() {
-                  removeTrip(truckId, tripIndex);
-                });
-                Navigator.of(context).pop();
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
-              child: const Text("Supprimer"),
-            ),
-          ],
         );
       },
     );
@@ -557,7 +584,7 @@ class CamionReportState extends State<CamionReport> {
                             padding: const EdgeInsets.all(16),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
+                            children: [
                                 Text(
                                   'Date',
                                   style: Theme.of(context).textTheme.titleMedium,
@@ -577,7 +604,7 @@ class CamionReportState extends State<CamionReport> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                              Text(
                                   'Poste',
                                   style: Theme.of(context).textTheme.titleMedium,
                                 ),
@@ -603,7 +630,7 @@ class CamionReportState extends State<CamionReport> {
                                 const Divider(height: 16),
                                 _buildInfoRow('Type d\'equipement', _selectedEquipment ?? '-'),
                                 _buildInfoRow('Qualite de produits', _selectedQualite != null ? qualiteTypeToString(_selectedQualite) : '-'),
-                              ],
+                            ],
                             ),
                           ),
                         ),
@@ -644,7 +671,7 @@ class CamionReportState extends State<CamionReport> {
                                         return Padding(
                                           padding: const EdgeInsets.only(left: 16, top: 4),
                                           child: Text(
-                                            'Voyage ${index + 1}: ${count['time']} - ${count['location']}',
+                                            'Voyage ${index + 1}: ${count['time']}',
                                             style: Theme.of(context).textTheme.bodyMedium,
                                           ),
                                         );
@@ -1070,12 +1097,13 @@ class CamionReportState extends State<CamionReport> {
                                                             ),
                                                           ],
                                                           onSelected: (String value) {
+                                                            Navigator.of(context).pop();
                                                             if (value == 'edit') {
-                                                              Navigator.of(context).pop();
-                                                              _showTruckDialog(context, truck);
+                                                              _showTruckDialog(context, truckData.firstWhere((t) => t['id'] == truck['id']));
                                                             } else if (value == 'delete') {
-                                                              Navigator.of(context).pop();
-                                                              deleteTruck(truck['id']);
+                                                              Future.delayed(const Duration(milliseconds: 100), () {
+                                                                deleteTruck(truck['id']);
+                                                              });
                                                             }
                                                           },
                                                         ),
@@ -1124,10 +1152,10 @@ class CamionReportState extends State<CamionReport> {
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 48),
                         ),
+                          ),
+                        ],
                       ),
-                    ],
                   ),
-                ),
                 isActive: _currentStep >= 4,
               ),
             ],
@@ -1273,19 +1301,7 @@ class CamionReportState extends State<CamionReport> {
       );
     }
 
-    return TextFormField(
-      controller: _truckControllers[truck['id']]!['count${i}_$field'],
-      onChanged: (val) => updateTruckData(truck['id'], "counts", val, i, field),
-      decoration: const InputDecoration(
-        isDense: true,
-        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        border: OutlineInputBorder(),
-        hintText: 'Lieu',
-      ),
-      maxLines: null,
-      minLines: 1,
-      style: const TextStyle(height: 1.5),
-    );
+    return const SizedBox.shrink();
   }
 
   void addTrip(String truckId) {
@@ -1299,8 +1315,7 @@ class CamionReportState extends State<CamionReport> {
         
         // Add new trip
         truck['counts'].add({
-          "time": "0",
-          "location": "",
+          "time": "0"
         });
         
         // Initialize controllers for the new trip
@@ -1310,8 +1325,6 @@ class CamionReportState extends State<CamionReport> {
         
         _truckControllers[truckId]!['count${tripIndex}_time'] = 
             TextEditingController(text: "0");
-        _truckControllers[truckId]!['count${tripIndex}_location'] = 
-            TextEditingController();
         
         // Update total
         truck["total"] = calculateTotal(truck);
@@ -1334,7 +1347,6 @@ class CamionReportState extends State<CamionReport> {
       
       // Dispose controllers for the trip
       _truckControllers[truckId]!['count${tripIndex}_time']?.dispose();
-      _truckControllers[truckId]!['count${tripIndex}_location']?.dispose();
       
       // Remove the trip
       truck['counts'].removeAt(tripIndex);
@@ -1343,8 +1355,6 @@ class CamionReportState extends State<CamionReport> {
       for (var i = tripIndex; i < truck['counts'].length; i++) {
         _truckControllers[truckId]!['count${i}_time'] = 
             TextEditingController(text: truck['counts'][i]['time']?.toString() ?? '0');
-        _truckControllers[truckId]!['count${i}_location'] = 
-            TextEditingController(text: truck['counts'][i]['location']?.toString() ?? '');
       }
       
       // Update total
