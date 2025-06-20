@@ -42,6 +42,72 @@ String posteToString(Poste? p) {
   }
 }
 
+// Mine and Sortie data structure
+class MineData {
+  final String name;
+  final List<ZoneData> zones;
+
+  MineData({required this.name, required this.zones});
+}
+
+class ZoneData {
+  final String name;
+  final List<String> sorties;
+
+  ZoneData({required this.name, required this.sorties});
+}
+
+final List<MineData> minesData = [
+  MineData(
+    name: 'Mine G',
+    zones: [
+      ZoneData(
+        name: 'Mine G Zone Dragline',
+        sorties: ['Sortie 1', 'Sortie 2'],
+      ),
+    ],
+  ),
+  MineData(
+    name: 'Mine E',
+    zones: [
+      ZoneData(
+        name: 'Mine E1 Zone Dragline',
+        sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3', 'Sortie 4'],
+      ),
+      ZoneData(
+        name: 'Mine E1 Zone Bulls',
+        sorties: ['Sortie 2', 'Sortie 3'],
+      ),
+      ZoneData(
+        name: 'Mine E3 Zone Dragline',
+        sorties: ['Sortie -1', 'Sortie 0', 'Sortie 1', 'Sortie 2'],
+      ),
+      ZoneData(
+        name: 'Mine E2 Zone Bulls',
+        sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3'],
+      ),
+    ],
+  ),
+  MineData(
+    name: 'Mine C',
+    zones: [
+      ZoneData(
+        name: 'Mine C Zone Dragline',
+        sorties: [],
+      ),
+    ],
+  ),
+  MineData(
+    name: 'Mine A',
+    zones: [
+      ZoneData(
+        name: 'Mine A',
+        sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3', 'Sortie 4', 'Sortie 5', 'Sortie 6', 'Sortie 7'],
+      ),
+    ],
+  ),
+];
+
 class TruckTrackingScreen extends StatefulWidget {
   final GlobalKey<FormState> formKey;
 
@@ -89,6 +155,11 @@ class CamionReportState extends State<CamionReport> {
   QualiteType? _selectedQualite;
   String? _selectedEquipment;
   Poste? _selectedPoste;
+  
+  // Mine and Sortie selection
+  MineData? _selectedMine;
+  ZoneData? _selectedZone;
+  String? _selectedSortie;
 
   List<Map<String, dynamic>> truckData = [
     {
@@ -588,6 +659,27 @@ class CamionReportState extends State<CamionReport> {
                           ),
                         ),
                         const SizedBox(height: 16),
+                        // Mine and Sortie Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Mine et Sortie',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                _buildInfoRow('Mine', _selectedMine?.name ?? '-'),
+                                _buildInfoRow('Zone', _selectedZone?.name ?? '-'),
+                                _buildInfoRow('Sortie', _selectedSortie ?? '-'),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                         // Equipment Section
                         Card(
                           margin: EdgeInsets.zero,
@@ -682,6 +774,9 @@ class CamionReportState extends State<CamionReport> {
         type: isDraft ? 'draft' : 'submitted',
         additionalData: {
           'truckData': truckData,
+          'mine': _selectedMine?.name,
+          'zone': _selectedZone?.name,
+          'sortie': _selectedSortie,
         },
       );
 
@@ -739,7 +834,7 @@ class CamionReportState extends State<CamionReport> {
           Stepper(
             currentStep: _currentStep,
             onStepContinue: () {
-              if (_currentStep < 5) {
+              if (_currentStep < 6) {
                 setState(() {
                   _currentStep += 1;
                 });
@@ -753,7 +848,7 @@ class CamionReportState extends State<CamionReport> {
               }
             },
             controlsBuilder: (context, details) {
-              if (_currentStep == 4) {
+              if (_currentStep == 5) {
                 return Padding(
                   padding: const EdgeInsets.only(top: 16.0),
                   child: Row(
@@ -784,7 +879,7 @@ class CamionReportState extends State<CamionReport> {
                       const SizedBox(width: 8),
                     ElevatedButton(
                       onPressed: details.onStepContinue,
-                      child: Text(_currentStep == 5 ? 'Terminer' : 'Suivant'),
+                      child: Text(_currentStep == 6 ? 'Terminer' : 'Suivant'),
                     ),
                   ],
                 ),
@@ -841,6 +936,110 @@ class CamionReportState extends State<CamionReport> {
                 isActive: _currentStep >= 0,
               ),
               Step(
+                title: const Text('Sélection Mine et Sortie'),
+                content: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Sélectionnez la mine, zone et sortie',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Sélection de la Mine',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 16),
+                              DropdownButtonFormField<MineData>(
+                                value: _selectedMine,
+                                decoration: const InputDecoration(
+                                  labelText: 'Mine',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: minesData.map((mine) {
+                                  return DropdownMenuItem(
+                                    value: mine,
+                                    child: Text(mine.name),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedMine = value;
+                                    _selectedZone = null;
+                                    _selectedSortie = null;
+                                  });
+                                },
+                              ),
+                              if (_selectedMine != null) ...[
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Sélection de la Zone',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 16),
+                                DropdownButtonFormField<ZoneData>(
+                                  value: _selectedZone,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Zone',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  items: _selectedMine!.zones.map((zone) {
+                                    return DropdownMenuItem(
+                                      value: zone,
+                                      child: Text(zone.name),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedZone = value;
+                                      _selectedSortie = null;
+                                    });
+                                  },
+                                ),
+                              ],
+                              if (_selectedZone != null && _selectedZone!.sorties.isNotEmpty) ...[
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Sélection de la Sortie',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 16),
+                                DropdownButtonFormField<String>(
+                                  value: _selectedSortie,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Sortie',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  items: _selectedZone!.sorties.map((sortie) {
+                                    return DropdownMenuItem(
+                                      value: sortie,
+                                      child: Text(sortie),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedSortie = value;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                isActive: _currentStep >= 1,
+              ),
+              Step(
                 title: const Text('Selection Poste'),
                 content: SingleChildScrollView(
                   physics: const NeverScrollableScrollPhysics(),
@@ -883,7 +1082,7 @@ class CamionReportState extends State<CamionReport> {
                     ],
                   ),
                 ),
-                isActive: _currentStep >= 1,
+                isActive: _currentStep >= 2,
               ),
               Step(
                 title: const Text('Selection equipement'),
@@ -959,7 +1158,7 @@ class CamionReportState extends State<CamionReport> {
                     ],
                   ),
                 ),
-                isActive: _currentStep >= 2,
+                isActive: _currentStep >= 3,
               ),
               Step(
                 title: const Text('Selection du camion'),
@@ -1122,7 +1321,7 @@ class CamionReportState extends State<CamionReport> {
                     ],
                   ),
                 ),
-                isActive: _currentStep >= 3,
+                isActive: _currentStep >= 4,
               ),
               Step(
                 title: const Text('Verification'),
@@ -1146,7 +1345,7 @@ class CamionReportState extends State<CamionReport> {
                         ],
                       ),
                   ),
-                isActive: _currentStep >= 4,
+                isActive: _currentStep >= 5,
               ),
             ],
           ),
