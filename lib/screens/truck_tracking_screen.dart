@@ -834,7 +834,7 @@ class CamionReportState extends State<CamionReport> {
           Stepper(
             currentStep: _currentStep,
             onStepContinue: () {
-              if (_currentStep < 6) {
+              if (_currentStep < 5) {
                 setState(() {
                   _currentStep += 1;
                 });
@@ -848,7 +848,7 @@ class CamionReportState extends State<CamionReport> {
               }
             },
             controlsBuilder: (context, details) {
-              if (_currentStep == 5) {
+              if (_currentStep == 4) {
                 return Padding(
                   padding: const EdgeInsets.only(top: 16.0),
                   child: Row(
@@ -879,7 +879,7 @@ class CamionReportState extends State<CamionReport> {
                       const SizedBox(width: 8),
                     ElevatedButton(
                       onPressed: details.onStepContinue,
-                      child: Text(_currentStep == 6 ? 'Terminer' : 'Suivant'),
+                      child: Text(_currentStep == 5 ? 'Terminer' : 'Suivant'),
                     ),
                   ],
                 ),
@@ -942,7 +942,7 @@ class CamionReportState extends State<CamionReport> {
                   child: Column(
                     children: [
                       const Text(
-                        'Sélectionnez la mine, zone et sortie',
+                        'Sélectionnez la mine, zone, sortie et poste',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 16),
@@ -1030,6 +1030,33 @@ class CamionReportState extends State<CamionReport> {
                                   },
                                 ),
                               ],
+                              if (_selectedMine != null && _selectedZone != null && 
+                                  (_selectedZone!.sorties.isEmpty || _selectedSortie != null)) ...[
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Selection du Poste',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 16),
+                                DropdownButtonFormField<Poste>(
+                                  value: _selectedPoste,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Poste',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  items: Poste.values.map((poste) {
+                                    return DropdownMenuItem(
+                                      value: poste,
+                                      child: Text(posteToString(poste)),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedPoste = value;
+                                    });
+                                  },
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -1038,51 +1065,6 @@ class CamionReportState extends State<CamionReport> {
                   ),
                 ),
                 isActive: _currentStep >= 1,
-              ),
-              Step(
-                title: const Text('Selection Poste'),
-                content: SingleChildScrollView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 16),
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Selection du Poste',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 16),
-                              DropdownButtonFormField<Poste>(
-                                value: _selectedPoste,
-                                decoration: const InputDecoration(
-                                  labelText: 'Poste',
-                                  border: OutlineInputBorder(),
-                                ),
-                                items: Poste.values.map((poste) {
-                                  return DropdownMenuItem(
-                                    value: poste,
-                                    child: Text(posteToString(poste)),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedPoste = value;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                isActive: _currentStep >= 2,
               ),
               Step(
                 title: const Text('Selection equipement'),
@@ -1158,7 +1140,7 @@ class CamionReportState extends State<CamionReport> {
                     ],
                   ),
                 ),
-                isActive: _currentStep >= 3,
+                isActive: _currentStep >= 2,
               ),
               Step(
                 title: const Text('Selection du camion'),
@@ -1321,7 +1303,7 @@ class CamionReportState extends State<CamionReport> {
                     ],
                   ),
                 ),
-                isActive: _currentStep >= 4,
+                isActive: _currentStep >= 3,
               ),
               Step(
                 title: const Text('Verification'),
@@ -1345,7 +1327,7 @@ class CamionReportState extends State<CamionReport> {
                         ],
                       ),
                   ),
-                isActive: _currentStep >= 5,
+                isActive: _currentStep >= 4,
               ),
             ],
           ),
