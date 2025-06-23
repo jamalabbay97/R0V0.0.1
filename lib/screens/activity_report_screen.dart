@@ -207,9 +207,9 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
   Future<void> _saveReport() async {
     try {
       final report = Report(
-        description: 'Activity Report - ${DateFormat('yyyy-MM-dd').format(_selectedDate)}',
+        description: 'Activity TNB - ${DateFormat('yyyy-MM-dd').format(_selectedDate)}',
         date: _selectedDate,
-        group: 'Activity',
+        group: 'MIB/U/E/I',
         type: 'activity_report',
         additionalData: {
           'stops': stops.map((stop) => {
@@ -678,15 +678,14 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      _buildSummaryRow('Temps d\'arrêt total:', formatMinutesToHoursMinutes(totalDowntime)),
-                      _buildSummaryRow('Temps de fonctionnement:', formatMinutesToHoursMinutes(operatingTime)),
-                      _buildSummaryRow('Temps vibreurs:', formatMinutesToHoursMinutes(totalVibratorMinutes)),
-                      _buildSummaryRow('Temps liaison:', formatMinutesToHoursMinutes(totalLiaisonMinutes)),
+                      _buildSummaryRow('T H.A:', formatMinutesToHoursMinutes(totalDowntime)),
+                      _buildSummaryRow('T H.M:', formatMinutesToHoursMinutes(operatingTime)),
+                      _buildSummaryRow('T H.V:', formatMinutesToHoursMinutes(totalVibratorMinutes)),
+                      _buildSummaryRow('T H.L:', formatMinutesToHoursMinutes(totalLiaisonMinutes)),
                       const SizedBox(height: 8),
-                      _buildSummaryRow('Nombre d\'arrêts:', stops.length.toString()),
-                      _buildSummaryRow('Nombre de compteurs vibreurs:', vibratorCounters.length.toString()),
-                      _buildSummaryRow('Nombre de compteurs liaison:', liaisonCounters.length.toString()),
-                      _buildSummaryRow('Nombre d\'entrées stock:', stockEntries.length.toString()),
+                      _buildSummaryRow('T Nr.A:', stops.length.toString()),
+                      _buildSummaryRow('T Nr.V:', vibratorCounters.length.toString()),
+                      _buildSummaryRow('T Nr.L:', liaisonCounters.length.toString()),
                     ],
                   ),
                 ),

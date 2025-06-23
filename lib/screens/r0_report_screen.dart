@@ -39,11 +39,24 @@ class ConsommationItem {
   ConsommationItem({this.tricone = '', this.gasoil = ''});
 }
 
+class ZoneData {
+  final String name;
+  final List<String> sorties;
+  ZoneData({required this.name, required this.sorties});
+}
+
+class MineData {
+  final String name;
+  final List<ZoneData> zones;
+  MineData({required this.name, required this.zones});
+}
+
 class R0ReportFormData {
   String entree = '';
-  String secteur = '';
+  String selectedMine = '';
+  String selectedZone = '';
+  String selectedSortie = '';
   String rapportNo = '';
-  String machineEngins = '';
   String unite = '';
   List<IndexCompteurPoste> indexCompteurs = List.generate(3, (_) => IndexCompteurPoste());
   List<String> shifts = List.generate(3, (_) => '');
@@ -88,71 +101,34 @@ class R0ReportState extends State<R0Report> {
     "3ème": "22:30 - 06:30",
   };
 
-  // Machine and equipment options
-  final List<String> machineOptions = [
-    // ENGINS - BULLDOZERS
-    'BULL D9R 76',
-    'BULL D9R 79',
-    'BULL D9R 80',
-    'BULL D9R 81',
-    'BULL D9R 82',
-    'BULL D9R 83',
-    'BULL D9R 86',
-    'BULL D9R 87',
-    'BULL LIB 84',
-    'BULL LIB 85',
-    
-    // ENGINS - CAMIONS
-    'CAMION T24',
-    'CAMION T25',
-    'CAMION T26',
-    'CAMION T27',
-    'CAMION T28',
-    'CAMION T29',
-    'CAMION T30',
-    'CAMION T31',
-    'CAMION T32',
-    'CAMION T33',
-    'WABCO 13',
-    'WABCO 19',
-    
-    // ENGINS - CHARGEUSES
-    'CHRG 992C',
-    'CHRG 992K',
-    'CHRG 994H',
-    
-    // ENGINS - NIVELEUSES
-    'NIV 14G',
-    'NIV 16H',
-    'NIV KOM01',
-    'NIV KOM02',
-    
-    // ENGINS - PAYDOZERS
-    'PAY CAT03',
-    'PAY KOM04',
-    'PAY KOM05',
-    
-    // ENGINS - PELLE HYDRAULIQUE
-    'PH365-C',
-    'PH5130',
-    
-    // MACHINES - DRAGLINES
-    '1370 W1',
-    '1370 W2',
-    
-    // MACHINES - PELLE ELECTRIQUE
-    '195 P1',
-    '195 P2',
-    
-    // MACHINES - SONDEUSES
-    'PV275-1',
-    'PV275-2',
-    'PV275-3',
-  ];
-
   // Ventilation codes and labels
   final List<VentilationItem> ventilationCodes = [
     VentilationItem(code: 121, label: "ARRET CARREAU INDUSTRIEL"),
+  ];
+
+  // Static mine/zone/sortie data
+  final List<MineData> mines = [
+    MineData(
+      name: 'Mine E',
+      zones: [
+        ZoneData(name: 'Mine E1 Zone Dragline', sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3', 'Sortie 4']),
+        ZoneData(name: 'Mine E1 Zone Bulls', sorties: ['Sortie 2', 'Sortie 3']),
+        ZoneData(name: 'Mine E3 Zone Dragline', sorties: ['Sortie -1', 'Sortie 0', 'Sortie 1', 'Sortie 2']),
+        ZoneData(name: 'Mine E2 Zone Bulls', sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3']),
+      ],
+    ),
+    MineData(
+      name: 'Mine C',
+      zones: [
+        ZoneData(name: 'Mine C Zone Dragline', sorties: []),
+      ],
+    ),
+    MineData(
+      name: 'Mine A',
+      zones: [
+        ZoneData(name: 'Mine A', sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3', 'Sortie 4', 'Sortie 5', 'Sortie 6', 'Sortie 7']),
+      ],
+    ),
   ];
 
   @override
@@ -256,82 +232,153 @@ class R0ReportState extends State<R0Report> {
   }
 
   // UI Building methods
-  Widget _buildHeaderSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Informations Générales',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Secteur',
-                border: OutlineInputBorder(),
-              ),
-              initialValue: formData.secteur,
-              onChanged: (value) {
-                setState(() {
-                  formData.secteur = value;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                labelText: 'Machine/Engins',
-                border: OutlineInputBorder(),
-              ),
-              value: formData.machineEngins.isEmpty ? null : formData.machineEngins,
-              hint: const Text('Sélectionner une machine'),
-              isExpanded: true,
-              items: machineOptions.map((String machine) {
-                return DropdownMenuItem<String>(
-                  value: machine,
-                  child: Text(
-                    machine,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  formData.machineEngins = newValue ?? '';
-                });
-              },
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Veuillez sélectionner une machine';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Sélection du Poste',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            ...posteOrder.map((poste) {
-              return RadioListTile<String>(
-                title: Text('$poste Poste (${posteTimes[poste]})'),
-                value: poste,
-                groupValue: formData.selectedPoste,
-                onChanged: (value) {
-                  setState(() {
-                    formData.selectedPoste = value!;
-                  });
-                },
-              );
-            }),
-          ],
+  Widget _buildHierarchicalSelectionSection() {
+    // Local state for dropdowns
+    MineData? selectedMine = formData.selectedMine.isNotEmpty
+        ? mines.firstWhere((m) => m.name == formData.selectedMine, orElse: () => mines.first)
+        : null;
+    ZoneData? selectedZone = (selectedMine != null && formData.selectedZone.isNotEmpty)
+        ? selectedMine.zones.firstWhere(
+            (z) => z.name == formData.selectedZone,
+            orElse: () => ZoneData(name: '', sorties: []),
+          )
+        : null;
+    String? selectedSortie = formData.selectedSortie.isNotEmpty ? formData.selectedSortie : null;
+    String? selectedPoste = formData.selectedPoste;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Sélection de la Mine',
+          style: Theme.of(context).textTheme.titleMedium,
         ),
-      ),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<MineData>(
+          value: selectedMine,
+          decoration: const InputDecoration(
+            labelText: 'Mine',
+            border: OutlineInputBorder(),
+          ),
+          items: mines.map((mine) {
+            return DropdownMenuItem(
+              value: mine,
+              child: Text(mine.name),
+            );
+          }).toList(),
+          onChanged: (value) {
+            setState(() {
+              formData.selectedMine = value?.name ?? '';
+              formData.selectedZone = '';
+              formData.selectedSortie = '';
+            });
+          },
+          validator: (value) {
+            if (value == null) {
+              return 'Veuillez sélectionner une mine';
+            }
+            return null;
+          },
+        ),
+        if (selectedMine != null) ...[
+          const SizedBox(height: 16),
+          Text(
+            'Sélection de la Zone',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<ZoneData>(
+            value: selectedZone,
+            decoration: const InputDecoration(
+              labelText: 'Zone',
+              border: OutlineInputBorder(),
+            ),
+            items: selectedMine.zones.map((zone) {
+              return DropdownMenuItem(
+                value: zone,
+                child: Text(zone.name),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                formData.selectedZone = value?.name ?? '';
+                formData.selectedSortie = '';
+              });
+            },
+            validator: (value) {
+              if (value == null) {
+                return 'Veuillez sélectionner une zone';
+              }
+              return null;
+            },
+          ),
+        ],
+        if (selectedZone != null && selectedZone.sorties.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text(
+            'Sélection de la Sortie',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            value: selectedSortie,
+            decoration: const InputDecoration(
+              labelText: 'Sortie',
+              border: OutlineInputBorder(),
+            ),
+            items: selectedZone.sorties.map((sortie) {
+              return DropdownMenuItem(
+                value: sortie,
+                child: Text(sortie),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                formData.selectedSortie = value ?? '';
+              });
+            },
+            validator: (value) {
+              if (selectedZone.sorties.isNotEmpty && (value == null || value.isEmpty)) {
+                return 'Veuillez sélectionner une sortie';
+              }
+              return null;
+            },
+          ),
+        ],
+        if (selectedMine != null && selectedZone != null &&
+            (selectedZone.sorties.isEmpty || selectedSortie != null)) ...[
+          const SizedBox(height: 16),
+          Text(
+            'Sélection du Poste',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            value: selectedPoste,
+            decoration: const InputDecoration(
+              labelText: 'Poste',
+              border: OutlineInputBorder(),
+            ),
+            items: posteOrder.map((poste) {
+              return DropdownMenuItem(
+                value: poste,
+                child: Text('$poste Poste (${posteTimes[poste]})'),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                formData.selectedPoste = value ?? posteOrder.first;
+              });
+            },
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Veuillez sélectionner un poste';
+              }
+              return null;
+            },
+          ),
+        ],
+      ],
     );
   }
 
@@ -339,256 +386,241 @@ class R0ReportState extends State<R0Report> {
     // Get the index of the selected poste
     final selectedPosteIndex = posteOrder.indexOf(formData.selectedPoste);
     
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Index Compteur - ${formData.selectedPoste} Poste',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          '${posteOrder[selectedPosteIndex]} Poste (${posteTimes[posteOrder[selectedPosteIndex]]})',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        Row(
           children: [
-            Text(
-              'Index Compteur - ${formData.selectedPoste} Poste',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '${posteOrder[selectedPosteIndex]} Poste (${posteTimes[posteOrder[selectedPosteIndex]]})',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    decoration: const InputDecoration(
-                      labelText: 'Début',
-                      border: OutlineInputBorder(),
-                      suffixText: 'h',
-                    ),
-                    keyboardType: TextInputType.number,
-                    initialValue: formData.indexCompteurs[selectedPosteIndex].debut,
-                    onChanged: (value) {
-                      setState(() {
-                        formData.indexCompteurs[selectedPosteIndex].debut = value;
-                        _calculateHours();
-                      });
-                    },
-                  ),
+            Expanded(
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Début',
+                  border: OutlineInputBorder(),
+                  suffixText: 'h',
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextFormField(
-                    decoration: const InputDecoration(
-                      labelText: 'Fin',
-                      border: OutlineInputBorder(),
-                      suffixText: 'h',
-                    ),
-                    keyboardType: TextInputType.number,
-                    initialValue: formData.indexCompteurs[selectedPosteIndex].fin,
-                    onChanged: (value) {
-                      setState(() {
-                        formData.indexCompteurs[selectedPosteIndex].fin = value;
-                        _calculateHours();
-                      });
-                    },
-                  ),
-                ),
-              ],
-            ),
-            if (!_validateCompteurIndexes() && 
-                (formData.indexCompteurs[selectedPosteIndex].debut.isNotEmpty || 
-                 formData.indexCompteurs[selectedPosteIndex].fin.isNotEmpty))
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Text(
-                  'Vérifiez les valeurs du compteur',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.error,
-                    fontSize: 12,
-                  ),
-                ),
+                keyboardType: TextInputType.number,
+                initialValue: formData.indexCompteurs[selectedPosteIndex].debut,
+                onChanged: (value) {
+                  setState(() {
+                    formData.indexCompteurs[selectedPosteIndex].debut = value;
+                    _calculateHours();
+                  });
+                },
               ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Fin',
+                  border: OutlineInputBorder(),
+                  suffixText: 'h',
+                ),
+                keyboardType: TextInputType.number,
+                initialValue: formData.indexCompteurs[selectedPosteIndex].fin,
+                onChanged: (value) {
+                  setState(() {
+                    formData.indexCompteurs[selectedPosteIndex].fin = value;
+                    _calculateHours();
+                  });
+                },
+              ),
+            ),
           ],
         ),
-      ),
+        if (!_validateCompteurIndexes() && 
+            (formData.indexCompteurs[selectedPosteIndex].debut.isNotEmpty || 
+             formData.indexCompteurs[selectedPosteIndex].fin.isNotEmpty))
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(
+              'Vérifiez les valeurs du compteur',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontSize: 12,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
   Widget _buildVentilationSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-            Text(
-              'Ventilation des Arrêts',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Code')),
-                  DataColumn(label: Text('Arrêt')),
-                  DataColumn(label: Text('Durée')),
-                  DataColumn(label: Text('Note')),
-                ],
-                rows: formData.ventilation.map((item) {
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(item.code.toString())),
-                      DataCell(Text(item.label)),
-                      DataCell(
-                        SizedBox(
-                          width: 100,
-                          child: TextFormField(
-                            decoration: const InputDecoration(
-                              hintText: '1h 30m',
-                              border: OutlineInputBorder(),
-                            ),
-                            initialValue: item.duree,
-                            onChanged: (value) {
-                              setState(() {
-                                item.duree = value;
-                                _calculateHours();
-                              });
-                            },
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        SizedBox(
-                          width: 150,
-                          child: TextFormField(
-                            decoration: const InputDecoration(
-                              hintText: 'Note',
-                              border: OutlineInputBorder(),
-                            ),
-                            initialValue: item.note,
-                            onChanged: (value) {
-                              setState(() {
-                                item.note = value;
-                              });
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
-              ),
-            ),
-            const SizedBox(height: 16),
-        TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Explication des Arrêts',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-              initialValue: formData.arretsExplication,
-              onChanged: (value) {
-                setState(() {
-                  formData.arretsExplication = value;
-                });
-              },
-            ),
-          ],
+        Text(
+          'Ventilation des Arrêts',
+          style: Theme.of(context).textTheme.titleLarge,
         ),
-      ),
+        const SizedBox(height: 16),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            columns: const [
+              DataColumn(label: Text('Code')),
+              DataColumn(label: Text('Arrêt')),
+              DataColumn(label: Text('Durée')),
+              DataColumn(label: Text('Note')),
+            ],
+            rows: formData.ventilation.map((item) {
+              return DataRow(
+                cells: [
+                  DataCell(Text(item.code.toString())),
+                  DataCell(Text(item.label)),
+                  DataCell(
+                    SizedBox(
+                      width: 100,
+                      child: TextFormField(
+                        decoration: const InputDecoration(
+                          hintText: '1h 30m',
+                          border: OutlineInputBorder(),
+                        ),
+                        initialValue: item.duree,
+                        onChanged: (value) {
+                          setState(() {
+                            item.duree = value;
+                            _calculateHours();
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    SizedBox(
+                      width: 150,
+                      child: TextFormField(
+                        decoration: const InputDecoration(
+                          hintText: 'Note',
+                          border: OutlineInputBorder(),
+                        ),
+                        initialValue: item.note,
+                        onChanged: (value) {
+                          setState(() {
+                            item.note = value;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Explication des Arrêts',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+          initialValue: formData.arretsExplication,
+          onChanged: (value) {
+            setState(() {
+              formData.arretsExplication = value;
+            });
+          },
+        ),
+      ],
     );
   }
 
   Widget _buildExploitationSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Exploitation',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 16),
+        Row(
           children: [
-            Text(
-              'Exploitation',
-              style: Theme.of(context).textTheme.titleLarge,
+            Expanded(
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Heures Brutes',
+                  border: OutlineInputBorder(),
+                  suffixText: 'h',
+                ),
+                readOnly: true,
+                controller: TextEditingController(text: formData.exploitation['heuresBrutes']),
+              ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    decoration: const InputDecoration(
-                      labelText: 'Heures Brutes',
-                      border: OutlineInputBorder(),
-                      suffixText: 'h',
-                    ),
-                    readOnly: true,
-                    controller: TextEditingController(text: formData.exploitation['heuresBrutes']),
-                  ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Heures Arrêts',
+                  border: OutlineInputBorder(),
+                  suffixText: 'h',
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextFormField(
-                    decoration: const InputDecoration(
-                      labelText: 'Heures Arrêts',
-                      border: OutlineInputBorder(),
-                      suffixText: 'h',
-                    ),
-                    readOnly: true,
-                    controller: TextEditingController(text: formData.exploitation['heuresArrets']),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextFormField(
-                    decoration: const InputDecoration(
-                      labelText: 'Heures Nettes',
-                      border: OutlineInputBorder(),
-                      suffixText: 'h',
-                    ),
-                    readOnly: true,
-                    controller: TextEditingController(text: formData.exploitation['heuresNettes']),
-                  ),
-                ),
-              ],
+                readOnly: true,
+                controller: TextEditingController(text: formData.exploitation['heuresArrets']),
+              ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    decoration: const InputDecoration(
-                      labelText: 'Tonnage',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    initialValue: formData.exploitation['tonnage'],
-                    onChanged: (value) {
-                      setState(() {
-                        formData.exploitation['tonnage'] = value;
-                      });
-                    },
-                  ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Heures Nettes',
+                  border: OutlineInputBorder(),
+                  suffixText: 'h',
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextFormField(
-                    decoration: const InputDecoration(
-                      labelText: 'Rendement',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    initialValue: formData.exploitation['rendement'],
-                    onChanged: (value) {
-                      setState(() {
-                        formData.exploitation['rendement'] = value;
-                      });
-                    },
-                  ),
-                ),
-              ],
+                readOnly: true,
+                controller: TextEditingController(text: formData.exploitation['heuresNettes']),
+              ),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Tonnage',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                initialValue: formData.exploitation['tonnage'],
+                onChanged: (value) {
+                  setState(() {
+                    formData.exploitation['tonnage'] = value;
+                  });
+                },
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Rendement',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                initialValue: formData.exploitation['rendement'],
+                onChanged: (value) {
+                  setState(() {
+                    formData.exploitation['rendement'] = value;
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -596,236 +628,217 @@ class R0ReportState extends State<R0Report> {
     // Get the index of the selected poste
     final selectedPosteIndex = posteOrder.indexOf(formData.selectedPoste);
     
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Répartition du Temps de Travail Pur - ${formData.selectedPoste} Poste',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          '${posteOrder[selectedPosteIndex]} Poste',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        Row(
           children: [
-            Text(
-              'Répartition du Temps de Travail Pur - ${formData.selectedPoste} Poste',
-              style: Theme.of(context).textTheme.titleLarge,
+            Expanded(
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Chantier',
+                  border: OutlineInputBorder(),
+                ),
+                initialValue: formData.repartitionTravail[selectedPosteIndex].chantier,
+                onChanged: (value) {
+                  setState(() {
+                    formData.repartitionTravail[selectedPosteIndex].chantier = value;
+                  });
+                },
+              ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              '${posteOrder[selectedPosteIndex]} Poste',
-              style: Theme.of(context).textTheme.titleMedium,
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Temps',
+                  border: OutlineInputBorder(),
+                ),
+                initialValue: formData.repartitionTravail[selectedPosteIndex].temps,
+                onChanged: (value) {
+                  setState(() {
+                    formData.repartitionTravail[selectedPosteIndex].temps = value;
+                  });
+                },
+              ),
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    decoration: const InputDecoration(
-                      labelText: 'Chantier',
-                      border: OutlineInputBorder(),
-                    ),
-                    initialValue: formData.repartitionTravail[selectedPosteIndex].chantier,
-                    onChanged: (value) {
-                      setState(() {
-                        formData.repartitionTravail[selectedPosteIndex].chantier = value;
-                      });
-                    },
-                  ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Imputation',
+                  border: OutlineInputBorder(),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextFormField(
-                    decoration: const InputDecoration(
-                      labelText: 'Temps',
-                      border: OutlineInputBorder(),
-                    ),
-                    initialValue: formData.repartitionTravail[selectedPosteIndex].temps,
-                    onChanged: (value) {
-                      setState(() {
-                        formData.repartitionTravail[selectedPosteIndex].temps = value;
-                      });
-                    },
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextFormField(
-                    decoration: const InputDecoration(
-                      labelText: 'Imputation',
-                      border: OutlineInputBorder(),
-                    ),
-                    initialValue: formData.repartitionTravail[selectedPosteIndex].imputation,
-                    onChanged: (value) {
-                      setState(() {
-                        formData.repartitionTravail[selectedPosteIndex].imputation = value;
-                      });
-                    },
-                  ),
-                ),
-              ],
+                initialValue: formData.repartitionTravail[selectedPosteIndex].imputation,
+                onChanged: (value) {
+                  setState(() {
+                    formData.repartitionTravail[selectedPosteIndex].imputation = value;
+                  });
+                },
+              ),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 
   Widget _buildPersonnelSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Personnel',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 16),
+        Row(
           children: [
-            Text(
-              'Personnel',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    decoration: const InputDecoration(
-                      labelText: 'Conducteur',
-                      border: OutlineInputBorder(),
-                    ),
-                    initialValue: formData.personnel.conducteur,
-                    onChanged: (value) {
-                      setState(() {
-                        formData.personnel.conducteur = value;
-                      });
-                    },
-                  ),
+            Expanded(
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Conducteur',
+                  border: OutlineInputBorder(),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextFormField(
-                    decoration: const InputDecoration(
-                      labelText: 'Graisseur',
-                      border: OutlineInputBorder(),
-                    ),
-                    initialValue: formData.personnel.graisseur,
-                    onChanged: (value) {
-                      setState(() {
-                        formData.personnel.graisseur = value;
-                      });
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-        TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Matricules',
-                border: OutlineInputBorder(),
+                initialValue: formData.personnel.conducteur,
+                onChanged: (value) {
+                  setState(() {
+                    formData.personnel.conducteur = value;
+                  });
+                },
               ),
-              initialValue: formData.personnel.matricules,
-              onChanged: (value) {
-                setState(() {
-                  formData.personnel.matricules = value;
-                });
-              },
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Graisseur',
+                  border: OutlineInputBorder(),
+                ),
+                initialValue: formData.personnel.graisseur,
+                onChanged: (value) {
+                  setState(() {
+                    formData.personnel.graisseur = value;
+                  });
+                },
+              ),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 16),
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Matricules',
+            border: OutlineInputBorder(),
+          ),
+          initialValue: formData.personnel.matricules,
+          onChanged: (value) {
+            setState(() {
+              formData.personnel.matricules = value;
+            });
+          },
+        ),
+      ],
     );
   }
 
   Widget _buildConsommationSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Suivi Consommation',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 16),
+        Row(
           children: [
-            Text(
-              'Suivi Consommation',
-              style: Theme.of(context).textTheme.titleLarge,
+            Expanded(
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Tricone',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                initialValue: formData.consommation.tricone,
+                onChanged: (value) {
+                  setState(() {
+                    formData.consommation.tricone = value;
+                  });
+                },
+              ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    decoration: const InputDecoration(
-                      labelText: 'Tricone',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    initialValue: formData.consommation.tricone,
-                    onChanged: (value) {
-                      setState(() {
-                        formData.consommation.tricone = value;
-                      });
-                    },
-                  ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Gasoil',
+                  border: OutlineInputBorder(),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextFormField(
-                    decoration: const InputDecoration(
-                      labelText: 'Gasoil',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    initialValue: formData.consommation.gasoil,
-                    onChanged: (value) {
-                      setState(() {
-                        formData.consommation.gasoil = value;
-                      });
-                    },
-                  ),
-                ),
-              ],
+                keyboardType: TextInputType.number,
+                initialValue: formData.consommation.gasoil,
+                onChanged: (value) {
+                  setState(() {
+                    formData.consommation.gasoil = value;
+                  });
+                },
+              ),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 
   Widget _buildVerificationSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Vérification du Rapport',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            _buildSummaryItem('Date du rapport', DateFormat('dd/MM/yyyy').format(_selectedDate)),
-            _buildSummaryItem('Entrée', formData.entree),
-            _buildSummaryItem('Secteur', formData.secteur),
-            _buildSummaryItem('Machine/Engins', formData.machineEngins),
-            _buildSummaryItem('Heures Brutes', '${formData.exploitation['heuresBrutes']}h'),
-            _buildSummaryItem('Heures Nettes', '${formData.exploitation['heuresNettes']}h'),
-            _buildSummaryItem('Conducteur', formData.personnel.conducteur),
-            const SizedBox(height: 16),
-            if (!_validateCompteurIndexes())
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.errorContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.warning, color: Theme.of(context).colorScheme.error),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Veuillez corriger les erreurs dans les index compteur avant de soumettre',
-                        style: TextStyle(color: Theme.of(context).colorScheme.error),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Vérification du Rapport',
+          style: Theme.of(context).textTheme.titleLarge,
         ),
-      ),
+        const SizedBox(height: 16),
+        _buildSummaryItem('Date du rapport', DateFormat('dd/MM/yyyy').format(_selectedDate)),
+        _buildSummaryItem('Entrée', formData.entree),
+        _buildSummaryItem('Mine', formData.selectedMine),
+        _buildSummaryItem('Zone', formData.selectedZone),
+        _buildSummaryItem('Sortie', formData.selectedSortie),
+        _buildSummaryItem('Heures Brutes', '${formData.exploitation['heuresBrutes']}h'),
+        _buildSummaryItem('Heures Nettes', '${formData.exploitation['heuresNettes']}h'),
+        _buildSummaryItem('Conducteur', formData.personnel.conducteur),
+        const SizedBox(height: 16),
+        if (!_validateCompteurIndexes())
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.errorContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.warning, color: Theme.of(context).colorScheme.error),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Veuillez corriger les erreurs dans les index compteur avant de soumettre',
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 
@@ -954,9 +967,10 @@ class R0ReportState extends State<R0Report> {
   Map<String, dynamic> _serializeFormData() {
     return {
       'entree': formData.entree,
-      'secteur': formData.secteur,
+      'mine': formData.selectedMine,
+      'zone': formData.selectedZone,
+      'sortie': formData.selectedSortie,
       'rapportNo': formData.rapportNo,
-      'machineEngins': formData.machineEngins,
       'unite': formData.unite,
       'indexCompteurs': formData.indexCompteurs.map((ic) => {
         'debut': ic.debut,
@@ -1009,145 +1023,512 @@ class R0ReportState extends State<R0Report> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           physics: const AlwaysScrollableScrollPhysics(),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              Stepper(
-                currentStep: _currentStep,
-                onStepContinue: () {
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Stepper(
+                  currentStep: _currentStep,
+                  onStepContinue: () {
                     if (_currentStep < 8) {
-                    setState(() {
-                      _currentStep += 1;
-                    });
-                  }
-                },
-                onStepCancel: () {
-                  if (_currentStep > 0) {
-                    setState(() {
-                      _currentStep -= 1;
-                    });
-                  }
-                },
-                controlsBuilder: (context, details) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 16.0),
-                    child: Row(
-                      children: [
-                        if (_currentStep > 0)
+                      setState(() {
+                        _currentStep += 1;
+                      });
+                    }
+                  },
+                  onStepCancel: () {
+                    if (_currentStep > 0) {
+                      setState(() {
+                        _currentStep -= 1;
+                      });
+                    }
+                  },
+                  controlsBuilder: (context, details) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 16.0),
+                      child: Row(
+                        children: [
+                          if (_currentStep > 0)
                             Expanded(
                               child: OutlinedButton(
-                            onPressed: details.onStepCancel,
-                            child: const Text('Précédent'),
+                                onPressed: details.onStepCancel,
+                                child: const Text('Précédent'),
                               ),
-                          ),
-                        if (_currentStep > 0)
-                          const SizedBox(width: 8),
+                            ),
+                          if (_currentStep > 0)
+                            const SizedBox(width: 8),
                           Expanded(
                             child: ElevatedButton(
-                          onPressed: details.onStepContinue,
+                              onPressed: details.onStepContinue,
                               child: Text(_currentStep == 8 ? 'Terminer' : 'Suivant'),
                             ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                steps: [
-                  Step(
-                title: const Text('Date du rapport'),
-                      content: Column(
-                    children: [
-                      const Text(
-                        'Sélectionnez la date du rapport',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
-                      Card(
-                        child: InkWell(
-                          onTap: () async {
-                            final DateTime? picked = await showDatePicker(
-                              context: context,
-                              initialDate: _selectedDate,
-                              firstDate: DateTime(2000),
-                              lastDate: DateTime(2100),
-                              locale: const Locale('fr', 'FR'),
-                            );
-                            if (picked != null && picked != _selectedDate) {
-                              setState(() {
-                                _selectedDate = picked;
-                              });
-                            }
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.calendar_today),
-                                const SizedBox(width: 16),
-                                Text(
-                                  '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                                  style: const TextStyle(fontSize: 18),
+                    );
+                  },
+                  steps: [
+                    Step(
+                      title: const Text('Date du rapport'),
+                      content: Column(
+                        children: [
+                          const Text(
+                            'Sélectionnez la date du rapport',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 16),
+                          Card(
+                            child: InkWell(
+                              onTap: () async {
+                                final DateTime? picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: _selectedDate,
+                                  firstDate: DateTime(2000),
+                                  lastDate: DateTime(2100),
+                                  locale: const Locale('fr', 'FR'),
+                                );
+                                if (picked != null && picked != _selectedDate) {
+                                  setState(() {
+                                    _selectedDate = picked;
+                                  });
+                                }
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.calendar_today),
+                                    const SizedBox(width: 16),
+                                    Text(
+                                      '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                                      style: const TextStyle(fontSize: 18),
+                                    ),
+                                    const Spacer(),
+                                    const Icon(Icons.arrow_forward_ios),
+                                  ],
                                 ),
-                                const Spacer(),
-                                const Icon(Icons.arrow_forward_ios),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                ),
-                isActive: _currentStep >= 0,
-                    state: _currentStep > 0 ? StepState.complete : StepState.indexed,
-                  ),
-                  Step(
+                      isActive: _currentStep >= 0,
+                      state: _currentStep > 0 ? StepState.complete : StepState.indexed,
+                    ),
+                    Step(
                       title: const Text('Informations Générales'),
-                      content: _buildHeaderSection(),
-                    isActive: _currentStep >= 1,
-                    state: _currentStep > 1 ? StepState.complete : StepState.indexed,
-                  ),
-                  Step(
+                      content: Row(
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Ajouter Informations Générales'),
+                                  content: _buildHierarchicalSelectionSection(),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Fermer'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text('Ajouter'),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Liste Informations Générales'),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Mine: ${formData.selectedMine}'),
+                                      Text('Zone: ${formData.selectedZone}'),
+                                      Text('Sortie: ${formData.selectedSortie}'),
+                                      Text('Poste: ${formData.selectedPoste}'),
+                                    ],
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Fermer'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text('Liste'),
+                          ),
+                        ],
+                      ),
+                      isActive: _currentStep >= 1,
+                      state: _currentStep > 1 ? StepState.complete : StepState.indexed,
+                    ),
+                    Step(
                       title: const Text('Compteurs'),
-                      content: _buildCompteurSection(),
-                    isActive: _currentStep >= 2,
-                    state: _currentStep > 2 ? StepState.complete : StepState.indexed,
-                  ),
+                      content: Row(
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Ajouter Compteur'),
+                                  content: _buildCompteurSection(),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Fermer'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text('Ajouter'),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Liste Compteurs'),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: List.generate(formData.indexCompteurs.length, (i) => Text('Poste ${i+1}: Début ${formData.indexCompteurs[i].debut}, Fin ${formData.indexCompteurs[i].fin}')),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Fermer'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text('Liste'),
+                          ),
+                        ],
+                      ),
+                      isActive: _currentStep >= 2,
+                      state: _currentStep > 2 ? StepState.complete : StepState.indexed,
+                    ),
                     Step(
                       title: const Text('Ventilation'),
-                      content: _buildVentilationSection(),
+                      content: Row(
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Ajouter Ventilation'),
+                                  content: _buildVentilationSection(),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Fermer'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text('Ajouter'),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Liste Ventilation'),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: formData.ventilation.map((v) => Text('Code: ${v.code}, Durée: ${v.duree}, Note: ${v.note}')).toList(),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Fermer'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text('Liste'),
+                          ),
+                        ],
+                      ),
                       isActive: _currentStep >= 3,
                       state: _currentStep > 3 ? StepState.complete : StepState.indexed,
                     ),
                     Step(
                       title: const Text('Exploitation'),
-                      content: _buildExploitationSection(),
+                      content: Row(
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Ajouter Exploitation'),
+                                  content: _buildExploitationSection(),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Fermer'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text('Ajouter'),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Liste Exploitation'),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Heures Brutes: ${formData.exploitation['heuresBrutes']}'),
+                                      Text('Heures Arrêts: ${formData.exploitation['heuresArrets']}'),
+                                      Text('Heures Nettes: ${formData.exploitation['heuresNettes']}'),
+                                      Text('Tonnage: ${formData.exploitation['tonnage']}'),
+                                      Text('Rendement: ${formData.exploitation['rendement']}'),
+                                    ],
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Fermer'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text('Liste'),
+                          ),
+                        ],
+                      ),
                       isActive: _currentStep >= 4,
                       state: _currentStep > 4 ? StepState.complete : StepState.indexed,
                     ),
                     Step(
                       title: const Text('Répartition'),
-                      content: _buildRepartitionSection(),
+                      content: Row(
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Ajouter Répartition'),
+                                  content: _buildRepartitionSection(),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Fermer'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text('Ajouter'),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Liste Répartition'),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: List.generate(formData.repartitionTravail.length, (i) => Text('Poste ${i+1}: Chantier ${formData.repartitionTravail[i].chantier}, Temps ${formData.repartitionTravail[i].temps}, Imputation ${formData.repartitionTravail[i].imputation}')),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Fermer'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text('Liste'),
+                          ),
+                        ],
+                      ),
                       isActive: _currentStep >= 5,
                       state: _currentStep > 5 ? StepState.complete : StepState.indexed,
                     ),
                     Step(
                       title: const Text('Personnel'),
-                      content: _buildPersonnelSection(),
+                      content: Row(
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Ajouter Personnel'),
+                                  content: _buildPersonnelSection(),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Fermer'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text('Ajouter'),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Liste Personnel'),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Conducteur: ${formData.personnel.conducteur}'),
+                                      Text('Graisseur: ${formData.personnel.graisseur}'),
+                                      Text('Matricules: ${formData.personnel.matricules}'),
+                                    ],
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Fermer'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text('Liste'),
+                          ),
+                        ],
+                      ),
                       isActive: _currentStep >= 6,
                       state: _currentStep > 6 ? StepState.complete : StepState.indexed,
                     ),
                     Step(
                       title: const Text('Consommation'),
-                      content: _buildConsommationSection(),
+                      content: Row(
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Ajouter Consommation'),
+                                  content: _buildConsommationSection(),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Fermer'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text('Ajouter'),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Liste Consommation'),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Tricone: ${formData.consommation.tricone}'),
+                                      Text('Gasoil: ${formData.consommation.gasoil}'),
+                                    ],
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Fermer'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text('Liste'),
+                          ),
+                        ],
+                      ),
                       isActive: _currentStep >= 7,
                       state: _currentStep > 7 ? StepState.complete : StepState.indexed,
                     ),
-                  Step(
-                    title: const Text('Vérification'),
-                      content: _buildVerificationSection(),
+                    Step(
+                      title: const Text('Vérification'),
+                      content: Row(
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Vérification du Rapport'),
+                                  content: _buildVerificationSection(),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Fermer'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text('Ajouter'),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Résumé du Rapport'),
+                                  content: _buildVerificationSection(),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Fermer'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text('Liste'),
+                          ),
+                        ],
+                      ),
                       isActive: _currentStep >= 8,
                       state: _currentStep > 8 ? StepState.complete : StepState.indexed,
                     ),
