@@ -285,7 +285,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       "${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}";
 
     return Scaffold(
-      appBar: AppBar(title: const Text("RAPPORT D'ACTIVITÉ TNR")),
+      appBar: AppBar(title: const Text("RAPPORT D'ACTIVITÉ TNB")),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
