@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:r0_app/services/database_helper.dart';
 import 'package:r0_app/models/report.dart';
-import 'package:r0_app/l10n/app_localizations.dart';
+// import 'package:r0_app/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 
 // Data models
@@ -60,7 +60,7 @@ class R0ReportFormData {
   String unite = '';
   List<IndexCompteurPoste> indexCompteurs = List.generate(3, (_) => IndexCompteurPoste());
   List<String> shifts = List.generate(3, (_) => '');
-  String selectedPoste = '1er';
+  String selectedPoste = '';
   List<VentilationItem> ventilation = [];
   String arretsExplication = '';
   Map<String, String> exploitation = {
@@ -805,18 +805,21 @@ class R0ReportState extends State<R0Report> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Vérification du Rapport',
+          'R0',
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
         _buildSummaryItem('Date du rapport', DateFormat('dd/MM/yyyy').format(_selectedDate)),
-        _buildSummaryItem('Entrée', formData.entree),
-        _buildSummaryItem('Mine', formData.selectedMine),
-        _buildSummaryItem('Zone', formData.selectedZone),
         _buildSummaryItem('Sortie', formData.selectedSortie),
         _buildSummaryItem('Heures Brutes', '${formData.exploitation['heuresBrutes']}h'),
         _buildSummaryItem('Heures Nettes', '${formData.exploitation['heuresNettes']}h'),
+        _buildSummaryItem('Tonnage', '${formData.exploitation['tonnage']}t'),
+        _buildSummaryItem('Rendement', '${formData.exploitation['rendement']}%'),
         _buildSummaryItem('Conducteur', formData.personnel.conducteur),
+        _buildSummaryItem('Graisseur', formData.personnel.graisseur),
+        _buildSummaryItem('Matricules', formData.personnel.matricules),
+        _buildSummaryItem('Tricone', formData.consommation.tricone),
+        _buildSummaryItem('Gasoil', formData.consommation.gasoil),
         const SizedBox(height: 16),
         if (!_validateCompteurIndexes())
           Container(
@@ -886,68 +889,6 @@ class R0ReportState extends State<R0Report> {
           content: Text('Brouillon enregistré avec succès'),
           backgroundColor: Colors.green,
         ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _submitReport() async {
-    if (!_validateCompteurIndexes()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Veuillez corriger les erreurs avant de soumettre'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final report = Report(
-        description: 'Rapport R0 - ${DateFormat('yyyy-MM-dd').format(_selectedDate)}',
-        date: _selectedDate,
-        group: 'R0',
-        type: 'r0_report',
-        additionalData: _serializeFormData(),
-      );
-
-      await _databaseHelper.insertReport(report);
-      
-      if (!mounted) return;
-      
-      final l10n = AppLocalizations.of(context)!;
-      await showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text(l10n.reportConfirmationTitle),
-            content: Text(l10n.reportConfirmationMessage),
-            actions: [
-              TextButton(
-                child: Text(l10n.done),
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close dialog
-                  Navigator.of(context).pop(); // Return to home
-                },
-              ),
-            ],
-          );
-        },
       );
     } catch (e) {
       if (!mounted) return;
@@ -1119,12 +1060,12 @@ class R0ReportState extends State<R0Report> {
                       state: _currentStep > 0 ? StepState.complete : StepState.indexed,
                     ),
                     Step(
-                      title: const Text('Informations Générales OIB/EE'),
+                      title: const Text('Info OIB/EE'),
                       content: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'ÉTAPE 2: INFORMATIONS GÉNÉRALES OIB/EE',
+                            'ÉTAPE 2: INFO OIB/EE',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -1730,7 +1671,7 @@ class R0ReportState extends State<R0Report> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'ÉTAPE 9: VÉRIFICATION',
+                            'ÉTAPE 9: VÉRIFICATION R0',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -1738,66 +1679,27 @@ class R0ReportState extends State<R0Report> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Text('Vérification du Rapport'),
-                                        content: _buildVerificationSection(),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Fermer'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Vérifier Rapport'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue[900],
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                  ),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Vérification du Rapport'),
+                                  content: _buildVerificationSection(),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Fermer'),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Text('Résumé du Rapport'),
-                                        content: _buildVerificationSection(),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Fermer'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.list),
-                                  label: const Text('Voir Résumé'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.blue[900],
-                                    side: BorderSide(color: Colors.blue[900]!),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
+                              );
+                            },
+                            icon: const Icon(Icons.visibility),
+                            label: const Text("Voir tous les détails"),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                            ),
                           ),
                         ],
                       ),
@@ -1813,14 +1715,7 @@ class R0ReportState extends State<R0Report> {
                       Expanded(
                         child: OutlinedButton(
                           onPressed: _isLoading ? null : _saveDraft,
-                          child: const Text('Enregistrer Brouillon'),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _submitReport,
-                          child: const Text('Soumettre Rapport'),
+                          child: const Text('Enregistrer'),
                         ),
                       ),
                     ],
