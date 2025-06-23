@@ -1119,54 +1119,88 @@ class R0ReportState extends State<R0Report> {
                       state: _currentStep > 0 ? StepState.complete : StepState.indexed,
                     ),
                     Step(
-                      title: const Text('Informations Générales'),
-                      content: Row(
+                      title: const Text('Informations Générales OIB/EE'),
+                      content: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ElevatedButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Ajouter Informations Générales'),
-                                  content: _buildHierarchicalSelectionSection(),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('Fermer'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            child: const Text('Ajouter'),
+                          Text(
+                            'ÉTAPE 2: INFORMATIONS GÉNÉRALES OIB/EE',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[900],
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Liste Informations Générales'),
-                                  content: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('Mine: ${formData.selectedMine}'),
-                                      Text('Zone: ${formData.selectedZone}'),
-                                      Text('Sortie: ${formData.selectedSortie}'),
-                                      Text('Poste: ${formData.selectedPoste}'),
-                                    ],
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Ajouter Info OIB/EE'),
+                                        content: _buildHierarchicalSelectionSection(),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text('Fermer'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Ajouter Info OIB/EE'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue[900],
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('Fermer'),
-                                    ),
-                                  ],
                                 ),
-                              );
-                            },
-                            child: const Text('Liste'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Liste Info OIB/EE'),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Mine: ${formData.selectedMine}'),
+                                            Text('Zone: ${formData.selectedZone}'),
+                                            Text('Sortie: ${formData.selectedSortie}'),
+                                            Text('Poste: ${formData.selectedPoste}'),
+                                          ],
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text('Fermer'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.list),
+                                  label: const Text('Voir Info OIB/EE'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.blue[900],
+                                    side: BorderSide(color: Colors.blue[900]!),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -1175,48 +1209,82 @@ class R0ReportState extends State<R0Report> {
                     ),
                     Step(
                       title: const Text('Compteurs'),
-                      content: Row(
+                      content: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ElevatedButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Ajouter Compteur'),
-                                  content: _buildCompteurSection(),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('Fermer'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            child: const Text('Ajouter'),
+                          Text(
+                            'ÉTAPE 3: INDEX COMPTEURS',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[900],
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Liste Compteurs'),
-                                  content: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: List.generate(formData.indexCompteurs.length, (i) => Text('Poste ${i+1}: Début ${formData.indexCompteurs[i].debut}, Fin ${formData.indexCompteurs[i].fin}')),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Ajouter Compteur'),
+                                        content: _buildCompteurSection(),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text('Fermer'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Ajouter Compteur'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue[900],
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('Fermer'),
-                                    ),
-                                  ],
                                 ),
-                              );
-                            },
-                            child: const Text('Liste'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Liste Compteurs'),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: List.generate(formData.indexCompteurs.length, (i) => Text('Poste ${i+1}: Début ${formData.indexCompteurs[i].debut}, Fin ${formData.indexCompteurs[i].fin}')),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text('Fermer'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.list),
+                                  label: const Text('Voir Compteurs'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.blue[900],
+                                    side: BorderSide(color: Colors.blue[900]!),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -1225,48 +1293,82 @@ class R0ReportState extends State<R0Report> {
                     ),
                     Step(
                       title: const Text('Ventilation'),
-                      content: Row(
+                      content: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ElevatedButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Ajouter Ventilation'),
-                                  content: _buildVentilationSection(),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('Fermer'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            child: const Text('Ajouter'),
+                          Text(
+                            'ÉTAPE 4: VENTILATION DES ARRÊTS',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[900],
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Liste Ventilation'),
-                                  content: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: formData.ventilation.map((v) => Text('Code: ${v.code}, Durée: ${v.duree}, Note: ${v.note}')).toList(),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Ajouter Ventilation'),
+                                        content: _buildVentilationSection(),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text('Fermer'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Ajouter Ventilation'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue[900],
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('Fermer'),
-                                    ),
-                                  ],
                                 ),
-                              );
-                            },
-                            child: const Text('Liste'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Liste Ventilation'),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: formData.ventilation.map((v) => Text('Code: ${v.code}, Durée: ${v.duree}, Note: ${v.note}')).toList(),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text('Fermer'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.list),
+                                  label: const Text('Voir Ventilation'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.blue[900],
+                                    side: BorderSide(color: Colors.blue[900]!),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -1275,54 +1377,88 @@ class R0ReportState extends State<R0Report> {
                     ),
                     Step(
                       title: const Text('Exploitation'),
-                      content: Row(
+                      content: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ElevatedButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Ajouter Exploitation'),
-                                  content: _buildExploitationSection(),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('Fermer'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            child: const Text('Ajouter'),
+                          Text(
+                            'ÉTAPE 5: EXPLOITATION',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[900],
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Liste Exploitation'),
-                                  content: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('Heures Brutes: ${formData.exploitation['heuresBrutes']}'),
-                                      Text('Heures Arrêts: ${formData.exploitation['heuresArrets']}'),
-                                      Text('Heures Nettes: ${formData.exploitation['heuresNettes']}'),
-                                      Text('Tonnage: ${formData.exploitation['tonnage']}'),
-                                      Text('Rendement: ${formData.exploitation['rendement']}'),
-                                    ],
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Ajouter Exploitation'),
+                                        content: _buildExploitationSection(),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text('Fermer'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Ajouter Exploitation'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue[900],
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('Fermer'),
-                                    ),
-                                  ],
                                 ),
-                              );
-                            },
-                            child: const Text('Liste'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Liste Exploitation'),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Heures Brutes: ${formData.exploitation['heuresBrutes']}'),
+                                            Text('Heures Arrêts: ${formData.exploitation['heuresArrets']}'),
+                                            Text('Heures Nettes: ${formData.exploitation['heuresNettes']}'),
+                                            Text('Tonnage: ${formData.exploitation['tonnage']}'),
+                                            Text('Rendement: ${formData.exploitation['rendement']}'),
+                                          ],
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text('Fermer'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.list),
+                                  label: const Text('Voir Exploitation'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.blue[900],
+                                    side: BorderSide(color: Colors.blue[900]!),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -1331,48 +1467,82 @@ class R0ReportState extends State<R0Report> {
                     ),
                     Step(
                       title: const Text('Répartition'),
-                      content: Row(
+                      content: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ElevatedButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Ajouter Répartition'),
-                                  content: _buildRepartitionSection(),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('Fermer'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            child: const Text('Ajouter'),
+                          Text(
+                            'ÉTAPE 6: RÉPARTITION DU TRAVAIL',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[900],
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Liste Répartition'),
-                                  content: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: List.generate(formData.repartitionTravail.length, (i) => Text('Poste ${i+1}: Chantier ${formData.repartitionTravail[i].chantier}, Temps ${formData.repartitionTravail[i].temps}, Imputation ${formData.repartitionTravail[i].imputation}')),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Ajouter Répartition'),
+                                        content: _buildRepartitionSection(),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text('Fermer'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Ajouter Répartition'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue[900],
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('Fermer'),
-                                    ),
-                                  ],
                                 ),
-                              );
-                            },
-                            child: const Text('Liste'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Liste Répartition'),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: List.generate(formData.repartitionTravail.length, (i) => Text('Poste ${i+1}: Chantier ${formData.repartitionTravail[i].chantier}, Temps ${formData.repartitionTravail[i].temps}, Imputation ${formData.repartitionTravail[i].imputation}')),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text('Fermer'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.list),
+                                  label: const Text('Voir Répartition'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.blue[900],
+                                    side: BorderSide(color: Colors.blue[900]!),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -1381,52 +1551,86 @@ class R0ReportState extends State<R0Report> {
                     ),
                     Step(
                       title: const Text('Personnel'),
-                      content: Row(
+                      content: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ElevatedButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Ajouter Personnel'),
-                                  content: _buildPersonnelSection(),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('Fermer'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            child: const Text('Ajouter'),
+                          Text(
+                            'ÉTAPE 7: PERSONNEL',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[900],
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Liste Personnel'),
-                                  content: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('Conducteur: ${formData.personnel.conducteur}'),
-                                      Text('Graisseur: ${formData.personnel.graisseur}'),
-                                      Text('Matricules: ${formData.personnel.matricules}'),
-                                    ],
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Ajouter Personnel'),
+                                        content: _buildPersonnelSection(),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text('Fermer'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Ajouter Personnel'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue[900],
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('Fermer'),
-                                    ),
-                                  ],
                                 ),
-                              );
-                            },
-                            child: const Text('Liste'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Liste Personnel'),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Conducteur: ${formData.personnel.conducteur}'),
+                                            Text('Graisseur: ${formData.personnel.graisseur}'),
+                                            Text('Matricules: ${formData.personnel.matricules}'),
+                                          ],
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text('Fermer'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.list),
+                                  label: const Text('Voir Personnel'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.blue[900],
+                                    side: BorderSide(color: Colors.blue[900]!),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -1435,51 +1639,85 @@ class R0ReportState extends State<R0Report> {
                     ),
                     Step(
                       title: const Text('Consommation'),
-                      content: Row(
+                      content: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ElevatedButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Ajouter Consommation'),
-                                  content: _buildConsommationSection(),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('Fermer'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            child: const Text('Ajouter'),
+                          Text(
+                            'ÉTAPE 8: CONSOMMATION',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[900],
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Liste Consommation'),
-                                  content: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('Tricone: ${formData.consommation.tricone}'),
-                                      Text('Gasoil: ${formData.consommation.gasoil}'),
-                                    ],
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Ajouter Consommation'),
+                                        content: _buildConsommationSection(),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text('Fermer'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Ajouter Consommation'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue[900],
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('Fermer'),
-                                    ),
-                                  ],
                                 ),
-                              );
-                            },
-                            child: const Text('Liste'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Liste Consommation'),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Tricone: ${formData.consommation.tricone}'),
+                                            Text('Gasoil: ${formData.consommation.gasoil}'),
+                                          ],
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text('Fermer'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.list),
+                                  label: const Text('Voir Consommation'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.blue[900],
+                                    side: BorderSide(color: Colors.blue[900]!),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -1488,44 +1726,78 @@ class R0ReportState extends State<R0Report> {
                     ),
                     Step(
                       title: const Text('Vérification'),
-                      content: Row(
+                      content: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ElevatedButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Vérification du Rapport'),
-                                  content: _buildVerificationSection(),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('Fermer'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            child: const Text('Ajouter'),
+                          Text(
+                            'ÉTAPE 9: VÉRIFICATION',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[900],
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Résumé du Rapport'),
-                                  content: _buildVerificationSection(),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('Fermer'),
-                                    ),
-                                  ],
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Vérification du Rapport'),
+                                        content: _buildVerificationSection(),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text('Fermer'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Vérifier Rapport'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue[900],
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
                                 ),
-                              );
-                            },
-                            child: const Text('Liste'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Résumé du Rapport'),
+                                        content: _buildVerificationSection(),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text('Fermer'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.list),
+                                  label: const Text('Voir Résumé'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.blue[900],
+                                    side: BorderSide(color: Colors.blue[900]!),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
