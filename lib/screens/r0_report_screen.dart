@@ -6,9 +6,9 @@ import 'package:intl/intl.dart';
 
 // Data models
 class IndexCompteurPoste {
-  String debut;
-  String fin;
-  IndexCompteurPoste({this.debut = '', this.fin = ''});
+  String duree;
+  String note;
+  IndexCompteurPoste({this.duree = '', this.note = ''});
 }
 
 class VentilationItem {
@@ -176,8 +176,8 @@ class R0ReportState extends State<R0Report> {
       // Calculate gross hours from compteur indexes
       double totalGrossHours = 0;
       for (int i = 0; i < formData.indexCompteurs.length; i++) {
-        final start = _parseNumeric(formData.indexCompteurs[i].debut);
-        final end = _parseNumeric(formData.indexCompteurs[i].fin);
+        final start = _parseNumeric(formData.indexCompteurs[i].duree);
+        final end = _parseNumeric(formData.indexCompteurs[i].note);
         if (end > start) {
           final shiftHours = (end - start) / 100; // Assuming compteur is in 0.01 hour units
           totalGrossHours += shiftHours;
@@ -201,50 +201,35 @@ class R0ReportState extends State<R0Report> {
     });
   }
 
-  bool _validateCompteurIndexes() {
-    for (int i = 0; i < formData.indexCompteurs.length; i++) {
-      final start = _parseNumeric(formData.indexCompteurs[i].debut);
-      final end = _parseNumeric(formData.indexCompteurs[i].fin);
-      
-      if (end <= start) {
-        return false;
-      }
-      
-      final shiftHours = (end - start) / 100;
-      if (shiftHours > 8) {
-        return false;
-      }
-      
-      // Validate continuity between shifts
-      if (i > 0) {
-        final previousEnd = _parseNumeric(formData.indexCompteurs[i - 1].fin);
-        if ((start - previousEnd).abs() > 0.1) { // Allow small tolerance
-          return false;
-        }
-      } else if (widget.previousDayThirdShiftEnd != null) {
-        final previousEnd = _parseNumeric(widget.previousDayThirdShiftEnd!);
-        if ((start - previousEnd).abs() > 0.1) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
   // UI Building methods
   Widget _buildHierarchicalSelectionSection() {
-    // Local state for dropdowns
-    MineData? selectedMine = formData.selectedMine.isNotEmpty
-        ? mines.firstWhere((m) => m.name == formData.selectedMine, orElse: () => mines.first)
+    // Find the selected Mine object
+    MineData? selectedMine;
+    if (formData.selectedMine.isNotEmpty) {
+      final foundMine = mines.where((m) => m.name == formData.selectedMine);
+      if (foundMine.isNotEmpty) {
+        selectedMine = foundMine.first;
+      }
+    }
+    // If formData.selectedMine is empty or not found, selectedMine is null
+
+    // Find the selected Zone object
+    ZoneData? selectedZone;
+    if (selectedMine != null && formData.selectedZone.isNotEmpty) {
+      final foundZone = selectedMine.zones.where((z) => z.name == formData.selectedZone);
+      if (foundZone.isNotEmpty) {
+        selectedZone = foundZone.first;
+      }
+    }
+    // If formData.selectedZone is empty or not found, selectedZone is null
+
+    // Find the selected Sortie string
+    String? selectedSortie = (selectedZone != null && formData.selectedSortie.isNotEmpty)
+        ? formData.selectedSortie
         : null;
-    ZoneData? selectedZone = (selectedMine != null && formData.selectedZone.isNotEmpty)
-        ? selectedMine.zones.firstWhere(
-            (z) => z.name == formData.selectedZone,
-            orElse: () => ZoneData(name: '', sorties: []),
-          )
-        : null;
-    String? selectedSortie = formData.selectedSortie.isNotEmpty ? formData.selectedSortie : null;
-    String? selectedPoste = formData.selectedPoste;
+
+    // Poste
+    String? selectedPoste = formData.selectedPoste.isNotEmpty ? formData.selectedPoste : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,7 +265,7 @@ class R0ReportState extends State<R0Report> {
             return null;
           },
         ),
-        if (selectedMine != null) ...[
+        if (selectedMine != null && selectedMine.zones.isNotEmpty) ...[
           const SizedBox(height: 16),
           Text(
             'Sélection de la Zone',
@@ -338,7 +323,7 @@ class R0ReportState extends State<R0Report> {
               });
             },
             validator: (value) {
-              if (selectedZone.sorties.isNotEmpty && (value == null || value.isEmpty)) {
+              if (selectedZone != null && selectedZone.sorties.isNotEmpty && (value == null || value.isEmpty)) {
                 return 'Veuillez sélectionner une sortie';
               }
               return null;
@@ -385,12 +370,15 @@ class R0ReportState extends State<R0Report> {
   Widget _buildCompteurSection() {
     // Get the index of the selected poste
     final selectedPosteIndex = posteOrder.indexOf(formData.selectedPoste);
+    if (selectedPosteIndex == -1) {
+      return const Text('Veuillez sélectionner un poste.');
+    }
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Index Compteur - ${formData.selectedPoste} Poste',
+          'Compteur - ${formData.selectedPoste} Poste',
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
@@ -399,58 +387,32 @@ class R0ReportState extends State<R0Report> {
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Début',
-                  border: OutlineInputBorder(),
-                  suffixText: 'h',
-                ),
-                keyboardType: TextInputType.number,
-                initialValue: formData.indexCompteurs[selectedPosteIndex].debut,
-                onChanged: (value) {
-                  setState(() {
-                    formData.indexCompteurs[selectedPosteIndex].debut = value;
-                    _calculateHours();
-                  });
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Fin',
-                  border: OutlineInputBorder(),
-                  suffixText: 'h',
-                ),
-                keyboardType: TextInputType.number,
-                initialValue: formData.indexCompteurs[selectedPosteIndex].fin,
-                onChanged: (value) {
-                  setState(() {
-                    formData.indexCompteurs[selectedPosteIndex].fin = value;
-                    _calculateHours();
-                  });
-                },
-              ),
-            ),
-          ],
-        ),
-        if (!_validateCompteurIndexes() && 
-            (formData.indexCompteurs[selectedPosteIndex].debut.isNotEmpty || 
-             formData.indexCompteurs[selectedPosteIndex].fin.isNotEmpty))
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: Text(
-              'Vérifiez les valeurs du compteur',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.error,
-                fontSize: 12,
-              ),
-            ),
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Durée',
+            hintText: '1h 30m',
+            border: OutlineInputBorder(),
           ),
+          initialValue: formData.indexCompteurs[selectedPosteIndex].duree,
+          onChanged: (value) {
+            setState(() {
+              formData.indexCompteurs[selectedPosteIndex].duree = value;
+            });
+          },
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Note',
+            border: OutlineInputBorder(),
+          ),
+          initialValue: formData.indexCompteurs[selectedPosteIndex].note,
+          onChanged: (value) {
+            setState(() {
+              formData.indexCompteurs[selectedPosteIndex].note = value;
+            });
+          },
+        ),
       ],
     );
   }
@@ -464,61 +426,13 @@ class R0ReportState extends State<R0Report> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columns: const [
-              DataColumn(label: Text('Code')),
-              DataColumn(label: Text('Arrêt')),
-              DataColumn(label: Text('Durée')),
-              DataColumn(label: Text('Note')),
-            ],
-            rows: formData.ventilation.map((item) {
-              return DataRow(
-                cells: [
-                  DataCell(Text(item.code.toString())),
-                  DataCell(Text(item.label)),
-                  DataCell(
-                    SizedBox(
-                      width: 100,
-                      child: TextFormField(
-                        decoration: const InputDecoration(
-                          hintText: '1h 30m',
-                          border: OutlineInputBorder(),
-                        ),
-                        initialValue: item.duree,
-                        onChanged: (value) {
-                          setState(() {
-                            item.duree = value;
-                            _calculateHours();
-                          });
-                        },
-                      ),
-                    ),
-                  ),
-                  DataCell(
-                    SizedBox(
-                      width: 150,
-                      child: TextFormField(
-                        decoration: const InputDecoration(
-                          hintText: 'Note',
-                          border: OutlineInputBorder(),
-                        ),
-                        initialValue: item.note,
-                        onChanged: (value) {
-                          setState(() {
-                            item.note = value;
-                          });
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
-        const SizedBox(height: 16),
+        ...formData.ventilation.map((item) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Code: ${item.code} - ${item.label}', style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 16),
+          ],
+        )),
         TextFormField(
           decoration: const InputDecoration(
             labelText: 'Explication des Arrêts',
@@ -545,80 +459,62 @@ class R0ReportState extends State<R0Report> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Heures Brutes',
-                  border: OutlineInputBorder(),
-                  suffixText: 'h',
-                ),
-                readOnly: true,
-                controller: TextEditingController(text: formData.exploitation['heuresBrutes']),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Heures Arrêts',
-                  border: OutlineInputBorder(),
-                  suffixText: 'h',
-                ),
-                readOnly: true,
-                controller: TextEditingController(text: formData.exploitation['heuresArrets']),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Heures Nettes',
-                  border: OutlineInputBorder(),
-                  suffixText: 'h',
-                ),
-                readOnly: true,
-                controller: TextEditingController(text: formData.exploitation['heuresNettes']),
-              ),
-            ),
-          ],
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Heures Brutes',
+            border: OutlineInputBorder(),
+            suffixText: 'h',
+          ),
+          readOnly: true,
+          controller: TextEditingController(text: formData.exploitation['heuresBrutes']),
         ),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Tonnage',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-                initialValue: formData.exploitation['tonnage'],
-                onChanged: (value) {
-                  setState(() {
-                    formData.exploitation['tonnage'] = value;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Rendement',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-                initialValue: formData.exploitation['rendement'],
-                onChanged: (value) {
-                  setState(() {
-                    formData.exploitation['rendement'] = value;
-                  });
-                },
-              ),
-            ),
-          ],
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Heures Arrêts',
+            border: OutlineInputBorder(),
+            suffixText: 'h',
+          ),
+          readOnly: true,
+          controller: TextEditingController(text: formData.exploitation['heuresArrets']),
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Heures Nettes',
+            border: OutlineInputBorder(),
+            suffixText: 'h',
+          ),
+          readOnly: true,
+          controller: TextEditingController(text: formData.exploitation['heuresNettes']),
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Tonnage',
+            border: OutlineInputBorder(),
+          ),
+          keyboardType: TextInputType.number,
+          initialValue: formData.exploitation['tonnage'],
+          onChanged: (value) {
+            setState(() {
+              formData.exploitation['tonnage'] = value;
+            });
+          },
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Rendement',
+            border: OutlineInputBorder(),
+          ),
+          keyboardType: TextInputType.number,
+          initialValue: formData.exploitation['rendement'],
+          onChanged: (value) {
+            setState(() {
+              formData.exploitation['rendement'] = value;
+            });
+          },
         ),
       ],
     );
@@ -627,6 +523,9 @@ class R0ReportState extends State<R0Report> {
   Widget _buildRepartitionSection() {
     // Get the index of the selected poste
     final selectedPosteIndex = posteOrder.indexOf(formData.selectedPoste);
+    if (selectedPosteIndex == -1) {
+      return const Text('Veuillez sélectionner un poste.');
+    }
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -641,53 +540,43 @@ class R0ReportState extends State<R0Report> {
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Chantier',
-                  border: OutlineInputBorder(),
-                ),
-                initialValue: formData.repartitionTravail[selectedPosteIndex].chantier,
-                onChanged: (value) {
-                  setState(() {
-                    formData.repartitionTravail[selectedPosteIndex].chantier = value;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Temps',
-                  border: OutlineInputBorder(),
-                ),
-                initialValue: formData.repartitionTravail[selectedPosteIndex].temps,
-                onChanged: (value) {
-                  setState(() {
-                    formData.repartitionTravail[selectedPosteIndex].temps = value;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Imputation',
-                  border: OutlineInputBorder(),
-                ),
-                initialValue: formData.repartitionTravail[selectedPosteIndex].imputation,
-                onChanged: (value) {
-                  setState(() {
-                    formData.repartitionTravail[selectedPosteIndex].imputation = value;
-                  });
-                },
-              ),
-            ),
-          ],
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Chantier',
+            border: OutlineInputBorder(),
+          ),
+          initialValue: formData.repartitionTravail[selectedPosteIndex].chantier,
+          onChanged: (value) {
+            setState(() {
+              formData.repartitionTravail[selectedPosteIndex].chantier = value;
+            });
+          },
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Temps',
+            border: OutlineInputBorder(),
+          ),
+          initialValue: formData.repartitionTravail[selectedPosteIndex].temps,
+          onChanged: (value) {
+            setState(() {
+              formData.repartitionTravail[selectedPosteIndex].temps = value;
+            });
+          },
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Imputation',
+            border: OutlineInputBorder(),
+          ),
+          initialValue: formData.repartitionTravail[selectedPosteIndex].imputation,
+          onChanged: (value) {
+            setState(() {
+              formData.repartitionTravail[selectedPosteIndex].imputation = value;
+            });
+          },
         ),
       ],
     );
@@ -702,38 +591,30 @@ class R0ReportState extends State<R0Report> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Conducteur',
-                  border: OutlineInputBorder(),
-                ),
-                initialValue: formData.personnel.conducteur,
-                onChanged: (value) {
-                  setState(() {
-                    formData.personnel.conducteur = value;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Graisseur',
-                  border: OutlineInputBorder(),
-                ),
-                initialValue: formData.personnel.graisseur,
-                onChanged: (value) {
-                  setState(() {
-                    formData.personnel.graisseur = value;
-                  });
-                },
-              ),
-            ),
-          ],
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Conducteur',
+            border: OutlineInputBorder(),
+          ),
+          initialValue: formData.personnel.conducteur,
+          onChanged: (value) {
+            setState(() {
+              formData.personnel.conducteur = value;
+            });
+          },
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Graisseur',
+            border: OutlineInputBorder(),
+          ),
+          initialValue: formData.personnel.graisseur,
+          onChanged: (value) {
+            setState(() {
+              formData.personnel.graisseur = value;
+            });
+          },
         ),
         const SizedBox(height: 16),
         TextFormField(
@@ -761,40 +642,32 @@ class R0ReportState extends State<R0Report> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Tricone',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-                initialValue: formData.consommation.tricone,
-                onChanged: (value) {
-                  setState(() {
-                    formData.consommation.tricone = value;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Gasoil',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-                initialValue: formData.consommation.gasoil,
-                onChanged: (value) {
-                  setState(() {
-                    formData.consommation.gasoil = value;
-                  });
-                },
-              ),
-            ),
-          ],
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Tricone',
+            border: OutlineInputBorder(),
+          ),
+          keyboardType: TextInputType.number,
+          initialValue: formData.consommation.tricone,
+          onChanged: (value) {
+            setState(() {
+              formData.consommation.tricone = value;
+            });
+          },
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Gasoil',
+            border: OutlineInputBorder(),
+          ),
+          keyboardType: TextInputType.number,
+          initialValue: formData.consommation.gasoil,
+          onChanged: (value) {
+            setState(() {
+              formData.consommation.gasoil = value;
+            });
+          },
         ),
       ],
     );
@@ -821,26 +694,6 @@ class R0ReportState extends State<R0Report> {
         _buildSummaryItem('Tricone', formData.consommation.tricone),
         _buildSummaryItem('Gasoil', formData.consommation.gasoil),
         const SizedBox(height: 16),
-        if (!_validateCompteurIndexes())
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.errorContainer,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.warning, color: Theme.of(context).colorScheme.error),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Veuillez corriger les erreurs dans les index compteur avant de soumettre',
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
-                  ),
-                ),
-              ],
-            ),
-          ),
       ],
     );
   }
@@ -914,8 +767,8 @@ class R0ReportState extends State<R0Report> {
       'rapportNo': formData.rapportNo,
       'unite': formData.unite,
       'indexCompteurs': formData.indexCompteurs.map((ic) => {
-        'debut': ic.debut,
-        'fin': ic.fin,
+        'duree': ic.duree,
+        'note': ic.note,
       }).toList(),
       'shifts': formData.shifts,
       'selectedPoste': formData.selectedPoste,
@@ -1082,7 +935,15 @@ class R0ReportState extends State<R0Report> {
                                       context: context,
                                       builder: (context) => AlertDialog(
                                         title: const Text('Ajouter Info OIB/EE'),
-                                        content: _buildHierarchicalSelectionSection(),
+                                        content: SingleChildScrollView(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              _buildHierarchicalSelectionSection(),
+                                            ],
+                                          ),
+                                        ),
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(),
@@ -1113,15 +974,17 @@ class R0ReportState extends State<R0Report> {
                                       context: context,
                                       builder: (context) => AlertDialog(
                                         title: const Text('Liste Info OIB/EE'),
-                                        content: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text('Mine: ${formData.selectedMine}'),
-                                            Text('Zone: ${formData.selectedZone}'),
-                                            Text('Sortie: ${formData.selectedSortie}'),
-                                            Text('Poste: ${formData.selectedPoste}'),
-                                          ],
+                                        content: SingleChildScrollView(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text('Mine: ${formData.selectedMine}'),
+                                              Text('Zone: ${formData.selectedZone}'),
+                                              Text('Sortie: ${formData.selectedSortie}'),
+                                              Text('Poste: ${formData.selectedPoste}'),
+                                            ],
+                                          ),
                                         ),
                                         actions: [
                                           TextButton(
@@ -1171,7 +1034,15 @@ class R0ReportState extends State<R0Report> {
                                       context: context,
                                       builder: (context) => AlertDialog(
                                         title: const Text('Ajouter Compteur'),
-                                        content: _buildCompteurSection(),
+                                        content: SingleChildScrollView(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              _buildCompteurSection(),
+                                            ],
+                                          ),
+                                        ),
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(),
@@ -1202,10 +1073,12 @@ class R0ReportState extends State<R0Report> {
                                       context: context,
                                       builder: (context) => AlertDialog(
                                         title: const Text('Liste Compteurs'),
-                                        content: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: List.generate(formData.indexCompteurs.length, (i) => Text('Poste ${i+1}: Début ${formData.indexCompteurs[i].debut}, Fin ${formData.indexCompteurs[i].fin}')),
+                                        content: SingleChildScrollView(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: List.generate(formData.indexCompteurs.length, (i) => Text('Poste ${i+1}: Début ${formData.indexCompteurs[i].duree}, Fin ${formData.indexCompteurs[i].note}')),
+                                          ),
                                         ),
                                         actions: [
                                           TextButton(
@@ -1255,7 +1128,15 @@ class R0ReportState extends State<R0Report> {
                                       context: context,
                                       builder: (context) => AlertDialog(
                                         title: const Text('Ajouter Ventilation'),
-                                        content: _buildVentilationSection(),
+                                        content: SingleChildScrollView(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              _buildVentilationSection(),
+                                            ],
+                                          ),
+                                        ),
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(),
@@ -1286,10 +1167,12 @@ class R0ReportState extends State<R0Report> {
                                       context: context,
                                       builder: (context) => AlertDialog(
                                         title: const Text('Liste Ventilation'),
-                                        content: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: formData.ventilation.map((v) => Text('Code: ${v.code}, Durée: ${v.duree}, Note: ${v.note}')).toList(),
+                                        content: SingleChildScrollView(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: formData.ventilation.map((v) => Text('Code: ${v.code}, Durée: ${v.duree}, Note: ${v.note}')).toList(),
+                                          ),
                                         ),
                                         actions: [
                                           TextButton(
@@ -1339,7 +1222,15 @@ class R0ReportState extends State<R0Report> {
                                       context: context,
                                       builder: (context) => AlertDialog(
                                         title: const Text('Ajouter Exploitation'),
-                                        content: _buildExploitationSection(),
+                                        content: SingleChildScrollView(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              _buildExploitationSection(),
+                                            ],
+                                          ),
+                                        ),
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(),
@@ -1370,16 +1261,18 @@ class R0ReportState extends State<R0Report> {
                                       context: context,
                                       builder: (context) => AlertDialog(
                                         title: const Text('Liste Exploitation'),
-                                        content: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text('Heures Brutes: ${formData.exploitation['heuresBrutes']}'),
-                                            Text('Heures Arrêts: ${formData.exploitation['heuresArrets']}'),
-                                            Text('Heures Nettes: ${formData.exploitation['heuresNettes']}'),
-                                            Text('Tonnage: ${formData.exploitation['tonnage']}'),
-                                            Text('Rendement: ${formData.exploitation['rendement']}'),
-                                          ],
+                                        content: SingleChildScrollView(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text('Heures Brutes: ${formData.exploitation['heuresBrutes']}'),
+                                              Text('Heures Arrêts: ${formData.exploitation['heuresArrets']}'),
+                                              Text('Heures Nettes: ${formData.exploitation['heuresNettes']}'),
+                                              Text('Tonnage: ${formData.exploitation['tonnage']}'),
+                                              Text('Rendement: ${formData.exploitation['rendement']}'),
+                                            ],
+                                          ),
                                         ),
                                         actions: [
                                           TextButton(
@@ -1429,7 +1322,15 @@ class R0ReportState extends State<R0Report> {
                                       context: context,
                                       builder: (context) => AlertDialog(
                                         title: const Text('Ajouter Répartition'),
-                                        content: _buildRepartitionSection(),
+                                        content: SingleChildScrollView(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              _buildRepartitionSection(),
+                                            ],
+                                          ),
+                                        ),
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(),
@@ -1460,10 +1361,12 @@ class R0ReportState extends State<R0Report> {
                                       context: context,
                                       builder: (context) => AlertDialog(
                                         title: const Text('Liste Répartition'),
-                                        content: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: List.generate(formData.repartitionTravail.length, (i) => Text('Poste ${i+1}: Chantier ${formData.repartitionTravail[i].chantier}, Temps ${formData.repartitionTravail[i].temps}, Imputation ${formData.repartitionTravail[i].imputation}')),
+                                        content: SingleChildScrollView(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: List.generate(formData.repartitionTravail.length, (i) => Text('Poste ${i+1}: Chantier ${formData.repartitionTravail[i].chantier}, Temps ${formData.repartitionTravail[i].temps}, Imputation ${formData.repartitionTravail[i].imputation}')),
+                                          ),
                                         ),
                                         actions: [
                                           TextButton(
@@ -1513,7 +1416,15 @@ class R0ReportState extends State<R0Report> {
                                       context: context,
                                       builder: (context) => AlertDialog(
                                         title: const Text('Ajouter Personnel'),
-                                        content: _buildPersonnelSection(),
+                                        content: SingleChildScrollView(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              _buildPersonnelSection(),
+                                            ],
+                                          ),
+                                        ),
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(),
@@ -1544,14 +1455,16 @@ class R0ReportState extends State<R0Report> {
                                       context: context,
                                       builder: (context) => AlertDialog(
                                         title: const Text('Liste Personnel'),
-                                        content: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text('Conducteur: ${formData.personnel.conducteur}'),
-                                            Text('Graisseur: ${formData.personnel.graisseur}'),
-                                            Text('Matricules: ${formData.personnel.matricules}'),
-                                          ],
+                                        content: SingleChildScrollView(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text('Conducteur: ${formData.personnel.conducteur}'),
+                                              Text('Graisseur: ${formData.personnel.graisseur}'),
+                                              Text('Matricules: ${formData.personnel.matricules}'),
+                                            ],
+                                          ),
                                         ),
                                         actions: [
                                           TextButton(
@@ -1601,7 +1514,15 @@ class R0ReportState extends State<R0Report> {
                                       context: context,
                                       builder: (context) => AlertDialog(
                                         title: const Text('Ajouter Consommation'),
-                                        content: _buildConsommationSection(),
+                                        content: SingleChildScrollView(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              _buildConsommationSection(),
+                                            ],
+                                          ),
+                                        ),
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(),
@@ -1632,13 +1553,15 @@ class R0ReportState extends State<R0Report> {
                                       context: context,
                                       builder: (context) => AlertDialog(
                                         title: const Text('Liste Consommation'),
-                                        content: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text('Tricone: ${formData.consommation.tricone}'),
-                                            Text('Gasoil: ${formData.consommation.gasoil}'),
-                                          ],
+                                        content: SingleChildScrollView(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text('Tricone: ${formData.consommation.tricone}'),
+                                              Text('Gasoil: ${formData.consommation.gasoil}'),
+                                            ],
+                                          ),
                                         ),
                                         actions: [
                                           TextButton(
@@ -1685,7 +1608,15 @@ class R0ReportState extends State<R0Report> {
                                 context: context,
                                 builder: (context) => AlertDialog(
                                   title: const Text('Vérification du Rapport'),
-                                  content: _buildVerificationSection(),
+                                  content: SingleChildScrollView(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _buildVerificationSection(),
+                                      ],
+                                    ),
+                                  ),
                                   actions: [
                                     TextButton(
                                       onPressed: () => Navigator.of(context).pop(),
