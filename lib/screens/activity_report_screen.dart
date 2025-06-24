@@ -315,26 +315,24 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                   child: Row(
                     children: [
                       if (_currentStep > 0)
-                        OutlinedButton(
-                          onPressed: details.onStepCancel,
-                          child: const Text('Précédent'),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: details.onStepCancel,
+                            child: const Text('Précédent'),
+                          ),
                         ),
                       if (_currentStep > 0)
                         const SizedBox(width: 8),
-                      if (_currentStep < 5)
-                        ElevatedButton(
-                          onPressed: details.onStepContinue,
-                          child: const Text('Suivant'),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: (_currentStep == 5)
+                            ? (hasVibratorErrors || hasLiaisonErrors || hasStockErrors)
+                              ? null
+                              : () async { await _saveReport(); }
+                            : details.onStepContinue,
+                          child: Text(_currentStep == 5 ? 'Soumettre' : 'Suivant'),
                         ),
-                      if (_currentStep == 5)
-                        ElevatedButton(
-                          onPressed: (hasVibratorErrors || hasLiaisonErrors || hasStockErrors)
-                            ? null
-                            : () async {
-                                await _saveReport();
-                              },
-                          child: const Text('Soumettre'),
-                        ),
+                      ),
                     ],
                   ),
                 );

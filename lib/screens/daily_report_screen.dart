@@ -358,19 +358,23 @@ class DailyReportState extends State<DailyReport> {
               }
             },
             controlsBuilder: (context, details) {
-              if (_currentStep == 4) {  // Final step
+              if (_currentStep == 4) {
                 return Padding(
                   padding: const EdgeInsets.only(top: 16.0),
                   child: Row(
                     children: [
-                      OutlinedButton(
-                        onPressed: details.onStepCancel,
-                        child: const Text('Précédent'),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: details.onStepCancel,
+                          child: const Text('Précédent'),
+                        ),
                       ),
                       const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () => _saveReport(),
-                        child: const Text('Soumettre'),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => _saveReport(),
+                          child: const Text('Soumettre'),
+                        ),
                       ),
                     ],
                   ),
@@ -381,15 +385,19 @@ class DailyReportState extends State<DailyReport> {
                 child: Row(
                   children: [
                     if (_currentStep > 0)
-                      OutlinedButton(
-                        onPressed: details.onStepCancel,
-                        child: const Text('Précédent'),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: details.onStepCancel,
+                          child: const Text('Précédent'),
+                        ),
                       ),
                     if (_currentStep > 0)
                       const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: details.onStepContinue,
-                      child: Text(_currentStep == 3 ? 'Terminer' : 'Suivant'),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: details.onStepContinue,
+                        child: Text(_currentStep == 3 ? 'Terminer' : 'Suivant'),
+                      ),
                     ),
                   ],
                 ),

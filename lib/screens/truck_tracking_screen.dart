@@ -852,15 +852,19 @@ class CamionReportState extends State<CamionReport> {
                 return Padding(
                   padding: const EdgeInsets.only(top: 16.0),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      OutlinedButton(
-                        onPressed: details.onStepCancel,
-                        child: const Text('Precedent'),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: details.onStepCancel,
+                          child: const Text('Précédent'),
+                        ),
                       ),
-                      ElevatedButton(
-                        onPressed: () => _saveReport(false),
-                        child: const Text("Soumettre"),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => _saveReport(false),
+                          child: const Text('Soumettre'),
+                        ),
                       ),
                     ],
                   ),
@@ -871,15 +875,19 @@ class CamionReportState extends State<CamionReport> {
                 child: Row(
                   children: [
                     if (_currentStep > 0)
-                      OutlinedButton(
-                        onPressed: details.onStepCancel,
-                        child: const Text('Precedent'),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: details.onStepCancel,
+                          child: const Text('Précédent'),
+                        ),
                       ),
                     if (_currentStep > 0)
                       const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: details.onStepContinue,
-                      child: Text(_currentStep == 5 ? 'Terminer' : 'Suivant'),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: details.onStepContinue,
+                        child: Text(_currentStep == 5 ? 'Terminer' : 'Suivant'),
+                      ),
                     ),
                   ],
                 ),
