@@ -519,39 +519,6 @@ static const Map<String, List<String>> machinesData = {
     );
   }
 
-  Widget _buildVentilationSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Ventilation des Arrêts',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 16),
-        ...formData.ventilation.map((item) => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Code: ${item.code} - ${item.label}', style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: 16),
-          ],
-        )),
-        TextFormField(
-          decoration: const InputDecoration(
-            labelText: 'Explication des Arrêts',
-            border: OutlineInputBorder(),
-          ),
-          maxLines: 3,
-          initialValue: formData.arretsExplication,
-          onChanged: (value) {
-            setState(() {
-              formData.arretsExplication = value;
-            });
-          },
-        ),
-      ],
-    );
-  }
-
   Widget _buildExploitationSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -900,6 +867,182 @@ static const Map<String, List<String>> machinesData = {
     };
   }
 
+  static const Map<String, List<String>> arretCategories = {
+    'EXTERIEURS': [
+      'ARRET CARREAU INDUSTRIEL',
+      'COUPURE GENERALE DU COURANT',
+      'GREVE',
+      'INTEMPERIES',
+      'STOCKS PLEINS',
+      'J. FERIES OU HEBDOMADAIRES',
+      'ARRET PAR LA CENTRALE (M.ENERGIE)',
+      'CONTROLE',
+    ],
+    'MATERIEL': [
+      'DEFAUT ELEC. (C.CRAME, RESEAU)',
+      'PANNE MECANIQUE',
+      'PANNE ELECTRIQUE',
+      'INTERVENTION ATELIER PNEUMATIQUE',
+      'ENTRETIEN SYSTEMATIQUE',
+      'APPOINT (HUILE, GAZOL, EAU)',
+      'GRAISSAGE',
+      'ARRET ELEC. INSTALATION FIXES',
+      'MANQUE CAMIONS',
+      'MANQUE BULL',
+      'MANQUE MECANICIEN',
+      'MANQUE D\'OUTILS DE TRAVAIL',
+      'MACHINE A L\'ARRET',
+      'PANNE ENGIN DEVANT MACHINE',
+    ],
+    'EXPLOITATION': [
+      'RELEVE',
+      'EXECUTION PLATE FORME',
+      'DEPLACEMENT',
+      'TIR ET SAUTAGE',
+      'MOUV. DE CABLE',
+      'ARRET DECIDE',
+      'MANQUE CONDUCTEUR',
+      'BRIQUET',
+      'PISTES (INTEMPERIES EXCLUES)',
+      'ARRETS MECA. INSTALATIONS FIXES',
+      'TELESCOPAGE',
+      'EXCAVATION PURE',
+      'TERASSEMENT PUR',
+    ],
+  };
+
+  Widget _buildAddVentilationDialog(BuildContext context) {
+    int step = 0;
+    String? selectedCategory;
+    String? selectedType;
+    String startTime = '';
+    String endTime = '';
+    return StatefulBuilder(
+      builder: (context, setDialogState) {
+        Widget content;
+        if (step == 0) {
+          content = DropdownButtonFormField<String>(
+            value: selectedCategory,
+            decoration: const InputDecoration(labelText: 'Catégorie', border: OutlineInputBorder()),
+            items: arretCategories.keys
+                .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
+                .toList(),
+            onChanged: (value) {
+              setDialogState(() {
+                selectedCategory = value;
+                selectedType = null;
+              });
+            },
+          );
+        } else if (step == 1 && selectedCategory != null) {
+          content = DropdownButtonFormField<String>(
+            value: selectedType,
+            decoration: const InputDecoration(labelText: 'Type d\'arrêt', border: OutlineInputBorder()),
+            items: arretCategories[selectedCategory]!
+                .map((type) => DropdownMenuItem(value: type, child: Text(type)))
+                .toList(),
+            onChanged: (value) {
+              setDialogState(() {
+                selectedType = value;
+              });
+            },
+          );
+        } else if (step == 2 && selectedType != null) {
+          content = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Catégorie: $selectedCategory'),
+              Text('Type: $selectedType'),
+              const SizedBox(height: 16),
+              TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Heure début',
+                  hintText: 'ex: 08:00',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  setDialogState(() {
+                    startTime = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Heure fin',
+                  hintText: 'ex: 09:15',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  setDialogState(() {
+                    endTime = value;
+                  });
+                },
+              ),
+            ],
+          );
+        } else {
+          content = const SizedBox();
+        }
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (step == 0) ...[
+              const Text('Sélection de la catégorie', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              content,
+            ] else if (step == 1) ...[
+              const Text('Sélection du type d\'arrêt', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              content,
+            ] else if (step == 2) ...[
+              const Text('Saisie des détails', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              content,
+            ],
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (step > 0)
+                  OutlinedButton(
+                    onPressed: () => setDialogState(() => step--),
+                    child: const Text('Précédent'),
+                  ),
+                if ((step == 0 && selectedCategory != null) ||
+                    (step == 1 && selectedType != null))
+                  ElevatedButton(
+                    onPressed: () {
+                      setDialogState(() => step++);
+                    },
+                    child: const Text('Suivant'),
+                  ),
+                if (step == 2 && selectedType != null)
+                  ElevatedButton(
+                    onPressed: startTime.isNotEmpty && endTime.isNotEmpty
+                        ? () {
+                            setState(() {
+                              formData.ventilation.add(VentilationItem(
+                                code: 0, // You can assign a code if needed
+                                label: selectedType!,
+                                duree: startTime,
+                                note: endTime,
+                              ));
+                            });
+                            Navigator.of(context).pop();
+                          }
+                        : null,
+                    child: const Text('Ajouter'),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1202,12 +1345,12 @@ static const Map<String, List<String>> machinesData = {
                       state: _currentStep > 2 ? StepState.complete : StepState.indexed,
                     ),
                     Step(
-                      title: const Text('Ventilation'),
+                      title: const Text('Arrêts'),
                       content: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'ÉTAPE 4: VENTILATION DES ARRÊTS',
+                            'ÉTAPE 4: DES ARRÊTS',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -1223,15 +1366,9 @@ static const Map<String, List<String>> machinesData = {
                                     showDialog(
                                       context: context,
                                       builder: (context) => AlertDialog(
-                                        title: const Text('Ajouter Ventilation'),
+                                        title: const Text('Ajouter Arrêts'),
                                         content: SingleChildScrollView(
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              _buildVentilationSection(),
-                                            ],
-                                          ),
+                                          child: _buildAddVentilationDialog(context),
                                         ),
                                         actions: [
                                           TextButton(
@@ -1243,7 +1380,7 @@ static const Map<String, List<String>> machinesData = {
                                     );
                                   },
                                   icon: const Icon(Icons.add),
-                                  label: const Text('Ajouter Ventilation'),
+                                  label: const Text('Ajouter Arrêts'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.blue[900],
                                     foregroundColor: Colors.white,
@@ -1262,12 +1399,12 @@ static const Map<String, List<String>> machinesData = {
                                     showDialog(
                                       context: context,
                                       builder: (context) => AlertDialog(
-                                        title: const Text('Liste Ventilation'),
+                                        title: const Text('Liste Arrêts'),
                                         content: SingleChildScrollView(
                                           child: Column(
                                             mainAxisSize: MainAxisSize.min,
                                             crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: formData.ventilation.map((v) => Text('Code: ${v.code}, Durée: ${v.duree}, Note: ${v.note}')).toList(),
+                                            children: formData.ventilation.map((v) => Text('Type: ${v.label}, Début: ${v.duree}, Fin: ${v.note}')).toList(),
                                           ),
                                         ),
                                         actions: [
@@ -1280,7 +1417,7 @@ static const Map<String, List<String>> machinesData = {
                                     );
                                   },
                                   icon: const Icon(Icons.list),
-                                  label: const Text('Voir Ventilation'),
+                                  label: const Text('Voir Arrêts'),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: Colors.blue[900],
                                     side: BorderSide(color: Colors.blue[900]!),
