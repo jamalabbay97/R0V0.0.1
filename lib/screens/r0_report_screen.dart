@@ -74,6 +74,9 @@ class R0ReportFormData {
   List<RepartitionItem> repartitionTravail = List.generate(3, (_) => RepartitionItem());
   PersonnelItem personnel = PersonnelItem();
   ConsommationItem consommation = ConsommationItem();
+  String selectedCategory = '';
+  String selectedType = '';
+  String selectedModel = '';
 }
 
 class R0Report extends StatefulWidget {
@@ -107,29 +110,75 @@ class R0ReportState extends State<R0Report> {
   ];
 
   // Static mine/zone/sortie data
-  final List<MineData> mines = [
-    MineData(
-      name: 'Mine E',
-      zones: [
-        ZoneData(name: 'Mine E1 Zone Dragline', sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3', 'Sortie 4']),
-        ZoneData(name: 'Mine E1 Zone Bulls', sorties: ['Sortie 2', 'Sortie 3']),
-        ZoneData(name: 'Mine E3 Zone Dragline', sorties: ['Sortie -1', 'Sortie 0', 'Sortie 1', 'Sortie 2']),
-        ZoneData(name: 'Mine E2 Zone Bulls', sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3']),
-      ],
-    ),
-    MineData(
-      name: 'Mine C',
-      zones: [
-        ZoneData(name: 'Mine C Zone Dragline', sorties: []),
-      ],
-    ),
-    MineData(
-      name: 'Mine A',
-      zones: [
-        ZoneData(name: 'Mine A', sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3', 'Sortie 4', 'Sortie 5', 'Sortie 6', 'Sortie 7']),
-      ],
-    ),
-  ];
+  final List<MineData> minesData = [
+  MineData(
+    name: 'Mine G',
+    zones: [
+      ZoneData(
+        name: 'Mine G Zone Dragline',
+        sorties: ['Sortie 1', 'Sortie 2'],
+      ),
+    ],
+  ),
+  MineData(
+    name: 'Mine E',
+    zones: [
+      ZoneData(
+        name: 'Mine E1 Zone Dragline',
+        sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3', 'Sortie 4'],
+      ),
+      ZoneData(
+        name: 'Mine E1 Zone Bulls',
+        sorties: ['Sortie 2', 'Sortie 3'],
+      ),
+      ZoneData(
+        name: 'Mine E3 Zone Dragline',
+        sorties: ['Sortie -1', 'Sortie 0', 'Sortie 1', 'Sortie 2'],
+      ),
+      ZoneData(
+        name: 'Mine E2 Zone Bulls',
+        sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3'],
+      ),
+    ],
+  ),
+  MineData(
+    name: 'Mine C',
+    zones: [
+      ZoneData(
+        name: 'Mine C Zone Dragline',
+        sorties: [],
+      ),
+    ],
+  ),
+  MineData(
+    name: 'Mine A',
+    zones: [
+      ZoneData(
+        name: 'Mine A',
+        sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3', 'Sortie 4', 'Sortie 5', 'Sortie 6', 'Sortie 7'],
+      ),
+    ],
+  ),
+];
+
+// Add ENGINS and MACHINES data maps
+static const Map<String, List<String>> enginsData = {
+  'BULLDOZERS': [
+    'BULL D9R 76', 'BULL D9R 79', 'BULL D9R 80', 'BULL D9R 81', 'BULL D9R 82', 'BULL D9R 83', 'BULL LIB 84', 'BULL LIB 85', 'BULL D9R 86', 'BULL D9R 87',
+  ],
+  'CAMIONS': [
+    'CAMION T24', 'CAMION T25', 'CAMION T26', 'CAMION T27', 'CAMION T28', 'CAMION T29', 'CAMION T30', 'CAMION T31', 'CAMION T32', 'CAMION T33', 'WABCO 13', 'WABCO 19',
+  ],
+  'CHARGEUSES': ['CHRG 992C', 'CHRG 992K', 'CHRG 994H'],
+  'NIVELEUSES': ['NIV 14G', 'NIV 16H', 'NIV KOM01', 'NIV KOM02'],
+  'PAYDOZERS': ['PAY CAT03', 'PAY KOM04', 'PAY KOM05'],
+  'PELLE HYDRAULIQUE': ['PH365-C', 'PH5130'],
+};
+static const Map<String, List<String>> machinesData = {
+  'DRAGLINES': ['1370 W1', '1370 W2'],
+  'PELLE ELECTRIQUE': ['195 P1', '195 P2'],
+  'SONDEUSES': ['PV275-1', 'PV275-2', 'PV275-3'],
+};
 
   @override
   void initState() {
@@ -202,168 +251,221 @@ class R0ReportState extends State<R0Report> {
   }
 
   // UI Building methods
-  Widget _buildHierarchicalSelectionSection() {
-    // Find the selected Mine object
-    MineData? selectedMine;
-    if (formData.selectedMine.isNotEmpty) {
-      final foundMine = mines.where((m) => m.name == formData.selectedMine);
-      if (foundMine.isNotEmpty) {
-        selectedMine = foundMine.first;
-      }
-    }
-    // If formData.selectedMine is empty or not found, selectedMine is null
+  Widget _buildHierarchicalSelectionDialog(BuildContext context) {
+    int step = 0;
+    return StatefulBuilder(
+      builder: (context, setDialogState) {
+        MineData? selectedMine = formData.selectedMine.isNotEmpty
+            ? minesData.where((m) => m.name == formData.selectedMine).isNotEmpty
+                ? minesData.firstWhere((m) => m.name == formData.selectedMine)
+                : null
+            : null;
+        ZoneData? selectedZone = (selectedMine != null && formData.selectedZone.isNotEmpty)
+            ? selectedMine.zones.where((z) => z.name == formData.selectedZone).isNotEmpty
+                ? selectedMine.zones.firstWhere((z) => z.name == formData.selectedZone)
+                : null
+            : null;
+        String? selectedSortie = (selectedZone != null && formData.selectedSortie.isNotEmpty)
+            ? formData.selectedSortie
+            : null;
+        String? selectedPoste = formData.selectedPoste.isNotEmpty ? formData.selectedPoste : null;
+        String? selectedCategory = formData.selectedCategory.isNotEmpty ? formData.selectedCategory : null;
+        String? selectedType = formData.selectedType.isNotEmpty ? formData.selectedType : null;
+        String? selectedModel = formData.selectedModel.isNotEmpty ? formData.selectedModel : null;
 
-    // Find the selected Zone object
-    ZoneData? selectedZone;
-    if (selectedMine != null && formData.selectedZone.isNotEmpty) {
-      final foundZone = selectedMine.zones.where((z) => z.name == formData.selectedZone);
-      if (foundZone.isNotEmpty) {
-        selectedZone = foundZone.first;
-      }
-    }
-    // If formData.selectedZone is empty or not found, selectedZone is null
+        void goNext() => setDialogState(() => step++);
+        void goBack() => setDialogState(() => step--);
 
-    // Find the selected Sortie string
-    String? selectedSortie = (selectedZone != null && formData.selectedSortie.isNotEmpty)
-        ? formData.selectedSortie
-        : null;
-
-    // Poste
-    String? selectedPoste = formData.selectedPoste.isNotEmpty ? formData.selectedPoste : null;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Sélection de la Mine',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 16),
-        DropdownButtonFormField<MineData>(
-          value: selectedMine,
-          decoration: const InputDecoration(
-            labelText: 'Mine',
-            border: OutlineInputBorder(),
-          ),
-          items: mines.map((mine) {
-            return DropdownMenuItem(
-              value: mine,
-              child: Text(mine.name),
-            );
-          }).toList(),
-          onChanged: (value) {
-            setState(() {
-              formData.selectedMine = value?.name ?? '';
-              formData.selectedZone = '';
-              formData.selectedSortie = '';
-            });
-          },
-          validator: (value) {
-            if (value == null) {
-              return 'Veuillez sélectionner une mine';
-            }
-            return null;
-          },
-        ),
-        if (selectedMine != null && selectedMine.zones.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Text(
-            'Sélection de la Zone',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<ZoneData>(
-            value: selectedZone,
-            decoration: const InputDecoration(
-              labelText: 'Zone',
-              border: OutlineInputBorder(),
-            ),
-            items: selectedMine.zones.map((zone) {
-              return DropdownMenuItem(
-                value: zone,
-                child: Text(zone.name),
-              );
-            }).toList(),
+        Widget content;
+        if (step == 0) {
+          content = DropdownButtonFormField<MineData>(
+            value: selectedMine,
+            decoration: const InputDecoration(labelText: 'Mine', border: OutlineInputBorder()),
+            items: minesData.map((mine) => DropdownMenuItem(value: mine, child: Text(mine.name))).toList(),
             onChanged: (value) {
-              setState(() {
+              setDialogState(() {
+                formData.selectedMine = value?.name ?? '';
+                formData.selectedZone = '';
+                formData.selectedSortie = '';
+                formData.selectedPoste = '';
+                formData.selectedCategory = '';
+                formData.selectedType = '';
+                formData.selectedModel = '';
+              });
+            },
+          );
+        } else if (step == 1 && selectedMine != null) {
+          content = DropdownButtonFormField<ZoneData>(
+            value: selectedZone,
+            decoration: const InputDecoration(labelText: 'Zone', border: OutlineInputBorder()),
+            items: selectedMine.zones.map((zone) => DropdownMenuItem(value: zone, child: Text(zone.name))).toList(),
+            onChanged: (value) {
+              setDialogState(() {
                 formData.selectedZone = value?.name ?? '';
                 formData.selectedSortie = '';
+                formData.selectedPoste = '';
+                formData.selectedCategory = '';
+                formData.selectedType = '';
+                formData.selectedModel = '';
               });
             },
-            validator: (value) {
-              if (value == null) {
-                return 'Veuillez sélectionner une zone';
-              }
-              return null;
+          );
+        } else if (step == 2) {
+          content = DropdownButtonFormField<String>(
+            value: selectedCategory,
+            decoration: const InputDecoration(labelText: 'Catégorie', border: OutlineInputBorder()),
+            items: const [
+              DropdownMenuItem(value: 'ENGINS', child: Text('ENGINS')),
+              DropdownMenuItem(value: 'MACHINES', child: Text('MACHINES')),
+            ],
+            onChanged: (value) {
+              setDialogState(() {
+                formData.selectedCategory = value ?? '';
+                formData.selectedType = '';
+                formData.selectedModel = '';
+              });
             },
-          ),
-        ],
-        if (selectedZone != null && selectedZone.sorties.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Text(
-            'Sélection de la Sortie',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
+          );
+        } else if (step == 3 && selectedCategory != null) {
+          final types = selectedCategory == 'ENGINS'
+              ? enginsData.keys.toList()
+              : machinesData.keys.toList();
+          content = DropdownButtonFormField<String>(
+            value: selectedType,
+            decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
+            items: types.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
+            onChanged: (value) {
+              setDialogState(() {
+                formData.selectedType = value ?? '';
+                formData.selectedModel = '';
+              });
+            },
+          );
+        } else if (step == 4 && selectedType != null) {
+          final models = selectedCategory == 'ENGINS'
+              ? enginsData[selectedType] ?? []
+              : machinesData[selectedType] ?? [];
+          content = DropdownButtonFormField<String>(
+            value: selectedModel,
+            decoration: const InputDecoration(labelText: 'Modèle', border: OutlineInputBorder()),
+            items: models.map((model) => DropdownMenuItem(value: model, child: Text(model))).toList(),
+            onChanged: (value) {
+              setDialogState(() {
+                formData.selectedModel = value ?? '';
+              });
+            },
+          );
+        } else if (step == 5 && selectedZone != null && selectedZone.sorties.isNotEmpty) {
+          content = DropdownButtonFormField<String>(
             value: selectedSortie,
-            decoration: const InputDecoration(
-              labelText: 'Sortie',
-              border: OutlineInputBorder(),
-            ),
-            items: selectedZone.sorties.map((sortie) {
-              return DropdownMenuItem(
-                value: sortie,
-                child: Text(sortie),
-              );
-            }).toList(),
+            decoration: const InputDecoration(labelText: 'Sortie', border: OutlineInputBorder()),
+            items: selectedZone.sorties.map((sortie) => DropdownMenuItem(value: sortie, child: Text(sortie))).toList(),
             onChanged: (value) {
-              setState(() {
+              setDialogState(() {
                 formData.selectedSortie = value ?? '';
+                formData.selectedPoste = '';
               });
             },
-            validator: (value) {
-              if (selectedZone != null && selectedZone.sorties.isNotEmpty && (value == null || value.isEmpty)) {
-                return 'Veuillez sélectionner une sortie';
-              }
-              return null;
-            },
-          ),
-        ],
-        if (selectedMine != null && selectedZone != null &&
-            (selectedZone.sorties.isEmpty || selectedSortie != null)) ...[
-          const SizedBox(height: 16),
-          Text(
-            'Sélection du Poste',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
+          );
+        } else if ((step == 5 && selectedZone != null && selectedZone.sorties.isEmpty) || step == 6) {
+          content = DropdownButtonFormField<String>(
             value: selectedPoste,
-            decoration: const InputDecoration(
-              labelText: 'Poste',
-              border: OutlineInputBorder(),
-            ),
-            items: posteOrder.map((poste) {
-              return DropdownMenuItem(
-                value: poste,
-                child: Text('$poste Poste (${posteTimes[poste]})'),
-              );
-            }).toList(),
+            decoration: const InputDecoration(labelText: 'Poste', border: OutlineInputBorder()),
+            items: posteOrder.map((poste) => DropdownMenuItem(value: poste, child: Text('$poste Poste (${posteTimes[poste]})'))).toList(),
             onChanged: (value) {
-              setState(() {
+              setDialogState(() {
                 formData.selectedPoste = value ?? posteOrder.first;
               });
             },
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Veuillez sélectionner un poste';
-              }
-              return null;
-            },
-          ),
-        ],
-      ],
+          );
+        } else {
+          content = const SizedBox();
+        }
+
+        // Determine if all steps are filled for 'Terminer'
+        bool canFinish = formData.selectedMine.isNotEmpty &&
+            formData.selectedZone.isNotEmpty &&
+            formData.selectedCategory.isNotEmpty &&
+            formData.selectedType.isNotEmpty &&
+            formData.selectedModel.isNotEmpty &&
+            (selectedZone == null || selectedZone.sorties.isEmpty || formData.selectedSortie.isNotEmpty) &&
+            formData.selectedPoste.isNotEmpty;
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (step == 0) ...[
+              const Text('Sélection de la Mine', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              content,
+            ] else if (step == 1) ...[
+              const Text('Sélection de la Zone', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              content,
+            ] else if (step == 2) ...[
+              const Text('Sélection Catégorie', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              content,
+            ] else if (step == 3) ...[
+              const Text('Sélection Type', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              content,
+            ] else if (step == 4) ...[
+              const Text('Sélection Modèle', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              content,
+            ] else if (step == 5 && selectedZone != null && selectedZone.sorties.isNotEmpty) ...[
+              const Text('Sélection de la Sortie', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              content,
+            ] else if ((step == 5 && selectedZone != null && selectedZone.sorties.isEmpty) || step == 6) ...[
+              const Text('Sélection du Poste', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              content,
+            ],
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (step > 0)
+                  OutlinedButton(
+                    onPressed: step > 0 ? goBack : null,
+                    child: const Text('Précédent'),
+                  ),
+                if ((step == 0 && selectedMine != null) ||
+                    (step == 1 && selectedZone != null) ||
+                    (step == 2 && selectedCategory != null) ||
+                    (step == 3 && selectedType != null) ||
+                    (step == 4 && selectedModel != null) ||
+                    (step == 5 && selectedZone != null && (selectedZone.sorties.isEmpty || selectedSortie != null)) ||
+                    (step == 6 && selectedPoste != null)
+                )
+                  ElevatedButton(
+                    onPressed: () {
+                      if (step == 0 && selectedMine != null) {
+                        goNext();
+                      } else if (step == 1 && selectedZone != null) {
+                        goNext();
+                      } else if (step == 2 && selectedCategory != null) {
+                        goNext();
+                      } else if (step == 3 && selectedType != null) {
+                        goNext();
+                      } else if (step == 4 && selectedModel != null) {
+                        goNext();
+                      } else if (step == 5 && selectedZone != null && (selectedZone.sorties.isEmpty || selectedSortie != null)) {
+                        goNext();
+                      } else if ((step == 6 && selectedPoste != null) && canFinish) {
+                        Navigator.of(context).pop();
+                      }
+                    },
+                    child: Text((step == 6 || (step == 5 && selectedZone != null && selectedZone.sorties.isEmpty)) && canFinish ? 'Terminer' : 'Suivant'),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -936,13 +1038,7 @@ class R0ReportState extends State<R0Report> {
                                       builder: (context) => AlertDialog(
                                         title: const Text('Ajouter Info OIB/EE'),
                                         content: SingleChildScrollView(
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              _buildHierarchicalSelectionSection(),
-                                            ],
-                                          ),
+                                          child: _buildHierarchicalSelectionDialog(context),
                                         ),
                                         actions: [
                                           TextButton(
