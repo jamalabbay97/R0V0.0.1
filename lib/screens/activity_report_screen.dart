@@ -744,77 +744,125 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
   }
 
   void _showAddStopDialog() {
+    const List<String> predefinedNatures = [
+      'Manque Produit',
+      'Attente Saturation Silo',
+      'Vidange Extraction 2',
+      'Arret Mécanique sur:',
+      'Dèfout Élèctrique sur:', 
+      'Arret d\'instalation sur:',
+      'Travoux Mècanique sur:',
+      'Travoux Elèctrique sur:',
+      'Travoux dans l\'instalation sur:',
+    ];
+    String? selectedNature;
+    String customNature = '';
+    final customNatureController = TextEditingController();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Ajouter un arrêt'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              decoration: const InputDecoration(
-                labelText: 'Durée (ex: 1h 30)',
-                border: OutlineInputBorder(),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Ajouter un arrêt'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                value: selectedNature,
+                decoration: const InputDecoration(
+                  labelText: 'Nature prédéfinie',
+                  border: OutlineInputBorder(),
+                ),
+                items: predefinedNatures.map((nature) => DropdownMenuItem(
+                  value: nature,
+                  child: Text(nature),
+                )).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedNature = value;
+                    customNature = '';
+                    customNatureController.clear();
+                  });
+                },
+                hint: const Text('Sélectionner une nature'),
+                isExpanded: true,
               ),
-              onChanged: (value) => setState(() => _tempStopDuration = value),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              decoration: const InputDecoration(
-                labelText: 'Nature',
-                border: OutlineInputBorder(),
-                hintText: 'Maximum 20 caractères par ligne',
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Durée (ex: 1h 30)',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => _tempStopDuration = value),
               ),
-              maxLines: 5,
-              onChanged: (value) {
-                // Split text into lines of max 20 characters
-                final words = value.split(' ');
-                final lines = <String>[];
-                String currentLine = '';
-                
-                for (var word in words) {
-                  if (('$currentLine $word').trim().length <= 20) {
-                    currentLine += (currentLine.isEmpty ? '' : ' ') + word;
-                  } else {
+              if (selectedNature?.endsWith(':') == true) ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: customNatureController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nature (complément)',
+                    border: OutlineInputBorder(),
+                    hintText: 'Maximum 20 caractères par ligne',
+                  ),
+                  maxLines: 5,
+                  onChanged: (value) {
+                    // Split text into lines of max 20 characters
+                    final words = value.split(' ');
+                    final lines = <String>[];
+                    String currentLine = '';
+                    for (var word in words) {
+                      if ((currentLine + (currentLine.isEmpty ? '' : ' ') + word).length <= 20) {
+                        currentLine += (currentLine.isEmpty ? '' : ' ') + word;
+                      } else {
+                        if (currentLine.isNotEmpty) {
+                          lines.add(currentLine);
+                        }
+                        currentLine = word;
+                      }
+                    }
                     if (currentLine.isNotEmpty) {
                       lines.add(currentLine);
                     }
-                    currentLine = word;
+                    setState(() => customNature = lines.join('\n'));
+                  },
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                String finalNature = '';
+                if (selectedNature != null) {
+                  if (selectedNature?.endsWith(':') == true) {
+                    if (customNature.trim().isEmpty) return;
+                    finalNature = '$selectedNature\n${customNature.trim()}';
+                  } else {
+                    finalNature = selectedNature!;
                   }
+                } else {
+                  return;
                 }
-                if (currentLine.isNotEmpty) {
-                  lines.add(currentLine);
+                if (_tempStopDuration.isNotEmpty && finalNature.isNotEmpty) {
+                  setState(() {
+                    stops.add(Stop(
+                      id: UniqueKey().toString(),
+                      duration: _tempStopDuration,
+                      nature: finalNature,
+                    ));
+                    _tempStopDuration = '';
+                  });
+                  recalculateTimes();
+                  Navigator.pop(context);
                 }
-                
-                setState(() => _tempStopNature = lines.join('\n'));
               },
+              child: const Text('Ajouter'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (_tempStopDuration.isNotEmpty && _tempStopNature.isNotEmpty) {
-                setState(() {
-                  stops.add(Stop(
-                    id: UniqueKey().toString(),
-                    duration: _tempStopDuration,
-                    nature: _tempStopNature,
-                  ));
-                  _tempStopDuration = '';
-                  _tempStopNature = '';
-                });
-                recalculateTimes();
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Ajouter'),
-          ),
-        ],
       ),
     );
   }

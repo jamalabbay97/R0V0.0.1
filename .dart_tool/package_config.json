@@ -123,21 +123,21 @@
     },
     {
       "name": "google_maps_flutter",
-      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/google_maps_flutter-2.12.2",
+      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/google_maps_flutter-2.12.3",
       "packageUri": "lib/",
       "languageVersion": "3.6"
     },
     {
       "name": "google_maps_flutter_android",
-      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/google_maps_flutter_android-2.16.1",
+      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/google_maps_flutter_android-2.16.2",
       "packageUri": "lib/",
       "languageVersion": "3.6"
     },
     {
       "name": "google_maps_flutter_ios",
-      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/google_maps_flutter_ios-2.15.2",
+      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/google_maps_flutter_ios-2.15.4",
       "packageUri": "lib/",
-      "languageVersion": "3.4"
+      "languageVersion": "3.6"
     },
     {
       "name": "google_maps_flutter_platform_interface",
@@ -147,9 +147,9 @@
     },
     {
       "name": "google_maps_flutter_web",
-      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/google_maps_flutter_web-0.5.12",
+      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/google_maps_flutter_web-0.5.12+2",
       "packageUri": "lib/",
-      "languageVersion": "3.4"
+      "languageVersion": "3.6"
     },
     {
       "name": "html",
@@ -213,7 +213,7 @@
     },
     {
       "name": "logger",
-      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/logger-2.5.0",
+      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/logger-2.6.0",
       "packageUri": "lib/",
       "languageVersion": "2.17"
     },
@@ -429,9 +429,9 @@
     },
     {
       "name": "synchronized",
-      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/synchronized-3.3.1",
+      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/synchronized-3.4.0",
       "packageUri": "lib/",
-      "languageVersion": "3.7"
+      "languageVersion": "3.8"
     },
     {
       "name": "term_glyph",
@@ -501,8 +501,8 @@
     }
   ],
   "generator": "pub",
-  "generatorVersion": "3.8.0",
+  "generatorVersion": "3.8.1",
   "flutterRoot": "file:///home/brahim/develop/flutter",
-  "flutterVersion": "3.32.0",
+  "flutterVersion": "3.32.5",
   "pubCache": "file:///home/brahim/.pub-cache"
 }

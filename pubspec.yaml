@@ -35,7 +35,13 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true  # For internationalization
+  fonts:
+    - family: NotoSans
+      fonts:
+        - asset: assets/fonts/NotoSans-Regular.ttf
 
   assets:
     - assets/translations/
-    - assets/images/ 
+    - assets/images/
+    - assets/fonts/
+    - assets/fonts/NotoSans-Regular.ttf 
