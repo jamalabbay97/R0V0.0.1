@@ -198,56 +198,49 @@ static const Map<String, List<String>> machinesData = {
   }
 
   // Helper functions
-  int _parseDuration(String duration) {
-    if (duration.isEmpty) return 0;
-    
-    int totalMinutes = 0;
-    final hoursMatch = RegExp(r'(\d+)\s*h').firstMatch(duration);
-    final minutesMatch = RegExp(r'(\d+)\s*m').firstMatch(duration);
-    
-    if (hoursMatch != null) {
-      totalMinutes += int.parse(hoursMatch.group(1)!) * 60;
-    }
-    if (minutesMatch != null) {
-      totalMinutes += int.parse(minutesMatch.group(1)!);
-    }
-    
-    return totalMinutes;
-  }
-
   double _parseNumeric(String value) {
     if (value.isEmpty) return 0.0;
     return double.tryParse(value.replaceAll(',', '.')) ?? 0.0;
   }
 
   void _calculateHours() {
-    setState(() {
-      // Calculate gross hours from compteur indexes
-      double totalGrossHours = 0;
-      for (int i = 0; i < formData.indexCompteurs.length; i++) {
-        final start = _parseNumeric(formData.indexCompteurs[i].duree);
-        final end = _parseNumeric(formData.indexCompteurs[i].note);
-        if (end > start) {
-          final shiftHours = (end - start) / 100; // Assuming compteur is in 0.01 hour units
-          totalGrossHours += shiftHours;
+    // Calculate gross hours from compteur indexes
+    double totalGrossHours = 0;
+    for (int i = 0; i < formData.indexCompteurs.length; i++) {
+      final start = _parseNumeric(formData.indexCompteurs[i].duree);
+      final end = _parseNumeric(formData.indexCompteurs[i].note);
+      if (end > start) {
+        final shiftHours = (end - start) / 1; // Assuming compteur is in 1.0 hour units
+        totalGrossHours += shiftHours;
+      }
+    }
+    
+    formData.exploitation['heuresBrutes'] = totalGrossHours.toStringAsFixed(2);
+    
+    // Calculate total stoppage time from ventilation data
+    double totalStoppageHours = 0;
+    for (var item in formData.ventilation) {
+      if (item.duree.isNotEmpty && item.note.isNotEmpty) {
+        // Parse time format HH:MM
+        final startParts = item.duree.split(':');
+        final endParts = item.note.split(':');
+        if (startParts.length == 2 && endParts.length == 2) {
+          final startHour = int.parse(startParts[0]);
+          final startMin = int.parse(startParts[1]);
+          final endHour = int.parse(endParts[0]);
+          final endMin = int.parse(endParts[1]);
+          
+          final startTotal = startHour * 60 + startMin;
+          final endTotal = endHour * 60 + endMin;
+          int diff = endTotal - startTotal;
+          if (diff <= 0) diff += 24 * 60; // Handle overnight periods
+          
+          totalStoppageHours += diff / 60.0;
         }
       }
-      
-      formData.exploitation['heuresBrutes'] = totalGrossHours.toStringAsFixed(2);
-      
-      // Calculate total stoppage time
-      int totalStoppageMinutes = 0;
-      for (var item in formData.ventilation) {
-        totalStoppageMinutes += _parseDuration(item.duree);
-      }
-      
-      final stoppageHours = totalStoppageMinutes / 60;
-      formData.exploitation['heuresArrets'] = stoppageHours.toStringAsFixed(2);
-      
-      // Calculate net hours
-      final netHours = totalGrossHours - stoppageHours;
-      formData.exploitation['heuresNettes'] = netHours.toStringAsFixed(2);
-    });
+    }
+    
+    formData.exploitation['heuresArrets'] = totalStoppageHours.toStringAsFixed(2);
   }
 
   // UI Building methods
@@ -470,12 +463,44 @@ static const Map<String, List<String>> machinesData = {
   }
 
   Widget _buildCompteurSection() {
-    // Get the index of the selected poste
     final selectedPosteIndex = posteOrder.indexOf(formData.selectedPoste);
     if (selectedPosteIndex == -1) {
       return const Text('Veuillez sélectionner un poste.');
     }
-    
+
+    // Parse allowed hours for the selected poste
+    String timeRange = posteTimes[posteOrder[selectedPosteIndex]] ?? '';
+    double allowedHours = 0.0;
+    if (timeRange.isNotEmpty) {
+      final parts = timeRange.split(' - ');
+      if (parts.length == 2) {
+        final start = parts[0].split(':');
+        final end = parts[1].split(':');
+        if (start.length == 2 && end.length == 2) {
+          int startHour = int.parse(start[0]);
+          int startMin = int.parse(start[1]);
+          int endHour = int.parse(end[0]);
+          int endMin = int.parse(end[1]);
+          // Handle overnight shift (e.g., 22:30 - 06:30)
+          int startTotal = startHour * 60 + startMin;
+          int endTotal = endHour * 60 + endMin;
+          int diff = endTotal - startTotal;
+          if (diff <= 0) diff += 24 * 60;
+          allowedHours = diff / 60.0;
+        }
+      }
+    }
+
+    String? errorText;
+    final compteur = formData.indexCompteurs[selectedPosteIndex];
+    final debut = _parseNumeric(compteur.duree);
+    final fin = _parseNumeric(compteur.note);
+    final marche = fin > debut ? (fin - debut) / 100 : 0.0;
+    if (marche > allowedHours) {
+      errorText =
+          'Heure de marche (${marche.toStringAsFixed(2)}h) dépasse la durée maximale autorisée pour ce poste (${allowedHours.toStringAsFixed(2)}h).';
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -491,30 +516,40 @@ static const Map<String, List<String>> machinesData = {
         const SizedBox(height: 8),
         TextFormField(
           decoration: const InputDecoration(
-            labelText: 'Durée',
-            hintText: '1h 30m',
+            labelText: 'Début',
             border: OutlineInputBorder(),
           ),
-          initialValue: formData.indexCompteurs[selectedPosteIndex].duree,
+          keyboardType: TextInputType.number,
+          initialValue: compteur.duree,
           onChanged: (value) {
             setState(() {
               formData.indexCompteurs[selectedPosteIndex].duree = value;
             });
+            _calculateHours();
           },
         ),
         const SizedBox(height: 16),
         TextFormField(
           decoration: const InputDecoration(
-            labelText: 'Note',
+            labelText: 'Fin',
             border: OutlineInputBorder(),
           ),
-          initialValue: formData.indexCompteurs[selectedPosteIndex].note,
+          keyboardType: TextInputType.number,
+          initialValue: compteur.note,
           onChanged: (value) {
             setState(() {
               formData.indexCompteurs[selectedPosteIndex].note = value;
             });
+            _calculateHours();
           },
         ),
+        if (errorText != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            errorText,
+            style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+          ),
+        ],
       ],
     );
   }
@@ -529,33 +564,27 @@ static const Map<String, List<String>> machinesData = {
         ),
         const SizedBox(height: 16),
         TextFormField(
-          decoration: const InputDecoration(
-            labelText: 'Heures Brutes',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: 'Heures marche',
+            border: const OutlineInputBorder(),
             suffixText: 'h',
+            filled: true,
+            fillColor: Colors.grey[100],
           ),
           readOnly: true,
           controller: TextEditingController(text: formData.exploitation['heuresBrutes']),
         ),
         const SizedBox(height: 16),
         TextFormField(
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Heures Arrêts',
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
             suffixText: 'h',
+            filled: true,
+            fillColor: Colors.grey[100],
           ),
           readOnly: true,
           controller: TextEditingController(text: formData.exploitation['heuresArrets']),
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          decoration: const InputDecoration(
-            labelText: 'Heures Nettes',
-            border: OutlineInputBorder(),
-            suffixText: 'h',
-          ),
-          readOnly: true,
-          controller: TextEditingController(text: formData.exploitation['heuresNettes']),
         ),
         const SizedBox(height: 16),
         TextFormField(
@@ -753,8 +782,7 @@ static const Map<String, List<String>> machinesData = {
         const SizedBox(height: 16),
         _buildSummaryItem('Date du rapport', DateFormat('dd/MM/yyyy').format(_selectedDate)),
         _buildSummaryItem('Sortie', formData.selectedSortie),
-        _buildSummaryItem('Heures Brutes', '${formData.exploitation['heuresBrutes']}h'),
-        _buildSummaryItem('Heures Nettes', '${formData.exploitation['heuresNettes']}h'),
+        _buildSummaryItem('Heures marche', '${formData.exploitation['heuresBrutes']}h'),
         _buildSummaryItem('Tonnage', '${formData.exploitation['tonnage']}t'),
         _buildSummaryItem('Rendement', '${formData.exploitation['rendement']}%'),
         _buildSummaryItem('Conducteur', formData.personnel.conducteur),
@@ -954,29 +982,37 @@ static const Map<String, List<String>> machinesData = {
               Text('Catégorie: $selectedCategory'),
               Text('Type: $selectedType'),
               const SizedBox(height: 16),
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Heure début',
-                  hintText: 'ex: 08:00',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (value) {
-                  setDialogState(() {
-                    startTime = value;
-                  });
+              ListTile(
+                title: const Text('Heure début'),
+                subtitle: Text(startTime.isEmpty ? 'Sélectionner l\'heure' : startTime),
+                trailing: const Icon(Icons.access_time),
+                onTap: () async {
+                  final TimeOfDay? picked = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.now(),
+                  );
+                  if (picked != null) {
+                    setDialogState(() {
+                      startTime = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                    });
+                  }
                 },
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Heure fin',
-                  hintText: 'ex: 09:15',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (value) {
-                  setDialogState(() {
-                    endTime = value;
-                  });
+              ListTile(
+                title: const Text('Heure fin'),
+                subtitle: Text(endTime.isEmpty ? 'Sélectionner l\'heure' : endTime),
+                trailing: const Icon(Icons.access_time),
+                onTap: () async {
+                  final TimeOfDay? picked = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.now(),
+                  );
+                  if (picked != null) {
+                    setDialogState(() {
+                      endTime = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                    });
+                  }
                 },
               ),
             ],
@@ -1030,10 +1066,11 @@ static const Map<String, List<String>> machinesData = {
                                 note: endTime,
                               ));
                             });
+                            _calculateHours();
                             Navigator.of(context).pop();
                           }
                         : null,
-                    child: const Text('Ajouter'),
+                    child: const Text('Terminer'),
                   ),
               ],
             ),
@@ -1218,10 +1255,13 @@ static const Map<String, List<String>> machinesData = {
                                             mainAxisSize: MainAxisSize.min,
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              Text('Mine: ${formData.selectedMine}'),
-                                              Text('Zone: ${formData.selectedZone}'),
-                                              Text('Sortie: ${formData.selectedSortie}'),
-                                              Text('Poste: ${formData.selectedPoste}'),
+                                              _buildSummaryItem('Mine', formData.selectedMine),
+                                              _buildSummaryItem('Zone', formData.selectedZone),
+                                              _buildSummaryItem('Sortie', formData.selectedSortie),
+                                              _buildSummaryItem('Catégorie', formData.selectedCategory),
+                                              _buildSummaryItem('Type', formData.selectedType),
+                                              _buildSummaryItem('Modèle', formData.selectedModel),
+                                              _buildSummaryItem('Poste', formData.selectedPoste),
                                             ],
                                           ),
                                         ),
@@ -1285,7 +1325,7 @@ static const Map<String, List<String>> machinesData = {
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Fermer'),
+                                            child: const Text('Terminer'),
                                           ),
                                         ],
                                       ),
@@ -1308,15 +1348,36 @@ static const Map<String, List<String>> machinesData = {
                               Expanded(
                                 child: OutlinedButton.icon(
                                   onPressed: () {
+                                    // Get the index of the selected poste
+                                    final selectedPosteIndex = posteOrder.indexOf(formData.selectedPoste);
+                                    if (selectedPosteIndex == -1) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Veuillez d\'abord sélectionner un poste'),
+                                          backgroundColor: Colors.orange,
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    
+                                    final compteur = formData.indexCompteurs[selectedPosteIndex];
+                                    final debut = _parseNumeric(compteur.duree);
+                                    final fin = _parseNumeric(compteur.note);
+                                    final heureMarche = fin > debut ? (fin - debut) / 1 : 0.0; // Assuming compteur is in 1.0 hour units
+                                    
                                     showDialog(
                                       context: context,
                                       builder: (context) => AlertDialog(
-                                        title: const Text('Liste Compteurs'),
+                                        title: Text('Compteur - ${formData.selectedPoste} Poste'),
                                         content: SingleChildScrollView(
                                           child: Column(
                                             mainAxisSize: MainAxisSize.min,
                                             crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: List.generate(formData.indexCompteurs.length, (i) => Text('Poste ${i+1}: Début ${formData.indexCompteurs[i].duree}, Fin ${formData.indexCompteurs[i].note}')),
+                                            children: [
+                                              _buildSummaryItem('Début', compteur.duree.isEmpty ? 'Non renseigné' : compteur.duree),
+                                              _buildSummaryItem('Fin', compteur.note.isEmpty ? 'Non renseigné' : compteur.note),
+                                              _buildSummaryItem('Heure de marche', '${heureMarche.toStringAsFixed(2)}h'),
+                                            ],
                                           ),
                                         ),
                                         actions: [
@@ -1329,7 +1390,7 @@ static const Map<String, List<String>> machinesData = {
                                     );
                                   },
                                   icon: const Icon(Icons.list),
-                                  label: const Text('Voir Compteurs'),
+                                  label: const Text('Voir Compteur'),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: Colors.blue[900],
                                     side: BorderSide(color: Colors.blue[900]!),
@@ -1499,9 +1560,8 @@ static const Map<String, List<String>> machinesData = {
                                             mainAxisSize: MainAxisSize.min,
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              Text('Heures Brutes: ${formData.exploitation['heuresBrutes']}'),
+                                              Text('Heures marche: ${formData.exploitation['heuresBrutes']}'),
                                               Text('Heures Arrêts: ${formData.exploitation['heuresArrets']}'),
-                                              Text('Heures Nettes: ${formData.exploitation['heuresNettes']}'),
                                               Text('Tonnage: ${formData.exploitation['tonnage']}'),
                                               Text('Rendement: ${formData.exploitation['rendement']}'),
                                             ],
