@@ -771,29 +771,7 @@ static const Map<String, List<String>> machinesData = {
     );
   }
 
-  Widget _buildVerificationSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'R0',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 16),
-        _buildSummaryItem('Date du rapport', DateFormat('dd/MM/yyyy').format(_selectedDate)),
-        _buildSummaryItem('Sortie', formData.selectedSortie),
-        _buildSummaryItem('Heures marche', '${formData.exploitation['heuresBrutes']}h'),
-        _buildSummaryItem('Tonnage', '${formData.exploitation['tonnage']}t'),
-        _buildSummaryItem('Rendement', '${formData.exploitation['rendement']}%'),
-        _buildSummaryItem('Conducteur', formData.personnel.conducteur),
-        _buildSummaryItem('Graisseur', formData.personnel.graisseur),
-        _buildSummaryItem('Matricules', formData.personnel.matricules),
-        _buildSummaryItem('Tricone', formData.consommation.tricone),
-        _buildSummaryItem('Gasoil', formData.consommation.gasoil),
-        const SizedBox(height: 16),
-      ],
-    );
-  }
+  // Removed unused _buildVerificationSection method
 
   Widget _buildSummaryItem(String label, String value) {
     return Padding(
@@ -837,44 +815,7 @@ static const Map<String, List<String>> machinesData = {
     );
   }
 
-  Future<void> _saveDraft() async {
-    setState(() {
-      _isLoading = true;
-    });
 
-    try {
-      final report = Report(
-        description: 'Brouillon R0 - ${DateFormat('yyyy-MM-dd').format(_selectedDate)}',
-        date: _selectedDate,
-        group: 'R0',
-        type: 'r0_draft',
-        additionalData: _serializeFormData(),
-      );
-
-      await _databaseHelper.insertReport(report);
-      
-      if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Brouillon enregistré avec succès'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
 
   Future<void> _saveReport() async {
     setState(() {
@@ -894,25 +835,15 @@ static const Map<String, List<String>> machinesData = {
       
       if (!mounted) return;
       
-      // Show confirmation dialog
-      await showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Rapport soumis'),
-            content: const Text('Votre rapport R0 a été soumis avec succès.'),
-            actions: [
-              TextButton(
-                child: const Text('Terminé'),
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close dialog
-                  Navigator.of(context).pop(); // Return to home
-                },
-              ),
-            ],
-          );
-        },
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Rapport soumis avec succès'),
+          backgroundColor: Colors.green,
+        ),
       );
+      
+      // Navigate back to home screen
+      Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2619,15 +2550,15 @@ static const Map<String, List<String>> machinesData = {
                                         maxWidth: 600,
                                         maxHeight: MediaQuery.of(context).size.height * 0.6,
                                       ),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Padding(
-                                            padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+                                          const Padding(
+                                            padding: EdgeInsets.fromLTRB(14, 10, 6, 10),
                                             child: Row(
                                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                               children: [
-                                                const Text(
+                                                Text(
                                                   'Vérification du Rapport R0',
                                                   style: TextStyle(
                                                     fontSize: 18,
@@ -2642,8 +2573,8 @@ static const Map<String, List<String>> machinesData = {
                                             child: SingleChildScrollView(
                                               padding: const EdgeInsets.all(16),
                                               child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
                                                   // Date Section
                                                   Card(
                                                     margin: EdgeInsets.zero,
@@ -2702,22 +2633,22 @@ static const Map<String, List<String>> machinesData = {
                                                           ),
                                                           const Divider(height: 16),
                                                           ...List.generate(formData.indexCompteurs.length, (index) {
-                                                            final compteur = formData.indexCompteurs[index];
-                                                            if (compteur.duree.isEmpty && compteur.note.isEmpty) return const SizedBox.shrink();
-                                                            return Column(
-                                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                                              children: [
-                                                                Text(
-                                                                  '${posteOrder[index]} Poste',
-                                                                  style: Theme.of(context).textTheme.titleSmall,
-                                                                ),
-                                                                const SizedBox(height: 8),
-                                                                _buildInfoRow('Début', compteur.duree),
-                                                                _buildInfoRow('Fin', compteur.note),
-                                                                const Divider(height: 16),
-                                                              ],
-                                                            );
-                                                          }),
+                                                             final compteur = formData.indexCompteurs[index];
+                                                             if (compteur.duree.isEmpty && compteur.note.isEmpty) return const SizedBox.shrink();
+                                                             return Column(
+                                                               crossAxisAlignment: CrossAxisAlignment.start,
+                                                               children: [
+                                                                 Text(
+                                                                   '${posteOrder[index]} Poste',
+                                                                   style: Theme.of(context).textTheme.titleSmall,
+                                                                 ),
+                                                                 const SizedBox(height: 8),
+                                                                 _buildInfoRow('Début', compteur.duree),
+                                                                 _buildInfoRow('Fin', compteur.note),
+                                                                 const Divider(height: 16),
+                                                               ],
+                                                             );
+                                                           }),
                                                         ],
                                                       ),
                                                     ),
@@ -2809,7 +2740,6 @@ static const Map<String, List<String>> machinesData = {
                     ),
                   ],
                 ),
-
               ],
             ),
           ),
