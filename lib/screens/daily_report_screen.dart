@@ -422,7 +422,7 @@ class DailyReportState extends State<DailyReport> {
                               context: context,
                               initialDate: _selectedDate,
                               firstDate: DateTime(2000),
-                              lastDate: DateTime(2100),
+                              lastDate: DateTime.now(),
                               locale: const Locale('fr', 'FR'),
                             );
                             if (picked != null && picked != _selectedDate) {

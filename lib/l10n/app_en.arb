@@ -2,6 +2,7 @@
   "appTitle": "R0 App",
   "home": "Home",
   "r0Report": "R0 Report",
+  "additionalData": "Additional Data",
   "addReport": "Add Report",
   "reportDetails": "Report Details",
   "editReport": "Edit Report",
@@ -13,6 +14,7 @@
   "noData": "No Data",
   "save": "Save",
   "cancel": "Cancel",
+  "close": "Close",
   "delete": "Delete",
   "edit": "Edit",
   "date": "Date",
@@ -55,5 +57,6 @@
   "location": "Location",
   "reportConfirmationTitle": "Report Saved",
   "reportConfirmationMessage": "When you click done, the report will be saved on the reports page. If you want to send this report to the company, go to the reports page and send it from there.",
+  "reportDetails": "Report Details",
   "done": "Done"
 } 

@@ -317,6 +317,45 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
+  Future<void> _showReportDetails(Report report) async {
+    final l10n = AppLocalizations.of(context)!;
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.reportDetails),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('${l10n.description}: ${report.description}'),
+              const SizedBox(height: 8),
+              Text('${l10n.type}: ${report.type}'),
+              const SizedBox(height: 8),
+              Text('${l10n.group}: ${report.group}'),
+              const SizedBox(height: 8),
+              Text('${l10n.date}: ${DateFormat('yyyy-MM-dd HH:mm').format(report.date)}'),
+              if (report.additionalData != null && report.additionalData!.isNotEmpty) ...[
+                const Divider(),
+                Text(l10n.additionalData),
+                ...report.additionalData!.entries.map((e) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Text('${e.key}: ${e.value}'),
+                )),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.close),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _saveReportUpdate(
     Report updatedReport,
     ScaffoldMessengerState scaffoldMessenger,
@@ -329,6 +368,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       scaffoldMessenger.showSnackBar(
         SnackBar(content: Text(l10n.reportUpdated)),
       );
+      await _showReportDetails(updatedReport);
     } catch (e) {
       if (!mounted) return;
       scaffoldMessenger.showSnackBar(

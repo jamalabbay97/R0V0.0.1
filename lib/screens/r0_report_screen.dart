@@ -1141,7 +1141,36 @@ static const Map<String, List<String>> machinesData = {
                             const SizedBox(width: 8),
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: () => _saveReport(),
+                                onPressed: () async {
+                                  // Show confirmation dialog before saving
+                                  final shouldSave = await showDialog<bool>(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text('Confirmation'),
+                                      content: const Text(
+                                        "When you click Done, the report will be saved on the reports page. If you want to send this report to the company, go to the reports page and send it from there."
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(context).pop(false),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () => Navigator.of(context).pop(true),
+                                          child: const Text('Done'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (!mounted) return;
+                                  if (shouldSave == true) {
+                                    await _saveReport();
+                                    if (!mounted) return;
+                                    // After saving, pop to home page
+                                    Navigator.of(context).popUntil((route) => route.isFirst);
+                                  }
+                                },
                                 child: const Text('Soumettre'),
                               ),
                             ),
@@ -1189,7 +1218,7 @@ static const Map<String, List<String>> machinesData = {
                                   context: context,
                                   initialDate: _selectedDate,
                                   firstDate: DateTime(2000),
-                                  lastDate: DateTime(2100),
+                                  lastDate: DateTime.now(), // Restrict to today
                                   locale: const Locale('fr', 'FR'),
                                 );
                                 if (picked != null && picked != _selectedDate) {
@@ -2416,7 +2445,7 @@ static const Map<String, List<String>> machinesData = {
                                                             style: Theme.of(context).textTheme.titleMedium,
                                                           ),
                                                           const Divider(height: 16),
-                                                          _buildInfoRow('Date du rapport', DateFormat('dd/MM/yyyy').format(_selectedDate)),
+                                                          _buildInfoRow('DR', DateFormat('dd/MM/yyyy').format(_selectedDate)),
                                                         ],
                                                       ),
                                                     ),
@@ -2495,10 +2524,10 @@ static const Map<String, List<String>> machinesData = {
                                                             style: Theme.of(context).textTheme.titleMedium,
                                                           ),
                                                           const Divider(height: 16),
-                                                          _buildInfoRow('Heures marche', '${formData.exploitation['heuresBrutes']}h'),
-                                                          _buildInfoRow('Heures Arrêts', '${formData.exploitation['heuresArrets']}h'),
+                                                          _buildInfoRow('H marche', '${formData.exploitation['heuresBrutes']}h'),
+                                                          _buildInfoRow('H Arrêts', '${formData.exploitation['heuresArrets']}h'),
                                                           _buildInfoRow('Tonnage', '${formData.exploitation['tonnage']}t'),
-                                                          _buildInfoRow('Rendement', '${formData.exploitation['rendement']}%'),
+                                                          _buildInfoRow('Rendeme', '${formData.exploitation['rendement']}%'),
                                                         ],
                                                       ),
                                                     ),
@@ -2517,11 +2546,9 @@ static const Map<String, List<String>> machinesData = {
                                                             style: Theme.of(context).textTheme.titleMedium,
                                                           ),
                                                           const Divider(height: 16),
-                                                          _buildInfoRow('Conducteur', formData.personnel.conducteur),
+                                                          _buildInfoRow('Ctr', formData.personnel.conducteur),
                                                           _buildInfoRow('Graisseur', formData.personnel.graisseur),
                                                           _buildInfoRow('Matricules', formData.personnel.matricules),
-                                                          _buildInfoRow('Tricone', formData.consommation.tricone),
-                                                          _buildInfoRow('Gasoil', formData.consommation.gasoil),
                                                         ],
                                                       ),
                                                     ),

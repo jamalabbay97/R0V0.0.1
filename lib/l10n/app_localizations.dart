@@ -116,6 +116,12 @@ abstract class AppLocalizations {
   /// **'R0 Report'**
   String get r0Report;
 
+  /// No description provided for @additionalData.
+  ///
+  /// In en, this message translates to:
+  /// **'Additional Data'**
+  String get additionalData;
+
   /// No description provided for @addReport.
   ///
   /// In en, this message translates to:
@@ -181,6 +187,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cancel'**
   String get cancel;
+
+  /// No description provided for @close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
 
   /// No description provided for @delete.
   ///

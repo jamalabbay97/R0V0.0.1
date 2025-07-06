@@ -18,6 +18,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get r0Report => 'Rapport R0';
 
   @override
+  String get additionalData => 'Données supplémentaires';
+
+  @override
   String get addReport => 'Ajouter un rapport';
 
   @override
@@ -49,6 +52,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get cancel => 'Annuler';
+
+  @override
+  String get close => 'Fermer';
 
   @override
   String get delete => 'Supprimer';
