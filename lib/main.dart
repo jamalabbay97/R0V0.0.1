@@ -27,7 +27,19 @@ class MyApp extends StatelessWidget {
           return MaterialApp(
             title: 'R0 App',
             theme: ThemeData(
-              primarySwatch: Colors.blue,
+              primarySwatch: Colors.green,
+              primaryColor: Colors.green[700],
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: Colors.green[700]!,
+                primary: Colors.green[700]!,
+                secondary: Colors.green[800]!,
+                onPrimary: Colors.white,
+                onSecondary: Colors.white,
+                surface: Colors.white,
+                error: Colors.red,
+                onError: Colors.white,
+                brightness: Brightness.light,
+              ),
               useMaterial3: true,
             ),
             localizationsDelegates: const [

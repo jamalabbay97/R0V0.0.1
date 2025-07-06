@@ -435,7 +435,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.blue[900],
+            color: Colors.green[700],
           ),
         ),
         const SizedBox(height: 16),
@@ -447,7 +447,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                 icon: const Icon(Icons.add),
                 label: const Text('Ajouter un arrêt'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[900],
+                  backgroundColor: Colors.green[700],
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -464,8 +464,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                 icon: const Icon(Icons.list),
                 label: const Text('Voir les arrêts'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.blue[900],
-                  side: BorderSide(color: Colors.blue[900]!),
+                  foregroundColor: Colors.green[700],
+                  side: BorderSide(color: Colors.green[700]!),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -485,7 +485,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.blue[900],
+            color: Colors.green[700],
           ),
         ),
         const SizedBox(height: 16),
@@ -497,7 +497,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                 icon: const Icon(Icons.add),
                 label: const Text('Ajouter un compteur'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[900],
+                  backgroundColor: Colors.green[700],
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -514,8 +514,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                 icon: const Icon(Icons.list),
                 label: const Text('Voir les compteurs'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.blue[900],
-                  side: BorderSide(color: Colors.blue[900]!),
+                  foregroundColor: Colors.green[700],
+                  side: BorderSide(color: Colors.green[700]!),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -535,7 +535,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.blue[900],
+            color: Colors.green[700],
           ),
         ),
         const SizedBox(height: 16),
@@ -547,7 +547,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                 icon: const Icon(Icons.add),
                 label: const Text('Ajouter un compteur'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[900],
+                  backgroundColor: Colors.green[700],
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -564,8 +564,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                 icon: const Icon(Icons.list),
                 label: const Text('Voir les compteurs'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.blue[900],
-                  side: BorderSide(color: Colors.blue[900]!),
+                  foregroundColor: Colors.green[700],
+                  side: BorderSide(color: Colors.green[700]!),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -585,7 +585,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.blue[900],
+            color: Colors.green[700],
           ),
         ),
         const SizedBox(height: 16),
@@ -597,7 +597,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                 icon: const Icon(Icons.add),
                 label: const Text('Ajouter un stock'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[900],
+                  backgroundColor: Colors.green[700],
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -614,8 +614,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                 icon: const Icon(Icons.list),
                 label: const Text('Voir les stocks'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.blue[900],
-                  side: BorderSide(color: Colors.blue[900]!),
+                  foregroundColor: Colors.green[700],
+                  side: BorderSide(color: Colors.green[700]!),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -635,7 +635,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.blue[900],
+            color: Colors.green[700],
           ),
         ),
         const SizedBox(height: 16),
@@ -672,7 +672,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.blue[900],
+                          color: Colors.green[700],
                         ),
                       ),
                       const SizedBox(height: 16),

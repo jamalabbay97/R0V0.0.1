@@ -482,12 +482,12 @@ class DailyReportState extends State<DailyReport> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Temps de Fonctionnement (24h - Arrêts)',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
-                                  color: Colors.blue,
+                                  color: Colors.green[700],
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -515,9 +515,9 @@ class DailyReportState extends State<DailyReport> {
                                         const SizedBox(height: 8),
                                         Text(
                                           'Arrêts: ${formatMinutesToHoursMinutes(module1TotalDowntime)}',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 14,
-                                            color: Colors.red,
+                                            color: Colors.red[700],
                                           ),
                                         ),
                                       ],
@@ -545,9 +545,9 @@ class DailyReportState extends State<DailyReport> {
                                         const SizedBox(height: 8),
                                         Text(
                                           'Arrêts: ${formatMinutesToHoursMinutes(module2TotalDowntime)}',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 14,
-                                            color: Colors.red,
+                                            color: Colors.red[700],
                                           ),
                                         ),
                                       ],
@@ -597,7 +597,7 @@ class DailyReportState extends State<DailyReport> {
               icon: const Icon(Icons.add),
                 label: const Text('Ajouter un arrêt'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[900],
+                  backgroundColor: Colors.green[900],
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -614,8 +614,8 @@ class DailyReportState extends State<DailyReport> {
                 icon: const Icon(Icons.list),
                 label: const Text('Voir les arrêts'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.blue[900],
-                  side: BorderSide(color: Colors.blue[900]!),
+                  foregroundColor: Colors.green[900],
+                  side: BorderSide(color: Colors.green[900]!),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -799,7 +799,7 @@ class DailyReportState extends State<DailyReport> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.blue[900],
+            color: Colors.green[700],
           ),
         ),
         const SizedBox(height: 16),

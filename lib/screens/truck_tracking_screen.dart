@@ -434,30 +434,30 @@ class CamionReportState extends State<CamionReport> {
                                                   child: Row(
                                                     mainAxisSize: MainAxisSize.min,
                                                     children: [
-                                                      Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
+                                                      Icon(Icons.edit, size: 18, color: Colors.green[700]),
                                                       const SizedBox(width: 8),
                                                       Text(
                                                         'Modifier',
                                                         style: TextStyle(
-                                                          color: Theme.of(context).colorScheme.primary,
+                                                          color: Colors.green[700],
                                                           fontSize: 14,
                                                         ),
                                                       ),
                                                     ],
                                                   ),
                                                 ),
-                                                PopupMenuItem<String>(
+                                                const PopupMenuItem<String>(
                                                   value: 'delete',
                                                   height: 36,
                                                   child: Row(
                                                     mainAxisSize: MainAxisSize.min,
                                                     children: [
-                                                      Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
-                                                      const SizedBox(width: 8),
+                                                      Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                                                      SizedBox(width: 8),
                                                       Text(
                                                         'Supprimer',
                                                         style: TextStyle(
-                                                          color: Theme.of(context).colorScheme.error,
+                                                          color: Colors.red,
                                                           fontSize: 14,
                                                         ),
                                                       ),
@@ -728,7 +728,7 @@ class CamionReportState extends State<CamionReport> {
                                       Text(
                                         'Voyages',
                                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                          color: Theme.of(context).colorScheme.primary,
+                                          color: Colors.green[700],
                                         ),
                                       ),
                                       ...List.generate(truck['counts'].length, (index) {
@@ -1181,7 +1181,8 @@ class CamionReportState extends State<CamionReport> {
                                       child: ConstrainedBox(
                                         constraints: BoxConstraints(
                                           maxHeight: MediaQuery.of(context).size.height * 0.8,
-                                        ),
+                                        )
+,
                                         child: Column(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
@@ -1244,30 +1245,30 @@ class CamionReportState extends State<CamionReport> {
                                                               child: Row(
                                                                 mainAxisSize: MainAxisSize.min,
                                                                 children: [
-                                                                  Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
+                                                                  Icon(Icons.edit, size: 18, color: Colors.green[700]),
                                                                   const SizedBox(width: 8),
                                                                   Text(
                                                                     'Modifier',
                                                                     style: TextStyle(
-                                                                      color: Theme.of(context).colorScheme.primary,
+                                                                      color: Colors.green[700],
                                                                       fontSize: 14,
                                                                     ),
                                                                   ),
                                                                 ],
                                                               ),
                                                             ),
-                                                            PopupMenuItem<String>(
+                                                            const PopupMenuItem<String>(
                                                               value: 'delete',
                                                               height: 36,
                                                               child: Row(
                                                                 mainAxisSize: MainAxisSize.min,
                                                                 children: [
-                                                                  Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
-                                                                  const SizedBox(width: 8),
+                                                                  Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                                                                  SizedBox(width: 8),
                                                                   Text(
                                                                     'Supprimer',
                                                                     style: TextStyle(
-                                                                      color: Theme.of(context).colorScheme.error,
+                                                                      color: Colors.red,
                                                                       fontSize: 14,
                                                                     ),
                                                                   ),
@@ -1472,7 +1473,7 @@ class CamionReportState extends State<CamionReport> {
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: const Icon(Icons.access_time, size: 20, color: Colors.blue),
+                child: Icon(Icons.access_time, size: 20, color: Colors.green[700]),
               ),
             ],
           ),

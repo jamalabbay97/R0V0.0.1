@@ -282,7 +282,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         context: dialogContext,
                         initialTime: TimeOfDay.fromDateTime(selectedDate),
                       );
-                      if (time != null) {
+                      if (time != null && mounted) {
                         setState(() {
                           selectedDate = DateTime(
                             picked.year,

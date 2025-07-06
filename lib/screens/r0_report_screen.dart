@@ -1168,7 +1168,9 @@ static const Map<String, List<String>> machinesData = {
                                     await _saveReport();
                                     if (!mounted) return;
                                     // After saving, pop to home page
-                                    Navigator.of(context).popUntil((route) => route.isFirst);
+                                    if (mounted) {
+                                      Navigator.of(context).popUntil((route) => route.isFirst);
+                                    }
                                   }
                                 },
                                 child: const Text('Soumettre'),
@@ -1259,7 +1261,7 @@ static const Map<String, List<String>> machinesData = {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue[900],
+                              color: Colors.green[700],
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -1287,7 +1289,7 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.add),
                                   label: const Text('Ajouter Info OIB/EE'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue[900],
+                                    backgroundColor: Colors.green[700],
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
@@ -1420,8 +1422,8 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.list),
                                   label: const Text('Voir Info OIB/EE'),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.blue[900],
-                                    side: BorderSide(color: Colors.blue[900]!),
+                                    foregroundColor: Colors.green[700],
+                                    side: BorderSide(color: Colors.green[700]!),
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
                                 ),
@@ -1443,7 +1445,7 @@ static const Map<String, List<String>> machinesData = {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue[900],
+                              color: Colors.green[700],
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -1477,7 +1479,7 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.add),
                                   label: const Text('Ajouter Compteur'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue[900],
+                                    backgroundColor: Colors.green[700],
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
@@ -1625,8 +1627,8 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.list),
                                   label: const Text('Voir Compteur'),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.blue[900],
-                                    side: BorderSide(color: Colors.blue[900]!),
+                                    foregroundColor: Colors.green[700],
+                                    side: BorderSide(color: Colors.green[700]!),
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
                                 ),
@@ -1648,7 +1650,7 @@ static const Map<String, List<String>> machinesData = {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue[900],
+                              color: Colors.green[700],
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -1670,7 +1672,7 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.add),
                                   label: const Text('Ajouter Arrêts'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue[900],
+                                    backgroundColor: Colors.green[700],
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
@@ -1790,8 +1792,8 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.list),
                                   label: const Text('Voir Arrêts'),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.blue[900],
-                                    side: BorderSide(color: Colors.blue[900]!),
+                                    foregroundColor: Colors.green[700],
+                                    side: BorderSide(color: Colors.green[700]!),
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
                                 ),
@@ -1813,7 +1815,7 @@ static const Map<String, List<String>> machinesData = {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue[900],
+                              color: Colors.green[700],
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -1847,7 +1849,7 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.add),
                                   label: const Text('Ajouter Exploitation'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue[900],
+                                    backgroundColor: Colors.green[700],
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
@@ -1978,8 +1980,8 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.list),
                                   label: const Text('Voir Exploitation'),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.blue[900],
-                                    side: BorderSide(color: Colors.blue[900]!),
+                                    foregroundColor: Colors.green[700],
+                                    side: BorderSide(color: Colors.green[700]!),
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
                                 ),
@@ -2001,7 +2003,7 @@ static const Map<String, List<String>> machinesData = {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue[900],
+                              color: Colors.green[700],
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -2035,7 +2037,7 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.add),
                                   label: const Text('Ajouter Répartition'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue[900],
+                                    backgroundColor: Colors.green[700],
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
@@ -2172,8 +2174,8 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.list),
                                   label: const Text('Voir Répartition'),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.blue[900],
-                                    side: BorderSide(color: Colors.blue[900]!),
+                                    foregroundColor: Colors.green[700],
+                                    side: BorderSide(color: Colors.green[700]!),
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
                                 ),
@@ -2195,7 +2197,7 @@ static const Map<String, List<String>> machinesData = {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue[900],
+                              color: Colors.green[700],
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -2231,7 +2233,7 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.add),
                                   label: const Text('Ajouter'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue[900],
+                                    backgroundColor: Colors.green[700],
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
@@ -2368,8 +2370,8 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.list),
                                   label: const Text('Voir Personnel & Consommation'),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.blue[900],
-                                    side: BorderSide(color: Colors.blue[900]!),
+                                    foregroundColor: Colors.green[700],
+                                    side: BorderSide(color: Colors.green[700]!),
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
                                 ),
@@ -2391,7 +2393,7 @@ static const Map<String, List<String>> machinesData = {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue[900],
+                              color: Colors.green[700],
                             ),
                           ),
                           const SizedBox(height: 16),
