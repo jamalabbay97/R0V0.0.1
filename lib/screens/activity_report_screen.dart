@@ -13,11 +13,11 @@ enum StockType { normal, oceane, pb30 }
 String posteToString(Poste? p) {
   switch (p) {
     case Poste.premier:
-      return "1er";
-    case Poste.deuxieme:
-      return "2ème";
-    case Poste.troisieme:
       return "3ème";
+    case Poste.deuxieme:
+      return "1er";
+    case Poste.troisieme:
+      return "2ème";
     default:
       return "";
   }

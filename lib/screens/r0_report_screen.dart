@@ -97,11 +97,11 @@ class R0ReportState extends State<R0Report> {
   int _currentStep = 0;
   bool _isLoading = false;
 
-  final posteOrder = const ["1er", "2ème", "3ème"];
+  final posteOrder = const ["3ème", "1er", "2ème"];
   final posteTimes = const {
+    "3ème": "22:30 - 06:30",
     "1er": "06:30 - 14:30",
     "2ème": "14:30 - 22:30",
-    "3ème": "22:30 - 06:30",
   };
 
   // Ventilation codes and labels
@@ -1113,7 +1113,7 @@ static const Map<String, List<String>> machinesData = {
                 Stepper(
                   currentStep: _currentStep,
                   onStepContinue: () {
-                    if (_currentStep < 8) {
+                    if (_currentStep < 7) {
                       setState(() {
                         _currentStep += 1;
                       });
@@ -1127,7 +1127,7 @@ static const Map<String, List<String>> machinesData = {
                     }
                   },
                   controlsBuilder: (context, details) {
-                    if (_currentStep == 8) {
+                    if (_currentStep == 7) {
                       return Padding(
                         padding: const EdgeInsets.only(top: 16.0),
                         child: Row(
@@ -1249,7 +1249,7 @@ static const Map<String, List<String>> machinesData = {
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Fermer'),
+                                            child: const Text('Terminer'),
                                           ),
                                         ],
                                       ),
@@ -1337,7 +1337,7 @@ static const Map<String, List<String>> machinesData = {
                                                       actions: [
                                                         TextButton(
                                                           onPressed: () => Navigator.of(context).pop(),
-                                                          child: const Text('Fermer'),
+                                                          child: const Text('Terminer'),
                                                         ),
                                                       ],
                                                     ),
@@ -1382,7 +1382,7 @@ static const Map<String, List<String>> machinesData = {
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Fermer'),
+                                            child: const Text('Terminer'),
                                           ),
                                         ],
                                       ),
@@ -1550,7 +1550,7 @@ static const Map<String, List<String>> machinesData = {
                                                       actions: [
                                                         TextButton(
                                                           onPressed: () => Navigator.of(context).pop(),
-                                                          child: const Text('Fermer'),
+                                                          child: const Text('Terminer'),
                                                         ),
                                                       ],
                                                     ),
@@ -1587,7 +1587,7 @@ static const Map<String, List<String>> machinesData = {
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Fermer'),
+                                            child: const Text('Terminer'),
                                           ),
                                         ],
                                       ),
@@ -1635,12 +1635,6 @@ static const Map<String, List<String>> machinesData = {
                                         content: SingleChildScrollView(
                                           child: _buildAddVentilationDialog(context),
                                         ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Fermer'),
-                                          ),
-                                        ],
                                       ),
                                     );
                                   },
@@ -1726,7 +1720,7 @@ static const Map<String, List<String>> machinesData = {
                                                       actions: [
                                                         TextButton(
                                                           onPressed: () => Navigator.of(context).pop(),
-                                                          child: const Text('Fermer'),
+                                                          child: const Text('Terminer'),
                                                         ),
                                                       ],
                                                     ),
@@ -1758,7 +1752,7 @@ static const Map<String, List<String>> machinesData = {
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Fermer'),
+                                            child: const Text('Terminer'),
                                           ),
                                         ],
                                       ),
@@ -1815,7 +1809,7 @@ static const Map<String, List<String>> machinesData = {
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Fermer'),
+                                            child: const Text('Terminer'),
                                           ),
                                         ],
                                       ),
@@ -1909,7 +1903,7 @@ static const Map<String, List<String>> machinesData = {
                                                       actions: [
                                                         TextButton(
                                                           onPressed: () => Navigator.of(context).pop(),
-                                                          child: const Text('Fermer'),
+                                                          child: const Text('Terminer'),
                                                         ),
                                                       ],
                                                     ),
@@ -1946,7 +1940,7 @@ static const Map<String, List<String>> machinesData = {
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Fermer'),
+                                            child: const Text('Terminer'),
                                           ),
                                         ],
                                       ),
@@ -2003,7 +1997,7 @@ static const Map<String, List<String>> machinesData = {
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Fermer'),
+                                            child: const Text('Terminer'),
                                           ),
                                         ],
                                       ),
@@ -2097,7 +2091,7 @@ static const Map<String, List<String>> machinesData = {
                                                       actions: [
                                                         TextButton(
                                                           onPressed: () => Navigator.of(context).pop(),
-                                                          child: const Text('Fermer'),
+                                                          child: const Text('Terminer'),
                                                         ),
                                                       ],
                                                     ),
@@ -2122,13 +2116,25 @@ static const Map<String, List<String>> machinesData = {
                                           child: Column(
                                             mainAxisSize: MainAxisSize.min,
                                             crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: List.generate(formData.repartitionTravail.length, (i) => Text('Poste ${i+1}: Chantier ${formData.repartitionTravail[i].chantier}, Temps ${formData.repartitionTravail[i].temps}, Imputation ${formData.repartitionTravail[i].imputation}')),
+                                            children: [
+                                              (() {
+                                                final selectedPosteIndex = posteOrder.indexOf(formData.selectedPoste);
+                                                if (selectedPosteIndex != -1) {
+                                                  final r = formData.repartitionTravail[selectedPosteIndex];
+                                                  return Text(
+                                                    'Poste ${posteOrder[selectedPosteIndex]}: Chantier ${r.chantier}, Temps ${r.temps}, Imputation ${r.imputation}'
+                                                  );
+                                                } else {
+                                                  return const Text('Aucun poste sélectionné.');
+                                                }
+                                              })(),
+                                            ],
                                           ),
                                         ),
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Fermer'),
+                                            child: const Text('Terminer'),
                                           ),
                                         ],
                                       ),
@@ -2151,12 +2157,12 @@ static const Map<String, List<String>> machinesData = {
                       state: _currentStep > 5 ? StepState.complete : StepState.indexed,
                     ),
                     Step(
-                      title: const Text('Personnel'),
+                      title: const Text('Personnel & Consommation'),
                       content: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'ÉTAPE 7: PERSONNEL',
+                            'ÉTAPE 7: PERSONNEL & CONSOMMATION',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -2172,27 +2178,29 @@ static const Map<String, List<String>> machinesData = {
                                     showDialog(
                                       context: context,
                                       builder: (context) => AlertDialog(
-                                        title: const Text('Ajouter Personnel'),
+                                        title: const Text('Ajouter Personnel & Consommation'),
                                         content: SingleChildScrollView(
                                           child: Column(
                                             mainAxisSize: MainAxisSize.min,
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               _buildPersonnelSection(),
+                                              const SizedBox(height: 24),
+                                              _buildConsommationSection(),
                                             ],
                                           ),
                                         ),
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Fermer'),
+                                            child: const Text('Terminer'),
                                           ),
                                         ],
                                       ),
                                     );
                                   },
                                   icon: const Icon(Icons.add),
-                                  label: const Text('Ajouter Personnel'),
+                                  label: const Text('Ajouter'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.blue[900],
                                     foregroundColor: Colors.white,
@@ -2214,7 +2222,7 @@ static const Map<String, List<String>> machinesData = {
                                         title: Row(
                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
-                                            const Text('Liste Personnel'),
+                                            const Text('Liste Personnel & Consommation'),
                                             PopupMenuButton<String>(
                                               icon: const Icon(Icons.more_horiz, size: 20),
                                               padding: EdgeInsets.zero,
@@ -2266,20 +2274,22 @@ static const Map<String, List<String>> machinesData = {
                                                   showDialog(
                                                     context: context,
                                                     builder: (context) => AlertDialog(
-                                                      title: const Text('Modifier Personnel'),
+                                                      title: const Text('Modifier Personnel & Consommation'),
                                                       content: SingleChildScrollView(
                                                         child: Column(
                                                           mainAxisSize: MainAxisSize.min,
                                                           crossAxisAlignment: CrossAxisAlignment.start,
                                                           children: [
                                                             _buildPersonnelSection(),
+                                                            const SizedBox(height: 24),
+                                                            _buildConsommationSection(),
                                                           ],
                                                         ),
                                                       ),
                                                       actions: [
                                                         TextButton(
                                                           onPressed: () => Navigator.of(context).pop(),
-                                                          child: const Text('Fermer'),
+                                                          child: const Text('Terminer'),
                                                         ),
                                                       ],
                                                     ),
@@ -2289,11 +2299,13 @@ static const Map<String, List<String>> machinesData = {
                                                     formData.personnel.conducteur = '';
                                                     formData.personnel.graisseur = '';
                                                     formData.personnel.matricules = '';
+                                                    formData.consommation.tricone = '';
+                                                    formData.consommation.gasoil = '';
                                                   });
                                                   Navigator.of(context).pop();
                                                   ScaffoldMessenger.of(context).showSnackBar(
                                                     const SnackBar(
-                                                      content: Text('Personnel supprimé'),
+                                                      content: Text('Personnel & Consommation supprimés'),
                                                       backgroundColor: Colors.orange,
                                                     ),
                                                   );
@@ -2310,20 +2322,22 @@ static const Map<String, List<String>> machinesData = {
                                               Text('Conducteur: ${formData.personnel.conducteur}'),
                                               Text('Graisseur: ${formData.personnel.graisseur}'),
                                               Text('Matricules: ${formData.personnel.matricules}'),
+                                              Text('Tricone: ${formData.consommation.tricone}'),
+                                              Text('Gasoil: ${formData.consommation.gasoil}'),
                                             ],
                                           ),
                                         ),
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Fermer'),
+                                            child: const Text('Terminer'),
                                           ),
                                         ],
                                       ),
                                     );
                                   },
                                   icon: const Icon(Icons.list),
-                                  label: const Text('Voir Personnel'),
+                                  label: const Text('Voir Personnel & Consommation'),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: Colors.blue[900],
                                     side: BorderSide(color: Colors.blue[900]!),
@@ -2337,192 +2351,6 @@ static const Map<String, List<String>> machinesData = {
                       ),
                       isActive: _currentStep >= 6,
                       state: _currentStep > 6 ? StepState.complete : StepState.indexed,
-                    ),
-                    Step(
-                      title: const Text('Consommation'),
-                      content: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'ÉTAPE 8: CONSOMMATION',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue[900],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Text('Ajouter Consommation'),
-                                        content: SingleChildScrollView(
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              _buildConsommationSection(),
-                                            ],
-                                          ),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Fermer'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Ajouter Consommation'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue[900],
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            const Text('Liste Consommation'),
-                                            PopupMenuButton<String>(
-                                              icon: const Icon(Icons.more_horiz, size: 20),
-                                              padding: EdgeInsets.zero,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              position: PopupMenuPosition.under,
-                                              itemBuilder: (BuildContext context) => [
-                                                PopupMenuItem<String>(
-                                                  value: 'edit',
-                                                  height: 36,
-                                                  child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
-                                                      const SizedBox(width: 8),
-                                                      Text(
-                                                        'Modifier',
-                                                        style: TextStyle(
-                                                          color: Theme.of(context).colorScheme.primary,
-                                                          fontSize: 14,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                PopupMenuItem<String>(
-                                                  value: 'delete',
-                                                  height: 36,
-                                                  child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
-                                                      const SizedBox(width: 8),
-                                                      Text(
-                                                        'Supprimer',
-                                                        style: TextStyle(
-                                                          color: Theme.of(context).colorScheme.error,
-                                                          fontSize: 14,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                              onSelected: (value) {
-                                                if (value == 'edit') {
-                                                  Navigator.of(context).pop();
-                                                  showDialog(
-                                                    context: context,
-                                                    builder: (context) => AlertDialog(
-                                                      title: const Text('Modifier Consommation'),
-                                                      content: SingleChildScrollView(
-                                                        child: Column(
-                                                          mainAxisSize: MainAxisSize.min,
-                                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                                          children: [
-                                                            _buildConsommationSection(),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                      actions: [
-                                                        TextButton(
-                                                          onPressed: () => Navigator.of(context).pop(),
-                                                          child: const Text('Fermer'),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  );
-                                                } else if (value == 'delete') {
-                                                  setState(() {
-                                                    formData.consommation.tricone = '';
-                                                    formData.consommation.gasoil = '';
-                                                  });
-                                                  Navigator.of(context).pop();
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text('Consommation supprimée'),
-                                                      backgroundColor: Colors.orange,
-                                                    ),
-                                                  );
-                                                }
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                        content: SingleChildScrollView(
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text('Tricone: ${formData.consommation.tricone}'),
-                                              Text('Gasoil: ${formData.consommation.gasoil}'),
-                                            ],
-                                          ),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Fermer'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.list),
-                                  label: const Text('Voir Consommation'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.blue[900],
-                                    side: BorderSide(color: Colors.blue[900]!),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      isActive: _currentStep >= 7,
-                      state: _currentStep > 7 ? StepState.complete : StepState.indexed,
                     ),
                     Step(
                       title: const Text('Vérification'),
@@ -2692,6 +2520,8 @@ static const Map<String, List<String>> machinesData = {
                                                           _buildInfoRow('Conducteur', formData.personnel.conducteur),
                                                           _buildInfoRow('Graisseur', formData.personnel.graisseur),
                                                           _buildInfoRow('Matricules', formData.personnel.matricules),
+                                                          _buildInfoRow('Tricone', formData.consommation.tricone),
+                                                          _buildInfoRow('Gasoil', formData.consommation.gasoil),
                                                         ],
                                                       ),
                                                     ),
@@ -2735,8 +2565,8 @@ static const Map<String, List<String>> machinesData = {
                           ),
                         ],
                       ),
-                      isActive: _currentStep >= 8,
-                      state: _currentStep > 8 ? StepState.complete : StepState.indexed,
+                      isActive: _currentStep >= 7,
+                      state: _currentStep > 7 ? StepState.complete : StepState.indexed,
                     ),
                   ],
                 ),

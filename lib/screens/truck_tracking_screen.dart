@@ -31,12 +31,12 @@ enum Poste {
 
 String posteToString(Poste? p) {
   switch (p) {
+    case Poste.troisieme:
+      return "3ème";
     case Poste.premier:
       return "1er";
     case Poste.deuxieme:
-      return "2eme";
-    case Poste.troisieme:
-      return "3eme";
+      return "2ème";
     default:
       return "";
   }
