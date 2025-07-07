@@ -29,6 +29,7 @@ dependencies:
   uuid: ^4.3.3
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.4
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.1
@@ -46,3 +47,40 @@ flutter:
     - assets/images/
     - assets/fonts/
     - assets/fonts/NotoSans-Regular.ttf 
+
+icons_launcher:
+  image_path: "assets/images/logo.png"
+  platforms:
+    android:
+      enable: true
+      image_path: "assets/images/logo.png"
+      notification_image: "assets/images/logo.png"
+      # adaptive_background_color: '#ffffff'
+      adaptive_background_image: "assets/images/logo.png"
+      adaptive_foreground_image: "assets/images/logo.png"
+      adaptive_round_image: "assets/images/logo.png"
+      adaptive_monochrome_image: "assets/images/logo.png"
+    ios:
+      enable: true
+      image_path: "assets/images/logo.png"
+      # For iOS 18+ (support dark and tinted)
+      dark_path: "assets/images/logo.png"
+      tinted_path: "assets/images/logo.png"
+    web:
+      enable: true
+      image_path: "assets/images/logo.png"
+      favicon_path: "assets/images/logo.png"
+    macos:
+      enable: false
+      image_path: "assets/images/logo.png"
+    windows:
+      enable: false
+      image_path: "assets/images/logo.png"
+    linux:
+      enable: false
+      image_path: "assets/images/logo.png"
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logo.png"
