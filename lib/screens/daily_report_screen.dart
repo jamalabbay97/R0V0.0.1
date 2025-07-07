@@ -64,8 +64,8 @@ class DailyReportState extends State<DailyReport> {
   String rapportNo = '';
   String machineEngins = '';
 
-  List<ModuleStop> module1Stops = [ModuleStop(id: const Uuid().v4())];
-  List<ModuleStop> module2Stops = [ModuleStop(id: const Uuid().v4())];
+  List<ModuleStop> module1Stops = [];
+  List<ModuleStop> module2Stops = [];
 
   int module1TotalDowntime = 0;
   int module2TotalDowntime = 0;
