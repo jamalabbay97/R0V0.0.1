@@ -161,17 +161,7 @@ class CamionReportState extends State<CamionReport> {
   ZoneData? _selectedZone;
   String? _selectedSortie;
 
-  List<Map<String, dynamic>> truckData = [
-    {
-      "id": const Uuid().v4(),
-      "truckNumber": "",
-      "driver1": "",
-      "driver2": "",
-      "counts": [],
-      "lieu": "",
-      "total": "0",
-    },
-  ];
+  List<Map<String, dynamic>> truckData = [];
 
   // Add predefined truck numbers
   static const List<String> predefinedTrucks = [
@@ -1206,7 +1196,38 @@ class CamionReportState extends State<CamionReport> {
                                             Flexible(
                                               child: SingleChildScrollView(
                                                 padding: const EdgeInsets.all(16),
+                                                child: truckData.isEmpty
+                                                    ? const Center(
                                                 child: Column(
+                                                          mainAxisAlignment: MainAxisAlignment.center,
+                                                          children: [
+                                                            Icon(
+                                                              Icons.local_shipping_outlined,
+                                                              size: 64,
+                                                              color: Colors.grey,
+                                                            ),
+                                                            SizedBox(height: 16),
+                                                            Text(
+                                                              'Aucun camion ajouté',
+                                                              style: TextStyle(
+                                                                fontSize: 18,
+                                                                color: Colors.grey,
+                                                                fontWeight: FontWeight.w500,
+                                                              ),
+                                                            ),
+                                                            SizedBox(height: 8),
+                                                            Text(
+                                                              'Cliquez sur "Ajouter un camion" pour commencer',
+                                                              style: TextStyle(
+                                                                fontSize: 14,
+                                                                color: Colors.grey,
+                                                              ),
+                                                              textAlign: TextAlign.center,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      )
+                                                    : Column(
                                                   children: truckData.map((truck) {
                                                     return Card(
                                                       margin: const EdgeInsets.only(bottom: 8),
@@ -1216,19 +1237,8 @@ class CamionReportState extends State<CamionReport> {
                                                           crossAxisAlignment: CrossAxisAlignment.start,
                                                           children: [
                                                             Text("Chauffeur: ${truck['driver1']}"),
-                                                            if (truck['trips'] != null && (truck['trips'] as List).isNotEmpty)
-                                                              ...(truck['trips'] as List).map((trip) {
-                                                                return Padding(
-                                                                  padding: const EdgeInsets.only(top: 4),
-                                                                  child: Text(
-                                                                    "📍 ${trip['location']}",
-                                                                    style: const TextStyle(
-                                                                      fontSize: 12,
-                                                                      color: Colors.grey,
-                                                                    ),
-                                                                  ),
-                                                                );
-                                                              }),
+                                                                  if (truck['counts'] != null && (truck['counts'] as List).isNotEmpty)
+                                                                    Text("Voyages: ${(truck['counts'] as List).length}"),
                                                           ],
                                                         ),
                                                         trailing: PopupMenuButton<String>(
