@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import 'package:r0_app/l10n/app_localizations.dart';
 import 'package:r0_app/services/database_helper.dart';
 import 'package:r0_app/models/report.dart';
+import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 
 enum QualiteType {
   normal,
@@ -1171,7 +1172,7 @@ class CamionReportState extends State<CamionReport> {
                                       child: ConstrainedBox(
                                         constraints: BoxConstraints(
                                           maxHeight: MediaQuery.of(context).size.height * 0.8,
-                                        )
+                                        ),
                                         child: Column(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
@@ -1552,29 +1553,39 @@ class CamionReportState extends State<CamionReport> {
   }
 
   Future<void> _selectTime(BuildContext context, Map<String, dynamic> truck, int index) async {
-    final TimeOfDay? picked = await showTimePicker(
+    final TimeOfDay? picked = await showDialog<TimeOfDay>(
       context: context,
-      initialTime: TimeOfDay.now(),
-      initialEntryMode: TimePickerEntryMode.input,
-      builder: (BuildContext context, Widget? child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            alwaysUse24HourFormat: true,
-          ),
-          child: Theme(
-            data: Theme.of(context).copyWith(
-              timePickerTheme: TimePickerThemeData(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                hourMinuteTextStyle: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+      builder: (context) {
+        TimeOfDay tempTime = TimeOfDay.now();
+        return AlertDialog(
+          title: const Text('Sélectionner l\'heure'),
+          content: SizedBox(
+            height: 200,
+            child: TimePickerSpinner(
+              key: const ValueKey('truck_time_picker_spinner'),
+              is24HourMode: true,
+              isShowSeconds: false,
+              minutesInterval: 1,
+              normalTextStyle: const TextStyle(fontSize: 18, color: Colors.black54),
+              highlightedTextStyle: const TextStyle(fontSize: 24, color: Colors.black),
+              spacing: 50,
+              itemHeight: 60,
+              isForce2Digits: true,
+              onTimeChange: (dateTime) {
+                tempTime = TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
+              },
             ),
-            child: child!,
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(tempTime),
+              child: const Text('OK'),
+            ),
+          ],
         );
       },
     );

@@ -3,6 +3,7 @@ import 'package:r0_app/services/database_helper.dart';
 import 'package:r0_app/models/report.dart';
 // import 'package:r0_app/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 
 // Data models
 class IndexCompteurPoste {
@@ -762,10 +763,41 @@ static const Map<String, List<String>> machinesData = {
                 subtitle: Text(startTime.isEmpty ? 'Sélectionner l\'heure' : startTime),
                 trailing: const Icon(Icons.access_time),
                 onTap: () async {
-                  final TimeOfDay? picked = await showTimePicker(
+                  final picked = await showDialog<TimeOfDay>(
                     context: context,
-                    initialTime: TimeOfDay.now(),
-                    initialEntryMode: TimePickerEntryMode.input,
+                    builder: (context) {
+                      TimeOfDay tempTime = TimeOfDay.now();
+                      return AlertDialog(
+                        title: const Text('Sélectionner l\'heure'),
+                        content: SizedBox(
+                          height: 200,
+                          child: TimePickerSpinner(
+                            key: const ValueKey('start_time_picker_spinner'),
+                            is24HourMode: true,
+                            isShowSeconds: false,
+                            minutesInterval: 1,
+                            normalTextStyle: const TextStyle(fontSize: 18, color: Colors.black54),
+                            highlightedTextStyle: const TextStyle(fontSize: 24, color: Colors.black),
+                            spacing: 50,
+                            itemHeight: 60,
+                            isForce2Digits: true,
+                            onTimeChange: (dateTime) {
+                              tempTime = TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
+                            },
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Annuler'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(tempTime),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      );
+                    },
                   );
                   if (picked != null) {
                     setDialogState(() {
@@ -780,10 +812,41 @@ static const Map<String, List<String>> machinesData = {
                 subtitle: Text(endTime.isEmpty ? 'Sélectionner l\'heure' : endTime),
                 trailing: const Icon(Icons.access_time),
                 onTap: () async {
-                  final TimeOfDay? picked = await showTimePicker(
+                  final picked = await showDialog<TimeOfDay>(
                     context: context,
-                    initialTime: TimeOfDay.now(),
-                    initialEntryMode: TimePickerEntryMode.input,
+                    builder: (context) {
+                      TimeOfDay tempTime = TimeOfDay.now();
+                      return AlertDialog(
+                        title: const Text('Sélectionner l\'heure'),
+                        content: SizedBox(
+                          height: 200,
+                          child: TimePickerSpinner(
+                            key: const ValueKey('end_time_picker_spinner'),
+                            is24HourMode: true,
+                            isShowSeconds: false,
+                            minutesInterval: 1,
+                            normalTextStyle: const TextStyle(fontSize: 18, color: Colors.black54),
+                            highlightedTextStyle: const TextStyle(fontSize: 24, color: Colors.black),
+                            spacing: 50,
+                            itemHeight: 60,
+                            isForce2Digits: true,
+                            onTimeChange: (dateTime) {
+                              tempTime = TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
+                            },
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Annuler'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(tempTime),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      );
+                    },
                   );
                   if (picked != null) {
                     setDialogState(() {
