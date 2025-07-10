@@ -2446,10 +2446,10 @@ static const Map<String, List<String>> machinesData = {
                                                         children: [
                                                           const Text('Exploitation', style: TextStyle(fontWeight: FontWeight.bold)),
                                                           const Divider(height: 16),
-                                                          _buildInfoRow('Heures marche', formData.exploitation['heuresBrutes'] ?? ''),
-                                                          _buildInfoRow('Heures Arrêts', formData.exploitation['heuresArrets'] ?? ''),
+                                                          _buildInfoRow('H.M', formData.exploitation['heuresBrutes'] ?? ''),
+                                                          _buildInfoRow('H.A', formData.exploitation['heuresArrets'] ?? ''),
                                                           _buildInfoRow('Tonnage', formData.exploitation['tonnage'] ?? ''),
-                                                          _buildInfoRow('Rendement', formData.exploitation['rendement'] ?? ''),
+                                                          _buildInfoRow('Rendeme', formData.exploitation['rendement'] ?? ''),
                                                         ],
                                                       ),
                                                     ),
@@ -2465,7 +2465,7 @@ static const Map<String, List<String>> machinesData = {
                                                         children: [
                                                           const Text('Personnel', style: TextStyle(fontWeight: FontWeight.bold)),
                                                           const Divider(height: 16),
-                                                          _buildInfoRow('Conducteur', formData.personnel.conducteur),
+                                                          _buildInfoRow('Conductr', formData.personnel.conducteur),
                                                           _buildInfoRow('Graisseur', formData.personnel.graisseur),
                                                           _buildInfoRow('Matricules', formData.personnel.matricules),
                                                         ],

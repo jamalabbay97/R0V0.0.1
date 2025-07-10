@@ -325,22 +325,81 @@ class _ReportsScreenState extends State<ReportsScreen> {
         title: Text(l10n.reportDetails),
         content: SingleChildScrollView(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('${l10n.description}: ${report.description}'),
-              const SizedBox(height: 8),
-              Text('${l10n.type}: ${report.type}'),
-              const SizedBox(height: 8),
-              Text('${l10n.group}: ${report.group}'),
-              const SizedBox(height: 8),
-              Text('${l10n.date}: ${DateFormat('yyyy-MM-dd HH:mm').format(report.date)}'),
+              Card(
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.description, style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 4),
+                      Text(report.description),
+                    ],
+                  ),
+                ),
+              ),
+              Card(
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.type, style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 4),
+                      Text(report.type),
+                    ],
+                  ),
+                ),
+              ),
+              Card(
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.group, style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 4),
+                      Text(report.group),
+                    ],
+                  ),
+                ),
+              ),
+              Card(
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.date, style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 4),
+                      Text(DateFormat('yyyy-MM-dd HH:mm').format(report.date)),
+                    ],
+                  ),
+                ),
+              ),
               if (report.additionalData != null && report.additionalData!.isNotEmpty) ...[
-                const Divider(),
-                Text(l10n.additionalData),
-                ...report.additionalData!.entries.map((e) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Text('${e.key}: ${e.value}'),
+                const SizedBox(height: 8),
+                Text(l10n.additionalData, style: Theme.of(context).textTheme.titleLarge),
+                ...report.additionalData!.entries.map((e) => Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(e.key, style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 4),
+                        Text(e.value.toString()),
+                      ],
+                    ),
+                  ),
                 )),
               ],
             ],
@@ -501,7 +560,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             },
                           ),
                           onTap: () {
-                            // TODO: Implement report details view
+                            _showReportDetails(report);
                           },
                         ),
                       );
