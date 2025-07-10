@@ -3,7 +3,6 @@ import 'package:uuid/uuid.dart';
 import 'package:r0_app/l10n/app_localizations.dart';
 import 'package:r0_app/services/database_helper.dart';
 import 'package:r0_app/models/report.dart';
-import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 
 enum QualiteType {
   normal,
@@ -157,6 +156,8 @@ class CamionReportState extends State<CamionReport> {
   String? _selectedEquipment;
   Poste? _selectedPoste;
   
+  // Add for step 3 selection
+  String? _selectedOperationType;
   // Mine and Sortie selection
   MineData? _selectedMine;
   ZoneData? _selectedZone;
@@ -199,7 +200,6 @@ class CamionReportState extends State<CamionReport> {
     _truckControllers[truckId] = {
       'truckNumber': TextEditingController(text: truck['truckNumber']?.toString() ?? ''),
       'driver1': TextEditingController(text: truck['driver1']?.toString() ?? ''),
-      'driver2': TextEditingController(text: truck['driver2']?.toString() ?? ''),
       'lieu': TextEditingController(text: truck['lieu']?.toString() ?? ''),
       'total': TextEditingController(text: truck['total']?.toString() ?? '0'),
     };
@@ -240,13 +240,15 @@ class CamionReportState extends State<CamionReport> {
   }
 
   void deleteTruck(String id) {
+    final controllersToDispose = _truckControllers[id]?.values.toList() ?? [];
     setState(() {
-      // Dispose controllers before removing truck
-      for (var controller in _truckControllers[id]!.values) {
-        controller.dispose();
-      }
       _truckControllers.remove(id);
       truckData.removeWhere((truck) => truck["id"] == id);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (var controller in controllersToDispose) {
+        controller.dispose();
+      }
     });
   }
 
@@ -285,14 +287,12 @@ class CamionReportState extends State<CamionReport> {
 
   Future<void> _showTruckDialog(BuildContext context, [Map<String, dynamic>? existingTruck]) async {
     final truckId = existingTruck?['id'] ?? const Uuid().v4();
-    int dialogStep = 0;
 
     if (existingTruck == null) {
       truckData.add({
         "id": truckId,
         "truckNumber": "",
         "driver1": "",
-        "driver2": "",
         "counts": [],
         "lieu": "",
         "total": "0",
@@ -306,16 +306,7 @@ class CamionReportState extends State<CamionReport> {
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            void goNext() {
-              setDialogState(() {
-                dialogStep++;
-              });
-            }
-            void goPrev() {
-              setDialogState(() {
-                dialogStep--;
-              });
-            }
+            // Only one step: select truck and enter driver info
             return PopScope(
               canPop: true,
               onPopInvokedWithResult: (didPop, result) {
@@ -360,156 +351,26 @@ class CamionReportState extends State<CamionReport> {
                     Flexible(
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.all(16),
-                          child: Builder(
-                            builder: (context) {
-                              if (dialogStep == 0) {
-                                // Step 1: Select truck
-                                return Column(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                                     Text("Selectionner un camion", style: Theme.of(context).textTheme.titleMedium),
                                     const SizedBox(height: 16),
                             _truckCell(truckData.firstWhere((t) => t['id'] == truckId), "truckNumber", isRequired: true),
-                                  ],
-                                );
-                              } else if (dialogStep == 1) {
-                                // Step 2: Enter driver(s) and details
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
+                            const SizedBox(height: 24),
                                     Text("Informations sur le conducteur", style: Theme.of(context).textTheme.titleMedium),
                             const SizedBox(height: 16),
                             _truckCell(truckData.firstWhere((t) => t['id'] == truckId), "driver", isRequired: true),
                                     const SizedBox(height: 16),
                                     _truckCell(truckData.firstWhere((t) => t['id'] == truckId), "lieu"),
                                   ],
-                                );
-                              } else {
-                                // Step 3: Add trips
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text("Voyages", style: Theme.of(context).textTheme.titleMedium),
-                            const SizedBox(height: 16),
-                            ExpansionTile(
-                                      initiallyExpanded: true,
-                              title: Text(
-                                "Voyages (${truckData.firstWhere((t) => t['id'] == truckId)['counts'].length})",
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              children: [
-                                ...List.generate(truckData.firstWhere((t) => t['id'] == truckId)['counts'].length, (i) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 16),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              "Voyage ${i + 1}",
-                                              style: const TextStyle(fontWeight: FontWeight.bold),
-                                            ),
-                                            PopupMenuButton<String>(
-                                              icon: const Icon(Icons.more_horiz, size: 20),
-                                              padding: EdgeInsets.zero,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              position: PopupMenuPosition.under,
-                                              itemBuilder: (BuildContext context) => [
-                                                PopupMenuItem<String>(
-                                                  value: 'edit',
-                                                  height: 36,
-                                                  child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      Icon(Icons.edit, size: 18, color: Colors.green[700]),
-                                                      const SizedBox(width: 8),
-                                                      Text(
-                                                        'Modifier',
-                                                        style: TextStyle(
-                                                          color: Colors.green[700],
-                                                          fontSize: 14,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                const PopupMenuItem<String>(
-                                                  value: 'delete',
-                                                  height: 36,
-                                                  child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                                                      SizedBox(width: 8),
-                                                      Text(
-                                                        'Supprimer',
-                                                        style: TextStyle(
-                                                          color: Colors.red,
-                                                          fontSize: 14,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                              onSelected: (String value) {
-                                                Navigator.of(context).pop();
-                                                if (value == 'edit') {
-                                                  _showTruckDialog(context, truckData.firstWhere((t) => t['id'] == truckId));
-                                                } else if (value == 'delete') {
-                                                  Future.delayed(const Duration(milliseconds: 100), () {
-                                                    deleteTruck(truckId);
-                                                  });
-                                                }
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        _truckCountCell(truckData.firstWhere((t) => t['id'] == truckId), i, "time"),
-                                      ],
-                                    ),
-                                  );
-                                }),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  child: ElevatedButton.icon(
-                                    onPressed: () {
-                                              setDialogState(() {
-                                        addTrip(truckId);
-                                      });
-                                    },
-                                    icon: const Icon(Icons.add),
-                                    label: const Text("Ajouter un voyage"),
-                                    style: ElevatedButton.styleFrom(
-                                      minimumSize: const Size(double.infinity, 36),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                                );
-                              }
-                            },
-                          ),
                         ),
+                      ),
                       ),
                       Padding(
                         padding: const EdgeInsets.all(16),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            if (dialogStep > 0)
-                              TextButton(
-                                onPressed: goPrev,
-                                child: const Text('Precedent'),
-                              ),
-                            Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 TextButton(
                                   onPressed: () {
@@ -521,19 +382,11 @@ class CamionReportState extends State<CamionReport> {
                                   child: const Text('Annuler'),
                                 ),
                                 const SizedBox(width: 8),
-                                if (dialogStep < 2)
-                                  ElevatedButton(
-                                    onPressed: goNext,
-                                    child: const Text('Suivant'),
-                                  ),
-                                if (dialogStep == 2)
                                   ElevatedButton(
                                     onPressed: () {
                                       Navigator.of(context).pop();
                                     },
                                     child: const Text('Enregistrer'),
-                                  ),
-                              ],
                             ),
                           ],
                         ),
@@ -625,7 +478,7 @@ class CamionReportState extends State<CamionReport> {
                                   style: Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
-                                _buildInfoRow('Date du rapport', '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}'),
+                                _buildInfoRow('Date', '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}'),
                               ],
                             ),
                           ),
@@ -644,7 +497,7 @@ class CamionReportState extends State<CamionReport> {
                                   style: Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
-                                _buildInfoRow('Poste selectionne', _selectedPoste != null ? posteToString(_selectedPoste) : '-'),
+                                _buildInfoRow('Poste', _selectedPoste != null ? posteToString(_selectedPoste) : '-'),
                               ],
                             ),
                           ),
@@ -684,8 +537,9 @@ class CamionReportState extends State<CamionReport> {
                                   style: Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
-                                _buildInfoRow('Type d\'equipement', _selectedEquipment ?? '-'),
-                                _buildInfoRow('Qualite de produits', _selectedQualite != null ? qualiteTypeToString(_selectedQualite) : '-'),
+                                _buildInfoRow('Equipment', _selectedEquipment ?? '-'),
+                                _buildInfoRow('Opération', _selectedOperationType ?? '-'),
+                                _buildInfoRow('Produits', _selectedQualite != null ? qualiteTypeToString(_selectedQualite) : '-'),
                             ],
                             ),
                           ),
@@ -712,8 +566,7 @@ class CamionReportState extends State<CamionReport> {
                                       style: Theme.of(context).textTheme.titleSmall,
                                     ),
                                     const SizedBox(height: 8),
-                                    _buildInfoRow('Chauffeur 1', truck['driver1']),
-                                    _buildInfoRow('Chauffeur 2', truck['driver2']),
+                                    _buildInfoRow('Chauffeur', truck['driver1']),
                                     if (truck['counts'].isNotEmpty) ...[
                                       const SizedBox(height: 8),
                                       Text(
@@ -768,6 +621,7 @@ class CamionReportState extends State<CamionReport> {
           'mine': _selectedMine?.name,
           'zone': _selectedZone?.name,
           'sortie': _selectedSortie,
+          'operationType': _selectedOperationType,
         },
       );
 
@@ -935,211 +789,59 @@ class CamionReportState extends State<CamionReport> {
                 isActive: _currentStep >= 0,
               ),
               Step(
-                title: const Text('Sélection Mine et Sortie'),
-                content: SingleChildScrollView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Sélectionnez la mine, zone, sortie et poste',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                title: const Text('Informations principales'),
+                content: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ÉTAPE 2: INFORMATIONS PRINCIPALES',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green[700],
                       ),
-                      const SizedBox(height: 16),
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Sélection de la Mine',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 16),
-                              DropdownButtonFormField<MineData>(
-                                value: _selectedMine,
-                                decoration: const InputDecoration(
-                                  labelText: 'Mine',
-                                  border: OutlineInputBorder(),
-                                ),
-                                items: minesData.map((mine) {
-                                  return DropdownMenuItem(
-                                    value: mine,
-                                    child: Text(mine.name),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedMine = value;
-                                    _selectedZone = null;
-                                    _selectedSortie = null;
-                                  });
-                                },
-                              ),
-                              if (_selectedMine != null) ...[
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Sélection de la Zone',
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const SizedBox(height: 16),
-                                DropdownButtonFormField<ZoneData>(
-                                  value: _selectedZone,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Zone',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  items: _selectedMine!.zones.map((zone) {
-                                    return DropdownMenuItem(
-                                      value: zone,
-                                      child: Text(zone.name),
-                                    );
-                                  }).toList(),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _selectedZone = value;
-                                      _selectedSortie = null;
-                                    });
-                                  },
-                                ),
-                              ],
-                              if (_selectedZone != null && _selectedZone!.sorties.isNotEmpty) ...[
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Sélection de la Sortie',
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const SizedBox(height: 16),
-                                DropdownButtonFormField<String>(
-                                  value: _selectedSortie,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Sortie',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  items: _selectedZone!.sorties.map((sortie) {
-                                    return DropdownMenuItem(
-                                      value: sortie,
-                                      child: Text(sortie),
-                                    );
-                                  }).toList(),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _selectedSortie = value;
-                                    });
-                                  },
-                                ),
-                              ],
-                              if (_selectedMine != null && _selectedZone != null && 
-                                  (_selectedZone!.sorties.isEmpty || _selectedSortie != null)) ...[
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Selection du Poste',
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const SizedBox(height: 16),
-                                DropdownButtonFormField<Poste>(
-                                  value: _selectedPoste,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Poste',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  items: Poste.values.map((poste) {
-                                    return DropdownMenuItem(
-                                      value: poste,
-                                      child: Text(posteToString(poste)),
-                                    );
-                                  }).toList(),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _selectedPoste = value;
-                                    });
-                                  },
-                                ),
-                              ],
-                            ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              _showFullInfoDialog(context);
+                            },
+                            icon: const Icon(Icons.add),
+                            label: const Text('Ajouter Informations'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green[700],
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              _showInfoSummaryDialog(context);
+                            },
+                            icon: const Icon(Icons.list),
+                            label: const Text('Voir Informations'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.green[700],
+                              side: BorderSide(color: Colors.green[700]!),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
                 isActive: _currentStep >= 1,
-              ),
-              Step(
-                title: const Text('Selection equipement'),
-                content: SingleChildScrollView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 16),
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Equipement et Qualite de Produits',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 16),
-                              DropdownButtonFormField<String>(
-                                value: _selectedEquipment,
-                                decoration: const InputDecoration(
-                                  labelText: 'Type d\'equipement',
-                                  border: OutlineInputBorder(),
-                                ),
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'Chargeuse 992K',
-                                    child: Text('Chargeuse 992K'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'Chargeuse 994H',
-                                    child: Text('Chargeuse 994H'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'Pelle Hy',
-                                    child: Text('Pelle hydraulique'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'Pelle B1',
-                                    child: Text('Pelle electrique B1'),
-                                  ),
-                                ],
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedEquipment = value;
-                                  });
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              DropdownButtonFormField<QualiteType>(
-                                value: _selectedQualite,
-                                decoration: const InputDecoration(
-                                  labelText: 'Qualite de Produits',
-                                  border: OutlineInputBorder(),
-                                ),
-                                items: QualiteType.values.map((type) {
-                                  return DropdownMenuItem(
-                                    value: type,
-                                    child: Text(qualiteTypeToString(type)),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedQualite = value;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                isActive: _currentStep >= 2,
               ),
               Step(
                 title: const Text('Selection du camion'),
@@ -1322,7 +1024,7 @@ class CamionReportState extends State<CamionReport> {
                     ],
                   ),
                 ),
-                isActive: _currentStep >= 3,
+                isActive: _currentStep >= 2,
               ),
               Step(
                 title: const Text('Verification'),
@@ -1346,7 +1048,7 @@ class CamionReportState extends State<CamionReport> {
                         ],
                       ),
                   ),
-                isActive: _currentStep >= 4,
+                isActive: _currentStep >= 3,
               ),
             ],
           ),
@@ -1383,40 +1085,20 @@ class CamionReportState extends State<CamionReport> {
         validator: isRequired ? validateRequired : null,
       );
     } else if (field == 'driver') {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextFormField(
+      return TextFormField(
             controller: _truckControllers[truck['id']]!['driver1'],
             onChanged: (val) => updateTruckData(truck['id'], 'driver1', val),
             decoration: const InputDecoration(
               isDense: true,
               contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               border: OutlineInputBorder(),
-              hintText: 'Conducteur 1',
+          hintText: 'Conducteur',
               errorMaxLines: 2,
             ),
             maxLines: null,
             minLines: 1,
             style: const TextStyle(height: 1.5),
             validator: isRequired ? validateRequired : null,
-          ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _truckControllers[truck['id']]!['driver2'],
-            onChanged: (val) => updateTruckData(truck['id'], 'driver2', val),
-            decoration: const InputDecoration(
-              isDense: true,
-              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              border: OutlineInputBorder(),
-              hintText: 'Conducteur 2 (optionnel)',
-              errorMaxLines: 2,
-            ),
-            maxLines: null,
-            minLines: 1,
-            style: const TextStyle(height: 1.5),
-          ),
-        ],
       );
     } else if (field == 'lieu') {
       return TextFormField(
@@ -1453,45 +1135,6 @@ class CamionReportState extends State<CamionReport> {
               ? validateNumeric 
               : null,
     );
-  }
-
-  Widget _truckCountCell(Map<String, dynamic> truck, int i, String field) {
-    final isTime = field == "time";
-    if (isTime) {
-      return InkWell(
-        onTap: () => _selectTime(context, truck, i),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _truckControllers[truck['id']]!['count${i}_$field'],
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                    border: InputBorder.none,
-                    hintText: 'Heure',
-                    hintStyle: TextStyle(color: Colors.grey[600]),
-                  ),
-                  validator: validateNumeric,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Icon(Icons.access_time, size: 20, color: Colors.green[700]),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return const SizedBox.shrink();
   }
 
   void addTrip(String truckId) {
@@ -1552,48 +1195,187 @@ class CamionReportState extends State<CamionReport> {
     });
   }
 
-  Future<void> _selectTime(BuildContext context, Map<String, dynamic> truck, int index) async {
-    final TimeOfDay? picked = await showDialog<TimeOfDay>(
+  void _showFullInfoDialog(BuildContext context) {
+    MineData? selectedMine = _selectedMine;
+    ZoneData? selectedZone = _selectedZone;
+    String? selectedSortie = _selectedSortie;
+    Poste? selectedPoste = _selectedPoste;
+    String? selectedEquipment = _selectedEquipment;
+    String? selectedOperationType = _selectedOperationType;
+    QualiteType? selectedQualite = _selectedQualite;
+
+    showDialog(
       context: context,
       builder: (context) {
-        TimeOfDay tempTime = TimeOfDay.now();
-        return AlertDialog(
-          title: const Text('Sélectionner l\'heure'),
-          content: SizedBox(
-            height: 200,
-            child: TimePickerSpinner(
-              key: const ValueKey('truck_time_picker_spinner'),
-              is24HourMode: true,
-              isShowSeconds: false,
-              minutesInterval: 1,
-              normalTextStyle: const TextStyle(fontSize: 18, color: Colors.black54),
-              highlightedTextStyle: const TextStyle(fontSize: 24, color: Colors.black),
-              spacing: 50,
-              itemHeight: 60,
-              isForce2Digits: true,
-              onTimeChange: (dateTime) {
-                tempTime = TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
-              },
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: Material(
+            type: MaterialType.card,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: SingleChildScrollView(
+                child: StatefulBuilder(
+                  builder: (context, setDialogState) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Ajouter Informations', style: Theme.of(context).textTheme.titleLarge),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<MineData>(
+                          value: selectedMine,
+                          decoration: const InputDecoration(labelText: 'Mine', border: OutlineInputBorder()),
+                          items: minesData.map((mine) => DropdownMenuItem(value: mine, child: Text(mine.name))).toList(),
+                          onChanged: (value) {
+                            setDialogState(() {
+                              selectedMine = value;
+                              selectedZone = null;
+                              selectedSortie = null;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<ZoneData>(
+                          value: selectedZone,
+                          decoration: const InputDecoration(labelText: 'Zone', border: OutlineInputBorder()),
+                          items: (selectedMine?.zones ?? []).map((zone) => DropdownMenuItem(value: zone, child: Text(zone.name))).toList(),
+                          onChanged: (value) {
+                            setDialogState(() {
+                              selectedZone = value;
+                              selectedSortie = null;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: selectedSortie,
+                          decoration: const InputDecoration(labelText: 'Sortie', border: OutlineInputBorder()),
+                          items: (selectedZone?.sorties ?? []).map((sortie) => DropdownMenuItem(value: sortie, child: Text(sortie))).toList(),
+                          onChanged: (value) {
+                            setDialogState(() {
+                              selectedSortie = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<Poste>(
+                          value: selectedPoste,
+                          decoration: const InputDecoration(labelText: 'Poste', border: OutlineInputBorder()),
+                          items: Poste.values.map((poste) => DropdownMenuItem(value: poste, child: Text(posteToString(poste)))).toList(),
+                          onChanged: (value) {
+                            setDialogState(() {
+                              selectedPoste = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: selectedEquipment,
+                          decoration: const InputDecoration(labelText: "Type d'equipement", border: OutlineInputBorder()),
+                          items: const [
+                            DropdownMenuItem(value: 'Chargeuse 992K', child: Text('Chargeuse 992K')),
+                            DropdownMenuItem(value: 'Chargeuse 994H', child: Text('Chargeuse 994H')),
+                            DropdownMenuItem(value: 'Pelle Hy', child: Text('Pelle hydraulique')),
+                            DropdownMenuItem(value: 'Pelle B1', child: Text('Pelle electrique B1')),
+                          ],
+                          onChanged: (value) {
+                            setDialogState(() {
+                              selectedEquipment = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: selectedOperationType,
+                          decoration: const InputDecoration(labelText: "Type d'opération", border: OutlineInputBorder()),
+                          items: const [
+                            DropdownMenuItem(value: 'Défeuitage', child: Text('Défeuitage')),
+                            DropdownMenuItem(value: 'Reprise', child: Text('Reprise')),
+                            DropdownMenuItem(value: 'stérile', child: Text('stérile')),
+                          ],
+                          onChanged: (value) {
+                            setDialogState(() {
+                              selectedOperationType = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<QualiteType>(
+                          value: selectedQualite,
+                          decoration: const InputDecoration(labelText: 'Qualite de Produits', border: OutlineInputBorder()),
+                          items: QualiteType.values.map((type) => DropdownMenuItem(value: type, child: Text(qualiteTypeToString(type)))).toList(),
+                          onChanged: (value) {
+                            setDialogState(() {
+                              selectedQualite = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text('Annuler'),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  _selectedMine = selectedMine;
+                                  _selectedZone = selectedZone;
+                                  _selectedSortie = selectedSortie;
+                                  _selectedPoste = selectedPoste;
+                                  _selectedEquipment = selectedEquipment;
+                                  _selectedOperationType = selectedOperationType;
+                                  _selectedQualite = selectedQualite;
+                                });
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text('Terminer'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Annuler'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(tempTime),
-              child: const Text('OK'),
-            ),
-          ],
         );
       },
     );
+  }
 
-    if (picked != null) {
-      final formattedTime = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-      _truckControllers[truck['id']]!['count${index}_time']!.text = formattedTime;
-      updateTruckData(truck['id'], "counts", formattedTime, index, "time");
-    }
+  void _showInfoSummaryDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Résumé des informations'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildInfoRow('Mine', _selectedMine?.name ?? '-'),
+              _buildInfoRow('Zone', _selectedZone?.name ?? '-'),
+              _buildInfoRow('Sortie', _selectedSortie ?? '-'),
+              _buildInfoRow('Poste', _selectedPoste != null ? posteToString(_selectedPoste) : '-'),
+              _buildInfoRow('Equipment', _selectedEquipment ?? '-'),
+              _buildInfoRow('Opération', _selectedOperationType ?? '-'),
+              _buildInfoRow('Produits', _selectedQualite != null ? qualiteTypeToString(_selectedQualite) : '-'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
   }
 } 
