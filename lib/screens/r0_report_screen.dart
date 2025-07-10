@@ -544,227 +544,6 @@ static const Map<String, List<String>> machinesData = {
     );
   }
 
-  Widget _buildExploitationSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Exploitation',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          decoration: InputDecoration(
-            labelText: 'Heures marche',
-            border: const OutlineInputBorder(),
-            suffixText: 'h',
-            filled: true,
-            fillColor: Colors.grey[100],
-          ),
-          readOnly: true,
-          controller: TextEditingController(text: formData.exploitation['heuresBrutes']),
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          decoration: InputDecoration(
-            labelText: 'Heures Arrêts',
-            border: const OutlineInputBorder(),
-            suffixText: 'h',
-            filled: true,
-            fillColor: Colors.grey[100],
-          ),
-          readOnly: true,
-          controller: TextEditingController(text: formData.exploitation['heuresArrets']),
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          decoration: const InputDecoration(
-            labelText: 'Tonnage',
-            border: OutlineInputBorder(),
-          ),
-          keyboardType: TextInputType.number,
-          initialValue: formData.exploitation['tonnage'],
-          onChanged: (value) {
-            setState(() {
-              formData.exploitation['tonnage'] = value;
-            });
-          },
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          decoration: const InputDecoration(
-            labelText: 'Rendement',
-            border: OutlineInputBorder(),
-          ),
-          keyboardType: TextInputType.number,
-          initialValue: formData.exploitation['rendement'],
-          onChanged: (value) {
-            setState(() {
-              formData.exploitation['rendement'] = value;
-            });
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRepartitionSection({int? editIndex, RepartitionItem? initialItem}) {
-    // Use local variables for form fields
-    final TextEditingController chantierController = TextEditingController(text: initialItem?.chantier ?? '');
-    final TextEditingController tempsController = TextEditingController(text: initialItem?.temps ?? '');
-    final TextEditingController imputationController = TextEditingController(text: initialItem?.imputation ?? '');
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          editIndex == null ? 'Ajouter une répartition' : 'Modifier la répartition',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: chantierController,
-          decoration: const InputDecoration(
-            labelText: 'Chantier',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: tempsController,
-          decoration: const InputDecoration(
-            labelText: 'Temps',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: imputationController,
-          decoration: const InputDecoration(
-            labelText: 'Imputation',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  final item = RepartitionItem(
-                    chantier: chantierController.text,
-                    temps: tempsController.text,
-                    imputation: imputationController.text,
-                  );
-                  if (editIndex != null) {
-                    formData.repartitionTravail[editIndex] = item;
-                  } else {
-                    formData.repartitionTravail.add(item);
-                  }
-                });
-                Navigator.of(context).pop();
-              },
-              child: Text(editIndex == null ? 'Ajouter' : 'Enregistrer'),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPersonnelSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Personnel',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          decoration: const InputDecoration(
-            labelText: 'Conducteur',
-            border: OutlineInputBorder(),
-          ),
-          initialValue: formData.personnel.conducteur,
-          onChanged: (value) {
-            setState(() {
-              formData.personnel.conducteur = value;
-            });
-          },
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          decoration: const InputDecoration(
-            labelText: 'Graisseur',
-            border: OutlineInputBorder(),
-          ),
-          initialValue: formData.personnel.graisseur,
-          onChanged: (value) {
-            setState(() {
-              formData.personnel.graisseur = value;
-            });
-          },
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          decoration: const InputDecoration(
-            labelText: 'Matricules',
-            border: OutlineInputBorder(),
-          ),
-          initialValue: formData.personnel.matricules,
-          onChanged: (value) {
-            setState(() {
-              formData.personnel.matricules = value;
-            });
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildConsommationSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Suivi Consommation',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          decoration: const InputDecoration(
-            labelText: 'Tricone',
-            border: OutlineInputBorder(),
-          ),
-          keyboardType: TextInputType.number,
-          initialValue: formData.consommation.tricone,
-          onChanged: (value) {
-            setState(() {
-              formData.consommation.tricone = value;
-            });
-          },
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          decoration: const InputDecoration(
-            labelText: 'Gasoil',
-            border: OutlineInputBorder(),
-          ),
-          keyboardType: TextInputType.number,
-          initialValue: formData.consommation.gasoil,
-          onChanged: (value) {
-            setState(() {
-              formData.consommation.gasoil = value;
-            });
-          },
-        ),
-      ],
-    );
-  }
-
-  // Removed unused _buildVerificationSection method
-
   Widget _buildSummaryItem(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -986,6 +765,7 @@ static const Map<String, List<String>> machinesData = {
                   final TimeOfDay? picked = await showTimePicker(
                     context: context,
                     initialTime: TimeOfDay.now(),
+                    initialEntryMode: TimePickerEntryMode.input,
                   );
                   if (picked != null) {
                     setDialogState(() {
@@ -1003,6 +783,7 @@ static const Map<String, List<String>> machinesData = {
                   final TimeOfDay? picked = await showTimePicker(
                     context: context,
                     initialTime: TimeOfDay.now(),
+                    initialEntryMode: TimePickerEntryMode.input,
                   );
                   if (picked != null) {
                     setDialogState(() {
@@ -1348,16 +1129,8 @@ static const Map<String, List<String>> machinesData = {
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                      isActive: _currentStep >= 1,
-                      state: _currentStep > 1 ? StepState.complete : StepState.indexed,
-                    ),
-                    Step(
-                      title: const Text('Compteurs'),
-                      content: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                          const Divider(height: 32),
+                          // Insert Compteurs content from old step 3 here
                           Text(
                             'ÉTAPE 3: INDEX COMPTEURS',
                             style: TextStyle(
@@ -1422,12 +1195,10 @@ static const Map<String, List<String>> machinesData = {
                                       );
                                       return;
                                     }
-                                    
                                     final compteur = formData.indexCompteurs[selectedPosteIndex];
                                     final debut = _parseNumeric(compteur.duree);
                                     final fin = _parseNumeric(compteur.note);
                                     final heureMarche = fin > debut ? (fin - debut) / 1 : 0.0; // Assuming compteur is in 1.0 hour units
-                                    
                                     showDialog(
                                       context: context,
                                       builder: (context) => AlertDialog(
@@ -1470,8 +1241,8 @@ static const Map<String, List<String>> machinesData = {
                           ),
                         ],
                       ),
-                      isActive: _currentStep >= 2,
-                      state: _currentStep > 2 ? StepState.complete : StepState.indexed,
+                      isActive: _currentStep >= 1,
+                      state: _currentStep > 1 ? StepState.complete : StepState.indexed,
                     ),
                     Step(
                       title: const Text('Arrêts'),
@@ -1653,7 +1424,7 @@ static const Map<String, List<String>> machinesData = {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'ÉTAPE 5: EXPLOITATION',
+                            'ÉTAPE 5: EXPLOITATION, RÉPARTITION, PERSONNEL & CONSOMMATION',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -1668,24 +1439,231 @@ static const Map<String, List<String>> machinesData = {
                                   onPressed: () {
                                     showDialog(
                                       context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Text('Ajouter'),
-                                        content: SingleChildScrollView(
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              _buildExploitationSection(),
-                                            ],
-                                          ),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Terminer'),
-                                          ),
-                                        ],
-                                      ),
+                                      builder: (context) {
+                                        int subStep = 0;
+                                        // --- Persistent controllers for all fields ---
+                                        // Exploitation
+                                        final TextEditingController heuresBrutesController = TextEditingController(text: formData.exploitation['heuresBrutes']);
+                                        final TextEditingController heuresArretsController = TextEditingController(text: formData.exploitation['heuresArrets']);
+                                        final TextEditingController tonnageController = TextEditingController(text: formData.exploitation['tonnage']);
+                                        final TextEditingController rendementController = TextEditingController(text: formData.exploitation['rendement']);
+                                        // Répartition
+                                        final TextEditingController chantierController = TextEditingController(text: formData.repartitionTravail.isNotEmpty ? formData.repartitionTravail[0].chantier : '');
+                                        final TextEditingController tempsController = TextEditingController(text: formData.repartitionTravail.isNotEmpty ? formData.repartitionTravail[0].temps : '');
+                                        final TextEditingController imputationController = TextEditingController(text: formData.repartitionTravail.isNotEmpty ? formData.repartitionTravail[0].imputation : '');
+                                        // Personnel
+                                        final TextEditingController conducteurController = TextEditingController(text: formData.personnel.conducteur);
+                                        final TextEditingController graisseurController = TextEditingController(text: formData.personnel.graisseur);
+                                        final TextEditingController matriculesController = TextEditingController(text: formData.personnel.matricules);
+                                        // Consommation
+                                        final TextEditingController triconeController = TextEditingController(text: formData.consommation.tricone);
+                                        final TextEditingController gasoilController = TextEditingController(text: formData.consommation.gasoil);
+                                        return StatefulBuilder(
+                                          builder: (context, setDialogState) {
+                                            Widget content;
+                                            String title;
+                                            switch (subStep) {
+                                              case 0:
+                                                title = 'Exploitation';
+                                                content = Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text('Exploitation', style: Theme.of(context).textTheme.titleLarge),
+                                                    const SizedBox(height: 16),
+                                                    TextFormField(
+                                                      decoration: InputDecoration(
+                                                        labelText: 'Heures marche',
+                                                        border: const OutlineInputBorder(),
+                                                        suffixText: 'h',
+                                                        filled: true,
+                                                        fillColor: Colors.grey[100],
+                                                      ),
+                                                      readOnly: true,
+                                                      controller: heuresBrutesController,
+                                                    ),
+                                                    const SizedBox(height: 16),
+                                                    TextFormField(
+                                                      decoration: InputDecoration(
+                                                        labelText: 'Heures Arrêts',
+                                                        border: const OutlineInputBorder(),
+                                                        suffixText: 'h',
+                                                        filled: true,
+                                                        fillColor: Colors.grey[100],
+                                                      ),
+                                                      readOnly: true,
+                                                      controller: heuresArretsController,
+                                                    ),
+                                                    const SizedBox(height: 16),
+                                                    TextFormField(
+                                                      decoration: const InputDecoration(
+                                                        labelText: 'Tonnage',
+                                                        border: OutlineInputBorder(),
+                                                      ),
+                                                      keyboardType: TextInputType.number,
+                                                      controller: tonnageController,
+                                                    ),
+                                                    const SizedBox(height: 16),
+                                                    TextFormField(
+                                                      decoration: const InputDecoration(
+                                                        labelText: 'Rendement',
+                                                        border: OutlineInputBorder(),
+                                                      ),
+                                                      keyboardType: TextInputType.number,
+                                                      controller: rendementController,
+                                                    ),
+                                                  ],
+                                                );
+                                                break;
+                                              case 1:
+                                                title = 'Répartition';
+                                                content = Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text('Répartition', style: Theme.of(context).textTheme.titleMedium),
+                                                    const SizedBox(height: 16),
+                                                    TextFormField(
+                                                      controller: chantierController,
+                                                      decoration: const InputDecoration(
+                                                        labelText: 'Chantier',
+                                                        border: OutlineInputBorder(),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 16),
+                                                    TextFormField(
+                                                      controller: tempsController,
+                                                      decoration: const InputDecoration(
+                                                        labelText: 'Temps',
+                                                        border: OutlineInputBorder(),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 16),
+                                                    TextFormField(
+                                                      controller: imputationController,
+                                                      decoration: const InputDecoration(
+                                                        labelText: 'Imputation',
+                                                        border: OutlineInputBorder(),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                );
+                                                break;
+                                              case 2:
+                                                title = 'Personnel';
+                                                content = Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text('Personnel', style: Theme.of(context).textTheme.titleLarge),
+                                                    const SizedBox(height: 16),
+                                                    TextFormField(
+                                                      decoration: const InputDecoration(
+                                                        labelText: 'Conducteur',
+                                                        border: OutlineInputBorder(),
+                                                      ),
+                                                      controller: conducteurController,
+                                                    ),
+                                                    const SizedBox(height: 16),
+                                                    TextFormField(
+                                                      decoration: const InputDecoration(
+                                                        labelText: 'Graisseur',
+                                                        border: OutlineInputBorder(),
+                                                      ),
+                                                      controller: graisseurController,
+                                                    ),
+                                                    const SizedBox(height: 16),
+                                                    TextFormField(
+                                                      decoration: const InputDecoration(
+                                                        labelText: 'Matricules',
+                                                        border: OutlineInputBorder(),
+                                                      ),
+                                                      controller: matriculesController,
+                                                    ),
+                                                  ],
+                                                );
+                                                break;
+                                              case 3:
+                                                title = 'Consommation';
+                                                content = Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text('Suivi Consommation', style: Theme.of(context).textTheme.titleLarge),
+                                                    const SizedBox(height: 16),
+                                                    TextFormField(
+                                                      decoration: const InputDecoration(
+                                                        labelText: 'Tricone',
+                                                        border: OutlineInputBorder(),
+                                                      ),
+                                                      keyboardType: TextInputType.number,
+                                                      controller: triconeController,
+                                                    ),
+                                                    const SizedBox(height: 16),
+                                                    TextFormField(
+                                                      decoration: const InputDecoration(
+                                                        labelText: 'Gasoil',
+                                                        border: OutlineInputBorder(),
+                                                      ),
+                                                      keyboardType: TextInputType.number,
+                                                      controller: gasoilController,
+                                                    ),
+                                                  ],
+                                                );
+                                                break;
+                                              default:
+                                                title = '';
+                                                content = const SizedBox();
+                                            }
+                                            return AlertDialog(
+                                              title: Text(title),
+                                              content: SingleChildScrollView(
+                                                child: content,
+                                              ),
+                                              actions: [
+                                                if (subStep > 0)
+                                                  TextButton(
+                                                    onPressed: () => setDialogState(() => subStep--),
+                                                    child: const Text('Précédent'),
+                                                  ),
+                                                if (subStep < 3)
+                                                  ElevatedButton(
+                                                    onPressed: () {
+                                                      // Save data for the current sub-step before moving forward
+                                                      if (subStep == 0) {
+                                                        formData.exploitation['heuresBrutes'] = heuresBrutesController.text;
+                                                        formData.exploitation['heuresArrets'] = heuresArretsController.text;
+                                                        formData.exploitation['tonnage'] = tonnageController.text;
+                                                        formData.exploitation['rendement'] = rendementController.text;
+                                                      } else if (subStep == 1) {
+                                                        if (formData.repartitionTravail.isEmpty) {
+                                                          formData.repartitionTravail.add(RepartitionItem());
+                                                        }
+                                                        formData.repartitionTravail[0] = RepartitionItem(
+                                                          chantier: chantierController.text,
+                                                          temps: tempsController.text,
+                                                          imputation: imputationController.text,
+                                                        );
+                                                      } else if (subStep == 2) {
+                                                        formData.personnel.conducteur = conducteurController.text;
+                                                        formData.personnel.graisseur = graisseurController.text;
+                                                        formData.personnel.matricules = matriculesController.text;
+                                                      }
+                                                      setDialogState(() => subStep++);
+                                                    },
+                                                    child: const Text('Suivant'),
+                                                  ),
+                                                if (subStep == 3)
+                                                  ElevatedButton(
+                                                    onPressed: () {
+                                                      // Save data for the last sub-step
+                                                      formData.consommation.tricone = triconeController.text;
+                                                      formData.consommation.gasoil = gasoilController.text;
+                                                      Navigator.of(context).pop();
+                                                    },
+                                                    child: const Text('Terminer'),
+                                                  ),
+                                              ],
+                                            );
+                                          },
+                                        );
+                                      },
                                     );
                                   },
                                   icon: const Icon(Icons.add),
@@ -1711,7 +1689,7 @@ static const Map<String, List<String>> machinesData = {
                                         title: const Row(
                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
-                                            Text('Liste Exploitation'),
+                                            Text('Liste'),
                                           ],
                                         ),
                                         content: SingleChildScrollView(
@@ -1719,10 +1697,62 @@ static const Map<String, List<String>> machinesData = {
                                             mainAxisSize: MainAxisSize.min,
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
+                                              // Exploitation Section
+                                              Text('Exploitation', style: Theme.of(context).textTheme.titleMedium),
+                                              const Divider(height: 16),
                                               Text('Heures marche: ${formData.exploitation['heuresBrutes']}'),
                                               Text('Heures Arrêts: ${formData.exploitation['heuresArrets']}'),
                                               Text('Tonnage: ${formData.exploitation['tonnage']}t'),
                                               Text('Rendement: ${formData.exploitation['rendement']}%'),
+                                              const SizedBox(height: 20),
+                                              // Répartition Section
+                                              Text('Répartition', style: Theme.of(context).textTheme.titleMedium),
+                                              const Divider(height: 16),
+                                              ...(() {
+                                                final List<RepartitionItem> nonEmptyRepartitions = formData.repartitionTravail
+                                                    .where((r) => r.chantier.isNotEmpty || r.temps.isNotEmpty || r.imputation.isNotEmpty)
+                                                    .toList();
+                                                if (nonEmptyRepartitions.isEmpty) {
+                                                  return [const Text('Aucune répartition ajoutée.')];
+                                                }
+                                                return List.generate(nonEmptyRepartitions.length, (index) {
+                                                  final r = nonEmptyRepartitions[index];
+                                                  return Padding(
+                                                    padding: const EdgeInsets.only(bottom: 8.0),
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Text('Chantier: ${r.chantier}'),
+                                                        Text('Temps: ${r.temps}'),
+                                                        Text('Imputation: ${r.imputation}'),
+                                                        if (index < nonEmptyRepartitions.length - 1) const Divider(height: 12),
+                                                      ],
+                                                    ),
+                                                  );
+                                                });
+                                              })(),
+                                              const SizedBox(height: 20),
+                                              // Personnel Section
+                                              Text('Personnel', style: Theme.of(context).textTheme.titleMedium),
+                                              const Divider(height: 16),
+                                              if (formData.personnel.conducteur.isNotEmpty)
+                                                Text('Conducteur: ${formData.personnel.conducteur}'),
+                                              if (formData.personnel.graisseur.isNotEmpty)
+                                                Text('Graisseur: ${formData.personnel.graisseur}'),
+                                              if (formData.personnel.matricules.isNotEmpty)
+                                                Text('Matricules: ${formData.personnel.matricules}'),
+                                              if (formData.personnel.conducteur.isEmpty && formData.personnel.graisseur.isEmpty && formData.personnel.matricules.isEmpty)
+                                                const Text('Aucun personnel renseigné.'),
+                                              const SizedBox(height: 20),
+                                              // Consommation Section
+                                              Text('Consommation', style: Theme.of(context).textTheme.titleMedium),
+                                              const Divider(height: 16),
+                                              if (formData.consommation.tricone.isNotEmpty)
+                                                Text('Tricone: ${formData.consommation.tricone}'),
+                                              if (formData.consommation.gasoil.isNotEmpty)
+                                                Text('Gasoil: ${formData.consommation.gasoil}'),
+                                              if (formData.consommation.tricone.isEmpty && formData.consommation.gasoil.isEmpty)
+                                                const Text('Aucune consommation renseignée.'),
                                             ],
                                           ),
                                         ),
@@ -1750,538 +1780,6 @@ static const Map<String, List<String>> machinesData = {
                       ),
                       isActive: _currentStep >= 4,
                       state: _currentStep > 4 ? StepState.complete : StepState.indexed,
-                    ),
-                    Step(
-                      title: const Text('Répartition'),
-                      content: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'ÉTAPE 6: RÉPARTITION DU TRAVAIL',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green[700],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Text('Ajouter'),
-                                        content: SingleChildScrollView(
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              _buildRepartitionSection(),
-                                            ],
-                                          ),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Terminer'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Ajouter'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green[700],
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => StatefulBuilder(
-                                        builder: (context, setDialogState) => AlertDialog(
-                                          title: const Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Text('Répartition'),
-                                            ],
-                                          ),
-                                          content: SingleChildScrollView(
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: (() {
-                                                final List<RepartitionItem> nonEmptyRepartitions = formData.repartitionTravail
-                                                    .where((r) => r.chantier.isNotEmpty || r.temps.isNotEmpty || r.imputation.isNotEmpty)
-                                                    .toList();
-                                                if (nonEmptyRepartitions.isEmpty) {
-                                                  return [const Text('Aucune répartition ajoutée.')];
-                                                }
-                                                return List.generate(nonEmptyRepartitions.length, (index) {
-                                                  final r = nonEmptyRepartitions[index];
-                                                  return Row(
-                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                    children: [
-                                                      Expanded(
-                                                        child: Text('Chantier: ${r.chantier}, Temps: ${r.temps}, Imputation: ${r.imputation}', overflow: TextOverflow.ellipsis),
-                                                      ),
-                                                      PopupMenuButton<String>(
-                                                        icon: const Icon(Icons.more_horiz, size: 20),
-                                                        padding: EdgeInsets.zero,
-                                                        shape: RoundedRectangleBorder(
-                                                          borderRadius: BorderRadius.circular(8),
-                                                        ),
-                                                        position: PopupMenuPosition.under,
-                                                        itemBuilder: (BuildContext context) => [
-                                                          PopupMenuItem<String>(
-                                                            value: 'edit',
-                                                            height: 36,
-                                                            child: Row(
-                                                              mainAxisSize: MainAxisSize.min,
-                                                              children: [
-                                                                Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
-                                                                const SizedBox(width: 8),
-                                                                Text(
-                                                                  'Modifier',
-                                                                  style: TextStyle(
-                                                                    color: Theme.of(context).colorScheme.primary,
-                                                                    fontSize: 14,
-                                                                  ),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                          PopupMenuItem<String>(
-                                                            value: 'delete',
-                                                            height: 36,
-                                                            child: Row(
-                                                              mainAxisSize: MainAxisSize.min,
-                                                              children: [
-                                                                Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
-                                                                const SizedBox(width: 8),
-                                                                Text(
-                                                                  'Supprimer',
-                                                                  style: TextStyle(
-                                                                    color: Theme.of(context).colorScheme.error,
-                                                                    fontSize: 14,
-                                                                  ),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                        ],
-                                                        onSelected: (value) async {
-                                                          if (value == 'edit') {
-                                                            await showDialog(
-                                                              context: context,
-                                                              builder: (context) => AlertDialog(
-                                                                title: const Text('Modifier Répartition'),
-                                                                content: SingleChildScrollView(
-                                                                  child: _buildRepartitionSection(editIndex: formData.repartitionTravail.indexOf(r), initialItem: r),
-                                                                ),
-                                                              ),
-                                                            );
-                                                            setDialogState(() {});
-                                                          } else if (value == 'delete') {
-                                                            setState(() {
-                                                              formData.repartitionTravail.remove(r);
-                                                            });
-                                                            setDialogState(() {});
-                                                          }
-                                                        },
-                                                      ),
-                                                    ],
-                                                  );
-                                                });
-                                              })(),
-                                            ),
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.of(context).pop(),
-                                              child: const Text('Terminer'),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.list),
-                                  label: const Text('Voir'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.green[700],
-                                    side: BorderSide(color: Colors.green[700]!),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      isActive: _currentStep >= 5,
-                      state: _currentStep > 5 ? StepState.complete : StepState.indexed,
-                    ),
-                    Step(
-                      title: const Text('Personnel & Consommation'),
-                      content: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'ÉTAPE 7: PERSONNEL & CONSOMMATION',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green[700],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Text('Ajouter'),
-                                        content: SingleChildScrollView(
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              _buildPersonnelSection(),
-                                              const SizedBox(height: 24),
-                                              _buildConsommationSection(),
-                                            ],
-                                          ),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Terminer'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Ajouter'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green[700],
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text('Liste Pr & Cs'),
-                                          ],
-                                        ),
-                                        content: SingleChildScrollView(
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              if (formData.personnel.conducteur.isEmpty &&
-                                                  formData.personnel.graisseur.isEmpty &&
-                                                  formData.personnel.matricules.isEmpty &&
-                                                  formData.consommation.tricone.isEmpty &&
-                                                  formData.consommation.gasoil.isEmpty)
-                                                const Text('Aucun personnel ou consommation ajouté.'),
-                                              if (formData.personnel.conducteur.isNotEmpty)
-                                                Row(
-                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                  children: [
-                                                    Expanded(child: Text('Conducteur: ${formData.personnel.conducteur}')),
-                                                    PopupMenuButton<String>(
-                                                      icon: const Icon(Icons.more_horiz, size: 20),
-                                                      padding: EdgeInsets.zero,
-                                                      shape: RoundedRectangleBorder(
-                                                        borderRadius: BorderRadius.circular(8),
-                                                      ),
-                                                      position: PopupMenuPosition.under,
-                                                      itemBuilder: (BuildContext context) => [
-                                                        PopupMenuItem<String>(
-                                                          value: 'edit',
-                                                          height: 36,
-                                                          child: Row(
-                                                            mainAxisSize: MainAxisSize.min,
-                                                            children: [
-                                                              Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
-                                                              const SizedBox(width: 8),
-                                                              Text(
-                                                                'Modifier',
-                                                                style: TextStyle(
-                                                                  color: Theme.of(context).colorScheme.primary,
-                                                                  fontSize: 14,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      ],
-                                                      onSelected: (value) async {
-                                                        if (value == 'edit') {
-                                                          await showDialog(
-                                                            context: context,
-                                                            builder: (context) => AlertDialog(
-                                                              title: const Text('Modifier Personnel'),
-                                                              content: SingleChildScrollView(
-                                                                child: _buildPersonnelSection(),
-                                                              ),
-                                                            ),
-                                                          );
-                                                        }
-                                                      },
-                                                    ),
-                                                  ],
-                                                ),
-                                              if (formData.personnel.graisseur.isNotEmpty)
-                                                Row(
-                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                  children: [
-                                                    Expanded(child: Text('Graisseur: ${formData.personnel.graisseur}')),
-                                                    PopupMenuButton<String>(
-                                                      icon: const Icon(Icons.more_horiz, size: 20),
-                                                      padding: EdgeInsets.zero,
-                                                      shape: RoundedRectangleBorder(
-                                                        borderRadius: BorderRadius.circular(8),
-                                                      ),
-                                                      position: PopupMenuPosition.under,
-                                                      itemBuilder: (BuildContext context) => [
-                                                        PopupMenuItem<String>(
-                                                          value: 'edit',
-                                                          height: 36,
-                                                          child: Row(
-                                                            mainAxisSize: MainAxisSize.min,
-                                                            children: [
-                                                              Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
-                                                              const SizedBox(width: 8),
-                                                              Text(
-                                                                'Modifier',
-                                                                style: TextStyle(
-                                                                  color: Theme.of(context).colorScheme.primary,
-                                                                  fontSize: 14,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      ],
-                                                      onSelected: (value) async {
-                                                        if (value == 'edit') {
-                                                          await showDialog(
-                                                            context: context,
-                                                            builder: (context) => AlertDialog(
-                                                              title: const Text('Modifier Personnel'),
-                                                              content: SingleChildScrollView(
-                                                                child: _buildPersonnelSection(),
-                                                              ),
-                                                            ),
-                                                          );
-                                                        }
-                                                      },
-                                                    ),
-                                                  ],
-                                                ),
-                                              if (formData.personnel.matricules.isNotEmpty)
-                                                Row(
-                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                  children: [
-                                                    Expanded(child: Text('Matricules: ${formData.personnel.matricules}')),
-                                                    PopupMenuButton<String>(
-                                                      icon: const Icon(Icons.more_horiz, size: 20),
-                                                      padding: EdgeInsets.zero,
-                                                      shape: RoundedRectangleBorder(
-                                                        borderRadius: BorderRadius.circular(8),
-                                                      ),
-                                                      position: PopupMenuPosition.under,
-                                                      itemBuilder: (BuildContext context) => [
-                                                        PopupMenuItem<String>(
-                                                          value: 'edit',
-                                                          height: 36,
-                                                          child: Row(
-                                                            mainAxisSize: MainAxisSize.min,
-                                                            children: [
-                                                              Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
-                                                              const SizedBox(width: 8),
-                                                              Text(
-                                                                'Modifier',
-                                                                style: TextStyle(
-                                                                  color: Theme.of(context).colorScheme.primary,
-                                                                  fontSize: 14,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      ],
-                                                      onSelected: (value) async {
-                                                        if (value == 'edit') {
-                                                          await showDialog(
-                                                            context: context,
-                                                            builder: (context) => AlertDialog(
-                                                              title: const Text('Modifier Personnel'),
-                                                              content: SingleChildScrollView(
-                                                                child: _buildPersonnelSection(),
-                                                              ),
-                                                            ),
-                                                          );
-                                                        }
-                                                      },
-                                                    ),
-                                                  ],
-                                                ),
-                                              if (formData.consommation.tricone.isNotEmpty)
-                                                Row(
-                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                  children: [
-                                                    Expanded(child: Text('Tricone: ${formData.consommation.tricone}')),
-                                                    PopupMenuButton<String>(
-                                                      icon: const Icon(Icons.more_horiz, size: 20),
-                                                      padding: EdgeInsets.zero,
-                                                      shape: RoundedRectangleBorder(
-                                                        borderRadius: BorderRadius.circular(8),
-                                                      ),
-                                                      position: PopupMenuPosition.under,
-                                                      itemBuilder: (BuildContext context) => [
-                                                        PopupMenuItem<String>(
-                                                          value: 'edit',
-                                                          height: 36,
-                                                          child: Row(
-                                                            mainAxisSize: MainAxisSize.min,
-                                                            children: [
-                                                              Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
-                                                              const SizedBox(width: 8),
-                                                              Text(
-                                                                'Modifier',
-                                                                style: TextStyle(
-                                                                  color: Theme.of(context).colorScheme.primary,
-                                                                  fontSize: 14,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      ],
-                                                      onSelected: (value) async {
-                                                        if (value == 'edit') {
-                                                          await showDialog(
-                                                            context: context,
-                                                            builder: (context) => AlertDialog(
-                                                              title: const Text('Modifier Consommation'),
-                                                              content: SingleChildScrollView(
-                                                                child: _buildConsommationSection(),
-                                                              ),
-                                                            ),
-                                                          );
-                                                        }
-                                                      },
-                                                    ),
-                                                  ],
-                                                ),
-                                              if (formData.consommation.gasoil.isNotEmpty)
-                                                Row(
-                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                  children: [
-                                                    Expanded(child: Text('Gasoil: ${formData.consommation.gasoil}')),
-                                                    PopupMenuButton<String>(
-                                                      icon: const Icon(Icons.more_horiz, size: 20),
-                                                      padding: EdgeInsets.zero,
-                                                      shape: RoundedRectangleBorder(
-                                                        borderRadius: BorderRadius.circular(8),
-                                                      ),
-                                                      position: PopupMenuPosition.under,
-                                                      itemBuilder: (BuildContext context) => [
-                                                        PopupMenuItem<String>(
-                                                          value: 'edit',
-                                                          height: 36,
-                                                          child: Row(
-                                                            mainAxisSize: MainAxisSize.min,
-                                                            children: [
-                                                              Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
-                                                              const SizedBox(width: 8),
-                                                              Text(
-                                                                'Modifier',
-                                                                style: TextStyle(
-                                                                  color: Theme.of(context).colorScheme.primary,
-                                                                  fontSize: 14,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      ],
-                                                      onSelected: (value) async {
-                                                        if (value == 'edit') {
-                                                          await showDialog(
-                                                            context: context,
-                                                            builder: (context) => AlertDialog(
-                                                              title: const Text('Modifier Consommation'),
-                                                              content: SingleChildScrollView(
-                                                                child: _buildConsommationSection(),
-                                                              ),
-                                                            ),
-                                                          );
-                                                        }
-                                                      },
-                                                    ),
-                                                  ],
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text('Terminer'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.list),
-                                  label: const Text('Voir'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.green[700],
-                                    side: BorderSide(color: Colors.green[700]!),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      isActive: _currentStep >= 6,
-                      state: _currentStep > 6 ? StepState.complete : StepState.indexed,
                     ),
                     Step(
                       title: const Text('Vérification'),
@@ -2450,6 +1948,44 @@ static const Map<String, List<String>> machinesData = {
                                                           _buildInfoRow('H.A', formData.exploitation['heuresArrets'] ?? ''),
                                                           _buildInfoRow('Tonnage', formData.exploitation['tonnage'] ?? ''),
                                                           _buildInfoRow('Rendeme', formData.exploitation['rendement'] ?? ''),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 16),
+                                                  // Répartition Section
+                                                  Card(
+                                                    margin: EdgeInsets.zero,
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.all(16),
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        children: [
+                                                          const Text('Répartition', style: TextStyle(fontWeight: FontWeight.bold)),
+                                                          const Divider(height: 16),
+                                                          ...(() {
+                                                            final List<RepartitionItem> nonEmptyRepartitions = formData.repartitionTravail
+                                                                .where((r) => r.chantier.isNotEmpty || r.temps.isNotEmpty || r.imputation.isNotEmpty)
+                                                                .toList();
+                                                            if (nonEmptyRepartitions.isEmpty) {
+                                                              return [const Text('Aucune répartition ajoutée.')];
+                                                            }
+                                                            return List.generate(nonEmptyRepartitions.length, (index) {
+                                                              final r = nonEmptyRepartitions[index];
+                                                              return Padding(
+                                                                padding: const EdgeInsets.only(bottom: 8.0),
+                                                                child: Column(
+                                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                                  children: [
+                                                                    Text('Chantier: ${r.chantier}'),
+                                                                    Text('Temps: ${r.temps}'),
+                                                                    Text('Imputation: ${r.imputation}'),
+                                                                    if (index < nonEmptyRepartitions.length - 1) const Divider(height: 12),
+                                                                  ],
+                                                                ),
+                                                              );
+                                                            });
+                                                          })(),
                                                         ],
                                                       ),
                                                     ),

@@ -146,6 +146,12 @@
       "languageVersion": "3.7"
     },
     {
+      "name": "flutter_time_picker_spinner",
+      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/flutter_time_picker_spinner-2.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "flutter_web_plugins",
       "rootUri": "file:///home/brahim/develop/flutter/packages/flutter_web_plugins",
       "packageUri": "lib/",

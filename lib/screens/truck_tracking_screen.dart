@@ -1172,7 +1172,6 @@ class CamionReportState extends State<CamionReport> {
                                         constraints: BoxConstraints(
                                           maxHeight: MediaQuery.of(context).size.height * 0.8,
                                         )
-,
                                         child: Column(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
@@ -1556,6 +1555,7 @@ class CamionReportState extends State<CamionReport> {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
+      initialEntryMode: TimePickerEntryMode.input,
       builder: (BuildContext context, Widget? child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
