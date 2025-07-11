@@ -369,7 +369,7 @@ class CamionReportState extends State<CamionReport> {
                                 Expanded(
                                   child: ElevatedButton.icon(
                                     icon: const Icon(Icons.add),
-                                    label: const Text('Ajouter un voyage'),
+                                    label: const Text('Ajouter'),
                                     onPressed: () async {
                                       await showDialog(
                                         context: context,
@@ -379,7 +379,7 @@ class CamionReportState extends State<CamionReport> {
                                           String? selectedEquipment = _selectedEquipment;
                                           DateTime selectedTripTime = DateTime.now();
                                           return AlertDialog(
-                                            title: const Text('Ajouter un voyage'),
+                                            title: const Text('Ajouter'),
                                             content: Column(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
@@ -1144,203 +1144,292 @@ class CamionReportState extends State<CamionReport> {
                                                       child: ListTile(
                                                         title: Text('Camion: ${truck['truckNumber'] ?? ''}'),
                                                         subtitle: Text('Chauffeur: ${truck['driver1'] ?? ''}'),
-                                                        trailing: ElevatedButton.icon(
-                                                          icon: const Icon(Icons.list, size: 18),
-                                                          label: const Text('Voir les voyages'),
-                                                          style: ElevatedButton.styleFrom(
-                                                            minimumSize: const Size(0, 36),
-                                                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                                                        trailing: PopupMenuButton<String>(
+                                                          icon: const Icon(Icons.more_horiz, size: 20),
+                                                          padding: EdgeInsets.zero,
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius: BorderRadius.circular(8),
                                                           ),
-                                                          onPressed: () async {
-                                                            Navigator.of(context).pop(); // Close the list dialog
-                                                            while (true) {
-                                                              final result = await showDialog(
+                                                          position: PopupMenuPosition.under,
+                                                          itemBuilder: (BuildContext context) => [
+                                                            PopupMenuItem<String>(
+                                                              value: 'edit',
+                                                              height: 36,
+                                                              child: Row(
+                                                                mainAxisSize: MainAxisSize.min,
+                                                                children: [
+                                                                  Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
+                                                                  const SizedBox(width: 8),
+                                                                  Text(
+                                                                    'Modifier',
+                                                                    style: TextStyle(
+                                                                      color: Theme.of(context).colorScheme.primary,
+                                                                      fontSize: 14,
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                            PopupMenuItem<String>(
+                                                              value: 'delete',
+                                                              height: 36,
+                                                              child: Row(
+                                                                mainAxisSize: MainAxisSize.min,
+                                                                children: [
+                                                                  Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
+                                                                  const SizedBox(width: 8),
+                                                                  Text(
+                                                                    'Supprimer',
+                                                                    style: TextStyle(
+                                                                      color: Theme.of(context).colorScheme.error,
+                                                                      fontSize: 14,
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                            PopupMenuItem<String>(
+                                                              value: 'trips',
+                                                              height: 36,
+                                                              child: Row(
+                                                                mainAxisSize: MainAxisSize.min,
+                                                                children: [
+                                                                  Icon(Icons.list, size: 18, color: Theme.of(context).colorScheme.secondary),
+                                                                  const SizedBox(width: 8),
+                                                                  Text(
+                                                                    'Voir les voyages',
+                                                                    style: TextStyle(
+                                                                      color: Theme.of(context).colorScheme.secondary,
+                                                                      fontSize: 14,
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ],
+                                                          onSelected: (String value) async {
+                                                            Navigator.of(context).pop(); // Close the truck list dialog
+                                                            
+                                                            if (value == 'edit') {
+                                                              // Edit truck
+                                                              await _showTruckDialog(context, truck);
+                                                            } else if (value == 'delete') {
+                                                              // Delete truck
+                                                              final shouldDelete = await showDialog<bool>(
                                                                 context: context,
-                                                                builder: (context) {
-                                                                  final counts = truck['counts'] ?? [];
-                                                                  final Map<String, int> equipmentCounts = {};
-                                                                  for (var trip in counts) {
-                                                                    final eq = trip['equipment'] ?? '-';
-                                                                    equipmentCounts[eq] = (equipmentCounts[eq] ?? 0) + 1;
-                                                                  }
-                                                                  return AlertDialog(
-                                                                    title: const Text('Détails des voyages'),
-                                                                    content: counts.isEmpty
-                                                                        ? const Text('Aucun voyage ajouté.')
-                                                                        : SizedBox(
-                                                                            width: 300,
-                                                                            height: 400,
-                                                                            child: SingleChildScrollView(
-                                                                              child: Column(
-                                                                                mainAxisSize: MainAxisSize.min,
-                                                                                children: [
-                                                                                  ListView.separated(
-                                                                                    shrinkWrap: true,
-                                                                                    physics: const NeverScrollableScrollPhysics(),
-                                                                                    itemCount: counts.length,
-                                                                                    separatorBuilder: (_, __) => const Divider(),
-                                                                                    itemBuilder: (context, i) {
-                                                                                      final trip = counts[i];
-                                                                                      return ListTile(
-                                                                                        title: Text('Voyage ${i + 1}'),
-                                                                                        subtitle: Column(
-                                                                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                                                                          children: [
-                                                                                            Text('Temps: ${trip['time']}'),
-                                                                                            Text('Equipement: ${trip['equipment'] ?? '-'}'),
-                                                                                          ],
-                                                                                        ),
-                                                                                        trailing: PopupMenuButton<String>(
-                                                                                          icon: const Icon(Icons.more_horiz, size: 20),
-                                                                                          padding: EdgeInsets.zero,
-                                                                                          shape: RoundedRectangleBorder(
-                                                                                            borderRadius: BorderRadius.circular(8),
-                                                                                          ),
-                                                                                          position: PopupMenuPosition.under,
-                                                                                          itemBuilder: (BuildContext context) => [
-                                                                                            PopupMenuItem<String>(
-                                                                                              value: 'edit',
-                                                                                              height: 36,
-                                                                                              child: Row(
-                                                                                                mainAxisSize: MainAxisSize.min,
-                                                                                                children: [
-                                                                                                  Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
-                                                                                                  const SizedBox(width: 8),
-                                                                                                  Text(
-                                                                                                    'Modifier',
-                                                                                                    style: TextStyle(
-                                                                                                      color: Theme.of(context).colorScheme.primary,
-                                                                                                      fontSize: 14,
-                                                                                                    ),
-                                                                                                  ),
-                                                                                                ],
-                                                                                              ),
-                                                                                            ),
-                                                                                            PopupMenuItem<String>(
-                                                                                              value: 'delete',
-                                                                                              height: 36,
-                                                                                              child: Row(
-                                                                                                mainAxisSize: MainAxisSize.min,
-                                                                                                children: [
-                                                                                                  Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
-                                                                                                  const SizedBox(width: 8),
-                                                                                                  Text(
-                                                                                                    'Supprimer',
-                                                                                                    style: TextStyle(
-                                                                                                      color: Theme.of(context).colorScheme.error,
-                                                                                                      fontSize: 14,
-                                                                                                    ),
-                                                                                                  ),
-                                                                                                ],
-                                                                                              ),
-                                                                                            ),
-                                                                                          ],
-                                                                                          onSelected: (String value) {
-                                                                                            Navigator.of(context).pop({'action': value, 'tripIndex': i});
-                                                                                          },
-                                                                                        ),
-                                                                                      );
-                                                                                    },
-                                                                                  ),
-                                                                                ],
-                                                                              ),
-                                                                            ),
-                                                                          ),
-                                                                    actions: [
-                                                                      TextButton(
-                                                                        onPressed: () => Navigator.of(context).pop(),
-                                                                        child: const Text('Fermer'),
+                                                                builder: (context) => AlertDialog(
+                                                                  title: const Text('Confirmer la suppression'),
+                                                                  content: Text('Voulez-vous vraiment supprimer le camion ${truck['truckNumber']} ?'),
+                                                                  actions: [
+                                                                    TextButton(
+                                                                      onPressed: () => Navigator.of(context).pop(false),
+                                                                      child: const Text('Annuler'),
+                                                                    ),
+                                                                    ElevatedButton(
+                                                                      onPressed: () => Navigator.of(context).pop(true),
+                                                                      style: ElevatedButton.styleFrom(
+                                                                        backgroundColor: Colors.red,
+                                                                        foregroundColor: Colors.white,
                                                                       ),
-                                                                    ],
-                                                                  );
-                                                                },
+                                                                      child: const Text('Supprimer'),
+                                                                    ),
+                                                                  ],
+                                                                ),
                                                               );
-                                                              if (!mounted) return;
-                                                              if (result is Map && result['action'] == 'edit') {
-                                                                final tripIndex = result['tripIndex'] as int;
-                                                                final trip = truck['counts'][tripIndex];
-                                                                var timeController = TextEditingController(text: trip['time']);
-                                                                String? selectedEquipment = trip['equipment'];
-                                                                DateTime selectedTripTime = DateTime.now();
-                                                                await showDialog(
+                                                              
+                                                              if (shouldDelete == true) {
+                                                                deleteTruck(truck['id']);
+                                                              }
+                                                            } else if (value == 'trips') {
+                                                              // View trips
+                                                              while (true) {
+                                                                final result = await showDialog(
                                                                   context: context,
                                                                   builder: (context) {
+                                                                    final counts = truck['counts'] ?? [];
+                                                                    final Map<String, int> equipmentCounts = {};
+                                                                    for (var trip in counts) {
+                                                                      final eq = trip['equipment'] ?? '-';
+                                                                      equipmentCounts[eq] = (equipmentCounts[eq] ?? 0) + 1;
+                                                                    }
                                                                     return AlertDialog(
-                                                                      title: const Text('Modifier le voyage'),
-                                                                      content: Column(
-                                                                        mainAxisSize: MainAxisSize.min,
-                                                                        children: [
-                                                                          Text('Temps du voyage', style: Theme.of(context).textTheme.titleMedium),
-                                                                          const SizedBox(height: 8),
-                                                                          TimePickerSpinner(
-                                                                            is24HourMode: true,
-                                                                            isShowSeconds: false,
-                                                                            normalTextStyle: const TextStyle(fontSize: 18, color: Colors.black54),
-                                                                            highlightedTextStyle: const TextStyle(fontSize: 24, color: Colors.black),
-                                                                            spacing: 50,
-                                                                            itemHeight: 60,
-                                                                            isForce2Digits: true,
-                                                                            time: selectedTripTime,
-                                                                            onTimeChange: (dateTime) {
-                                                                              selectedTripTime = dateTime;
-                                                                              timeController.text = '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-                                                                            },
-                                                                          ),
-                                                                          const SizedBox(height: 16),
-                                                                          DropdownButtonFormField<String>(
-                                                                            value: selectedEquipment,
-                                                                            decoration: const InputDecoration(
-                                                                              labelText: "Equipement utilisé",
-                                                                              border: OutlineInputBorder(),
+                                                                      title: const Text('Détails des voyages'),
+                                                                      content: counts.isEmpty
+                                                                          ? const Text('Aucun voyage ajouté.')
+                                                                          : SizedBox(
+                                                                              width: 300,
+                                                                              height: 400,
+                                                                              child: SingleChildScrollView(
+                                                                                child: Column(
+                                                                                  mainAxisSize: MainAxisSize.min,
+                                                                                  children: [
+                                                                                    ListView.separated(
+                                                                                      shrinkWrap: true,
+                                                                                      physics: const NeverScrollableScrollPhysics(),
+                                                                                      itemCount: counts.length,
+                                                                                      separatorBuilder: (_, __) => const Divider(),
+                                                                                      itemBuilder: (context, i) {
+                                                                                        final trip = counts[i];
+                                                                                        return ListTile(
+                                                                                          title: Text('Voyage ${i + 1}'),
+                                                                                          subtitle: Column(
+                                                                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                                                                            children: [
+                                                                                              Text('Temps: ${trip['time']}'),
+                                                                                              Text('Equipement: ${trip['equipment'] ?? '-'}'),
+                                                                                            ],
+                                                                                          ),
+                                                                                          trailing: PopupMenuButton<String>(
+                                                                                            icon: const Icon(Icons.more_horiz, size: 20),
+                                                                                            padding: EdgeInsets.zero,
+                                                                                            shape: RoundedRectangleBorder(
+                                                                                              borderRadius: BorderRadius.circular(8),
+                                                                                            ),
+                                                                                            position: PopupMenuPosition.under,
+                                                                                            itemBuilder: (BuildContext context) => [
+                                                                                              PopupMenuItem<String>(
+                                                                                                value: 'edit',
+                                                                                                height: 36,
+                                                                                                child: Row(
+                                                                                                  mainAxisSize: MainAxisSize.min,
+                                                                                                  children: [
+                                                                                                    Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
+                                                                                                    const SizedBox(width: 8),
+                                                                                                    Text(
+                                                                                                      'Modifier',
+                                                                                                      style: TextStyle(
+                                                                                                        color: Theme.of(context).colorScheme.primary,
+                                                                                                        fontSize: 14,
+                                                                                                      ),
+                                                                                                    ),
+                                                                                                  ],
+                                                                                                ),
+                                                                                              ),
+                                                                                              PopupMenuItem<String>(
+                                                                                                value: 'delete',
+                                                                                                height: 36,
+                                                                                                child: Row(
+                                                                                                  mainAxisSize: MainAxisSize.min,
+                                                                                                  children: [
+                                                                                                    Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
+                                                                                                    const SizedBox(width: 8),
+                                                                                                    Text(
+                                                                                                      'Supprimer',
+                                                                                                      style: TextStyle(
+                                                                                                        color: Theme.of(context).colorScheme.error,
+                                                                                                        fontSize: 14,
+                                                                                                      ),
+                                                                                                    ),
+                                                                                                  ],
+                                                                                                ),
+                                                                                              ),
+                                                                                            ],
+                                                                                            onSelected: (String value) {
+                                                                                              Navigator.of(context).pop({'action': value, 'tripIndex': i});
+                                                                                            },
+                                                                                          ),
+                                                                                        );
+                                                                                      },
+                                                                                    ),
+                                                                                  ],
+                                                                                ),
+                                                                              ),
                                                                             ),
-                                                                            items: const [
-                                                                              DropdownMenuItem(value: 'Chargeuse 992K', child: Text('Chargeuse 992K')),
-                                                                              DropdownMenuItem(value: 'Chargeuse 994H', child: Text('Chargeuse 994H')),
-                                                                              DropdownMenuItem(value: 'Pelle Hy', child: Text('Pelle hydraulique')),
-                                                                              DropdownMenuItem(value: 'Pelle B1', child: Text('Pelle electrique B1')),
-                                                                            ],
-                                                                            onChanged: (value) {
-                                                                              selectedEquipment = value;
-                                                                            },
-                                                                          ),
-                                                                        ],
-                                                                      ),
                                                                       actions: [
                                                                         TextButton(
                                                                           onPressed: () => Navigator.of(context).pop(),
-                                                                          child: const Text('Annuler'),
-                                                                        ),
-                                                                        ElevatedButton(
-                                                                          onPressed: () {
-                                                                            if (timeController.text.isNotEmpty && selectedEquipment != null) {
-                                                                              setState(() {
-                                                                                trip['time'] = timeController.text;
-                                                                                trip['equipment'] = selectedEquipment;
-                                                                                truck['total'] = calculateTotal(truck);
-                                                                              });
-                                                                              Navigator.of(context).pop();
-                                                                            }
-                                                                          },
-                                                                          child: const Text('Enregistrer'),
+                                                                          child: const Text('Fermer'),
                                                                         ),
                                                                       ],
                                                                     );
                                                                   },
                                                                 );
                                                                 if (!mounted) return;
-                                                                // Reopen the trip list dialog after editing
-                                                                continue;
-                                                              } else if (result is Map && result['action'] == 'delete') {
-                                                                final tripIndex = result['tripIndex'] as int;
-                                                                setState(() {
-                                                                  truck['counts'].removeAt(tripIndex);
-                                                                  truck['total'] = calculateTotal(truck);
-                                                                });
-                                                                // Reopen the trip list dialog after deleting
-                                                                continue;
+                                                                if (result is Map && result['action'] == 'edit') {
+                                                                  final tripIndex = result['tripIndex'] as int;
+                                                                  final trip = truck['counts'][tripIndex];
+                                                                  var timeController = TextEditingController(text: trip['time']);
+                                                                  String? selectedEquipment = trip['equipment'];
+                                                                  DateTime selectedTripTime = DateTime.now();
+                                                                  await showDialog(
+                                                                    context: context,
+                                                                    builder: (context) {
+                                                                      return AlertDialog(
+                                                                        title: const Text('Modifier le voyage'),
+                                                                        content: Column(
+                                                                          mainAxisSize: MainAxisSize.min,
+                                                                          children: [
+                                                                            Text('Temps du voyage', style: Theme.of(context).textTheme.titleMedium),
+                                                                            const SizedBox(height: 8),
+                                                                            TimePickerSpinner(
+                                                                              is24HourMode: true,
+                                                                              isShowSeconds: false,
+                                                                              normalTextStyle: const TextStyle(fontSize: 18, color: Colors.black54),
+                                                                              highlightedTextStyle: const TextStyle(fontSize: 24, color: Colors.black),
+                                                                              spacing: 50,
+                                                                              itemHeight: 60,
+                                                                              isForce2Digits: true,
+                                                                              time: selectedTripTime,
+                                                                              onTimeChange: (dateTime) {
+                                                                                selectedTripTime = dateTime;
+                                                                                timeController.text = '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+                                                                              },
+                                                                            ),
+                                                                            const SizedBox(height: 16),
+                                                                            DropdownButtonFormField<String>(
+                                                                              value: selectedEquipment,
+                                                                              decoration: const InputDecoration(
+                                                                                labelText: "Equipement utilisé",
+                                                                                border: OutlineInputBorder(),
+                                                                              ),
+                                                                              items: const [
+                                                                                DropdownMenuItem(value: 'Chargeuse 992K', child: Text('Chargeuse 992K')),
+                                                                                DropdownMenuItem(value: 'Chargeuse 994H', child: Text('Chargeuse 994H')),
+                                                                                DropdownMenuItem(value: 'Pelle Hy', child: Text('Pelle hydraulique')),
+                                                                                DropdownMenuItem(value: 'Pelle B1', child: Text('Pelle electrique B1')),
+                                                                              ],
+                                                                              onChanged: (value) {
+                                                                                selectedEquipment = value;
+                                                                              },
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                        actions: [
+                                                                          TextButton(
+                                                                            onPressed: () => Navigator.of(context).pop(),
+                                                                            child: const Text('Annuler'),
+                                                                          ),
+                                                                          ElevatedButton(
+                                                                            onPressed: () {
+                                                                              if (timeController.text.isNotEmpty && selectedEquipment != null) {
+                                                                                setState(() {
+                                                                                  trip['time'] = timeController.text;
+                                                                                  trip['equipment'] = selectedEquipment;
+                                                                                  truck['total'] = calculateTotal(truck);
+                                                                                });
+                                                                                Navigator.of(context).pop();
+                                                                              }
+                                                                            },
+                                                                            child: const Text('Enregistrer'),
+                                                                          ),
+                                                                        ],
+                                                                      );
+                                                                    },
+                                                                  );
+                                                                  // Reopen the trip list dialog after editing
+                                                                  continue;
+                                                                } else if (result is Map && result['action'] == 'delete') {
+                                                                  final tripIndex = result['tripIndex'] as int;
+                                                                  setState(() {
+                                                                    truck['counts'].removeAt(tripIndex);
+                                                                    truck['total'] = calculateTotal(truck);
+                                                                  });
+                                                                  // Reopen the trip list dialog after deleting
+                                                                  continue;
+                                                                }
+                                                                // If result is null or closed, break the loop
+                                                                break;
                                                               }
-                                                              // If result is null or closed, break the loop
-                                                              break;
                                                             }
                                                           },
                                                         ),

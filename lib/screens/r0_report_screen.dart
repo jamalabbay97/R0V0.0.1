@@ -653,10 +653,8 @@ static const Map<String, List<String>> machinesData = {
         const SnackBar(
           content: Text('Rapport soumis avec succès'),
           backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
         ),
       );
-      
       // Delay navigation so the SnackBar is visible
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
@@ -1017,7 +1015,7 @@ static const Map<String, List<String>> machinesData = {
                 Stepper(
                   currentStep: _currentStep,
                   onStepContinue: () {
-                    if (_currentStep < 5) { // 6 steps: 0 to 5
+                    if (_currentStep < 4) { // 5 steps: 0 to 4
                       setState(() {
                         _currentStep += 1;
                       });
@@ -1031,7 +1029,7 @@ static const Map<String, List<String>> machinesData = {
                     }
                   },
                   controlsBuilder: (context, details) {
-                    if (_currentStep == 5) { // Last step
+                    if (_currentStep == 4) { // Last step
                       return Padding(
                         padding: const EdgeInsets.only(top: 16.0),
                         child: Row(
@@ -1056,10 +1054,6 @@ static const Map<String, List<String>> machinesData = {
                                         "When you click Done, the report will be saved on the reports page. If you want to send this report to the company, go to the reports page and send it from there."
                                       ),
                                       actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.of(context).pop(false),
-                                          child: const Text('Cancel'),
-                                        ),
                                         ElevatedButton(
                                           onPressed: () => Navigator.of(context).pop(true),
                                           child: const Text('Done'),
@@ -1100,7 +1094,7 @@ static const Map<String, List<String>> machinesData = {
                           Expanded(
                             child: ElevatedButton(
                               onPressed: details.onStepContinue,
-                              child: Text(_currentStep == 4 ? 'Soumettre' : 'Suivant'),
+                              child: Text(_currentStep == 3 ? 'Suivant' : 'Suivant'),
                             ),
                           ),
                         ],
@@ -1113,7 +1107,7 @@ static const Map<String, List<String>> machinesData = {
                       content: Column(
                         children: [
                           const Text(
-                            'Sélectionnez la date du rapport',
+                            'ÉTAPE 1: DATE',
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 16),
@@ -1278,7 +1272,7 @@ static const Map<String, List<String>> machinesData = {
                                             children: [
                                               _buildCompteurSection(),
                                             ],
-                                          ),
+                                        ),
                                         ),
                                         actions: [
                                           TextButton(
@@ -1438,9 +1432,13 @@ static const Map<String, List<String>> machinesData = {
                                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                         children: [
                                                           Expanded(
-                                                            child: Text(
-                                                              'Type: ${v.label}, Début: ${v.duree}, Fin: ${v.note}',
-                                                              overflow: TextOverflow.ellipsis,
+                                                            child: Column(
+                                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                                              children: [
+                                                                Text('Type: ${v.label}'),
+                                                                Text('Début: ${v.duree}'),
+                                                                Text('Fin: ${v.note}'),
+                                                              ],
                                                             ),
                                                           ),
                                                           PopupMenuButton<String>(
@@ -1537,8 +1535,8 @@ static const Map<String, List<String>> machinesData = {
                           ),
                         ],
                       ),
-                      isActive: _currentStep >= 3,
-                      state: _currentStep > 3 ? StepState.complete : StepState.indexed,
+                      isActive: _currentStep >= 2,
+                      state: _currentStep > 2 ? StepState.complete : StepState.indexed,
                     ),
                     Step(
                       title: const Text('Exploitation'),
@@ -1900,8 +1898,8 @@ static const Map<String, List<String>> machinesData = {
                           ),
                         ],
                       ),
-                      isActive: _currentStep >= 4,
-                      state: _currentStep > 4 ? StepState.complete : StepState.indexed,
+                      isActive: _currentStep >= 3,
+                      state: _currentStep > 3 ? StepState.complete : StepState.indexed,
                     ),
                     Step(
                       title: const Text('Vérification'),
@@ -1909,7 +1907,7 @@ static const Map<String, List<String>> machinesData = {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'ÉTAPE 9: VÉRIFICATION R0',
+                            'ÉTAPE 6: VÉRIFICATION',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -2169,8 +2167,8 @@ static const Map<String, List<String>> machinesData = {
                           ),
                         ],
                       ),
-                      isActive: _currentStep >= 7,
-                      state: _currentStep > 7 ? StepState.complete : StepState.indexed,
+                      isActive: _currentStep >= 4,
+                      state: _currentStep > 4 ? StepState.complete : StepState.indexed,
                     ),
                   ],
                 ),
