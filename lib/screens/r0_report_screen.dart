@@ -262,105 +262,147 @@ static const Map<String, List<String>> machinesData = {
 
         Widget content;
         if (step == 0) {
-          content = DropdownButtonFormField<MineData>(
-            value: selectedMine,
-            decoration: const InputDecoration(labelText: 'Mine', border: OutlineInputBorder()),
-            items: minesData.map((mine) => DropdownMenuItem(value: mine, child: Text(mine.name))).toList(),
-            onChanged: (value) {
-              setDialogState(() {
-                formData.selectedMine = value?.name ?? '';
-                formData.selectedZone = '';
-                formData.selectedSortie = '';
-                formData.selectedPoste = '';
-                formData.selectedCategory = '';
-                formData.selectedType = '';
-                formData.selectedModel = '';
-              });
-            },
+          content = Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<MineData>(
+                  value: selectedMine,
+                  decoration: const InputDecoration(labelText: 'Mine', border: OutlineInputBorder()),
+                  items: minesData.map((mine) => DropdownMenuItem(value: mine, child: Text(mine.name))).toList(),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      formData.selectedMine = value?.name ?? '';
+                      formData.selectedZone = '';
+                      formData.selectedSortie = '';
+                      formData.selectedPoste = '';
+                      formData.selectedCategory = '';
+                      formData.selectedType = '';
+                      formData.selectedModel = '';
+                    });
+                  },
+                ),
+              ),
+            ],
           );
         } else if (step == 1 && selectedMine != null) {
-          content = DropdownButtonFormField<ZoneData>(
-            value: selectedZone,
-            decoration: const InputDecoration(labelText: 'Zone', border: OutlineInputBorder()),
-            items: selectedMine.zones.map((zone) => DropdownMenuItem(value: zone, child: Text(zone.name))).toList(),
-            onChanged: (value) {
-              setDialogState(() {
-                formData.selectedZone = value?.name ?? '';
-                formData.selectedSortie = '';
-                formData.selectedPoste = '';
-                formData.selectedCategory = '';
-                formData.selectedType = '';
-                formData.selectedModel = '';
-              });
-            },
+          content = Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<ZoneData>(
+                  value: selectedZone,
+                  decoration: const InputDecoration(labelText: 'Zone', border: OutlineInputBorder()),
+                  items: selectedMine.zones.map((zone) => DropdownMenuItem(value: zone, child: Text(zone.name))).toList(),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      formData.selectedZone = value?.name ?? '';
+                      formData.selectedSortie = '';
+                      formData.selectedPoste = '';
+                      formData.selectedCategory = '';
+                      formData.selectedType = '';
+                      formData.selectedModel = '';
+                    });
+                  },
+                ),
+              ),
+            ],
           );
         } else if (step == 2) {
-          content = DropdownButtonFormField<String>(
-            value: selectedCategory,
-            decoration: const InputDecoration(labelText: 'Catégorie', border: OutlineInputBorder()),
-            items: const [
-              DropdownMenuItem(value: 'ENGINS', child: Text('ENGINS')),
-              DropdownMenuItem(value: 'MACHINES', child: Text('MACHINES')),
+          content = Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: selectedCategory,
+                  decoration: const InputDecoration(labelText: 'Catégorie', border: OutlineInputBorder()),
+                  items: const [
+                    DropdownMenuItem(value: 'ENGINS', child: Text('ENGINS')),
+                    DropdownMenuItem(value: 'MACHINES', child: Text('MACHINES')),
+                  ],
+                  onChanged: (value) {
+                    setDialogState(() {
+                      formData.selectedCategory = value ?? '';
+                      formData.selectedType = '';
+                      formData.selectedModel = '';
+                    });
+                  },
+                ),
+              ),
             ],
-            onChanged: (value) {
-              setDialogState(() {
-                formData.selectedCategory = value ?? '';
-                formData.selectedType = '';
-                formData.selectedModel = '';
-              });
-            },
           );
         } else if (step == 3 && selectedCategory != null) {
           final types = selectedCategory == 'ENGINS'
               ? enginsData.keys.toList()
               : machinesData.keys.toList();
-          content = DropdownButtonFormField<String>(
-            value: selectedType,
-            decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
-            items: types.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
-            onChanged: (value) {
-              setDialogState(() {
-                formData.selectedType = value ?? '';
-                formData.selectedModel = '';
-              });
-            },
+          content = Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: selectedType,
+                  decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
+                  items: types.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      formData.selectedType = value ?? '';
+                      formData.selectedModel = '';
+                    });
+                  },
+                ),
+              ),
+            ],
           );
         } else if (step == 4 && selectedType != null) {
           final models = selectedCategory == 'ENGINS'
               ? enginsData[selectedType] ?? []
               : machinesData[selectedType] ?? [];
-          content = DropdownButtonFormField<String>(
-            value: selectedModel,
-            decoration: const InputDecoration(labelText: 'Modèle', border: OutlineInputBorder()),
-            items: models.map((model) => DropdownMenuItem(value: model, child: Text(model))).toList(),
-            onChanged: (value) {
-              setDialogState(() {
-                formData.selectedModel = value ?? '';
-              });
-            },
+          content = Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: selectedModel,
+                  decoration: const InputDecoration(labelText: 'Modèle', border: OutlineInputBorder()),
+                  items: models.map((model) => DropdownMenuItem(value: model, child: Text(model))).toList(),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      formData.selectedModel = value ?? '';
+                    });
+                  },
+                ),
+              ),
+            ],
           );
         } else if (step == 5 && selectedZone != null && selectedZone.sorties.isNotEmpty) {
-          content = DropdownButtonFormField<String>(
-            value: selectedSortie,
-            decoration: const InputDecoration(labelText: 'Sortie', border: OutlineInputBorder()),
-            items: selectedZone.sorties.map((sortie) => DropdownMenuItem(value: sortie, child: Text(sortie))).toList(),
-            onChanged: (value) {
-              setDialogState(() {
-                formData.selectedSortie = value ?? '';
-                formData.selectedPoste = '';
-              });
-            },
+          content = Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: selectedSortie,
+                  decoration: const InputDecoration(labelText: 'Sortie', border: OutlineInputBorder()),
+                  items: selectedZone.sorties.map((sortie) => DropdownMenuItem(value: sortie, child: Text(sortie))).toList(),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      formData.selectedSortie = value ?? '';
+                      formData.selectedPoste = '';
+                    });
+                  },
+                ),
+              ),
+            ],
           );
         } else if ((step == 5 && selectedZone != null && selectedZone.sorties.isEmpty) || step == 6) {
-          content = DropdownButtonFormField<String>(
-            value: selectedPoste,
-            decoration: const InputDecoration(labelText: 'Poste', border: OutlineInputBorder()),
-            items: posteOrder.map((poste) => DropdownMenuItem(value: poste, child: Text('$poste Poste (${posteTimes[poste]})'))).toList(),
-            onChanged: (value) {
-              setDialogState(() {
-                formData.selectedPoste = value ?? posteOrder.first;
-              });
-            },
+          content = Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: selectedPoste,
+                  decoration: const InputDecoration(labelText: 'Poste', border: OutlineInputBorder()),
+                  items: posteOrder.map((poste) => DropdownMenuItem(value: poste, child: Text('$poste Poste (${posteTimes[poste]})'))).toList(),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      formData.selectedPoste = value ?? posteOrder.first;
+                    });
+                  },
+                ),
+              ),
+            ],
           );
         } else {
           content = const SizedBox();
@@ -611,11 +653,16 @@ static const Map<String, List<String>> machinesData = {
         const SnackBar(
           content: Text('Rapport soumis avec succès'),
           backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
         ),
       );
       
-      // Navigate back to home screen
-      Navigator.of(context).pop();
+      // Delay navigation so the SnackBar is visible
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+      });
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -725,31 +772,43 @@ static const Map<String, List<String>> machinesData = {
       builder: (context, setDialogState) {
         Widget content;
         if (step == 0) {
-          content = DropdownButtonFormField<String>(
-            value: selectedCategory,
-            decoration: const InputDecoration(labelText: 'Catégorie', border: OutlineInputBorder()),
-            items: arretCategories.keys
-                .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
-                .toList(),
-            onChanged: (value) {
-              setDialogState(() {
-                selectedCategory = value;
-                selectedType = null;
-              });
-            },
+          content = Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: selectedCategory,
+                  decoration: const InputDecoration(labelText: 'Catégorie', border: OutlineInputBorder()),
+                  items: arretCategories.keys
+                      .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
+                      .toList(),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      selectedCategory = value;
+                      selectedType = null;
+                    });
+                  },
+                ),
+              ),
+            ],
           );
         } else if (step == 1 && selectedCategory != null) {
-          content = DropdownButtonFormField<String>(
-            value: selectedType,
-            decoration: const InputDecoration(labelText: 'Type d\'arrêt', border: OutlineInputBorder()),
-            items: arretCategories[selectedCategory]!
-                .map((type) => DropdownMenuItem(value: type, child: Text(type)))
-                .toList(),
-            onChanged: (value) {
-              setDialogState(() {
-                selectedType = value;
-              });
-            },
+          content = Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: selectedType,
+                  decoration: const InputDecoration(labelText: 'Type d\'arrêt', border: OutlineInputBorder()),
+                  items: arretCategories[selectedCategory]!
+                      .map((type) => DropdownMenuItem(value: type, child: Text(type)))
+                      .toList(),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      selectedType = value;
+                    });
+                  },
+                ),
+              ),
+            ],
           );
         } else if (step == 2 && selectedType != null) {
           content = Column(
@@ -958,7 +1017,7 @@ static const Map<String, List<String>> machinesData = {
                 Stepper(
                   currentStep: _currentStep,
                   onStepContinue: () {
-                    if (_currentStep < 7) {
+                    if (_currentStep < 5) { // 6 steps: 0 to 5
                       setState(() {
                         _currentStep += 1;
                       });
@@ -972,7 +1031,7 @@ static const Map<String, List<String>> machinesData = {
                     }
                   },
                   controlsBuilder: (context, details) {
-                    if (_currentStep == 7) {
+                    if (_currentStep == 5) { // Last step
                       return Padding(
                         padding: const EdgeInsets.only(top: 16.0),
                         child: Row(
@@ -1041,7 +1100,7 @@ static const Map<String, List<String>> machinesData = {
                           Expanded(
                             child: ElevatedButton(
                               onPressed: details.onStepContinue,
-                              child: Text(_currentStep == 8 ? 'Terminer' : 'Suivant'),
+                              child: Text(_currentStep == 4 ? 'Soumettre' : 'Suivant'),
                             ),
                           ),
                         ],
