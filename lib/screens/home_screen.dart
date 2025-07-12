@@ -6,6 +6,7 @@ import 'package:r0_app/screens/settings_screen.dart';
 import 'package:r0_app/screens/activity_report_screen.dart';
 import 'package:r0_app/screens/daily_report_screen.dart';
 import 'package:r0_app/screens/truck_tracking_screen.dart';
+import 'package:r0_app/screens/machines_equipment_stopped_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -61,6 +62,19 @@ class HomeScreen extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (context) => TruckTrackingScreen(
                     formKey: GlobalKey<FormState>(),
+                  ),
+                ),
+              ),
+            ),
+            _buildMenuCard(
+              context,
+              l10n.machinesEquipmentStopped,
+              Icons.stop_circle,
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MachinesEquipmentStoppedScreen(
+                    selectedDate: DateTime.now(),
                   ),
                 ),
               ),

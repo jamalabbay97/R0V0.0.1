@@ -170,6 +170,12 @@ abstract class AppLocalizations {
   /// **'Truck Tracking'**
   String get truckTracking;
 
+  /// No description provided for @machinesEquipmentStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Machines & Equipment Stopped'**
+  String get machinesEquipmentStopped;
+
   /// No description provided for @noData.
   ///
   /// In en, this message translates to:

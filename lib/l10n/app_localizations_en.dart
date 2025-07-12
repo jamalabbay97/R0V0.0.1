@@ -45,6 +45,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get truckTracking => 'Truck Tracking';
 
   @override
+  String get machinesEquipmentStopped => 'Machines & Equipment Stopped';
+
+  @override
   String get noData => 'No Data';
 
   @override
