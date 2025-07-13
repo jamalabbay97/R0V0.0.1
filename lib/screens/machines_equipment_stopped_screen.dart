@@ -18,8 +18,6 @@ class MachinesEquipmentStoppedScreen extends StatefulWidget {
 
 class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppedScreen> {
   final DatabaseHelper _databaseHelper = DatabaseHelper();
-  final _formKey = GlobalKey<FormState>();
-  final _descriptionController = TextEditingController();
   final _durationController = TextEditingController();
   
   String _selectedEquipmentType = '';
@@ -89,14 +87,24 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
 
 
   Future<void> _saveReport() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_equipmentList.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ajoutez au moins un équipement avant de soumettre.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
 
     try {
       final report = Report(
         id: DateTime.now().millisecondsSinceEpoch,
         date: _selectedDate,
         type: 'Machines Equipment Stopped',
-        description: _descriptionController.text,
+        description: '', // No description field in the UI
         group: 'Machines Equipment',
         additionalData: {
           'equipmentList': _equipmentList,
@@ -112,7 +120,6 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
             backgroundColor: Colors.green,
           ),
         );
-        // Navigator.pop(context); // Removed to fix navigation
       }
     } catch (e) {
       if (mounted) {
@@ -183,33 +190,35 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                                           borderRadius: BorderRadius.circular(8),
                                         ),
                                       ),
-                                      onPressed: () async {
-                                        final shouldSave = await showDialog<bool>(
-                                          context: context,
-                                          barrierDismissible: false,
-                                          builder: (context) => AlertDialog(
-                                            title: const Text('Confirmation'),
-                                            content: const Text(
-                                              "When you click Done, the report will be saved on the reports page. If you want to send this report to the company, go to the reports page and send it from there."
-                                            ),
-                                            actions: [
-                                              ElevatedButton(
-                                                onPressed: () => Navigator.of(context).pop(true),
-                                                child: const Text('Done'),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                        if (!mounted) return;
-                                        if (shouldSave == true) {
-                                          await _saveReport();
-                                          if (!mounted) return;
-                                          Navigator.of(context).pushAndRemoveUntil(
-                                            MaterialPageRoute(builder: (context) => const HomeScreen()),
-                                            (route) => false,
-                                          );
-                                        }
-                                      },
+                                      onPressed: _equipmentList.isNotEmpty
+                                          ? () async {
+                                              final shouldSave = await showDialog<bool>(
+                                                context: context,
+                                                barrierDismissible: false,
+                                                builder: (context) => AlertDialog(
+                                                  title: const Text('Confirmation'),
+                                                  content: const Text(
+                                                    "When you click Done, the report will be saved on the reports page. If you want to send this report to the company, go to the reports page and send it from there."
+                                                  ),
+                                                  actions: [
+                                                    ElevatedButton(
+                                                      onPressed: () => Navigator.of(context).pop(true),
+                                                      child: const Text('Done'),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                              if (!mounted) return;
+                                              if (shouldSave == true) {
+                                                await _saveReport();
+                                                if (!mounted) return;
+                                                Navigator.of(context).pushAndRemoveUntil(
+                                                  MaterialPageRoute(builder: (context) => const HomeScreen()),
+                                                  (route) => false,
+                                                );
+                                              }
+                                            }
+                                          : null,
                                       label: const Text('Soumettre'),
                                     )
                                   : ElevatedButton(
