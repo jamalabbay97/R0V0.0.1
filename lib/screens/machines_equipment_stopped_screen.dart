@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:r0_app/l10n/app_localizations.dart';
 import 'package:r0_app/services/database_helper.dart';
 import 'package:r0_app/models/report.dart';
+import 'package:r0_app/screens/home_screen.dart';
 
 class MachinesEquipmentStoppedScreen extends StatefulWidget {
   final DateTime selectedDate;
@@ -111,7 +112,7 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context);
+        // Navigator.pop(context); // Removed to fix navigation
       }
     } catch (e) {
       if (mounted) {
@@ -140,13 +141,13 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                   const SizedBox(height: 12),
                   Stepper(
                     currentStep: _currentStep,
-                                  onStepContinue: () {
-                if (_currentStep < 2) {
-                  setState(() {
-                    _currentStep += 1;
-                  });
-                }
-              },
+                    onStepContinue: () {
+                      if (_currentStep < 2) {
+                        setState(() {
+                          _currentStep += 1;
+                        });
+                      }
+                    },
                     onStepCancel: () {
                       if (_currentStep > 0) {
                         setState(() {
@@ -155,6 +156,7 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                       }
                     },
                     controlsBuilder: (context, details) {
+                      final isLastStep = _currentStep == 2;
                       return Padding(
                         padding: const EdgeInsets.only(top: 16.0),
                         child: Row(
@@ -169,37 +171,76 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                             if (_currentStep > 0)
                               const SizedBox(width: 8),
                             Expanded(
-                              child: ElevatedButton(
-                          onPressed: (_currentStep == 2)
-                            ? () async { await _saveReport(); }
-                            : details.onStepContinue,
-                          child: Text(_currentStep == 2 ? 'Soumettre' : 'Suivant'),
+                              child: isLastStep
+                                  ? ElevatedButton.icon(
+                                      icon: const Icon(Icons.check_circle, color: Colors.white),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green[800],
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                      onPressed: () async {
+                                        final shouldSave = await showDialog<bool>(
+                                          context: context,
+                                          barrierDismissible: false,
+                                          builder: (context) => AlertDialog(
+                                            title: const Text('Confirmation'),
+                                            content: const Text(
+                                              "When you click Done, the report will be saved on the reports page. If you want to send this report to the company, go to the reports page and send it from there."
+                                            ),
+                                            actions: [
+                                              ElevatedButton(
+                                                onPressed: () => Navigator.of(context).pop(true),
+                                                child: const Text('Done'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        if (!mounted) return;
+                                        if (shouldSave == true) {
+                                          await _saveReport();
+                                          if (!mounted) return;
+                                          Navigator.of(context).pushAndRemoveUntil(
+                                            MaterialPageRoute(builder: (context) => const HomeScreen()),
+                                            (route) => false,
+                                          );
+                                        }
+                                      },
+                                      label: const Text('Soumettre'),
+                                    )
+                                  : ElevatedButton(
+                                      onPressed: details.onStepContinue,
+                                      child: const Text('Suivant'),
                               ),
                             ),
                           ],
                         ),
                       );
                     },
-                                  steps: [
-                Step(
-                  title: const Text('Sélection de la date'),
-                  content: _buildStep1Content(),
-                  isActive: _currentStep >= 0,
-                  state: _currentStep > 0 ? StepState.complete : StepState.indexed,
-                ),
-                Step(
-                  title: const Text('Sélection de l\'équipement'),
-                  content: _buildStep2Content(),
-                  isActive: _currentStep >= 1,
-                  state: _currentStep > 1 ? StepState.complete : StepState.indexed,
-                ),
-                Step(
-                  title: const Text('Vérification'),
-                  content: _buildStep3Content(),
-                  isActive: _currentStep >= 2,
-                  state: _currentStep > 2 ? StepState.complete : StepState.indexed,
-                ),
-              ],
+                    steps: [
+                      Step(
+                        title: const Text('Sélection de la date'),
+                        content: _buildStep1Content(),
+                        isActive: _currentStep >= 0,
+                        state: _currentStep > 0 ? StepState.complete : StepState.indexed,
+                      ),
+                      Step(
+                        title: const Text('Sélection de l\'équipement'),
+                        content: _buildStep2Content(),
+                        isActive: _currentStep >= 1,
+                        state: _currentStep > 1 ? StepState.complete : StepState.indexed,
+                      ),
+                      Step(
+                        title: const Text('Vérification'),
+                        content: _buildStep3Content(),
+                        isActive: _currentStep >= 2,
+                        state: _currentStep > 2 ? StepState.complete : StepState.indexed,
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -339,7 +380,7 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                 ),
               ],
             ),
-          ),
+        ),
       ],
     );
   }
@@ -436,17 +477,17 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                           onChanged: (value) {
                             setDialogState(() {
                               _stopReason = value;
-                            });
-                          },
-                        ),
+                          });
+                        },
+                      ),
                         const SizedBox(height: 24),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                        TextButton(
+          TextButton(
                               onPressed: () => Navigator.of(context).pop(),
-                              child: const Text('Annuler'),
-                            ),
+            child: const Text('Annuler'),
+          ),
                             const SizedBox(width: 8),
                       ElevatedButton(
                               onPressed: _selectedEquipment.isNotEmpty && _stopReason.isNotEmpty
@@ -723,86 +764,143 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
   void _showVerificationDetails() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Vérification des informations'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: Material(
+            type: MaterialType.card,
+            borderRadius: BorderRadius.circular(12),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Vérification des informations',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                        padding: const EdgeInsets.all(6),
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Date du rapport',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}',
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Équipements arrêtés',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        if (_equipmentList.isEmpty)
-                          const Text(
-                            'Aucun équipement ajouté',
-                            style: TextStyle(color: Colors.grey),
-                          )
-                        else
-                          ..._equipmentList.asMap().entries.map((entry) {
-                            final index = entry.key;
-                            final equipment = entry.value;
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Équipement ${index + 1}:',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text('Type: ${equipment['equipmentType']}'),
-                                  Text('Raison: ${equipment['stopReason']}'),
-                                  if (index < _equipmentList.length - 1) const Divider(),
-                                ],
-                              ),
-                            );
-                          }),
-                      ],
-                    ),
-                  ),
-                ),
+                        // Date Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Date du rapport',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                Text(
+                                  '${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}',
+                                  style: const TextStyle(fontSize: 16),
+                                ),
               ],
             ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Fermer'),
+                        const SizedBox(height: 16),
+                        // Equipment Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Équipements arrêtés',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                if (_equipmentList.isEmpty)
+                                  const Text(
+                                    'Aucun équipement ajouté',
+                                    style: TextStyle(color: Colors.grey),
+                                  )
+                                else
+                                  ..._equipmentList.asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final equipment = entry.value;
+    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 8.0),
+                                      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+                                          Text(
+                                            'Équipement ${index + 1}:',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+                                          const SizedBox(height: 4),
+                                          Text('Type: ${equipment['equipmentType']}'),
+                                          Text('Raison: ${equipment['stopReason']}'),
+                                          if (index < _equipmentList.length - 1) const Divider(),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        if (_equipmentList.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.green[50],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.green[200]!),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.check_circle, color: Colors.green[700]),
+                                const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+                                    '${_equipmentList.length} équipement${_equipmentList.length > 1 ? 's' : ''} prêt${_equipmentList.length > 1 ? 's' : ''} à être soumis',
+                                    style: TextStyle(
+                                      color: Colors.green[700],
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+            ),
           ),
         ],
       ),
+          ),
+        );
+      },
     );
   }
 } 
