@@ -17,88 +17,108 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Image.asset(
+            'assets/images/logo.png',
+            fit: BoxFit.contain,
+          ),
+        ),
         title: const Text("R0 Report"),
       ),
-      body: SingleChildScrollView(
-        child: GridView.count(
-          crossAxisCount: 2,
-          padding: const EdgeInsets.all(16.0),
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          children: [
-            _buildMenuCard(
-              context,
-              l10n.r0Report,
-              Icons.assignment,
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => R0Report(selectedDate: DateTime.now())),
-              ),
-            ),
-            _buildMenuCard(
-              context,
-              l10n.activityReport,
-              Icons.assessment,
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ActivityReportScreen(selectedDate: DateTime.now())),
-              ),
-            ),
-            _buildMenuCard(
-              context,
-              l10n.dailyReport,
-              Icons.calendar_today,
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const DailyReportScreen()),
-              ),
-            ),
-            _buildMenuCard(
-              context,
-              l10n.truckTracking,
-              Icons.local_shipping,
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => TruckTrackingScreen(
-                    formKey: GlobalKey<FormState>(),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          int crossAxisCount = 2;
+          double maxWidth = constraints.maxWidth;
+          if (maxWidth >= 900) {
+            crossAxisCount = 4;
+          } else if (maxWidth >= 600) {
+            crossAxisCount = 3;
+          }
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1200),
+              child: GridView.count(
+                crossAxisCount: crossAxisCount,
+                padding: const EdgeInsets.all(16.0),
+                shrinkWrap: true,
+                children: [
+                  _buildMenuCard(
+                    context,
+                    l10n.r0Report,
+                    Icons.assignment,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => R0Report(selectedDate: DateTime.now())),
+                    ),
                   ),
-                ),
-              ),
-            ),
-            _buildMenuCard(
-              context,
-              l10n.machinesEquipmentStopped,
-              Icons.stop_circle,
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => MachinesEquipmentStoppedScreen(
-                    selectedDate: DateTime.now(),
+                  _buildMenuCard(
+                    context,
+                    l10n.activityReport,
+                    Icons.assessment,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => ActivityReportScreen(selectedDate: DateTime.now())),
+                    ),
                   ),
-                ),
+                  _buildMenuCard(
+                    context,
+                    l10n.dailyReport,
+                    Icons.calendar_today,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const DailyReportScreen()),
+                    ),
+                  ),
+                  _buildMenuCard(
+                    context,
+                    l10n.truckTracking,
+                    Icons.local_shipping,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TruckTrackingScreen(
+                          formKey: GlobalKey<FormState>(),
+                        ),
+                      ),
+                    ),
+                  ),
+                  _buildMenuCard(
+                    context,
+                    l10n.machinesEquipmentStopped,
+                    Icons.stop_circle,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MachinesEquipmentStoppedScreen(
+                          selectedDate: DateTime.now(),
+                        ),
+                      ),
+                    ),
+                  ),
+                  _buildMenuCard(
+                    context,
+                    l10n.reports,
+                    Icons.list_alt,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ReportsScreen()),
+                    ),
+                  ),
+                  _buildMenuCard(
+                    context,
+                    l10n.settings,
+                    Icons.settings,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                    ),
+                  ),
+                ],
               ),
             ),
-            _buildMenuCard(
-              context,
-              l10n.reports,
-              Icons.list_alt,
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ReportsScreen()),
-              ),
-            ),
-            _buildMenuCard(
-              context,
-              l10n.settings,
-              Icons.settings,
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
