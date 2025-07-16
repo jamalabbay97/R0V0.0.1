@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:r0_app/l10n/app_localizations.dart';
-import 'package:r0_app/screens/r0_report_screen.dart';
-import 'package:r0_app/screens/reports_screen.dart';
-import 'package:r0_app/screens/settings_screen.dart';
-import 'package:r0_app/screens/activity_report_screen.dart';
-import 'package:r0_app/screens/daily_report_screen.dart';
-import 'package:r0_app/screens/truck_tracking_screen.dart';
-import 'package:r0_app/screens/machines_equipment_stopped_screen.dart';
+import 'package:r0/l10n/app_localizations.dart';
+import 'package:r0/screens/r0_report_screen.dart';
+import 'package:r0/screens/reports_screen.dart';
+import 'package:r0/screens/settings_screen.dart';
+import 'package:r0/screens/activity_report_screen.dart';
+import 'package:r0/screens/daily_report_screen.dart';
+import 'package:r0/screens/truck_tracking_screen.dart';
+import 'package:r0/screens/machines_equipment_stopped_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});

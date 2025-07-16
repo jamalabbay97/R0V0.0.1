@@ -2,17 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:r0_app/l10n/app_localizations.dart';
-import 'package:r0_app/providers/language_provider.dart';
-import 'package:r0_app/screens/home_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:r0/l10n/app_localizations.dart';
+import 'package:r0/providers/language_provider.dart';
+import 'package:r0/screens/home_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-  runApp(const MyApp());
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    runApp(const MyApp());
+  } catch (e, stack) {
+    debugPrint('Error during initialization: $e');
+    debugPrint(stack.toString());
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -26,7 +36,7 @@ class MyApp extends StatelessWidget {
         builder: (context, languageProvider, child) {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
-            title: 'R0 App',
+            title: 'R0',
             theme: ThemeData(
               primarySwatch: Colors.green,
               primaryColor: Colors.green[700],

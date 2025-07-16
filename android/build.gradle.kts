@@ -1,7 +1,22 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.google.gms:google-services:4.4.3")
+    }
+}
+
 allprojects {
     repositories {
         google()
         mavenCentral()
+        maven { url = uri("https://jcenter.bintray.com") }
+        maven { url = uri("https://repo1.maven.org/maven2") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
     }
 }
 

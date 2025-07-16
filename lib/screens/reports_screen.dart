@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:r0_app/l10n/app_localizations.dart';
-import 'package:r0_app/models/report.dart';
-import 'package:r0_app/services/database_helper.dart';
+import 'package:r0/l10n/app_localizations.dart';
+import 'package:r0/models/report.dart';
+import 'package:r0/services/database_helper.dart';
 import 'package:intl/intl.dart';
 
 class ReportsScreen extends StatefulWidget {
@@ -319,6 +319,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Future<void> _showReportDetails(Report report) async {
     final l10n = AppLocalizations.of(context)!;
+
+    // Define all possible additional fields (customize this list as needed)
+    const List<String> allAdditionalFields = [
+      'field1',
+      'field2',
+      'field3',
+      // Add all possible keys you want to display here
+    ];
+
     await showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -328,6 +337,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Main fields
               Card(
                 margin: const EdgeInsets.symmetric(vertical: 4),
                 child: Padding(
@@ -337,7 +347,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     children: [
                       Text(l10n.description, style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 4),
-                      Text(report.description),
+                      Text(report.description.isNotEmpty ? report.description : 'Not filled'),
                     ],
                   ),
                 ),
@@ -351,7 +361,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     children: [
                       Text(l10n.type, style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 4),
-                      Text(report.type),
+                      Text(report.type.isNotEmpty ? report.type : 'Not filled'),
                     ],
                   ),
                 ),
@@ -365,7 +375,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     children: [
                       Text(l10n.group, style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 4),
-                      Text(report.group),
+                      Text(report.group.isNotEmpty ? report.group : 'Not filled'),
                     ],
                   ),
                 ),
@@ -384,24 +394,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                 ),
               ),
-              if (report.additionalData != null && report.additionalData!.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(l10n.additionalData, style: Theme.of(context).textTheme.titleLarge),
-                ...report.additionalData!.entries.map((e) => Card(
+              const SizedBox(height: 8),
+              Text(l10n.additionalData, style: Theme.of(context).textTheme.titleLarge),
+              ...allAdditionalFields.map((key) {
+                final value = report.additionalData != null ? report.additionalData![key] : null;
+                return Card(
                   margin: const EdgeInsets.symmetric(vertical: 4),
                   child: Padding(
                     padding: const EdgeInsets.all(12.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(e.key, style: Theme.of(context).textTheme.titleMedium),
+                        Text(key, style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 4),
-                        Text(e.value.toString()),
+                        Text(value != null && value.toString().isNotEmpty ? value.toString() : 'Not filled'),
                       ],
                     ),
                   ),
-                )),
-              ],
+                );
+              }),
             ],
           ),
         ),

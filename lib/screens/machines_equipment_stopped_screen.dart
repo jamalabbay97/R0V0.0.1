@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:r0_app/l10n/app_localizations.dart';
-import 'package:r0_app/services/database_helper.dart';
-import 'package:r0_app/models/report.dart';
-import 'package:r0_app/screens/home_screen.dart';
+import 'package:r0/l10n/app_localizations.dart';
+import 'package:r0/services/database_helper.dart';
+import 'package:r0/models/report.dart';
+import 'package:r0/screens/home_screen.dart';
 
 class MachinesEquipmentStoppedScreen extends StatefulWidget {
   final DateTime selectedDate;
@@ -208,9 +208,11 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                                                   ],
                                                 ),
                                               );
+                                              // ignore: use_build_context_synchronously
                                               if (!mounted) return;
                                               if (shouldSave == true) {
                                                 await _saveReport();
+                                                // ignore: use_build_context_synchronously
                                                 if (!mounted) return;
                                                 Navigator.of(context).pushAndRemoveUntil(
                                                   MaterialPageRoute(builder: (context) => const HomeScreen()),
