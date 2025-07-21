@@ -320,14 +320,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Future<void> _showReportDetails(Report report) async {
     final l10n = AppLocalizations.of(context)!;
 
-    // Define all possible additional fields (customize this list as needed)
-    const List<String> allAdditionalFields = [
-      'field1',
-      'field2',
-      'field3',
-      // Add all possible keys you want to display here
-    ];
-
     await showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -394,25 +386,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(l10n.additionalData, style: Theme.of(context).textTheme.titleLarge),
-              ...allAdditionalFields.map((key) {
-                final value = report.additionalData != null ? report.additionalData![key] : null;
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(key, style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 4),
-                        Text(value != null && value.toString().isNotEmpty ? value.toString() : 'Not filled'),
-                      ],
-                    ),
-                  ),
-                );
-              }),
+                const SizedBox(height: 8),
+                Text(l10n.additionalData, style: Theme.of(context).textTheme.titleLarge),
+              _buildAdditionalDataView(report),
             ],
           ),
         ),
@@ -424,6 +400,541 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildAdditionalDataView(Report report) {
+    final data = report.additionalData ?? {};
+    switch (report.type) {
+      case 'activity_report':
+        return _buildActivityReportAdditionalData(data);
+      case 'r0_submitted':
+        return _buildR0ReportAdditionalData(data);
+      case 'daily_report':
+        return _buildDailyReportAdditionalData(data);
+      case 'Machines Equipment Stopped':
+        return _buildMachinesEquipmentStoppedAdditionalData(data);
+      case 'Truck Tracking':
+        return _buildTruckTrackingAdditionalData(data);
+      default:
+        return const Text('No additional data');
+    }
+  }
+
+  Widget _buildActivityReportAdditionalData(Map<String, dynamic> data) {
+    if (data.isEmpty) return const Text('Aucune donnée d\'activité disponible.');
+
+    String formatMinutesToHoursMinutes(int? totalMinutes) {
+      if (totalMinutes == null || totalMinutes <= 0) return "0h 0m";
+      int hours = totalMinutes ~/ 60;
+      int minutes = totalMinutes % 60;
+      return "${hours}h ${minutes}m";
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Résumé des données',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green[700],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildSummaryRow('T H.A:', formatMinutesToHoursMinutes(data['totalDowntime'])),
+                _buildSummaryRow('T H.M:', formatMinutesToHoursMinutes(data['operatingTime'])),
+                _buildSummaryRow('T H.V:', formatMinutesToHoursMinutes(data['totalVibratorMinutes'])),
+                _buildSummaryRow('T H.L:', formatMinutesToHoursMinutes(data['totalLiaisonMinutes'])),
+                const SizedBox(height: 8),
+                _buildSummaryRow('T Nr.A:', (data['stops'] as List?)?.length.toString() ?? '0'),
+                _buildSummaryRow('T Nr.V:', (data['vibratorCounters'] as List?)?.length.toString() ?? '0'),
+                _buildSummaryRow('T Nr.L:', (data['liaisonCounters'] as List?)?.length.toString() ?? '0'),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (data['stops'] is List && (data['stops'] as List).isNotEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Arrêts', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...List.from(data['stops']).map((stop) => Padding(
+                    padding: const EdgeInsets.only(left: 16, top: 4),
+                    child: Text('${stop['duration']} - ${stop['nature']}'),
+                  )),
+                ],
+              ),
+            ),
+          ),
+        if (data['vibratorCounters'] is List && (data['vibratorCounters'] as List).isNotEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Compteurs Vibreurs', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...List.from(data['vibratorCounters']).map((counter) => Padding(
+                    padding: const EdgeInsets.only(left: 16, top: 4),
+                    child: Text('Poste: 9${counter['poste'] ?? '-'}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
+                  )),
+                ],
+              ),
+            ),
+          ),
+        if (data['liaisonCounters'] is List && (data['liaisonCounters'] as List).isNotEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Compteurs Liaison', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...List.from(data['liaisonCounters']).map((counter) => Padding(
+                    padding: const EdgeInsets.only(left: 16, top: 4),
+                    child: Text('Poste: 	${counter['poste'] ?? '-'}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
+                  )),
+                ],
+              ),
+            ),
+          ),
+        if (data['stockEntries'] is List && (data['stockEntries'] as List).isNotEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Stocks', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...List.from(data['stockEntries']).map((entry) => Padding(
+                    padding: const EdgeInsets.only(left: 16, top: 4),
+                    child: Text('Poste: ${entry['poste'] ?? '-'}, Parc: ${entry['park'] ?? '-'}, Type: ${entry['type'] ?? '-'}, Qté: ${entry['quantity'] ?? '-'}, Début: ${entry['startTime'] ?? '-'}'),
+                  )),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSummaryRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildR0ReportAdditionalData(Map<String, dynamic> data) {
+    if (data.isEmpty) return const Text('Aucune donnée R0 disponible.');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (data['entree'] != null) Text('Entrée: ${data['entree']}'),
+        if (data['mine'] != null) Text('Mine: ${data['mine']}'),
+        if (data['zone'] != null) Text('Zone: ${data['zone']}'),
+        if (data['sortie'] != null) Text('Sortie: ${data['sortie']}'),
+        if (data['rapportNo'] != null) Text('Rapport N°: ${data['rapportNo']}'),
+        if (data['unite'] != null) Text('Unité: ${data['unite']}'),
+        if (data['indexCompteurs'] is List && (data['indexCompteurs'] as List).isNotEmpty)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Index Compteurs :', style: TextStyle(fontWeight: FontWeight.bold)),
+              ...List.from(data['indexCompteurs']).map((ic) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Text('• Durée: ${ic['duree'] ?? '-'}, Note: ${ic['note'] ?? '-'}'),
+              )),
+            ],
+          ),
+        if (data['shifts'] != null) Text('Shifts: ${data['shifts']}'),
+        if (data['selectedPoste'] != null) Text('Poste sélectionné: ${data['selectedPoste']}'),
+        if (data['ventilation'] is List && (data['ventilation'] as List).isNotEmpty)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Ventilation :', style: TextStyle(fontWeight: FontWeight.bold)),
+              ...List.from(data['ventilation']).map((v) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Text('• [${v['code'] ?? '-'}] ${v['label'] ?? '-'} - Durée: ${v['duree'] ?? '-'}, Note: ${v['note'] ?? '-'}'),
+              )),
+            ],
+          ),
+        if (data['arretsExplication'] != null) Text('Explication Arrêts: ${data['arretsExplication']}'),
+        if (data['exploitation'] is Map && (data['exploitation'] as Map).isNotEmpty)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Exploitation :', style: TextStyle(fontWeight: FontWeight.bold)),
+              ...data['exploitation'].entries.map<Widget>((e) => Text('${e.key}: ${e.value}')),
+            ],
+          ),
+        if (data['bulls'] != null) Text('Bulls: ${data['bulls']}'),
+        if (data['repartitionTravail'] is List && (data['repartitionTravail'] as List).isNotEmpty)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Répartition Travail :', style: TextStyle(fontWeight: FontWeight.bold)),
+              ...List.from(data['repartitionTravail']).map((r) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Text('• Chantier: ${r['chantier'] ?? '-'}, Temps: ${r['temps'] ?? '-'}, Imputation: ${r['imputation'] ?? '-'}'),
+              )),
+            ],
+          ),
+        if (data['personnel'] is Map && (data['personnel'] as Map).isNotEmpty)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Personnel :', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('Conducteur: ${data['personnel']['conducteur'] ?? '-'}'),
+              Text('Graisseur: ${data['personnel']['graisseur'] ?? '-'}'),
+              Text('Matricules: ${data['personnel']['matricules'] ?? '-'}'),
+            ],
+          ),
+        if (data['consommation'] is Map && (data['consommation'] as Map).isNotEmpty)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Consommation :', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('Tricone: ${data['consommation']['tricone'] ?? '-'}'),
+              Text('Gasoil: ${data['consommation']['gasoil'] ?? '-'}'),
+            ],
+          ),
+        if (
+          (data['entree'] == null) &&
+          (data['mine'] == null) &&
+          (data['zone'] == null) &&
+          (data['sortie'] == null) &&
+          (data['rapportNo'] == null) &&
+          (data['unite'] == null) &&
+          (
+            (data['indexCompteurs'] == null) ||
+            (data['indexCompteurs'] is List && (data['indexCompteurs'] as List).isEmpty)
+          ) &&
+          (data['shifts'] == null) &&
+          (data['selectedPoste'] == null) &&
+          (
+            (data['ventilation'] == null) ||
+            (data['ventilation'] is List && (data['ventilation'] as List).isEmpty)
+          ) &&
+          (data['arretsExplication'] == null) &&
+          (
+            (data['exploitation'] == null) ||
+            (data['exploitation'] is Map && (data['exploitation'] as Map).isEmpty)
+          ) &&
+          (data['bulls'] == null) &&
+          (
+            (data['repartitionTravail'] == null) ||
+            (data['repartitionTravail'] is List && (data['repartitionTravail'] as List).isEmpty)
+          ) &&
+          (
+            (data['personnel'] == null) ||
+            (data['personnel'] is Map && (data['personnel'] as Map).isEmpty)
+          ) &&
+          (
+            (data['consommation'] == null) ||
+            (data['consommation'] is Map && (data['consommation'] as Map).isEmpty)
+          )
+        )
+          const Text('Aucune donnée R0 disponible.'),
+      ],
+    );
+  }
+
+  Widget _buildDailyReportAdditionalData(Map<String, dynamic> data) {
+    if (data.isEmpty) return const Text('Aucune donnée quotidienne disponible.');
+
+    String formatMinutesToHoursMinutes(int? totalMinutes) {
+      if (totalMinutes == null || totalMinutes <= 0) return "0h 0m";
+      int hours = totalMinutes ~/ 60;
+      int minutes = totalMinutes % 60;
+      return "${hours}h ${minutes}m";
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (data['entree'] != null)
+          Text('Entrée: 	${data['entree']}'),
+        if (data['secteur'] != null)
+          Text('Secteur: ${data['secteur']}'),
+        if (data['rapportNo'] != null)
+          Text('Rapport N°: ${data['rapportNo']}'),
+        if (data['machineEngins'] != null)
+          Text('Machines/Engins: ${data['machineEngins']}'),
+        const SizedBox(height: 16),
+        // Module 1 Section
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+                const Text('Module 1', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Divider(height: 16),
+                Text('Temps de fonctionnement: ${formatMinutesToHoursMinutes(data['module1OperatingTime'])}'),
+                Text('Temps d\'arrêt: ${formatMinutesToHoursMinutes(data['module1TotalDowntime'])}'),
+                if (data['module1Stops'] is List && (data['module1Stops'] as List).isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  const Text('Arrêts:', style: TextStyle(fontWeight: FontWeight.bold)),
+              ...List.from(data['module1Stops']).map((stop) => Padding(
+                    padding: const EdgeInsets.only(left: 16, top: 4),
+                    child: Text('${stop['duration']} - ${stop['nature']}'),
+                  )),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Module 2 Section
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+                const Text('Module 2', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Divider(height: 16),
+                Text('Temps de fonctionnement: ${formatMinutesToHoursMinutes(data['module2OperatingTime'])}'),
+                Text('Temps d\'arrêt: ${formatMinutesToHoursMinutes(data['module2TotalDowntime'])}'),
+                if (data['module2Stops'] is List && (data['module2Stops'] as List).isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  const Text('Arrêts:', style: TextStyle(fontWeight: FontWeight.bold)),
+              ...List.from(data['module2Stops']).map((stop) => Padding(
+                    padding: const EdgeInsets.only(left: 16, top: 4),
+                    child: Text('${stop['duration']} - ${stop['nature']}'),
+                  )),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMachinesEquipmentStoppedAdditionalData(Map<String, dynamic> data) {
+    if (data.isEmpty) return const Text('Aucune donnée d\'équipement arrêtée disponible.');
+    final equipmentList = data['equipmentList'] as List?;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Date du rapport', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Divider(height: 16),
+                if (data['date'] != null)
+                  Text(data['date'].toString()),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Équipements arrêtés', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Divider(height: 16),
+                if (equipmentList == null || equipmentList.isEmpty)
+                  const Text('Aucun équipement ajouté', style: TextStyle(color: Colors.grey)),
+                if (equipmentList != null && equipmentList.isNotEmpty)
+                  ...equipmentList.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final equipment = entry.value;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Équipement ${index + 1}:', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text('Type: ${equipment['equipmentType']}'),
+                          Text('Raison: ${equipment['stopReason']}'),
+                          if (index < equipmentList.length - 1) const Divider(),
+                        ],
+                      ),
+                    );
+                  }),
+              ],
+            ),
+          ),
+        ),
+        if (equipmentList != null && equipmentList.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 16.0),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green[700]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${equipmentList.length} équipement${equipmentList.length > 1 ? 's' : ''} prêt${equipmentList.length > 1 ? 's' : ''} à être soumis',
+                      style: TextStyle(
+                        color: Colors.green[700],
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildTruckTrackingAdditionalData(Map<String, dynamic> data) {
+    if (data.isEmpty) return const Text('Aucune donnée de suivi camion disponible.');
+    final truckData = data['truckData'] as List?;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Mine et Sortie', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Divider(height: 16),
+                Text('Mine: ${data['mine'] ?? '-'}'),
+                Text('Zone: ${data['zone'] ?? '-'}'),
+                Text('Sortie: ${data['sortie'] ?? '-'}'),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Equipement', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Divider(height: 16),
+                Text('Opération: ${data['operationType'] ?? '-'}'),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Camions', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Divider(height: 16),
+                if (truckData == null || truckData.isEmpty)
+                  const Text('Aucun camion ajouté.'),
+                if (truckData != null && truckData.isNotEmpty)
+                  ...truckData.map((truck) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Camion: ${truck['truckNumber'] ?? '-'}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text('Chauffeur: ${truck['driver1'] ?? '-'}'),
+                      if (truck['counts'] != null && (truck['counts'] as List).isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        const Text('Voyages:', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ...List.generate((truck['counts'] as List).length, (index) {
+                          final count = truck['counts'][index];
+                          return Padding(
+                            padding: const EdgeInsets.only(left: 16, top: 4),
+                            child: Row(
+                              children: [
+                                Text('Voyage ${index + 1}: '),
+                                Text(count['time'] ?? '-'),
+                                const SizedBox(width: 12),
+                                const Text('|'),
+                                const SizedBox(width: 12),
+                                Text(count['equipment'] ?? '-'),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                      const Divider(),
+                    ],
+                  )),
+              ],
+            ),
+          ),
+        ),
+        if (truckData != null && truckData.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Card(
+              color: Colors.grey[100],
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Résumé des voyages', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text('Total de voyages: ${truckData.expand((truck) => truck['counts'] ?? []).length}'),
+                    const SizedBox(height: 8),
+                    ..._buildEquipmentCounts(truckData),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  List<Widget> _buildEquipmentCounts(List truckData) {
+    final allTrips = truckData.expand((truck) => truck['counts'] ?? []).toList();
+    final Map<String, int> equipmentCounts = {};
+    for (var trip in allTrips) {
+      final eq = trip['equipment'] ?? '-';
+      equipmentCounts[eq] = (equipmentCounts[eq] ?? 0) + 1;
+    }
+    return equipmentCounts.entries
+        .map((e) => Text('Total pour ${e.key}: ${e.value}'))
+        .toList();
   }
 
   Future<void> _saveReportUpdate(

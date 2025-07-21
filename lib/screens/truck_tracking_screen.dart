@@ -945,10 +945,10 @@ class CamionReportState extends State<CamionReport> {
 
     try {
       final report = Report(
-        description: 'Rapport de suivi des camions',
+        description: 'Suivi des camions',
         date: _selectedDate,
         group: 'Truck Tracking',
-        type: isDraft ? 'draft' : 'submitted',
+        type: 'Truck Tracking',
         additionalData: {
           'truckData': truckData,
           'mine': _selectedMine?.name,
