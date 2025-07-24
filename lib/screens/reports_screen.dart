@@ -421,7 +421,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildActivityReportAdditionalData(Map<String, dynamic> data) {
-    if (data.isEmpty) return const Text('Aucune donnée d\'activité disponible.');
+    if (data.isEmpty || data == null) return const Text('Aucune donnée d\'activité disponible.');
 
     String formatMinutesToHoursMinutes(int? totalMinutes) {
       if (totalMinutes == null || totalMinutes <= 0) return "0h 0m";
@@ -429,6 +429,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
       int minutes = totalMinutes % 60;
       return "${hours}h ${minutes}m";
     }
+
+    final stops = (data['stops'] is List) ? List.from(data['stops']) : [];
+    final vibratorCounters = (data['vibratorCounters'] is List) ? List.from(data['vibratorCounters']) : [];
+    final liaisonCounters = (data['liaisonCounters'] is List) ? List.from(data['liaisonCounters']) : [];
+    final stockEntries = (data['stockEntries'] is List) ? List.from(data['stockEntries']) : [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -448,20 +453,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _buildSummaryRow('T H.A:', formatMinutesToHoursMinutes(data['totalDowntime'])),
-                _buildSummaryRow('T H.M:', formatMinutesToHoursMinutes(data['operatingTime'])),
-                _buildSummaryRow('T H.V:', formatMinutesToHoursMinutes(data['totalVibratorMinutes'])),
-                _buildSummaryRow('T H.L:', formatMinutesToHoursMinutes(data['totalLiaisonMinutes'])),
+                _buildSummaryRow('T H.A:', formatMinutesToHoursMinutes(data['totalDowntime'] is int ? data['totalDowntime'] : 0)),
+                _buildSummaryRow('T H.M:', formatMinutesToHoursMinutes(data['operatingTime'] is int ? data['operatingTime'] : 0)),
+                _buildSummaryRow('T H.V:', formatMinutesToHoursMinutes(data['totalVibratorMinutes'] is int ? data['totalVibratorMinutes'] : 0)),
+                _buildSummaryRow('T H.L:', formatMinutesToHoursMinutes(data['totalLiaisonMinutes'] is int ? data['totalLiaisonMinutes'] : 0)),
                 const SizedBox(height: 8),
-                _buildSummaryRow('T Nr.A:', (data['stops'] as List?)?.length.toString() ?? '0'),
-                _buildSummaryRow('T Nr.V:', (data['vibratorCounters'] as List?)?.length.toString() ?? '0'),
-                _buildSummaryRow('T Nr.L:', (data['liaisonCounters'] as List?)?.length.toString() ?? '0'),
+                _buildSummaryRow('T Nr.A:', stops.length.toString()),
+                _buildSummaryRow('T Nr.V:', vibratorCounters.length.toString()),
+                _buildSummaryRow('T Nr.L:', liaisonCounters.length.toString()),
               ],
             ),
           ),
         ),
         const SizedBox(height: 16),
-        if (data['stops'] is List && (data['stops'] as List).isNotEmpty)
+        if (stops.isNotEmpty)
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -469,15 +474,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Arrêts', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ...List.from(data['stops']).map((stop) => Padding(
+                  ...stops.map((stop) => Padding(
                     padding: const EdgeInsets.only(left: 16, top: 4),
-                    child: Text('${stop['duration']} - ${stop['nature']}'),
+                    child: Text('${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
                   )),
                 ],
               ),
             ),
           ),
-        if (data['vibratorCounters'] is List && (data['vibratorCounters'] as List).isNotEmpty)
+        if (vibratorCounters.isNotEmpty)
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -485,7 +490,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Compteurs Vibreurs', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ...List.from(data['vibratorCounters']).map((counter) => Padding(
+                  ...vibratorCounters.map((counter) => Padding(
                     padding: const EdgeInsets.only(left: 16, top: 4),
                     child: Text('Poste: 9${counter['poste'] ?? '-'}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
                   )),
@@ -493,7 +498,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
             ),
           ),
-        if (data['liaisonCounters'] is List && (data['liaisonCounters'] as List).isNotEmpty)
+        if (liaisonCounters.isNotEmpty)
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -501,15 +506,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Compteurs Liaison', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ...List.from(data['liaisonCounters']).map((counter) => Padding(
+                  ...liaisonCounters.map((counter) => Padding(
                     padding: const EdgeInsets.only(left: 16, top: 4),
-                    child: Text('Poste: 	${counter['poste'] ?? '-'}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
+                    child: Text('Poste: \t${counter['poste'] ?? '-'}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
                   )),
                 ],
               ),
             ),
           ),
-        if (data['stockEntries'] is List && (data['stockEntries'] as List).isNotEmpty)
+        if (stockEntries.isNotEmpty)
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -517,7 +522,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Stocks', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ...List.from(data['stockEntries']).map((entry) => Padding(
+                  ...stockEntries.map((entry) => Padding(
                     padding: const EdgeInsets.only(left: 16, top: 4),
                     child: Text('Poste: ${entry['poste'] ?? '-'}, Parc: ${entry['park'] ?? '-'}, Type: ${entry['type'] ?? '-'}, Qté: ${entry['quantity'] ?? '-'}, Début: ${entry['startTime'] ?? '-'}'),
                   )),
@@ -543,7 +548,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildR0ReportAdditionalData(Map<String, dynamic> data) {
-    if (data.isEmpty) return const Text('Aucune donnée R0 disponible.');
+    if (data.isEmpty || data == null) return const Text('Aucune donnée R0 disponible.');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -583,7 +588,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('Exploitation :', style: TextStyle(fontWeight: FontWeight.bold)),
-              ...data['exploitation'].entries.map<Widget>((e) => Text('${e.key}: ${e.value}')),
+              ...((data['exploitation'] as Map).entries.map<Widget>((e) => Text('${e.key}: ${e.value}'))),
             ],
           ),
         if (data['bulls'] != null) Text('Bulls: ${data['bulls']}'),
@@ -603,9 +608,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('Personnel :', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('Conducteur: ${data['personnel']['conducteur'] ?? '-'}'),
-              Text('Graisseur: ${data['personnel']['graisseur'] ?? '-'}'),
-              Text('Matricules: ${data['personnel']['matricules'] ?? '-'}'),
+              Text('Conducteur: ${(data['personnel'] as Map)['conducteur'] ?? '-'}'),
+              Text('Graisseur: ${(data['personnel'] as Map)['graisseur'] ?? '-'}'),
+              Text('Matricules: ${(data['personnel'] as Map)['matricules'] ?? '-'}'),
             ],
           ),
         if (data['consommation'] is Map && (data['consommation'] as Map).isNotEmpty)
@@ -613,53 +618,33 @@ class _ReportsScreenState extends State<ReportsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('Consommation :', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('Tricone: ${data['consommation']['tricone'] ?? '-'}'),
-              Text('Gasoil: ${data['consommation']['gasoil'] ?? '-'}'),
+              Text('Tricone: ${(data['consommation'] as Map)['tricone'] ?? '-'}'),
+              Text('Gasoil: ${(data['consommation'] as Map)['gasoil'] ?? '-'}'),
             ],
           ),
-        if (
-          (data['entree'] == null) &&
-          (data['mine'] == null) &&
-          (data['zone'] == null) &&
-          (data['sortie'] == null) &&
-          (data['rapportNo'] == null) &&
-          (data['unite'] == null) &&
-          (
-            (data['indexCompteurs'] == null) ||
-            (data['indexCompteurs'] is List && (data['indexCompteurs'] as List).isEmpty)
-          ) &&
-          (data['shifts'] == null) &&
-          (data['selectedPoste'] == null) &&
-          (
-            (data['ventilation'] == null) ||
-            (data['ventilation'] is List && (data['ventilation'] as List).isEmpty)
-          ) &&
-          (data['arretsExplication'] == null) &&
-          (
-            (data['exploitation'] == null) ||
-            (data['exploitation'] is Map && (data['exploitation'] as Map).isEmpty)
-          ) &&
-          (data['bulls'] == null) &&
-          (
-            (data['repartitionTravail'] == null) ||
-            (data['repartitionTravail'] is List && (data['repartitionTravail'] as List).isEmpty)
-          ) &&
-          (
-            (data['personnel'] == null) ||
-            (data['personnel'] is Map && (data['personnel'] as Map).isEmpty)
-          ) &&
-          (
-            (data['consommation'] == null) ||
-            (data['consommation'] is Map && (data['consommation'] as Map).isEmpty)
-          )
-        )
+        if ((data['entree'] == null) &&
+            (data['mine'] == null) &&
+            (data['zone'] == null) &&
+            (data['sortie'] == null) &&
+            (data['rapportNo'] == null) &&
+            (data['unite'] == null) &&
+            ((data['indexCompteurs'] == null) || (data['indexCompteurs'] is List && (data['indexCompteurs'] as List).isEmpty)) &&
+            (data['shifts'] == null) &&
+            (data['selectedPoste'] == null) &&
+            ((data['ventilation'] == null) || (data['ventilation'] is List && (data['ventilation'] as List).isEmpty)) &&
+            (data['arretsExplication'] == null) &&
+            ((data['exploitation'] == null) || (data['exploitation'] is Map && (data['exploitation'] as Map).isEmpty)) &&
+            (data['bulls'] == null) &&
+            ((data['repartitionTravail'] == null) || (data['repartitionTravail'] is List && (data['repartitionTravail'] as List).isEmpty)) &&
+            ((data['personnel'] == null) || (data['personnel'] is Map && (data['personnel'] as Map).isEmpty)) &&
+            ((data['consommation'] == null) || (data['consommation'] is Map && (data['consommation'] as Map).isEmpty)))
           const Text('Aucune donnée R0 disponible.'),
       ],
     );
   }
 
   Widget _buildDailyReportAdditionalData(Map<String, dynamic> data) {
-    if (data.isEmpty) return const Text('Aucune donnée quotidienne disponible.');
+    if (data.isEmpty || data == null) return const Text('Aucune donnée quotidienne disponible.');
 
     String formatMinutesToHoursMinutes(int? totalMinutes) {
       if (totalMinutes == null || totalMinutes <= 0) return "0h 0m";
@@ -668,11 +653,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
       return "${hours}h ${minutes}m";
     }
 
+    final module1Stops = (data['module1Stops'] is List) ? List.from(data['module1Stops']) : [];
+    final module2Stops = (data['module2Stops'] is List) ? List.from(data['module2Stops']) : [];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (data['entree'] != null)
-          Text('Entrée: 	${data['entree']}'),
+          Text('Entrée: \t${data['entree']}'),
         if (data['secteur'] != null)
           Text('Secteur: ${data['secteur']}'),
         if (data['rapportNo'] != null)
@@ -686,18 +674,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 const Text('Module 1', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const Divider(height: 16),
-                Text('Temps de fonctionnement: ${formatMinutesToHoursMinutes(data['module1OperatingTime'])}'),
-                Text('Temps d\'arrêt: ${formatMinutesToHoursMinutes(data['module1TotalDowntime'])}'),
-                if (data['module1Stops'] is List && (data['module1Stops'] as List).isNotEmpty) ...[
+                Text('Temps de fonctionnement: ${formatMinutesToHoursMinutes(data['module1OperatingTime'] is int ? data['module1OperatingTime'] : 0)}'),
+                Text('Temps d\'arrêt: ${formatMinutesToHoursMinutes(data['module1TotalDowntime'] is int ? data['module1TotalDowntime'] : 0)}'),
+                if (module1Stops.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   const Text('Arrêts:', style: TextStyle(fontWeight: FontWeight.bold)),
-              ...List.from(data['module1Stops']).map((stop) => Padding(
+                  ...module1Stops.map((stop) => Padding(
                     padding: const EdgeInsets.only(left: 16, top: 4),
-                    child: Text('${stop['duration']} - ${stop['nature']}'),
+                    child: Text('${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
                   )),
                 ],
               ],
@@ -711,18 +699,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 const Text('Module 2', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const Divider(height: 16),
-                Text('Temps de fonctionnement: ${formatMinutesToHoursMinutes(data['module2OperatingTime'])}'),
-                Text('Temps d\'arrêt: ${formatMinutesToHoursMinutes(data['module2TotalDowntime'])}'),
-                if (data['module2Stops'] is List && (data['module2Stops'] as List).isNotEmpty) ...[
+                Text('Temps de fonctionnement: ${formatMinutesToHoursMinutes(data['module2OperatingTime'] is int ? data['module2OperatingTime'] : 0)}'),
+                Text('Temps d\'arrêt: ${formatMinutesToHoursMinutes(data['module2TotalDowntime'] is int ? data['module2TotalDowntime'] : 0)}'),
+                if (module2Stops.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   const Text('Arrêts:', style: TextStyle(fontWeight: FontWeight.bold)),
-              ...List.from(data['module2Stops']).map((stop) => Padding(
+                  ...module2Stops.map((stop) => Padding(
                     padding: const EdgeInsets.only(left: 16, top: 4),
-                    child: Text('${stop['duration']} - ${stop['nature']}'),
+                    child: Text('${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
                   )),
                 ],
               ],
@@ -734,8 +722,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildMachinesEquipmentStoppedAdditionalData(Map<String, dynamic> data) {
-    if (data.isEmpty) return const Text('Aucune donnée d\'équipement arrêtée disponible.');
-    final equipmentList = data['equipmentList'] as List?;
+    if (data.isEmpty || data == null) return const Text('Aucune donnée d\'équipement arrêtée disponible.');
+    final equipmentList = (data['equipmentList'] is List) ? List.from(data['equipmentList']) : [];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -764,9 +752,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
               children: [
                 const Text('Équipements arrêtés', style: TextStyle(fontWeight: FontWeight.bold)),
                 const Divider(height: 16),
-                if (equipmentList == null || equipmentList.isEmpty)
+                if (equipmentList.isEmpty)
                   const Text('Aucun équipement ajouté', style: TextStyle(color: Colors.grey)),
-                if (equipmentList != null && equipmentList.isNotEmpty)
+                if (equipmentList.isNotEmpty)
                   ...equipmentList.asMap().entries.map((entry) {
                     final index = entry.key;
                     final equipment = entry.value;
@@ -777,8 +765,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         children: [
                           Text('Équipement ${index + 1}:', style: const TextStyle(fontWeight: FontWeight.bold)),
                           const SizedBox(height: 4),
-                          Text('Type: ${equipment['equipmentType']}'),
-                          Text('Raison: ${equipment['stopReason']}'),
+                          Text('Type: ${equipment['equipmentType'] ?? '-'}'),
+                          Text('Raison: ${equipment['stopReason'] ?? '-'}'),
                           if (index < equipmentList.length - 1) const Divider(),
                         ],
                       ),
@@ -788,7 +776,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
           ),
         ),
-        if (equipmentList != null && equipmentList.isNotEmpty)
+        if (equipmentList.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 16.0),
             child: Container(
@@ -820,8 +808,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildTruckTrackingAdditionalData(Map<String, dynamic> data) {
-    if (data.isEmpty) return const Text('Aucune donnée de suivi camion disponible.');
-    final truckData = data['truckData'] as List?;
+    if (data.isEmpty || data == null) return const Text('Aucune donnée de suivi camion disponible.');
+    final truckData = (data['truckData'] is List) ? List.from(data['truckData']) : [];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -866,19 +854,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
               children: [
                 const Text('Camions', style: TextStyle(fontWeight: FontWeight.bold)),
                 const Divider(height: 16),
-                if (truckData == null || truckData.isEmpty)
+                if (truckData.isEmpty)
                   const Text('Aucun camion ajouté.'),
-                if (truckData != null && truckData.isNotEmpty)
+                if (truckData.isNotEmpty)
                   ...truckData.map((truck) => Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Camion: ${truck['truckNumber'] ?? '-'}', style: const TextStyle(fontWeight: FontWeight.bold)),
                       Text('Chauffeur: ${truck['driver1'] ?? '-'}'),
-                      if (truck['counts'] != null && (truck['counts'] as List).isNotEmpty) ...[
+                      if (truck['counts'] != null && (truck['counts'] is List) && (truck['counts'] as List).isNotEmpty) ...[
                         const SizedBox(height: 8),
                         const Text('Voyages:', style: TextStyle(fontWeight: FontWeight.bold)),
                         ...List.generate((truck['counts'] as List).length, (index) {
-                          final count = truck['counts'][index];
+                          final count = (truck['counts'] as List)[index];
                           return Padding(
                             padding: const EdgeInsets.only(left: 16, top: 4),
                             child: Row(
@@ -901,7 +889,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
           ),
         ),
-        if (truckData != null && truckData.isNotEmpty)
+        if (truckData.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
             child: Card(
@@ -913,7 +901,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   children: [
                     const Text('Résumé des voyages', style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-                    Text('Total de voyages: ${truckData.expand((truck) => truck['counts'] ?? []).length}'),
+                    Text('Total de voyages: ${truckData.expand((truck) => (truck['counts'] is List) ? truck['counts'] : []).length}'),
                     const SizedBox(height: 8),
                     ..._buildEquipmentCounts(truckData),
                   ],
@@ -926,7 +914,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   List<Widget> _buildEquipmentCounts(List truckData) {
-    final allTrips = truckData.expand((truck) => truck['counts'] ?? []).toList();
+    final allTrips = truckData.expand((truck) => (truck['counts'] is List) ? truck['counts'] : []).toList();
     final Map<String, int> equipmentCounts = {};
     for (var trip in allTrips) {
       final eq = trip['equipment'] ?? '-';
