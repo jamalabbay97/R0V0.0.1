@@ -416,7 +416,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
       case 'Truck Tracking':
         return _buildTruckTrackingAdditionalData(data);
       default:
-        return const Text('No additional data');
+        // Fallback: show all additionalData key-value pairs
+        if (data.isEmpty) return const Text('No additional data');
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: data.entries.map<Widget>((entry) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(
+              children: [
+                Text('${entry.key}: ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Expanded(child: Text(entry.value.toString())),
+              ],
+            ),
+          )).toList(),
+        );
     }
   }
 
