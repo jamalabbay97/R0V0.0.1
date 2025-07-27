@@ -363,15 +363,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget _buildAdditionalDataView(Report report) {
     final data = report.additionalData ?? {};
     switch (report.type) {
-      case 'activity_report':
+      case 'activity TNB':
         return _buildActivityReportAdditionalData(data);
-      case 'r0_submitted':
+      case 'R0':
         return _buildR0ReportAdditionalData(data);
-      case 'daily_report':
+      case 'daily TSUD':
         return _buildDailyReportAdditionalData(data);
-      case 'Machines Equipment Stopped':
+      case 'Machine/Engin Arrêtés':
         return _buildMachinesEquipmentStoppedAdditionalData(data);
-      case 'Truck Tracking':
+      case 'Suivi Camion':
         return _buildTruckTrackingAdditionalData(data);
       default:
         // Fallback: show all additionalData key-value pairs
@@ -526,7 +526,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (data['entree'] != null) Text('Entrée: ${data['entree']}'),
         if (data['mine'] != null) Text('Mine: ${data['mine']}'),
         if (data['zone'] != null) Text('Zone: ${data['zone']}'),
         if (data['sortie'] != null) Text('Sortie: ${data['sortie']}'),
