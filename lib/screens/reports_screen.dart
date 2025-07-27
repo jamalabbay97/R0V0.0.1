@@ -344,48 +344,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                 ),
               ),
-              Card(
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(l10n.type, style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 4),
-                      Text(report.type.isNotEmpty ? report.type : 'Not filled'),
-                    ],
-                  ),
-                ),
-              ),
-              Card(
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(l10n.group, style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 4),
-                      Text(report.group.isNotEmpty ? report.group : 'Not filled'),
-                    ],
-                  ),
-                ),
-              ),
-              Card(
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(l10n.date, style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 4),
-                      Text(DateFormat('yyyy-MM-dd HH:mm').format(report.date)),
-                    ],
-                  ),
-                ),
-              ),
                 const SizedBox(height: 8),
                 Text(l10n.additionalData, style: Theme.of(context).textTheme.titleLarge),
               _buildAdditionalDataView(report),
@@ -434,7 +392,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildActivityReportAdditionalData(Map<String, dynamic> data) {
-    if (data.isEmpty || data == null) return const Text('Aucune donnée d\'activité disponible.');
+    if (data.isEmpty) return const Text('Aucune donnée d\'activité disponible.');
 
     String formatMinutesToHoursMinutes(int? totalMinutes) {
       if (totalMinutes == null || totalMinutes <= 0) return "0h 0m";
@@ -561,7 +519,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildR0ReportAdditionalData(Map<String, dynamic> data) {
-    if (data.isEmpty || data == null) return const Text('Aucune donnée R0 disponible.');
+    // Debug: print the raw additionalData to console
+    // ignore: avoid_print
+    print('R0 additionalData: $data');
+    if (data.isEmpty) return const Text('Aucune donnée R0 disponible.');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -572,69 +533,123 @@ class _ReportsScreenState extends State<ReportsScreen> {
         if (data['rapportNo'] != null) Text('Rapport N°: ${data['rapportNo']}'),
         if (data['unite'] != null) Text('Unité: ${data['unite']}'),
         if (data['indexCompteurs'] is List && (data['indexCompteurs'] as List).isNotEmpty)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Index Compteurs :', style: TextStyle(fontWeight: FontWeight.bold)),
-              ...List.from(data['indexCompteurs']).map((ic) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Text('• Durée: ${ic['duree'] ?? '-'}, Note: ${ic['note'] ?? '-'}'),
-              )),
-            ],
+          Card(
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Index Compteurs :', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...List.from(data['indexCompteurs']).map((ic) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Text('• Durée: ${ic['duree'] ?? '-'}, Note: ${ic['note'] ?? '-'}'),
+                  )),
+                ],
+              ),
+            ),
           ),
         if (data['shifts'] != null) Text('Shifts: ${data['shifts']}'),
         if (data['selectedPoste'] != null) Text('Poste sélectionné: ${data['selectedPoste']}'),
         if (data['ventilation'] is List && (data['ventilation'] as List).isNotEmpty)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Ventilation :', style: TextStyle(fontWeight: FontWeight.bold)),
-              ...List.from(data['ventilation']).map((v) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Text('• [${v['code'] ?? '-'}] ${v['label'] ?? '-'} - Durée: ${v['duree'] ?? '-'}, Note: ${v['note'] ?? '-'}'),
-              )),
-            ],
+          Card(
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Ventilation :', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...List.from(data['ventilation']).map((v) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Text('• [${v['code'] ?? '-'}] ${v['label'] ?? '-'} - Durée: ${v['duree'] ?? '-'}, Note: ${v['note'] ?? '-'}'),
+                  )),
+                ],
+              ),
+            ),
           ),
         if (data['arretsExplication'] != null) Text('Explication Arrêts: ${data['arretsExplication']}'),
         if (data['exploitation'] is Map && (data['exploitation'] as Map).isNotEmpty)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Exploitation :', style: TextStyle(fontWeight: FontWeight.bold)),
-              ...((data['exploitation'] as Map).entries.map<Widget>((e) => Text('${e.key}: ${e.value}'))),
-            ],
+          Card(
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Exploitation :', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...((data['exploitation'] as Map).entries.map<Widget>((e) => Text('${e.key}: ${e.value}'))),
+                ],
+              ),
+            ),
           ),
         if (data['bulls'] != null) Text('Bulls: ${data['bulls']}'),
         if (data['repartitionTravail'] is List && (data['repartitionTravail'] as List).isNotEmpty)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Répartition Travail :', style: TextStyle(fontWeight: FontWeight.bold)),
-              ...List.from(data['repartitionTravail']).map((r) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Text('• Chantier: ${r['chantier'] ?? '-'}, Temps: ${r['temps'] ?? '-'}, Imputation: ${r['imputation'] ?? '-'}'),
-              )),
-            ],
+          Card(
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Répartition Travail :', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...List.from(data['repartitionTravail']).map((r) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Text('• Chantier: ${r['chantier'] ?? '-'}, Temps: ${r['temps'] ?? '-'}, Imputation: ${r['imputation'] ?? '-'}'),
+                  )),
+                ],
+              ),
+            ),
           ),
         if (data['personnel'] is Map && (data['personnel'] as Map).isNotEmpty)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Personnel :', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('Conducteur: ${(data['personnel'] as Map)['conducteur'] ?? '-'}'),
-              Text('Graisseur: ${(data['personnel'] as Map)['graisseur'] ?? '-'}'),
-              Text('Matricules: ${(data['personnel'] as Map)['matricules'] ?? '-'}'),
-            ],
+          Card(
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Personnel :', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text('Conducteur: ${(data['personnel'] as Map)['conducteur'] ?? '-'}'),
+                  Text('Graisseur: ${(data['personnel'] as Map)['graisseur'] ?? '-'}'),
+                  Text('Matricules: ${(data['personnel'] as Map)['matricules'] ?? '-'}'),
+                ],
+              ),
+            ),
           ),
         if (data['consommation'] is Map && (data['consommation'] as Map).isNotEmpty)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Consommation :', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('Tricone: ${(data['consommation'] as Map)['tricone'] ?? '-'}'),
-              Text('Gasoil: ${(data['consommation'] as Map)['gasoil'] ?? '-'}'),
-            ],
+          Card(
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Consommation :', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text('Tricone: ${(data['consommation'] as Map)['tricone'] ?? '-'}'),
+                  Text('Gasoil: ${(data['consommation'] as Map)['gasoil'] ?? '-'}'),
+                ],
+              ),
+            ),
           ),
+        // Fallback: show any unknown keys in a card layout
+        ...data.entries.where((entry) => ![
+          'entree', 'mine', 'zone', 'sortie', 'rapportNo', 'unite', 'indexCompteurs', 'shifts', 'selectedPoste', 'ventilation', 'arretsExplication', 'exploitation', 'bulls', 'repartitionTravail', 'personnel', 'consommation'
+        ].contains(entry.key)).map((entry) =>
+          Card(
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('${entry.key}: ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Expanded(child: Text(entry.value.toString())),
+                ],
+              ),
+            ),
+          ),
+        ),
         if ((data['entree'] == null) &&
             (data['mine'] == null) &&
             (data['zone'] == null) &&
@@ -657,7 +672,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildDailyReportAdditionalData(Map<String, dynamic> data) {
-    if (data.isEmpty || data == null) return const Text('Aucune donnée quotidienne disponible.');
+    if (data.isEmpty) return const Text('Aucune donnée quotidienne disponible.');
 
     String formatMinutesToHoursMinutes(int? totalMinutes) {
       if (totalMinutes == null || totalMinutes <= 0) return "0h 0m";
@@ -735,7 +750,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildMachinesEquipmentStoppedAdditionalData(Map<String, dynamic> data) {
-    if (data.isEmpty || data == null) return const Text('Aucune donnée d\'équipement arrêtée disponible.');
+    if (data.isEmpty) return const Text('Aucune donnée d\'équipement arrêtée disponible.');
     final equipmentList = (data['equipmentList'] is List) ? List.from(data['equipmentList']) : [];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -821,7 +836,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildTruckTrackingAdditionalData(Map<String, dynamic> data) {
-    if (data.isEmpty || data == null) return const Text('Aucune donnée de suivi camion disponible.');
+    if (data.isEmpty) return const Text('Aucune donnée de suivi camion disponible.');
     final truckData = (data['truckData'] is List) ? List.from(data['truckData']) : [];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

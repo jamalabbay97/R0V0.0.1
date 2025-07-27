@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'dart:convert';
 
 class Report {
   final int? id;
@@ -24,7 +25,7 @@ class Report {
       'date': DateFormat('yyyy-MM-dd HH:mm:ss').format(date),
       'group_name': group,
       'type': type,
-      'additional_data': additionalData?.toString(),
+      'additional_data': additionalData != null ? jsonEncode(additionalData) : null,
     };
   }
 
@@ -36,20 +37,7 @@ class Report {
       group: map['group_name'] as String,
       type: map['type'] as String,
       additionalData: map['additional_data'] != null
-          ? Map<String, dynamic>.fromEntries(
-              (map['additional_data'] as String)
-                  .replaceAll('{', '')
-                  .replaceAll('}', '')
-                  .split(',')
-                  .where((e) => e.contains(':'))
-                  .map((e) {
-                final parts = e.split(':');
-                return MapEntry(
-                  parts[0].trim(),
-                  parts[1].trim(),
-                );
-              }),
-            )
+          ? Map<String, dynamic>.from(jsonDecode(map['additional_data']))
           : null,
     );
   }
