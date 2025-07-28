@@ -641,7 +641,7 @@ static const Map<String, List<String>> machinesData = {
         description: 'Rapport R0 - ${DateFormat('yyyy-MM-dd').format(_selectedDate)}',
         date: _selectedDate,
         group: 'R0',
-        type: 'r0_submitted',
+        type: 'R0',
         additionalData: _serializeFormData(),
       );
 

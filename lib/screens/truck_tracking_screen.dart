@@ -948,7 +948,7 @@ class CamionReportState extends State<CamionReport> {
         description: 'Suivi des camions',
         date: _selectedDate,
         group: 'Truck Tracking',
-        type: 'Truck Tracking',
+        type: 'Suivi Camion',
         additionalData: {
           'truckData': truckData,
           'mine': _selectedMine?.name,

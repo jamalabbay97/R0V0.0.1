@@ -633,7 +633,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
         // Fallback: show any unknown keys in a card layout
         ...data.entries.where((entry) => ![
-          'entree', 'mine', 'zone', 'sortie', 'rapportNo', 'unite', 'indexCompteurs', 'shifts', 'selectedPoste', 'ventilation', 'arretsExplication', 'exploitation', 'bulls', 'repartitionTravail', 'personnel', 'consommation'
+           'mine', 'zone', 'sortie', 'rapportNo', 'unite', 'indexCompteurs', 'shifts', 'selectedPoste', 'ventilation', 'arretsExplication', 'exploitation', 'bulls', 'repartitionTravail', 'personnel', 'consommation'
         ].contains(entry.key)).map((entry) =>
           Card(
             margin: const EdgeInsets.symmetric(vertical: 4),
@@ -649,8 +649,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
           ),
         ),
-        if ((data['entree'] == null) &&
-            (data['mine'] == null) &&
+        if ((data['mine'] == null) &&
             (data['zone'] == null) &&
             (data['sortie'] == null) &&
             (data['rapportNo'] == null) &&
@@ -686,8 +685,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (data['entree'] != null)
-          Text('Entrée: \t${data['entree']}'),
         if (data['secteur'] != null)
           Text('Secteur: ${data['secteur']}'),
         if (data['rapportNo'] != null)

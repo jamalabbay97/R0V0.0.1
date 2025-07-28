@@ -210,7 +210,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
         description: 'Activity TNB - ${DateFormat('yyyy-MM-dd').format(_selectedDate)}',
         date: _selectedDate,
         group: 'MIB/U/E/I',
-        type: 'activity_report',
+        type: 'activity TNB',
         additionalData: {
           'stops': stops.map((stop) => {
             'id': stop.id,
@@ -688,6 +688,70 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                   ),
                 ),
               ),
+              if (stops.isNotEmpty)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Arrêts', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ...stops.map((stop) => Padding(
+                          padding: const EdgeInsets.only(left: 16, top: 4),
+                          child: Text('${stop.duration.isNotEmpty ? stop.duration : '-'} - ${stop.nature.isNotEmpty ? stop.nature : '-'}'),
+                        )),
+                      ],
+                    ),
+                  ),
+                ),
+              if (vibratorCounters.isNotEmpty)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Compteurs Vibreurs', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ...vibratorCounters.map((counter) => Padding(
+                          padding: const EdgeInsets.only(left: 16, top: 4),
+                          child: Text('Poste: 	${counter.poste != null ? posteToString(counter.poste) : '-'}, Début: ${counter.start.isNotEmpty ? counter.start : '-'}, Fin: ${counter.end.isNotEmpty ? counter.end : '-'}'),
+                        )),
+                      ],
+                    ),
+                  ),
+                ),
+              if (liaisonCounters.isNotEmpty)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Compteurs Liaison', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ...liaisonCounters.map((counter) => Padding(
+                          padding: const EdgeInsets.only(left: 16, top: 4),
+                          child: Text('Poste: 	${counter.poste != null ? posteToString(counter.poste) : '-'}, Début: ${counter.start.isNotEmpty ? counter.start : '-'}, Fin: ${counter.end.isNotEmpty ? counter.end : '-'}'),
+                        )),
+                      ],
+                    ),
+                  ),
+                ),
+              if (stockEntries.isNotEmpty)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Stocks', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ...stockEntries.map((entry) => Padding(
+                          padding: const EdgeInsets.only(left: 16, top: 4),
+                          child: Text('Poste: ${entry.poste != null ? posteToString(entry.poste) : '-'}, Parc: ${entry.park != null ? parkToString(entry.park) : '-'}, Type: ${entry.type != null ? stockTypeToString(entry.type) : '-'}, Qté: ${entry.quantity.isNotEmpty ? entry.quantity : '-'}, Début: ${entry.startTime.isNotEmpty ? entry.startTime : '-'}'),
+                        )),
+                      ],
+                    ),
+                  ),
+                ),
               if (hasVibratorErrors || hasLiaisonErrors || hasStockErrors) ...[
                 const SizedBox(height: 16),
                 Card(

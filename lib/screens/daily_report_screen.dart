@@ -269,7 +269,7 @@ class DailyReportState extends State<DailyReport> {
         description: 'Daily Report - ${DateFormat('yyyy-MM-dd').format(DateTime.now())}',
         date: DateTime.now(),
         group: 'Daily',
-        type: 'daily_report',
+        type: 'daily TSUD',
         additionalData: {
           'entree': entree,
           'secteur': secteur,
