@@ -320,6 +320,468 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Future<void> _showReportDetails(Report report) async {
     final l10n = AppLocalizations.of(context)!;
 
+    // Special handling for R0 report
+    if (report.type == 'R0') {
+      final data = report.additionalData ?? {};
+      await showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(l10n.reportDetails),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Date Card
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Date', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 4),
+                        Text(DateFormat('yyyy-MM-dd').format(report.date)),
+                      ],
+                    ),
+                  ),
+                ),
+                // Info OIB/EE Card
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Info OIB/EE', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 4),
+                        if (data['mine'] != null) Text('Mine: ${data['mine']}'),
+                        if (data['zone'] != null) Text('Zone: ${data['zone']}'),
+                        if (data['sortie'] != null) Text('Sortie: ${data['sortie']}'),
+                        if (data['rapportNo'] != null) Text('Rapport N°: ${data['rapportNo']}'),
+                        if (data['unite'] != null) Text('Unité: ${data['unite']}'),
+                        if (data['selectedPoste'] != null) Text('Poste: ${data['selectedPoste']}'),
+                      ],
+                    ),
+                  ),
+                ),
+                // Compteurs Card
+                if (data['indexCompteurs'] is List && (data['indexCompteurs'] as List).isNotEmpty)
+                  Card(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Compteurs', style: Theme.of(context).textTheme.titleMedium),
+                          const SizedBox(height: 4),
+                          ...List.from(data['indexCompteurs']).map((ic) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Text('• Début: ${ic['duree'] ?? '-'}, Fin: ${ic['note'] ?? '-'}'),
+                          )),
+                        ],
+                      ),
+                    ),
+                  ),
+                // Arrets Card
+                if (data['ventilation'] is List && (data['ventilation'] as List).isNotEmpty)
+                  Card(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Arrêts', style: Theme.of(context).textTheme.titleMedium),
+                          const SizedBox(height: 4),
+                          ...List.from(data['ventilation']).map((v) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Text('• ${v['label'] ?? '-'} - Début: ${v['duree'] ?? '-'}, Fin: ${v['note'] ?? '-'}'),
+                          )),
+                        ],
+                      ),
+                    ),
+                  ),
+                // Exploitation Card
+                if (data['exploitation'] is Map && (data['exploitation'] as Map).isNotEmpty)
+                  Card(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Exploitation', style: Theme.of(context).textTheme.titleMedium),
+                          const SizedBox(height: 4),
+                          ...((data['exploitation'] as Map).entries.map<Widget>((e) => Text('${e.key}: ${e.value}'))),
+                        ],
+                      ),
+                    ),
+                  ),
+                // Répartition Card
+                if (data['repartitionTravail'] is List && (data['repartitionTravail'] as List).isNotEmpty)
+                  Card(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Répartition', style: Theme.of(context).textTheme.titleMedium),
+                          const SizedBox(height: 4),
+                          ...List.from(data['repartitionTravail']).map((r) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Text('• Chantier: ${r['chantier'] ?? '-'}, Temps: ${r['temps'] ?? '-'}, Imputation: ${r['imputation'] ?? '-'}'),
+                          )),
+                        ],
+                      ),
+                    ),
+                  ),
+                // Personnel Card
+                if (data['personnel'] is Map && (data['personnel'] as Map).isNotEmpty)
+                  Card(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Personnel', style: Theme.of(context).textTheme.titleMedium),
+                          const SizedBox(height: 4),
+                          Text('Conducteur: ${(data['personnel'] as Map)['conducteur'] ?? '-'}'),
+                          Text('Graisseur: ${(data['personnel'] as Map)['graisseur'] ?? '-'}'),
+                          Text('Matricules: ${(data['personnel'] as Map)['matricules'] ?? '-'}'),
+                        ],
+                      ),
+                    ),
+                  ),
+                // Consommation Card
+                if (data['consommation'] is Map && (data['consommation'] as Map).isNotEmpty)
+                  Card(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Consommation', style: Theme.of(context).textTheme.titleMedium),
+                          const SizedBox(height: 4),
+                          Text('Tricone: ${(data['consommation'] as Map)['tricone'] ?? '-'}'),
+                          Text('Gasoil: ${(data['consommation'] as Map)['gasoil'] ?? '-'}'),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(l10n.close),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // Special handling for daily TSUD report
+    if (report.type == 'daily TSUD') {
+      final data = report.additionalData ?? {};
+      await showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(l10n.reportDetails),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Date Card
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Date', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 4),
+                        Text(DateFormat('yyyy-MM-dd').format(report.date)),
+                      ],
+                    ),
+                  ),
+                ),
+                // Module 1 Card
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Module 1', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 4),
+                        Text('Temps de fonctionnement: ${_formatMinutesToHoursMinutes(data['module1OperatingTime'] ?? 0)}'),
+                        Text('Temps d\'arrêt: ${_formatMinutesToHoursMinutes(data['module1TotalDowntime'] ?? 0)}'),
+                        if (data['module1Stops'] is List && (data['module1Stops'] as List).isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          const Text('Arrêts:', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ...List.from(data['module1Stops']).map((stop) => Padding(
+                            padding: const EdgeInsets.only(left: 16, top: 4),
+                            child: Text('${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
+                          )),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                // Module 2 Card
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Module 2', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 4),
+                        Text('Temps de fonctionnement: ${_formatMinutesToHoursMinutes(data['module2OperatingTime'] ?? 0)}'),
+                        Text('Temps d\'arrêt: ${_formatMinutesToHoursMinutes(data['module2TotalDowntime'] ?? 0)}'),
+                        if (data['module2Stops'] is List && (data['module2Stops'] as List).isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          const Text('Arrêts:', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ...List.from(data['module2Stops']).map((stop) => Padding(
+                            padding: const EdgeInsets.only(left: 16, top: 4),
+                            child: Text('${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
+                          )),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(l10n.close),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // Special handling for Machine/Engin Arrêtés report
+    if (report.type == 'Machine/Engin Arrêtés') {
+      final data = report.additionalData ?? {};
+      await showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(l10n.reportDetails),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Date Card
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Date', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 4),
+                        Text(DateFormat('yyyy-MM-dd').format(report.date)),
+                      ],
+                    ),
+                  ),
+                ),
+                // Équipements arrêtés Card
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Équipements arrêtés', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 4),
+                        if (data['equipmentList'] is List && (data['equipmentList'] as List).isNotEmpty) ...[
+                          ...List.from(data['equipmentList']).asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final equipment = entry.value;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Équipement ${index + 1}:', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 4),
+                                  Text('Type: ${equipment['equipmentType'] ?? '-'}'),
+                                  Text('Raison: ${equipment['stopReason'] ?? '-'}'),
+                                  if (index < (data['equipmentList'] as List).length - 1) const Divider(),
+                                ],
+                              ),
+                            );
+                          }),
+                        ] else ...[
+                          const Text('Aucun équipement arrêté', style: TextStyle(color: Colors.grey)),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(l10n.close),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // Special handling for Suivi Camion report
+    if (report.type == 'Suivi Camion') {
+      final data = report.additionalData ?? {};
+      final truckData = (data['truckData'] is List) ? List.from(data['truckData']) : [];
+      
+      // Calculate summary data
+      final allTrips = truckData.expand((truck) => (truck['counts'] is List) ? truck['counts'] : []).toList();
+      final Map<String, int> equipmentCounts = {};
+      for (var trip in allTrips) {
+        final eq = trip['equipment'] ?? '-';
+        equipmentCounts[eq] = (equipmentCounts[eq] ?? 0) + 1;
+      }
+      
+      await showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(l10n.reportDetails),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Date Card
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Date', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 4),
+                        Text(DateFormat('yyyy-MM-dd').format(report.date)),
+                      ],
+                    ),
+                  ),
+                ),
+                // Equipement Card
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Equipement', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 4),
+                        Text('Opération: ${data['operationType'] ?? '-'}'),
+                      ],
+                    ),
+                  ),
+                ),
+                // Camions Card
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Camions', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 4),
+                        if (truckData.isEmpty)
+                          const Text('Aucun camion ajouté.', style: TextStyle(color: Colors.grey)),
+                        if (truckData.isNotEmpty)
+                          ...truckData.map((truck) => Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Camion: ${truck['truckNumber'] ?? '-'}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              Text('Chauffeur: ${truck['driver1'] ?? '-'}'),
+                              if (truck['counts'] != null && (truck['counts'] is List) && (truck['counts'] as List).isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                const Text('Voyages:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                ...List.generate((truck['counts'] as List).length, (index) {
+                                  final count = (truck['counts'] as List)[index];
+                                  return Padding(
+                                    padding: const EdgeInsets.only(left: 16, top: 4),
+                                    child: Row(
+                                      children: [
+                                        Text('v${index + 1}: '),
+                                        Text(count['time'] ?? '-'),
+                                        const SizedBox(width: 12),
+                                        const Text('|'),
+                                        const SizedBox(width: 12),
+                                        Text(count['equipment'] ?? '-'),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                              ],
+                              const Divider(),
+                            ],
+                          )),
+                      ],
+                    ),
+                  ),
+                ),
+                // Résumé Card
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Résumé', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 4),
+                        Text('Total de voyages: ${allTrips.length}'),
+                        const SizedBox(height: 8),
+                        ...equipmentCounts.entries.map((e) => Text('Total pour ${e.key}: ${e.value}')),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(l10n.close),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     await showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -503,6 +965,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
       ],
     );
+  }
+
+  String _formatMinutesToHoursMinutes(int totalMinutes) {
+    if (totalMinutes <= 0) return "0h 0m";
+    int hours = totalMinutes ~/ 60;
+    int minutes = totalMinutes % 60;
+    return "${hours}h ${minutes}m";
   }
 
   Widget _buildSummaryRow(String label, String value) {
@@ -895,7 +1364,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             padding: const EdgeInsets.only(left: 16, top: 4),
                             child: Row(
                               children: [
-                                Text('Voyage ${index + 1}: '),
+                                Text('v${index + 1}: '),
                                 Text(count['time'] ?? '-'),
                                 const SizedBox(width: 12),
                                 const Text('|'),

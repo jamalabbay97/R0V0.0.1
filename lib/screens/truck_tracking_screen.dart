@@ -483,7 +483,7 @@ class CamionReportState extends State<CamionReport> {
                                                               itemBuilder: (context, i) {
                                                                 final trip = counts[i];
                                                                 return ListTile(
-                                                                  title: Text('Voyage ${i + 1}'),
+                                                                  title: Text('v${i + 1}'),
                                                                   subtitle: Column(
                                                                     crossAxisAlignment: CrossAxisAlignment.start,
                                                                     children: [
@@ -869,7 +869,7 @@ class CamionReportState extends State<CamionReport> {
                                           child: Row(
                                             children: [
                                               Text(
-                                                'Voyage ${index + 1}: ',
+                                                'v${index + 1}: ',
                                             style: Theme.of(context).textTheme.bodyMedium,
                                               ),
                                               Text(
@@ -1271,7 +1271,7 @@ class CamionReportState extends State<CamionReport> {
                                                                                       itemBuilder: (context, i) {
                                                                                         final trip = counts[i];
                                                                                         return ListTile(
-                                                                                          title: Text('Voyage ${i + 1}'),
+                                                                                          title: Text('v${i + 1}'),
                                                                                           subtitle: Column(
                                                                                             crossAxisAlignment: CrossAxisAlignment.start,
                                                                                             children: [
