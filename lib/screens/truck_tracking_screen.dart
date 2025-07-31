@@ -951,6 +951,8 @@ class CamionReportState extends State<CamionReport> {
         type: 'Suivi Camion',
         additionalData: {
           'truckData': truckData,
+          'poste': _selectedPoste != null ? posteToString(_selectedPoste) : null,
+          'equipment': _selectedEquipment,
           'mine': _selectedMine?.name,
           'zone': _selectedZone?.name,
           'sortie': _selectedSortie,

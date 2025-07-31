@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/models/report.dart';
 import 'package:r0/services/database_helper.dart';
 import 'package:intl/intl.dart';
 
+/// ReportsScreen displays all saved reports with filtering capabilities.
+/// 
+/// Features:
+/// - View all reports with details
+/// - Filter reports by poste (3ème, 1er, 2ème)
+/// - Edit and delete reports
+/// - View detailed report information
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
 
@@ -14,7 +22,16 @@ class ReportsScreen extends StatefulWidget {
 class _ReportsScreenState extends State<ReportsScreen> {
   final DatabaseHelper _databaseHelper = DatabaseHelper();
   List<Report> _reports = [];
+  List<Report> _filteredReports = [];
   bool _isLoading = true;
+  String? _selectedPosteFilter;
+
+  // Available postes for filtering
+  List<String> _availablePostes = [
+    '3ème',
+    '1er', 
+    '2ème',
+  ];
 
   @override
   void initState() {
@@ -31,6 +48,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final reports = await _databaseHelper.getReports();
       setState(() {
         _reports = reports;
+        _filterReports();
         _isLoading = false;
       });
     } catch (e) {
@@ -43,6 +61,62 @@ class _ReportsScreenState extends State<ReportsScreen> {
         );
       }
     }
+  }
+
+  void _filterReports() {
+    if (_selectedPosteFilter == null) {
+      _filteredReports = _reports;
+    } else {
+      _filteredReports = _reports.where((report) {
+        final additionalData = report.additionalData;
+        if (additionalData == null) return false;
+        
+        // Check for different poste field names used in different report types
+        final poste = additionalData['selectedPoste'] ?? 
+                     additionalData['poste'] ?? 
+                     additionalData['posteSelected'];
+        
+        // Debug: log the poste value for debugging (only in debug mode)
+        if (kDebugMode && (report.type == 'R0' || report.type == 'Suivi Camion')) {
+          debugPrint('Report ${report.id}: type=${report.type}, poste=$poste, filter=$_selectedPosteFilter');
+        }
+        
+        return poste == _selectedPosteFilter;
+      }).toList();
+    }
+    
+    // Update available postes based on existing reports
+    _updateAvailablePostes();
+  }
+
+  void _updateAvailablePostes() {
+    final Set<String> foundPostes = <String>{};
+    
+    for (final report in _reports) {
+      final additionalData = report.additionalData;
+      if (additionalData != null) {
+        final poste = additionalData['selectedPoste'] ?? 
+                     additionalData['poste'] ?? 
+                     additionalData['posteSelected'];
+        if (poste != null && poste.isNotEmpty) {
+          foundPostes.add(poste);
+        }
+      }
+    }
+    
+    // Add default postes if not found in reports
+    foundPostes.addAll(['3ème', '1er', '2ème']);
+    
+    setState(() {
+      _availablePostes = foundPostes.toList()..sort();
+    });
+  }
+
+  void _onPosteFilterChanged(String? newValue) {
+    setState(() {
+      _selectedPosteFilter = newValue;
+      _filterReports();
+    });
   }
 
   Future<void> _deleteReport(Report report) async {
@@ -282,16 +356,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         context: dialogContext,
                         initialTime: TimeOfDay.fromDateTime(selectedDate),
                       );
-                      if (time != null && mounted) {
-                        setState(() {
-                          selectedDate = DateTime(
-                            picked.year,
-                            picked.month,
-                            picked.day,
-                            time.hour,
-                            time.minute,
-                          );
-                        });
+                      if (time != null) {
+                        if (mounted) {
+                          setState(() {
+                            selectedDate = DateTime(
+                              picked.year,
+                              picked.month,
+                              picked.day,
+                              time.hour,
+                              time.minute,
+                            );
+                          });
+                        }
                       }
                     }
                   },
@@ -357,12 +433,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       children: [
                         Text('Info OIB/EE', style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 4),
+                        if (data['selectedPoste'] != null) Text('Poste: ${data['selectedPoste']}'),
+                        if (data['equipment'] != null) Text('Équipement: ${data['equipment']}'),
                         if (data['mine'] != null) Text('Mine: ${data['mine']}'),
                         if (data['zone'] != null) Text('Zone: ${data['zone']}'),
                         if (data['sortie'] != null) Text('Sortie: ${data['sortie']}'),
-                        if (data['rapportNo'] != null) Text('Rapport N°: ${data['rapportNo']}'),
-                        if (data['unite'] != null) Text('Unité: ${data['unite']}'),
-                        if (data['selectedPoste'] != null) Text('Poste: ${data['selectedPoste']}'),
+                        if (data['operationType'] != null) Text('Type d\'opération: ${data['operationType']}'),
+                        if (data['production'] != null) Text('Production: ${data['production']}'),
                       ],
                     ),
                   ),
@@ -370,9 +447,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 // Compteurs Card
                 if (data['indexCompteurs'] is List && (data['indexCompteurs'] as List).isNotEmpty)
                   Card(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Padding(
-                      padding: const EdgeInsets.all(12.0),
+                      padding: const EdgeInsets.all(16.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -389,9 +466,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 // Arrets Card
                 if (data['ventilation'] is List && (data['ventilation'] as List).isNotEmpty)
                   Card(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Padding(
-                      padding: const EdgeInsets.all(12.0),
+                      padding: const EdgeInsets.all(16.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -408,9 +485,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 // Exploitation Card
                 if (data['exploitation'] is Map && (data['exploitation'] as Map).isNotEmpty)
                   Card(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Padding(
-                      padding: const EdgeInsets.all(12.0),
+                      padding: const EdgeInsets.all(16.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -424,9 +501,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 // Répartition Card
                 if (data['repartitionTravail'] is List && (data['repartitionTravail'] as List).isNotEmpty)
                   Card(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Padding(
-                      padding: const EdgeInsets.all(12.0),
+                      padding: const EdgeInsets.all(16.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -443,9 +520,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 // Personnel Card
                 if (data['personnel'] is Map && (data['personnel'] as Map).isNotEmpty)
                   Card(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Padding(
-                      padding: const EdgeInsets.all(12.0),
+                      padding: const EdgeInsets.all(16.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -461,9 +538,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 // Consommation Card
                 if (data['consommation'] is Map && (data['consommation'] as Map).isNotEmpty)
                   Card(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Padding(
-                      padding: const EdgeInsets.all(12.0),
+                      padding: const EdgeInsets.all(16.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -669,101 +746,214 @@ class _ReportsScreenState extends State<ReportsScreen> {
       
       await showDialog(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Text(l10n.reportDetails),
-          content: SingleChildScrollView(
+        builder: (dialogContext) => Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 600,
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Date Card
-                Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Date', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 4),
-                        Text(DateFormat('yyyy-MM-dd').format(report.date)),
-                      ],
-                    ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Détails du rapport - Suivi Camion',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(dialogContext),
+                        padding: const EdgeInsets.all(6),
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
                   ),
                 ),
-                // Equipement Card
-                Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
+                const Divider(height: 1),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Equipement', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 4),
-                        Text('Opération: ${data['operationType'] ?? '-'}'),
-                      ],
-                    ),
-                  ),
-                ),
-                // Camions Card
-                Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Camions', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 4),
-                        if (truckData.isEmpty)
-                          const Text('Aucun camion ajouté.', style: TextStyle(color: Colors.grey)),
-                        if (truckData.isNotEmpty)
-                          ...truckData.map((truck) => Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Camion: ${truck['truckNumber'] ?? '-'}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                              Text('Chauffeur: ${truck['driver1'] ?? '-'}'),
-                              if (truck['counts'] != null && (truck['counts'] is List) && (truck['counts'] as List).isNotEmpty) ...[
-                                const SizedBox(height: 8),
-                                const Text('Voyages:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                ...List.generate((truck['counts'] as List).length, (index) {
-                                  final count = (truck['counts'] as List)[index];
-                                  return Padding(
-                                    padding: const EdgeInsets.only(left: 16, top: 4),
-                                    child: Row(
-                                      children: [
-                                        Text('v${index + 1}: '),
-                                        Text(count['time'] ?? '-'),
-                                        const SizedBox(width: 12),
-                                        const Text('|'),
-                                        const SizedBox(width: 12),
-                                        Text(count['equipment'] ?? '-'),
-                                      ],
-                                    ),
-                                  );
-                                }),
+                        // Date Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Date',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                Text('${report.date.day}/${report.date.month}/${report.date.year}'),
                               ],
-                              const Divider(),
-                            ],
-                          )),
-                      ],
-                    ),
-                  ),
-                ),
-                // Résumé Card
-                Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Résumé', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 4),
-                        Text('Total de voyages: ${allTrips.length}'),
-                        const SizedBox(height: 8),
-                        ...equipmentCounts.entries.map((e) => Text('Total pour ${e.key}: ${e.value}')),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Poste Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Poste',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                Text(data['poste'] ?? data['selectedPoste'] ?? '-'),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Equipement Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Equipement',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                Text('Opération: ${data['operationType'] ?? '-'}'),
+                                if (data['equipment'] != null) Text('Type: ${data['equipment']}'),
+                                if (data['selectedEquipment'] != null) Text('Type: ${data['selectedEquipment']}'),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Mine et Sortie Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Mine et Sortie',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                Text('Mine: ${data['mine'] ?? '-'}'),
+                                Text('Zone: ${data['zone'] ?? '-'}'),
+                                Text('Sortie: ${data['sortie'] ?? '-'}'),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Camions Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Camions',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                if (truckData.isEmpty)
+                                  const Text('Aucun camion ajouté.', style: TextStyle(color: Colors.grey)),
+                                if (truckData.isNotEmpty)
+                                  ...truckData.map((truck) => Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Camion ${truck['truckNumber']}',
+                                        style: Theme.of(context).textTheme.titleSmall,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text('Chauffeur: ${truck['driver1'] ?? '-'}'),
+                                      if (truck['counts'] != null && (truck['counts'] is List) && (truck['counts'] as List).isNotEmpty) ...[
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Voyages',
+                                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                            color: Colors.green[700],
+                                          ),
+                                        ),
+                                        ...List.generate((truck['counts'] as List).length, (index) {
+                                          final count = (truck['counts'] as List)[index];
+                                          return Padding(
+                                            padding: const EdgeInsets.only(left: 16, top: 4),
+                                            child: Row(
+                                              children: [
+                                                Text(
+                                                  'v${index + 1}: ',
+                                                  style: Theme.of(context).textTheme.bodyMedium,
+                                                ),
+                                                Text(
+                                                  count['time'] ?? '-',
+                                                  style: Theme.of(context).textTheme.bodyMedium,
+                                                ),
+                                                const SizedBox(width: 12),
+                                                const Text('|'),
+                                                const SizedBox(width: 12),
+                                                Text(
+                                                  count['equipment'] ?? '-',
+                                                  style: Theme.of(context).textTheme.bodyMedium,
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }),
+                                      ],
+                                      if (truck != truckData.last) const Divider(),
+                                    ],
+                                  )),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // Résumé Card
+                        Builder(
+                          builder: (context) {
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Card(
+                                color: Colors.grey[100],
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Résumé', style: TextStyle(fontWeight: FontWeight.bold)),
+                                      const SizedBox(height: 8),
+                                      Text('Total de voyages: ${allTrips.length}'),
+                                      const SizedBox(height: 8),
+                                      ...equipmentCounts.entries.map((e) => Text('Total pour ${e.key}: ${e.value}')),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -771,12 +961,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(l10n.close),
-            ),
-          ],
         ),
       );
       return;
@@ -1002,9 +1186,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
         if (data['unite'] != null) Text('Unité: ${data['unite']}'),
         if (data['indexCompteurs'] is List && (data['indexCompteurs'] as List).isNotEmpty)
           Card(
-            margin: const EdgeInsets.symmetric(vertical: 4),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1021,9 +1205,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
         if (data['selectedPoste'] != null) Text('Poste sélectionné: ${data['selectedPoste']}'),
         if (data['ventilation'] is List && (data['ventilation'] as List).isNotEmpty)
           Card(
-            margin: const EdgeInsets.symmetric(vertical: 4),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1039,9 +1223,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
         if (data['arretsExplication'] != null) Text('Explication Arrêts: ${data['arretsExplication']}'),
         if (data['exploitation'] is Map && (data['exploitation'] as Map).isNotEmpty)
           Card(
-            margin: const EdgeInsets.symmetric(vertical: 4),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1054,9 +1238,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
         if (data['bulls'] != null) Text('Bulls: ${data['bulls']}'),
         if (data['repartitionTravail'] is List && (data['repartitionTravail'] as List).isNotEmpty)
           Card(
-            margin: const EdgeInsets.symmetric(vertical: 4),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1071,9 +1255,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
         if (data['personnel'] is Map && (data['personnel'] as Map).isNotEmpty)
           Card(
-            margin: const EdgeInsets.symmetric(vertical: 4),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1087,9 +1271,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
         if (data['consommation'] is Map && (data['consommation'] as Map).isNotEmpty)
           Card(
-            margin: const EdgeInsets.symmetric(vertical: 4),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1445,8 +1629,39 @@ class _ReportsScreenState extends State<ReportsScreen> {
     
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.reports),
+        title: Text(_selectedPosteFilter != null 
+            ? '${l10n.reports} - $_selectedPosteFilter'
+            : l10n.reports),
         actions: [
+          // Poste Filter Dropdown
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            child: DropdownButton<String>(
+              value: _selectedPosteFilter,
+              hint: const Text('Tous les postes', style: TextStyle(color: Colors.white)),
+              dropdownColor: Theme.of(context).colorScheme.surface,
+              underline: Container(),
+              icon: const Icon(Icons.filter_list, color: Colors.white),
+              items: [
+                const DropdownMenuItem<String>(
+                  value: null,
+                  child: Text('Tous les postes'),
+                ),
+                ..._availablePostes.map((poste) => DropdownMenuItem<String>(
+                  value: poste,
+                  child: Text(poste),
+                )),
+              ],
+              onChanged: _onPosteFilterChanged,
+            ),
+          ),
+          // Clear filter button when filter is active
+          if (_selectedPosteFilter != null)
+            IconButton(
+              icon: const Icon(Icons.clear),
+              onPressed: () => _onPosteFilterChanged(null),
+              tooltip: 'Effacer le filtre',
+            ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadReports,
@@ -1456,7 +1671,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _reports.isEmpty
+          : _filteredReports.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -1464,112 +1679,147 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       const Icon(Icons.description_outlined, size: 64, color: Colors.grey),
                       const SizedBox(height: 16),
                       Text(
-                        l10n.noDataMessage,
+                        _selectedPosteFilter != null 
+                            ? 'Aucun rapport trouvé pour le poste $_selectedPosteFilter'
+                            : l10n.noDataMessage,
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
+                      if (_selectedPosteFilter != null) ...[
+                        const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () => _onPosteFilterChanged(null),
+                          child: const Text('Voir tous les rapports'),
+                        ),
+                      ],
                     ],
                   ),
                 )
-              : SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _reports.length,
-                    itemBuilder: (context, index) {
-                      final report = _reports[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: ListTile(
-                          title: Text(report.description),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Type: ${report.type}'),
-                              Text('Date: ${DateFormat('yyyy-MM-dd HH:mm').format(report.date)}'),
-                              Text('Group: ${report.group}'),
-                            ],
-                          ),
-                          trailing: PopupMenuButton<String>(
-                            icon: const Icon(Icons.more_horiz, size: 20),
-                            padding: EdgeInsets.zero,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+              : Column(
+                  children: [
+                    // Filter summary
+                    if (_selectedPosteFilter != null)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        color: Colors.blue[50],
+                        child: Row(
+                          children: [
+                            Icon(Icons.filter_list, color: Colors.blue[700], size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${_filteredReports.length} rapport${_filteredReports.length > 1 ? 's' : ''} trouvé${_filteredReports.length > 1 ? 's' : ''} pour le poste $_selectedPosteFilter',
+                              style: TextStyle(
+                                color: Colors.blue[700],
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                            position: PopupMenuPosition.under,
-                            itemBuilder: (BuildContext context) => [
-                              PopupMenuItem<String>(
-                                value: 'edit',
-                                height: 36,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
+                          ],
+                        ),
+                      ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _filteredReports.length,
+                          itemBuilder: (context, index) {
+                            final report = _filteredReports[index];
+                            return Card(
+                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              child: ListTile(
+                                title: Text(report.description),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Modifier',
-                                      style: TextStyle(
-                                        color: Theme.of(context).colorScheme.primary,
-                                        fontSize: 14,
-                                      ),
-                                    ),
+                                    Text('Type: ${report.type}'),
+                                    Text('Date: ${DateFormat('yyyy-MM-dd HH:mm').format(report.date)}'),
+                                    Text('Group: ${report.group}'),
                                   ],
                                 ),
-                              ),
-                              PopupMenuItem<String>(
-                                value: 'delete',
-                                height: 36,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Supprimer',
-                                      style: TextStyle(
-                                        color: Theme.of(context).colorScheme.error,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                            onSelected: (String value) {
-                              if (value == 'delete') {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: Text(l10n.delete),
-                                    content: const Text('Are you sure you want to delete this report?'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        child: Text(l10n.cancel),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.pop(context);
-                                          _deleteReport(report);
-                                        },
-                                        child: Text(l10n.delete),
-                                      ),
-                                    ],
+                                trailing: PopupMenuButton<String>(
+                                  icon: const Icon(Icons.more_horiz, size: 20),
+                                  padding: EdgeInsets.zero,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                );
-                              } else if (value == 'edit') {
-                                _editReport(report);
-                              }
-                            },
-                          ),
-                          onTap: () {
-                            _showReportDetails(report);
+                                  position: PopupMenuPosition.under,
+                                  itemBuilder: (BuildContext context) => [
+                                    PopupMenuItem<String>(
+                                      value: 'edit',
+                                      height: 36,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Modifier',
+                                            style: TextStyle(
+                                              color: Theme.of(context).colorScheme.primary,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    PopupMenuItem<String>(
+                                      value: 'delete',
+                                      height: 36,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Supprimer',
+                                            style: TextStyle(
+                                              color: Theme.of(context).colorScheme.error,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                  onSelected: (String value) {
+                                    if (value == 'delete') {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: Text(l10n.delete),
+                                          content: const Text('Are you sure you want to delete this report?'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context),
+                                              child: Text(l10n.cancel),
+                                            ),
+                                            TextButton(
+                                              onPressed: () {
+                                                Navigator.pop(context);
+                                                _deleteReport(report);
+                                              },
+                                              child: Text(l10n.delete),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    } else if (value == 'edit') {
+                                      _editReport(report);
+                                    }
+                                  },
+                                ),
+                                onTap: () {
+                                  _showReportDetails(report);
+                                },
+                              ),
+                            );
                           },
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    ),
+                  ],
                 ),
-    );
+              );
   }
-} 
+}
