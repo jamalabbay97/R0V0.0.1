@@ -1,10 +1,10 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'dart:math';
 import 'package:r0/models/report.dart';
 import 'package:r0/services/database_helper.dart';
 import 'package:r0/l10n/app_localizations.dart';
-import 'package:intl/intl.dart';
 
 enum Poste { premier, deuxieme, troisieme }
 enum Park { park1, park2, park3 }
@@ -210,7 +210,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
         description: 'Activity TNB - ${DateFormat('yyyy-MM-dd').format(_selectedDate)}',
         date: _selectedDate,
         group: 'MIB/U/E/I',
-        type: 'activity TNB',
+        type: 'Activity TNB',
         additionalData: {
           'stops': stops.map((stop) => {
             'id': stop.id,
@@ -654,147 +654,176 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
   void _showVerificationDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Vérification des données'),
-        content: SingleChildScrollView(
+      builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 600,
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Vérification des données',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(dialogContext),
+                      padding: const EdgeInsets.all(6),
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Résumé des données',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green[700],
+                      Card(
+                        margin: EdgeInsets.zero,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Résumé des données',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green[700],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              _buildSummaryRow('T H.A:', formatMinutesToHoursMinutes(totalDowntime)),
+                              _buildSummaryRow('T H.M:', formatMinutesToHoursMinutes(operatingTime)),
+                              _buildSummaryRow('T H.V:', formatMinutesToHoursMinutes(totalVibratorMinutes)),
+                              _buildSummaryRow('T H.L:', formatMinutesToHoursMinutes(totalLiaisonMinutes)),
+                              const SizedBox(height: 8),
+                              _buildSummaryRow('T Nr.A:', stops.length.toString()),
+                              _buildSummaryRow('T Nr.V:', vibratorCounters.length.toString()),
+                              _buildSummaryRow('T Nr.L:', liaisonCounters.length.toString()),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      _buildSummaryRow('T H.A:', formatMinutesToHoursMinutes(totalDowntime)),
-                      _buildSummaryRow('T H.M:', formatMinutesToHoursMinutes(operatingTime)),
-                      _buildSummaryRow('T H.V:', formatMinutesToHoursMinutes(totalVibratorMinutes)),
-                      _buildSummaryRow('T H.L:', formatMinutesToHoursMinutes(totalLiaisonMinutes)),
-                      const SizedBox(height: 8),
-                      _buildSummaryRow('T Nr.A:', stops.length.toString()),
-                      _buildSummaryRow('T Nr.V:', vibratorCounters.length.toString()),
-                      _buildSummaryRow('T Nr.L:', liaisonCounters.length.toString()),
+                      if (stops.isNotEmpty)
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Arrêts', style: TextStyle(fontWeight: FontWeight.bold)),
+                                ...stops.map((stop) => Padding(
+                                  padding: const EdgeInsets.only(left: 16, top: 4),
+                                  child: Text('${stop.duration.isNotEmpty ? stop.duration : '-'} - ${stop.nature.isNotEmpty ? stop.nature : '-'}'),
+                                )),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (vibratorCounters.isNotEmpty)
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Compteurs Vibreurs', style: TextStyle(fontWeight: FontWeight.bold)),
+                                ...vibratorCounters.map((counter) => Padding(
+                                  padding: const EdgeInsets.only(left: 16, top: 4),
+                                  child: Text('Poste: \t${counter.poste != null ? posteToString(counter.poste) : '-'}, Début: ${counter.start.isNotEmpty ? counter.start : '-'}, Fin: ${counter.end.isNotEmpty ? counter.end : '-'}'),
+                                )),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (liaisonCounters.isNotEmpty)
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Compteurs Liaison', style: TextStyle(fontWeight: FontWeight.bold)),
+                                ...liaisonCounters.map((counter) => Padding(
+                                  padding: const EdgeInsets.only(left: 16, top: 4),
+                                  child: Text('Poste: \t${counter.poste != null ? posteToString(counter.poste) : '-'}, Début: ${counter.start.isNotEmpty ? counter.start : '-'}, Fin: ${counter.end.isNotEmpty ? counter.end : '-'}'),
+                                )),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (stockEntries.isNotEmpty)
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Stocks', style: TextStyle(fontWeight: FontWeight.bold)),
+                                ...stockEntries.map((entry) => Padding(
+                                  padding: const EdgeInsets.only(left: 16, top: 4),
+                                  child: Text('Poste: 	${entry.poste != null ? posteToString(entry.poste) : '-'}, Parc: ${entry.park != null ? parkToString(entry.park) : '-'}, Type: ${entry.type != null ? stockTypeToString(entry.type) : '-'}, Qté: ${entry.quantity.isNotEmpty ? entry.quantity : '-'}, Début: ${entry.startTime.isNotEmpty ? entry.startTime : '-'}'),
+                                )),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (hasVibratorErrors || hasLiaisonErrors || hasStockErrors) ...[
+                        const SizedBox(height: 16),
+                        Card(
+                          color: Colors.red[50],
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Erreurs détectées',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red[900],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                if (hasVibratorErrors)
+                                  Text('• Erreurs dans les compteurs vibreurs', style: TextStyle(color: Colors.red[900])),
+                                if (hasLiaisonErrors)
+                                  Text('• Erreurs dans les compteurs liaison', style: TextStyle(color: Colors.red[900])),
+                                if (hasStockErrors)
+                                  Text('• Erreurs dans les entrées stock', style: TextStyle(color: Colors.red[900])),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
               ),
-              if (stops.isNotEmpty)
-                Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Arrêts', style: TextStyle(fontWeight: FontWeight.bold)),
-                        ...stops.map((stop) => Padding(
-                          padding: const EdgeInsets.only(left: 16, top: 4),
-                          child: Text('${stop.duration.isNotEmpty ? stop.duration : '-'} - ${stop.nature.isNotEmpty ? stop.nature : '-'}'),
-                        )),
-                      ],
-                    ),
-                  ),
-                ),
-              if (vibratorCounters.isNotEmpty)
-                Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Compteurs Vibreurs', style: TextStyle(fontWeight: FontWeight.bold)),
-                        ...vibratorCounters.map((counter) => Padding(
-                          padding: const EdgeInsets.only(left: 16, top: 4),
-                          child: Text('Poste: 	${counter.poste != null ? posteToString(counter.poste) : '-'}, Début: ${counter.start.isNotEmpty ? counter.start : '-'}, Fin: ${counter.end.isNotEmpty ? counter.end : '-'}'),
-                        )),
-                      ],
-                    ),
-                  ),
-                ),
-              if (liaisonCounters.isNotEmpty)
-                Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Compteurs Liaison', style: TextStyle(fontWeight: FontWeight.bold)),
-                        ...liaisonCounters.map((counter) => Padding(
-                          padding: const EdgeInsets.only(left: 16, top: 4),
-                          child: Text('Poste: 	${counter.poste != null ? posteToString(counter.poste) : '-'}, Début: ${counter.start.isNotEmpty ? counter.start : '-'}, Fin: ${counter.end.isNotEmpty ? counter.end : '-'}'),
-                        )),
-                      ],
-                    ),
-                  ),
-                ),
-              if (stockEntries.isNotEmpty)
-                Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Stocks', style: TextStyle(fontWeight: FontWeight.bold)),
-                        ...stockEntries.map((entry) => Padding(
-                          padding: const EdgeInsets.only(left: 16, top: 4),
-                          child: Text('Poste: ${entry.poste != null ? posteToString(entry.poste) : '-'}, Parc: ${entry.park != null ? parkToString(entry.park) : '-'}, Type: ${entry.type != null ? stockTypeToString(entry.type) : '-'}, Qté: ${entry.quantity.isNotEmpty ? entry.quantity : '-'}, Début: ${entry.startTime.isNotEmpty ? entry.startTime : '-'}'),
-                        )),
-                      ],
-                    ),
-                  ),
-                ),
-              if (hasVibratorErrors || hasLiaisonErrors || hasStockErrors) ...[
-                const SizedBox(height: 16),
-                Card(
-                  color: Colors.red[50],
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Erreurs détectées',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red[900],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        if (hasVibratorErrors)
-                          Text('• Erreurs dans les compteurs vibreurs', style: TextStyle(color: Colors.red[900])),
-                        if (hasLiaisonErrors)
-                          Text('• Erreurs dans les compteurs liaison', style: TextStyle(color: Colors.red[900])),
-                        if (hasStockErrors)
-                          Text('• Erreurs dans les entrées stock', style: TextStyle(color: Colors.red[900])),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Fermer'),
-          ),
-        ],
       ),
     );
   }

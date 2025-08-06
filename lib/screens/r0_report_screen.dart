@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:r0/services/database_helper.dart';
 import 'package:r0/models/report.dart';
 // import 'package:r0/l10n/app_localizations.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 
 // Data models
@@ -57,7 +56,6 @@ class R0ReportFormData {
   String selectedMine = '';
   String selectedZone = '';
   String selectedSortie = '';
-  String rapportNo = '';
   String unite = '';
   List<IndexCompteurPoste> indexCompteurs = List.generate(3, (_) => IndexCompteurPoste());
   List<String> shifts = List.generate(3, (_) => '');
@@ -638,10 +636,10 @@ static const Map<String, List<String>> machinesData = {
 
     try {
       final report = Report(
-        description: 'Rapport R0 - ${DateFormat('yyyy-MM-dd').format(_selectedDate)}',
+        description: 'Rapport R0 - ${formData.selectedPoste}',
         date: _selectedDate,
         group: 'R0',
-        type: 'R0',
+        type: formData.selectedModel,
         additionalData: _serializeFormData(),
       );
 
@@ -682,8 +680,7 @@ static const Map<String, List<String>> machinesData = {
       'mine': formData.selectedMine,
       'zone': formData.selectedZone,
       'sortie': formData.selectedSortie,
-      'rapportNo': formData.rapportNo,
-      'unite': formData.unite,
+      'poste': formData.selectedPoste,
       'indexCompteurs': formData.indexCompteurs.map((ic) => {
         'duree': ic.duree,
         'note': ic.note,

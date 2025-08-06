@@ -266,8 +266,8 @@ class DailyReportState extends State<DailyReport> {
   Future<void> _saveReport() async {
     try {
       final report = Report(
-        description: 'Daily Report - ${DateFormat('yyyy-MM-dd').format(DateTime.now())}',
-        date: DateTime.now(),
+        description: 'Daily TSUD - ${DateFormat('yyyy-MM-dd').format(_selectedDate)}',
+        date: _selectedDate,
         group: 'Daily',
         type: 'daily TSUD',
         additionalData: {

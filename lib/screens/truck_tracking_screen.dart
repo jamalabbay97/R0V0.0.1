@@ -945,10 +945,10 @@ class CamionReportState extends State<CamionReport> {
 
     try {
       final report = Report(
-        description: 'Suivi des camions',
+        description: 'Suivi des camions - ${_selectedEquipment ?? ''}',
         date: _selectedDate,
-        group: 'Truck Tracking',
-        type: 'Suivi Camion',
+        group: posteToString(_selectedPoste),
+        type: _selectedEquipment ?? '',
         additionalData: {
           'truckData': truckData,
           'poste': _selectedPoste != null ? posteToString(_selectedPoste) : null,

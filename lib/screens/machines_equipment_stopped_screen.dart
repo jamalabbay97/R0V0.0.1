@@ -101,10 +101,9 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
 
     try {
       final report = Report(
-        id: DateTime.now().millisecondsSinceEpoch,
+        description: 'Machine/Engin Arrêtés',
         date: _selectedDate,
         type: 'Machine/Engin Arrêtés',
-        description: '', // No description field in the UI
         group: 'Machines Equipment',
         additionalData: {
           'equipmentList': _equipmentList,
