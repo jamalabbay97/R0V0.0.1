@@ -1230,12 +1230,29 @@ class _ReportsScreenState extends State<ReportsScreen> {
     // ignore: avoid_print
     print('R0 additionalData: $data');
     if (data.isEmpty) return const Text('Aucune donnée R0 disponible.');
-    
+
+    // Helper to get poste from any possible key
+    final poste = data['selectedPoste'] ?? data['poste'] ?? data['posteSelected'];
+    final equipment = data['equipment'] ?? data['selectedEquipment'];
+    final operationType = data['operationType'] ?? data['operation_type'];
+    final production = data['production'] ?? data['prod'];
+
+    // Collect all keys that are handled by cards below
+    final Set<String> handledKeys = {
+      'selectedPoste', 'poste', 'posteSelected',
+      'mine', 'zone', 'sortie',
+      'equipment', 'selectedEquipment',
+      'operationType', 'operation_type',
+      'production', 'prod',
+      'indexCompteurs', 'shifts', 'ventilation', 'arretsExplication',
+      'exploitation', 'bulls', 'repartitionTravail', 'personnel', 'consommation',
+    };
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Info OIB/EE Card
-        if (data['selectedPoste'] != null || data['mine'] != null || data['zone'] != null || data['sortie'] != null || data['equipment'] != null || data['operationType'] != null || data['production'] != null)
+        if (poste != null || data['mine'] != null || data['zone'] != null || data['sortie'] != null || equipment != null || operationType != null || production != null)
           Card(
             margin: const EdgeInsets.symmetric(vertical: 4),
             child: Padding(
@@ -1245,13 +1262,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 children: [
                   const Text('Info OIB/EE', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const Divider(height: 16),
-                  if (data['selectedPoste'] != null) Text('Poste: ${data['selectedPoste']}'),
-                  if (data['equipment'] != null) Text('Équipement: ${data['equipment']}'),
+                  if (poste != null) Text('Poste: $poste'),
+                  if (equipment != null) Text('Équipement: $equipment'),
                   if (data['mine'] != null) Text('Mine: ${data['mine']}'),
                   if (data['zone'] != null) Text('Zone: ${data['zone']}'),
                   if (data['sortie'] != null) Text('Sortie: ${data['sortie']}'),
-                  if (data['operationType'] != null) Text('Type d\'opération: ${data['operationType']}'),
-                  if (data['production'] != null) Text('Production: ${data['production']}'),
+                  if (operationType != null) Text('Type d\'opération: $operationType'),
+                  if (production != null) Text('Production: $production'),
                 ],
               ),
             ),
@@ -1269,7 +1286,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   const Divider(height: 16),
                   ...List.from(data['indexCompteurs']).map((ic) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Text('• Début: ${ic['duree'] ?? '-'}, Fin: ${ic['note'] ?? '-'}'),
+                    child: Text('• Début: 	${ic['duree'] ?? '-'}, Fin: ${ic['note'] ?? '-'}'),
                   )),
                 ],
               ),
@@ -1413,9 +1430,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
           ),
         // Fallback: show any unknown keys in a card layout
-        ...data.entries.where((entry) => ![
-           'mine', 'zone', 'sortie', 'unite', 'indexCompteurs', 'shifts', 'selectedPoste', 'ventilation', 'arretsExplication', 'exploitation', 'bulls', 'repartitionTravail', 'personnel', 'consommation', 'equipment', 'operationType', 'production'
-        ].contains(entry.key)).map((entry) =>
+        ...data.entries.where((entry) => !handledKeys.contains(entry.key)).map((entry) =>
           Card(
             margin: const EdgeInsets.symmetric(vertical: 4),
             child: Padding(
@@ -1432,7 +1447,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
         ),
         // Show message if no data is available
-        if ((data['selectedPoste'] == null) &&
+        if ((poste == null) &&
             (data['mine'] == null) &&
             (data['zone'] == null) &&
             (data['sortie'] == null) &&
@@ -1445,9 +1460,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ((data['repartitionTravail'] == null) || (data['repartitionTravail'] is List && (data['repartitionTravail'] as List).isEmpty)) &&
             ((data['personnel'] == null) || (data['personnel'] is Map && (data['personnel'] as Map).isEmpty)) &&
             ((data['consommation'] == null) || (data['consommation'] is Map && (data['consommation'] as Map).isEmpty)) &&
-            (data['equipment'] == null) &&
-            (data['operationType'] == null) &&
-            (data['production'] == null))
+            (equipment == null) &&
+            (operationType == null) &&
+            (production == null))
           const Card(
             margin: EdgeInsets.symmetric(vertical: 4),
             child: Padding(
@@ -1475,7 +1490,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
       int minutes = totalMinutes % 60;
       return "${hours}h ${minutes}m";
     }
-const
     final module1Stops = (data['module1Stops'] is List) ? List.from(data['module1Stops']) : [];
     final module2Stops = (data['module2Stops'] is List) ? List.from(data['module2Stops']) : [];
 
