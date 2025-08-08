@@ -189,7 +189,7 @@
     },
     {
       "name": "flutter_plugin_android_lifecycle",
-      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/flutter_plugin_android_lifecycle-2.0.28",
+      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/flutter_plugin_android_lifecycle-2.0.29",
       "packageUri": "lib/",
       "languageVersion": "3.6"
     },
@@ -231,19 +231,19 @@
     },
     {
       "name": "google_maps_flutter_android",
-      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/google_maps_flutter_android-2.16.2",
+      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/google_maps_flutter_android-2.18.1",
       "packageUri": "lib/",
       "languageVersion": "3.6"
     },
     {
       "name": "google_maps_flutter_ios",
-      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/google_maps_flutter_ios-2.15.4",
+      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/google_maps_flutter_ios-2.15.5",
       "packageUri": "lib/",
       "languageVersion": "3.6"
     },
     {
       "name": "google_maps_flutter_platform_interface",
-      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.12.1",
+      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.13.0",
       "packageUri": "lib/",
       "languageVersion": "3.6"
     },
@@ -261,7 +261,7 @@
     },
     {
       "name": "http",
-      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/http-1.4.0",
+      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/http-1.5.0",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
@@ -327,7 +327,7 @@
     },
     {
       "name": "logger",
-      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/logger-2.6.0",
+      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/logger-2.6.1",
       "packageUri": "lib/",
       "languageVersion": "2.17"
     },
@@ -447,7 +447,7 @@
     },
     {
       "name": "shared_preferences_android",
-      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/shared_preferences_android-2.4.10",
+      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/shared_preferences_android-2.4.11",
       "packageUri": "lib/",
       "languageVersion": "3.6"
     },
@@ -519,9 +519,9 @@
     },
     {
       "name": "sqflite_common",
-      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/sqflite_common-2.5.5",
+      "rootUri": "file:///home/brahim/.pub-cache/hosted/pub.dev/sqflite_common-2.5.6",
       "packageUri": "lib/",
-      "languageVersion": "3.7"
+      "languageVersion": "3.8"
     },
     {
       "name": "sqflite_darwin",

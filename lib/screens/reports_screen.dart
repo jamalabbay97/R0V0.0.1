@@ -476,9 +476,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 _buildSummaryItem('Mine', data['mine'] ?? ''),
                                 _buildSummaryItem('Zone', data['zone'] ?? ''),
                                 _buildSummaryItem('Sortie', data['sortie'] ?? ''),
-                                _buildSummaryItem('Catégorie', data['selectedCategory'] ?? ''),
-                                _buildSummaryItem('Type', data['selectedType'] ?? ''),
-                                _buildSummaryItem('Modèle', data['selectedModel'] ?? ''),
+                                _buildSummaryItem('Catégorie', data['selectedCategory'] ?? data['Category'] ?? ''),
+                                _buildSummaryItem('Type', data['selectedType'] ?? data['Type'] ?? ''),
+                                _buildSummaryItem('Modèle', data['selectedModel'] ?? data['Model'] ?? ''),
                                 _buildSummaryItem('Poste', data['selectedPoste'] ?? data['poste'] ?? ''),
                               ],
                             ),
@@ -498,25 +498,34 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   style: Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
-                                if (data['indexCompteurs'] is List && (data['indexCompteurs'] as List).isNotEmpty)
-                                  ...List.from(data['indexCompteurs']).asMap().entries.map((entry) {
-                                    final index = entry.key;
-                                    final compteur = entry.value;
-                                    if ((compteur['duree'] ?? '').isEmpty && (compteur['note'] ?? '').isEmpty) return const SizedBox.shrink();
-                                    return Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          index == 0 ? '3ème Poste' : index == 1 ? '1er Poste' : '2ème Poste',
-                                          style: Theme.of(context).textTheme.titleSmall,
-                                        ),
-                                        const SizedBox(height: 8),
-                                        _buildInfoRow('Début', compteur['duree'] ?? ''),
-                                        _buildInfoRow('Fin', compteur['note'] ?? ''),
-                                        const Divider(height: 16),
-                                      ],
-                                    );
-                                  })
+                                if (data['Compteurs'] is List && (data['Compteurs'] as List).isNotEmpty)
+                                  ...List.from(data['Compteurs'])
+                                      .asMap()
+                                      .entries
+                                      .where((entry) {
+                                        final compteur = entry.value;
+                                        return (compteur['duree'] ?? compteur['Début'] ?? '').isNotEmpty || 
+                                               (compteur['note'] ?? compteur['Fin'] ?? '').isNotEmpty;
+                                      })
+                                      .map((entry) {
+                                        final index = entry.key;
+                                        final compteur = entry.value;
+                                        final duree = compteur['duree'] ?? compteur['Début'] ?? '';
+                                        final note = compteur['note'] ?? compteur['Fin'] ?? '';
+                                        return Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              index == 0 ? '3ème Poste' : index == 1 ? '1er Poste' : '2ème Poste',
+                                              style: Theme.of(context).textTheme.titleSmall,
+                                            ),
+                                            const SizedBox(height: 8),
+                                            _buildInfoRow('Début', duree),
+                                            _buildInfoRow('Fin', note),
+                                            const Divider(height: 16),
+                                          ],
+                                        );
+                                      })
                                 else
                                   const Text('Aucun compteur ajouté.'),
                               ],
@@ -535,18 +544,39 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 const Text('Arrêts', style: TextStyle(fontWeight: FontWeight.bold)),
                                 const Divider(height: 16),
                                 if (data['ventilation'] is List && (data['ventilation'] as List).isNotEmpty)
-                                  ...List.from(data['ventilation']).map((v) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 12.0),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('Type: ${v['label'] ?? ''}', style: Theme.of(context).textTheme.titleSmall),
-                                        _buildInfoRow('Début', v['duree'] ?? ''),
-                                        _buildInfoRow('Fin', v['note'] ?? ''),
-                                        const Divider(height: 12),
-                                      ],
-                                    ),
-                                  ))
+                                  ...List.from(data['ventilation'])
+                                      .where((v) => (v['label'] ?? v['Arret'] ?? '').isNotEmpty || 
+                                                   (v['duree'] ?? v['Début'] ?? '').isNotEmpty || 
+                                                   (v['note'] ?? v['Fin'] ?? '').isNotEmpty)
+                                      .map((v) => Padding(
+                                        padding: const EdgeInsets.only(bottom: 12.0),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Type: ${v['label'] ?? v['Arret'] ?? ''}', style: Theme.of(context).textTheme.titleSmall),
+                                            _buildInfoRow('Début', v['duree'] ?? v['Début'] ?? ''),
+                                            _buildInfoRow('Fin', v['note'] ?? v['Fin'] ?? ''),
+                                            const Divider(height: 12),
+                                          ],
+                                        ),
+                                      ))
+                                else if (data['Arrets'] is List && (data['Arrets'] as List).isNotEmpty)
+                                  ...List.from(data['Arrets'])
+                                      .where((v) => (v['Arret'] ?? '').isNotEmpty || 
+                                                   (v['Début'] ?? '').isNotEmpty || 
+                                                   (v['Fin'] ?? '').isNotEmpty)
+                                      .map((v) => Padding(
+                                        padding: const EdgeInsets.only(bottom: 12.0),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Type: ${v['Arret'] ?? ''}', style: Theme.of(context).textTheme.titleSmall),
+                                            _buildInfoRow('Début', v['Début'] ?? ''),
+                                            _buildInfoRow('Fin', v['Fin'] ?? ''),
+                                            const Divider(height: 12),
+                                          ],
+                                        ),
+                                      ))
                                 else
                                   const Text('Aucun arrêt ajouté.'),
                               ],
@@ -567,7 +597,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 _buildInfoRow('H.M', data['exploitation']?['heuresBrutes'] ?? ''),
                                 _buildInfoRow('H.A', data['exploitation']?['heuresArrets'] ?? ''),
                                 _buildInfoRow('Tonnage', data['exploitation']?['tonnage'] ?? ''),
-                                _buildInfoRow('Rendement', data['exploitation']?['rendement'] ?? ''),
+                                _buildInfoRow('Rendeme', data['exploitation']?['rendement'] ?? ''),
                               ],
                             ),
                           ),
@@ -583,24 +613,54 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               children: [
                                 const Text('Répartition', style: TextStyle(fontWeight: FontWeight.bold)),
                                 const Divider(height: 16),
-                                if (data['repartitionTravail'] is List && (data['repartitionTravail'] as List).isNotEmpty)
-                                  ...List.from(data['repartitionTravail']).asMap().entries.map((entry) {
-                                    final index = entry.key;
-                                    final r = entry.value;
-                                    if ((r['chantier'] ?? '').isEmpty && (r['temps'] ?? '').isEmpty && (r['imputation'] ?? '').isEmpty) return const SizedBox.shrink();
-                                    return Padding(
-                                      padding: const EdgeInsets.only(bottom: 8.0),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text('Chantier: ${r['chantier'] ?? ''}'),
-                                          Text('Temps: ${r['temps'] ?? ''}'),
-                                          Text('Imputation: ${r['imputation'] ?? ''}'),
-                                          if (index < (data['repartitionTravail'] as List).length - 1) const Divider(height: 12),
-                                        ],
-                                      ),
-                                    );
-                                  })
+                                if (data['Répartition'] is List && (data['Répartition'] as List).isNotEmpty)
+                                  ...List.from(data['Répartition'])
+                                      .asMap()
+                                      .entries
+                                      .where((entry) {
+                                        final r = entry.value;
+                                        return (r['chantier'] ?? '').isNotEmpty || (r['temps'] ?? '').isNotEmpty || (r['imputation'] ?? '').isNotEmpty;
+                                      })
+                                      .map((entry) {
+                                        final index = entry.key;
+                                        final r = entry.value;
+                                        return Padding(
+                                          padding: const EdgeInsets.only(bottom: 8.0),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text('Chantier: ${r['chantier'] ?? ''}'),
+                                              Text('Temps: ${r['temps'] ?? ''}'),
+                                              Text('Imputation: ${r['imputation'] ?? ''}'),
+                                              if (index < (data['Répartition'] as List).length - 1) const Divider(height: 12),
+                                            ],
+                                          ),
+                                        );
+                                      })
+                                else if (data['Répartition Travail'] is List && (data['Répartition Travail'] as List).isNotEmpty)
+                                  ...List.from(data['Répartition Travail'])
+                                      .asMap()
+                                      .entries
+                                      .where((entry) {
+                                        final r = entry.value;
+                                        return (r['Chantier'] ?? '').isNotEmpty || (r['temps'] ?? '').isNotEmpty || (r['imputation'] ?? '').isNotEmpty;
+                                      })
+                                      .map((entry) {
+                                        final index = entry.key;
+                                        final r = entry.value;
+                                        return Padding(
+                                          padding: const EdgeInsets.only(bottom: 8.0),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text('Chantier: ${r['Chantier'] ?? ''}'),
+                                              Text('Temps: ${r['temps'] ?? ''}'),
+                                              Text('Imputation: ${r['imputation'] ?? ''}'),
+                                              if (index < (data['Répartition Travail'] as List).length - 1) const Divider(height: 12),
+                                            ],
+                                          ),
+                                        );
+                                      })
                                 else
                                   const Text('Aucune répartition ajoutée.'),
                               ],
@@ -618,7 +678,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               children: [
                                 const Text('Personnel', style: TextStyle(fontWeight: FontWeight.bold)),
                                 const Divider(height: 16),
-                                _buildInfoRow('Conducteur', data['personnel']?['conducteur'] ?? ''),
+                                _buildInfoRow('Conductr', data['personnel']?['conducteur'] ?? ''),
                                 _buildInfoRow('Graisseur', data['personnel']?['graisseur'] ?? ''),
                                 _buildInfoRow('Matricules', data['personnel']?['matricules'] ?? ''),
                               ],
