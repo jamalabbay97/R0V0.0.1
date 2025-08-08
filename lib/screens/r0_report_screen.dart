@@ -52,13 +52,10 @@ class MineData {
 }
 
 class R0ReportFormData {
-  String entree = '';
   String selectedMine = '';
   String selectedZone = '';
   String selectedSortie = '';
-  String unite = '';
   List<IndexCompteurPoste> indexCompteurs = List.generate(3, (_) => IndexCompteurPoste());
-  List<String> shifts = List.generate(3, (_) => '');
   String selectedPoste = '';
   List<VentilationItem> ventilation = [];
   String arretsExplication = '';
@@ -69,7 +66,6 @@ class R0ReportFormData {
     'tonnage': '',
     'rendement': '',
   };
-  List<String> bulls = List.generate(3, (_) => '');
   List<RepartitionItem> repartitionTravail = List.generate(3, (_) => RepartitionItem());
   PersonnelItem personnel = PersonnelItem();
   ConsommationItem consommation = ConsommationItem();
@@ -676,16 +672,17 @@ static const Map<String, List<String>> machinesData = {
 
   Map<String, dynamic> _serializeFormData() {
     return {
-      'entree': formData.entree,
       'mine': formData.selectedMine,
       'zone': formData.selectedZone,
       'sortie': formData.selectedSortie,
+      'selectedCategory': formData.selectedCategory,
+      'selectedType': formData.selectedType,
+      'selectedModel': formData.selectedModel,
       'poste': formData.selectedPoste,
       'indexCompteurs': formData.indexCompteurs.map((ic) => {
         'duree': ic.duree,
         'note': ic.note,
       }).toList(),
-      'shifts': formData.shifts,
       'selectedPoste': formData.selectedPoste,
       'ventilation': formData.ventilation.map((v) => {
         'code': v.code,
@@ -695,7 +692,6 @@ static const Map<String, List<String>> machinesData = {
       }).toList(),
       'arretsExplication': formData.arretsExplication,
       'exploitation': formData.exploitation,
-      'bulls': formData.bulls,
       'repartitionTravail': formData.repartitionTravail.map((r) => {
         'chantier': r.chantier,
         'temps': r.temps,

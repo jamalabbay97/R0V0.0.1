@@ -406,42 +406,270 @@ class _ReportsScreenState extends State<ReportsScreen> {
     // Special handling for R0 report (case-insensitive, contains)
     if (typeLower == 'r0' || typeLower.contains('r0')) {
       final data = report.additionalData ?? {};
+      // Debug: print the actual data for R0 reports
+      if (kDebugMode) {
+        debugPrint('R0 Report Data: $data');
+        debugPrint('R0 Report Data Keys: ${data.keys.toList()}');
+        debugPrint('R0 Report Mine: ${data['mine']}');
+        debugPrint('R0 Report Zone: ${data['zone']}');
+        debugPrint('R0 Report Poste: ${data['selectedPoste']}');
+        debugPrint('R0 Report Category: ${data['selectedCategory']}');
+        debugPrint('R0 Report Type: ${data['selectedType']}');
+        debugPrint('R0 Report Model: ${data['selectedModel']}');
+      }
       await showDialog(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Text(l10n.reportDetails),
-          content: SingleChildScrollView(
+        builder: (dialogContext) => Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 600,
+              maxHeight: MediaQuery.of(context).size.height * 0.6,
+            ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Date Card
-                Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(14, 10, 6, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Vérification du Rapport R0',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Date', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 4),
-                        Text(DateFormat('yyyy-MM-dd').format(report.date)),
+                        // Date Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: _buildSummaryItem(
+                              'Date',
+                              '${report.date.day}/${report.date.month}/${report.date.year}',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Info OIB/EE Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Info OIB/EE', style: TextStyle(fontWeight: FontWeight.bold)),
+                                const Divider(height: 16),
+                                _buildSummaryItem('Mine', data['mine'] ?? ''),
+                                _buildSummaryItem('Zone', data['zone'] ?? ''),
+                                _buildSummaryItem('Sortie', data['sortie'] ?? ''),
+                                _buildSummaryItem('Catégorie', data['selectedCategory'] ?? ''),
+                                _buildSummaryItem('Type', data['selectedType'] ?? ''),
+                                _buildSummaryItem('Modèle', data['selectedModel'] ?? ''),
+                                _buildSummaryItem('Poste', data['selectedPoste'] ?? data['poste'] ?? ''),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Compteurs Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Compteurs',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                if (data['indexCompteurs'] is List && (data['indexCompteurs'] as List).isNotEmpty)
+                                  ...List.from(data['indexCompteurs']).asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final compteur = entry.value;
+                                    if ((compteur['duree'] ?? '').isEmpty && (compteur['note'] ?? '').isEmpty) return const SizedBox.shrink();
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          index == 0 ? '3ème Poste' : index == 1 ? '1er Poste' : '2ème Poste',
+                                          style: Theme.of(context).textTheme.titleSmall,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        _buildInfoRow('Début', compteur['duree'] ?? ''),
+                                        _buildInfoRow('Fin', compteur['note'] ?? ''),
+                                        const Divider(height: 16),
+                                      ],
+                                    );
+                                  })
+                                else
+                                  const Text('Aucun compteur ajouté.'),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Arrêts Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Arrêts', style: TextStyle(fontWeight: FontWeight.bold)),
+                                const Divider(height: 16),
+                                if (data['ventilation'] is List && (data['ventilation'] as List).isNotEmpty)
+                                  ...List.from(data['ventilation']).map((v) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 12.0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Type: ${v['label'] ?? ''}', style: Theme.of(context).textTheme.titleSmall),
+                                        _buildInfoRow('Début', v['duree'] ?? ''),
+                                        _buildInfoRow('Fin', v['note'] ?? ''),
+                                        const Divider(height: 12),
+                                      ],
+                                    ),
+                                  ))
+                                else
+                                  const Text('Aucun arrêt ajouté.'),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Exploitation Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Exploitation', style: TextStyle(fontWeight: FontWeight.bold)),
+                                const Divider(height: 16),
+                                _buildInfoRow('H.M', data['exploitation']?['heuresBrutes'] ?? ''),
+                                _buildInfoRow('H.A', data['exploitation']?['heuresArrets'] ?? ''),
+                                _buildInfoRow('Tonnage', data['exploitation']?['tonnage'] ?? ''),
+                                _buildInfoRow('Rendement', data['exploitation']?['rendement'] ?? ''),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Répartition Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Répartition', style: TextStyle(fontWeight: FontWeight.bold)),
+                                const Divider(height: 16),
+                                if (data['repartitionTravail'] is List && (data['repartitionTravail'] as List).isNotEmpty)
+                                  ...List.from(data['repartitionTravail']).asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final r = entry.value;
+                                    if ((r['chantier'] ?? '').isEmpty && (r['temps'] ?? '').isEmpty && (r['imputation'] ?? '').isEmpty) return const SizedBox.shrink();
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 8.0),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('Chantier: ${r['chantier'] ?? ''}'),
+                                          Text('Temps: ${r['temps'] ?? ''}'),
+                                          Text('Imputation: ${r['imputation'] ?? ''}'),
+                                          if (index < (data['repartitionTravail'] as List).length - 1) const Divider(height: 12),
+                                        ],
+                                      ),
+                                    );
+                                  })
+                                else
+                                  const Text('Aucune répartition ajoutée.'),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Personnel Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Personnel', style: TextStyle(fontWeight: FontWeight.bold)),
+                                const Divider(height: 16),
+                                _buildInfoRow('Conducteur', data['personnel']?['conducteur'] ?? ''),
+                                _buildInfoRow('Graisseur', data['personnel']?['graisseur'] ?? ''),
+                                _buildInfoRow('Matricules', data['personnel']?['matricules'] ?? ''),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Consommation Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Consommation',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                _buildInfoRow('Tricone', data['consommation']?['tricone'] ?? ''),
+                                _buildInfoRow('Gasoil', data['consommation']?['gasoil'] ?? ''),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (data['arretsExplication'] != null && data['arretsExplication'].toString().isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          // Arrets Explication Section
+                          Card(
+                            margin: EdgeInsets.zero,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Explication Arrêts', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  const Divider(height: 16),
+                                  Text(data['arretsExplication'].toString()),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                // Additional Data using the proper method
-                _buildR0ReportAdditionalData(data),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(l10n.close),
-            ),
-          ],
         ),
       );
       return;
@@ -1061,8 +1289,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     switch (report.type) {
       case 'Activity TNB':
         return _buildActivityReportAdditionalData(data);
-      case 'R0':
-        return _buildR0ReportAdditionalData(data);
       case 'daily TSUD':
         return _buildDailyReportAdditionalData(data);
       case 'Machine/Engin Arrêtés':
@@ -1225,259 +1451,45 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _buildR0ReportAdditionalData(Map<String, dynamic> data) {
-    // Debug: print the raw additionalData to console
-    // ignore: avoid_print
-    print('R0 additionalData: $data');
-    if (data.isEmpty) return const Text('Aucune donnée R0 disponible.');
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          Expanded(
+            child: Text(value.isEmpty ? '-' : value),
+          ),
+        ],
+      ),
+    );
+  }
 
-    // Helper to get poste from any possible key
-    final poste = data['selectedPoste'] ?? data['poste'] ?? data['posteSelected'];
-    final equipment = data['equipment'] ?? data['selectedEquipment'];
-    final operationType = data['operationType'] ?? data['operation_type'];
-    final production = data['production'] ?? data['prod'];
-
-    // Collect all keys that are handled by cards below
-    final Set<String> handledKeys = {
-      'selectedPoste', 'poste', 'posteSelected',
-      'mine', 'zone', 'sortie',
-      'equipment', 'selectedEquipment',
-      'operationType', 'operation_type',
-      'production', 'prod',
-      'indexCompteurs', 'shifts', 'ventilation', 'arretsExplication',
-      'exploitation', 'bulls', 'repartitionTravail', 'personnel', 'consommation',
-    };
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Info OIB/EE Card
-        if (poste != null || data['mine'] != null || data['zone'] != null || data['sortie'] != null || equipment != null || operationType != null || production != null)
-          Card(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Info OIB/EE', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  const Divider(height: 16),
-                  if (poste != null) Text('Poste: $poste'),
-                  if (equipment != null) Text('Équipement: $equipment'),
-                  if (data['mine'] != null) Text('Mine: ${data['mine']}'),
-                  if (data['zone'] != null) Text('Zone: ${data['zone']}'),
-                  if (data['sortie'] != null) Text('Sortie: ${data['sortie']}'),
-                  if (operationType != null) Text('Type d\'opération: $operationType'),
-                  if (production != null) Text('Production: $production'),
-                ],
-              ),
+  Widget _buildSummaryItem(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
-        // Index Compteurs Card
-        if (data['indexCompteurs'] is List && (data['indexCompteurs'] as List).isNotEmpty)
-          Card(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Compteurs', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  const Divider(height: 16),
-                  ...List.from(data['indexCompteurs']).map((ic) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Text('• Début: 	${ic['duree'] ?? '-'}, Fin: ${ic['note'] ?? '-'}'),
-                  )),
-                ],
-              ),
-            ),
+          Expanded(
+            child: Text(value.isEmpty ? 'Non renseigné' : value),
           ),
-        // Shifts Card
-        if (data['shifts'] != null)
-          Card(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Shifts', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  const Divider(height: 16),
-                  Text(data['shifts'].toString()),
-                ],
-              ),
-            ),
-          ),
-        // Ventilation/Arrêts Card
-        if (data['ventilation'] is List && (data['ventilation'] as List).isNotEmpty)
-          Card(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Arrêts', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  const Divider(height: 16),
-                  ...List.from(data['ventilation']).map((v) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Text('• [${v['code'] ?? '-'}] ${v['label'] ?? '-'} - Début: ${v['duree'] ?? '-'}, Fin: ${v['note'] ?? '-'}'),
-                  )),
-                ],
-              ),
-            ),
-          ),
-        // Arrets Explication Card
-        if (data['arretsExplication'] != null)
-          Card(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Explication Arrêts', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  const Divider(height: 16),
-                  Text(data['arretsExplication'].toString()),
-                ],
-              ),
-            ),
-          ),
-        // Exploitation Card
-        if (data['exploitation'] is Map && (data['exploitation'] as Map).isNotEmpty)
-          Card(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Exploitation', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  const Divider(height: 16),
-                  ...((data['exploitation'] as Map).entries.map<Widget>((e) => Text('${e.key}: ${e.value}'))),
-                ],
-              ),
-            ),
-          ),
-        // Bulls Card
-        if (data['bulls'] != null)
-          Card(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Bulls', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  const Divider(height: 16),
-                  Text(data['bulls'].toString()),
-                ],
-              ),
-            ),
-          ),
-        // Répartition Travail Card
-        if (data['repartitionTravail'] is List && (data['repartitionTravail'] as List).isNotEmpty)
-          Card(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Répartition Travail', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  const Divider(height: 16),
-                  ...List.from(data['repartitionTravail']).map((r) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Text('• Chantier: ${r['chantier'] ?? '-'}, Temps: ${r['temps'] ?? '-'}, Imputation: ${r['imputation'] ?? '-'}'),
-                  )),
-                ],
-              ),
-            ),
-          ),
-        // Personnel Card
-        if (data['personnel'] is Map && (data['personnel'] as Map).isNotEmpty)
-          Card(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Personnel', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  const Divider(height: 16),
-                  Text('Conducteur: ${(data['personnel'] as Map)['conducteur'] ?? '-'}'),
-                  Text('Graisseur: ${(data['personnel'] as Map)['graisseur'] ?? '-'}'),
-                  Text('Matricules: ${(data['personnel'] as Map)['matricules'] ?? '-'}'),
-                ],
-              ),
-            ),
-          ),
-        // Consommation Card
-        if (data['consommation'] is Map && (data['consommation'] as Map).isNotEmpty)
-          Card(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Consommation', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  const Divider(height: 16),
-                  Text('Tricone: ${(data['consommation'] as Map)['tricone'] ?? '-'}'),
-                  Text('Gasoil: ${(data['consommation'] as Map)['gasoil'] ?? '-'}'),
-                ],
-              ),
-            ),
-          ),
-        // Fallback: show any unknown keys in a card layout
-        ...data.entries.where((entry) => !handledKeys.contains(entry.key)).map((entry) =>
-          Card(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(entry.key, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  const Divider(height: 16),
-                  Text(entry.value.toString()),
-                ],
-              ),
-            ),
-          ),
-        ),
-        // Show message if no data is available
-        if ((poste == null) &&
-            (data['mine'] == null) &&
-            (data['zone'] == null) &&
-            (data['sortie'] == null) &&
-            ((data['indexCompteurs'] == null) || (data['indexCompteurs'] is List && (data['indexCompteurs'] as List).isEmpty)) &&
-            (data['shifts'] == null) &&
-            ((data['ventilation'] == null) || (data['ventilation'] is List && (data['ventilation'] as List).isEmpty)) &&
-            (data['arretsExplication'] == null) &&
-            ((data['exploitation'] == null) || (data['exploitation'] is Map && (data['exploitation'] as Map).isEmpty)) &&
-            (data['bulls'] == null) &&
-            ((data['repartitionTravail'] == null) || (data['repartitionTravail'] is List && (data['repartitionTravail'] as List).isEmpty)) &&
-            ((data['personnel'] == null) || (data['personnel'] is Map && (data['personnel'] as Map).isEmpty)) &&
-            ((data['consommation'] == null) || (data['consommation'] is Map && (data['consommation'] as Map).isEmpty)) &&
-            (equipment == null) &&
-            (operationType == null) &&
-            (production == null))
-          const Card(
-            margin: EdgeInsets.symmetric(vertical: 4),
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Aucune donnée R0 disponible', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  Divider(height: 16),
-                  Text('Aucune donnée supplémentaire n\'a été trouvée pour ce rapport R0.'),
-                ],
-              ),
-            ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 
