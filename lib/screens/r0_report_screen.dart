@@ -678,20 +678,32 @@ static const Map<String, List<String>> machinesData = {
       'Category': formData.selectedCategory,
       'Type': formData.selectedType,
       'Model': formData.selectedModel,
-      'poste': formData.selectedPoste,
-      'Compteurs': formData.indexCompteurs.map((ic) => {
-        'Début': ic.duree,
-        'Fin': ic.note,
-      }).toList(),
-      'Poste': formData.selectedPoste,
+      'selectedPoste': formData.selectedPoste,
+      'Compteurs': formData.indexCompteurs
+          .asMap()
+          .entries
+          .where((entry) {
+            final compteur = entry.value;
+            return compteur.duree.isNotEmpty || compteur.note.isNotEmpty;
+          })
+          .map((entry) {
+            final compteur = entry.value;
+            return {
+              'duree': compteur.duree,
+              'note': compteur.note,
+            };
+          })
+          .toList(),
       'Arrets': formData.ventilation.map((v) => {
         'Arret': v.label,
         'Début': v.duree,
         'Fin': v.note,
       }).toList(),
       'Explication Arrets': formData.arretsExplication,
-      'Exploitation': formData.exploitation,
-      'Répartition Travail': formData.repartitionTravail.map((r) => {
+      'exploitation': formData.exploitation,
+      'Répartition Travail': formData.repartitionTravail
+          .where((r) => r.chantier.isNotEmpty || r.temps.isNotEmpty || r.imputation.isNotEmpty)
+          .map((r) => {
         'Chantier': r.chantier,
         'temps': r.temps,
         'imputation': r.imputation,

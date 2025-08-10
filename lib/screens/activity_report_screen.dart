@@ -701,13 +701,9 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                             children: [
                               Text(
                                 'Résumé des données',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green[700],
-                                ),
+                                style: Theme.of(context).textTheme.titleMedium,
                               ),
-                              const SizedBox(height: 16),
+                              const Divider(height: 16),
                               _buildSummaryRow('T H.A:', formatMinutesToHoursMinutes(totalDowntime)),
                               _buildSummaryRow('T H.M:', formatMinutesToHoursMinutes(operatingTime)),
                               _buildSummaryRow('T H.V:', formatMinutesToHoursMinutes(totalVibratorMinutes)),
@@ -720,7 +716,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                           ),
                         ),
                       ),
-                      if (stops.isNotEmpty)
+                      if (stops.isNotEmpty) ...[
+                        const SizedBox(height: 16),
                         Card(
                           margin: EdgeInsets.zero,
                           child: Padding(
@@ -728,16 +725,22 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Arrêts', style: TextStyle(fontWeight: FontWeight.bold)),
+                                Text(
+                                  'Arrêts',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
                                 ...stops.map((stop) => Padding(
-                                  padding: const EdgeInsets.only(left: 16, top: 4),
-                                  child: Text('${stop.duration.isNotEmpty ? stop.duration : '-'} - ${stop.nature.isNotEmpty ? stop.nature : '-'}'),
+                                  padding: const EdgeInsets.symmetric(vertical: 2),
+                                  child: Text('• ${stop.duration.isNotEmpty ? stop.duration : '-'} - ${stop.nature.isNotEmpty ? stop.nature : '-'}'),
                                 )),
                               ],
                             ),
                           ),
                         ),
-                      if (vibratorCounters.isNotEmpty)
+                      ],
+                      if (vibratorCounters.isNotEmpty) ...[
+                        const SizedBox(height: 16),
                         Card(
                           margin: EdgeInsets.zero,
                           child: Padding(
@@ -745,16 +748,22 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Compteurs Vibreurs', style: TextStyle(fontWeight: FontWeight.bold)),
+                                Text(
+                                  'Compteurs Vibreurs',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
                                 ...vibratorCounters.map((counter) => Padding(
-                                  padding: const EdgeInsets.only(left: 16, top: 4),
-                                  child: Text('Poste: \t${counter.poste != null ? posteToString(counter.poste) : '-'}, Début: ${counter.start.isNotEmpty ? counter.start : '-'}, Fin: ${counter.end.isNotEmpty ? counter.end : '-'}'),
+                                  padding: const EdgeInsets.symmetric(vertical: 2),
+                                  child: Text('• Poste: ${counter.poste != null ? posteToString(counter.poste) : '-'}, Début: ${counter.start.isNotEmpty ? counter.start : '-'}, Fin: ${counter.end.isNotEmpty ? counter.end : '-'}'),
                                 )),
                               ],
                             ),
                           ),
                         ),
-                      if (liaisonCounters.isNotEmpty)
+                      ],
+                      if (liaisonCounters.isNotEmpty) ...[
+                        const SizedBox(height: 16),
                         Card(
                           margin: EdgeInsets.zero,
                           child: Padding(
@@ -762,16 +771,22 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Compteurs Liaison', style: TextStyle(fontWeight: FontWeight.bold)),
+                                Text(
+                                  'Compteurs Liaison',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
                                 ...liaisonCounters.map((counter) => Padding(
-                                  padding: const EdgeInsets.only(left: 16, top: 4),
-                                  child: Text('Poste: \t${counter.poste != null ? posteToString(counter.poste) : '-'}, Début: ${counter.start.isNotEmpty ? counter.start : '-'}, Fin: ${counter.end.isNotEmpty ? counter.end : '-'}'),
+                                  padding: const EdgeInsets.symmetric(vertical: 2),
+                                  child: Text('• Poste: ${counter.poste != null ? posteToString(counter.poste) : '-'}, Début: ${counter.start.isNotEmpty ? counter.start : '-'}, Fin: ${counter.end.isNotEmpty ? counter.end : '-'}'),
                                 )),
                               ],
                             ),
                           ),
                         ),
-                      if (stockEntries.isNotEmpty)
+                      ],
+                      if (stockEntries.isNotEmpty) ...[
+                        const SizedBox(height: 16),
                         Card(
                           margin: EdgeInsets.zero,
                           child: Padding(
@@ -779,15 +794,20 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Stocks', style: TextStyle(fontWeight: FontWeight.bold)),
+                                Text(
+                                  'Stocks',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
                                 ...stockEntries.map((entry) => Padding(
-                                  padding: const EdgeInsets.only(left: 16, top: 4),
-                                  child: Text('Poste: 	${entry.poste != null ? posteToString(entry.poste) : '-'}, Parc: ${entry.park != null ? parkToString(entry.park) : '-'}, Type: ${entry.type != null ? stockTypeToString(entry.type) : '-'}, Qté: ${entry.quantity.isNotEmpty ? entry.quantity : '-'}, Début: ${entry.startTime.isNotEmpty ? entry.startTime : '-'}'),
+                                  padding: const EdgeInsets.symmetric(vertical: 2),
+                                  child: Text('• Poste: ${entry.poste != null ? posteToString(entry.poste) : '-'}, Parc: ${entry.park != null ? parkToString(entry.park) : '-'}, Type: ${entry.type != null ? stockTypeToString(entry.type) : '-'}, Qté: ${entry.quantity.isNotEmpty ? entry.quantity : '-'}, Début: ${entry.startTime.isNotEmpty ? entry.startTime : '-'}'),
                                 )),
                               ],
                             ),
                           ),
                         ),
+                      ],
                       if (hasVibratorErrors || hasLiaisonErrors || hasStockErrors) ...[
                         const SizedBox(height: 16),
                         Card(
@@ -852,6 +872,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       'Travoux Mècanique sur:',
       'Travoux Elèctrique sur:',
       'Travoux dans l\'instalation sur:',
+      'Autre:',
     ];
     String? selectedNature;
     String customNature = '';
