@@ -1200,7 +1200,7 @@ class CamionReportState extends State<CamionReport> {
                                                                   Icon(Icons.list, size: 18, color: Theme.of(context).colorScheme.secondary),
                                                                   const SizedBox(width: 8),
                                                                   Text(
-                                                                    'Voir les voyages',
+                                                                    'Voir',
                                                                     style: TextStyle(
                                                                       color: Theme.of(context).colorScheme.secondary,
                                                                       fontSize: 14,
@@ -1455,6 +1455,8 @@ class CamionReportState extends State<CamionReport> {
                               icon: const Icon(Icons.list),
                               label: const Text("Voir les camions"),
                               style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.success,
+                                foregroundColor: Colors.white,
                                 minimumSize: const Size(double.infinity, 36),
                               ),
                             ),
@@ -1482,12 +1484,14 @@ class CamionReportState extends State<CamionReport> {
                         icon: const Icon(Icons.visibility),
                         label: const Text("Voir tous les details"),
                         style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.warning,
+                          foregroundColor: Colors.white,
                           minimumSize: const Size(double.infinity, 48),
                         ),
-                          ),
-                        ],
                       ),
+                    ],
                   ),
+                ),
                 isActive: _currentStep >= 3,
       ),
     ];
