@@ -644,9 +644,9 @@ static const Map<String, List<String>> machinesData = {
       if (!mounted) return;
       
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Rapport soumis avec succès'),
-          backgroundColor: Colors.green,
+        SnackBar(
+          content: const Text('Rapport soumis avec succès'),
+          backgroundColor: Theme.of(context).colorScheme.primary,
         ),
       );
       // Delay navigation so the SnackBar is visible
@@ -1163,7 +1163,7 @@ static const Map<String, List<String>> machinesData = {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.green[700],
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -1191,8 +1191,8 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.add),
                                   label: const Text('Ajouter Info OIB/EE'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green[700],
-                                    foregroundColor: Colors.white,
+                                    backgroundColor: Theme.of(context).colorScheme.primary,
+                                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
                                 ),
@@ -1241,8 +1241,8 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.list),
                                   label: const Text('Voir Info OIB/EE'),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.green[700],
-                                    side: BorderSide(color: Colors.green[700]!),
+                                    foregroundColor: Theme.of(context).colorScheme.primary,
+                                    side: BorderSide(color: Theme.of(context).colorScheme.primary),
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
                                 ),
@@ -1256,7 +1256,7 @@ static const Map<String, List<String>> machinesData = {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.green[700],
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -1290,8 +1290,8 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.add),
                                   label: const Text('Ajouter'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green[700],
-                                    foregroundColor: Colors.white,
+                                    backgroundColor: Theme.of(context).colorScheme.primary,
+                                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
                                 ),
@@ -1351,8 +1351,8 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.list),
                                   label: const Text('Voir'),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.green[700],
-                                    side: BorderSide(color: Colors.green[700]!),
+                                    foregroundColor: Theme.of(context).colorScheme.primary,
+                                    side: BorderSide(color: Theme.of(context).colorScheme.primary),
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
                                 ),
@@ -1374,7 +1374,7 @@ static const Map<String, List<String>> machinesData = {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.green[700],
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -1396,8 +1396,8 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.add),
                                   label: const Text('Ajouter'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green[700],
-                                    foregroundColor: Colors.white,
+                                    backgroundColor: Theme.of(context).colorScheme.primary,
+                                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
                                 ),
@@ -1529,8 +1529,8 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.list),
                                   label: const Text('Voir'),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.green[700],
-                                    side: BorderSide(color: Colors.green[700]!),
+                                    foregroundColor: Theme.of(context).colorScheme.primary,
+                                    side: BorderSide(color: Theme.of(context).colorScheme.primary),
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
                                 ),
@@ -1552,7 +1552,7 @@ static const Map<String, List<String>> machinesData = {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.green[700],
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -1793,8 +1793,8 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.add),
                                   label: const Text('Ajouter'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green[700],
-                                    foregroundColor: Colors.white,
+                                    backgroundColor: Theme.of(context).colorScheme.primary,
+                                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
                                 ),
@@ -1892,8 +1892,8 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.list),
                                   label: const Text('Voir'),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.green[700],
-                                    side: BorderSide(color: Colors.green[700]!),
+                                    foregroundColor: Theme.of(context).colorScheme.primary,
+                                    side: BorderSide(color: Theme.of(context).colorScheme.primary),
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
                                 ),
@@ -1915,7 +1915,7 @@ static const Map<String, List<String>> machinesData = {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.green[700],
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                           const SizedBox(height: 16),

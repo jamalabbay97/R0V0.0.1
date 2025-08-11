@@ -13,6 +13,65 @@ class ModuleStop {
   ModuleStop({required this.id, this.duration = '', this.nature = ''});
 }
 
+// Stock enums and helpers (mirrors activity_report_screen.dart)
+enum Poste { premier, deuxieme, troisieme }
+enum Park { park1, park2, park3 }
+enum StockType { normal, oceane, pb30 }
+
+String posteToString(Poste? p) {
+  switch (p) {
+    case Poste.premier:
+      return "3ème";
+    case Poste.deuxieme:
+      return "1er";
+    case Poste.troisieme:
+      return "2ème";
+    default:
+      return "";
+  }
+}
+
+String parkToString(Park? p) {
+  switch (p) {
+    case Park.park1:
+      return "PARK 1";
+    case Park.park2:
+      return "PARK 2";
+    case Park.park3:
+      return "PARK 3";
+    default:
+      return "";
+  }
+}
+
+String stockTypeToString(StockType? t) {
+  switch (t) {
+    case StockType.normal:
+      return "NORMAL";
+    case StockType.oceane:
+      return "OCEANE";
+    case StockType.pb30:
+      return "PB30";
+    default:
+      return "";
+  }
+}
+
+class DailyStockEntry {
+  String id;
+  Poste? poste;
+  Park? park;
+  StockType? type;
+  String quantity;
+  DailyStockEntry({
+    required this.id,
+    this.poste,
+    this.park,
+    this.type,
+    this.quantity = '',
+  });
+}
+
 class DailyReportScreen extends StatefulWidget {
   const DailyReportScreen({super.key});
 
@@ -66,6 +125,7 @@ class DailyReportState extends State<DailyReport> {
 
   List<ModuleStop> module1Stops = [];
   List<ModuleStop> module2Stops = [];
+  List<DailyStockEntry> stockEntries = [];
 
   int module1TotalDowntime = 0;
   int module2TotalDowntime = 0;
@@ -73,6 +133,12 @@ class DailyReportState extends State<DailyReport> {
   int module2OperatingTime = totalPeriodMinutes;
 
   final Map<String, TextEditingController> _controllers = {};
+
+  // Temp vars for stock dialogs
+  Poste? _tempStockPoste;
+  Park? _tempStockPark;
+  StockType? _tempStockType;
+  String _tempStockQuantity = '';
 
   @override
   void initState() {
@@ -289,6 +355,13 @@ class DailyReportState extends State<DailyReport> {
           'module2TotalDowntime': module2TotalDowntime,
           'module1OperatingTime': module1OperatingTime,
           'module2OperatingTime': module2OperatingTime,
+          'stockEntries': stockEntries.map((entry) => {
+            'id': entry.id,
+            'poste': entry.poste?.index,
+            'park': entry.park?.index,
+            'type': entry.type?.index,
+            'quantity': entry.quantity,
+          }).toList(),
         },
       );
 
@@ -344,7 +417,7 @@ class DailyReportState extends State<DailyReport> {
           Stepper(
             currentStep: _currentStep,
             onStepContinue: () {
-              if (_currentStep < 4) {
+              if (_currentStep < 5) {
                 setState(() {
                   _currentStep += 1;
                 });
@@ -358,7 +431,7 @@ class DailyReportState extends State<DailyReport> {
               }
             },
             controlsBuilder: (context, details) {
-              if (_currentStep == 4) {
+              if (_currentStep == 5) {
                 return Padding(
                   padding: const EdgeInsets.only(top: 16.0),
                   child: Row(
@@ -396,7 +469,7 @@ class DailyReportState extends State<DailyReport> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: details.onStepContinue,
-                        child: Text(_currentStep == 3 ? 'Terminer' : 'Suivant'),
+                        child: Text(_currentStep == 4 ? 'Terminer' : 'Suivant'),
                       ),
                     ),
                   ],
@@ -487,7 +560,7 @@ class DailyReportState extends State<DailyReport> {
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
-                                  color: Colors.green[700],
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -507,9 +580,9 @@ class DailyReportState extends State<DailyReport> {
                                         const SizedBox(height: 4),
                                         Text(
                                           formatMinutesToHoursMinutes(module1OperatingTime),
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 18,
-                                            color: Colors.green,
+                                            color: Theme.of(context).colorScheme.primary,
                                           ),
                                         ),
                                         const SizedBox(height: 8),
@@ -537,9 +610,9 @@ class DailyReportState extends State<DailyReport> {
                                         const SizedBox(height: 4),
                                         Text(
                                           formatMinutesToHoursMinutes(module2OperatingTime),
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 18,
-                                            color: Colors.green,
+                                            color: Theme.of(context).colorScheme.primary,
                                           ),
                                         ),
                                         const SizedBox(height: 8),
@@ -565,12 +638,20 @@ class DailyReportState extends State<DailyReport> {
                 isActive: _currentStep >= 3,
               ),
               Step(
+                title: const Text('Stock'),
+                content: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: buildStockSection(),
+                ),
+                isActive: _currentStep >= 4,
+              ),
+              Step(
                 title: const Text('VÉRIFICATION'),
                 content: SingleChildScrollView(
                   physics: const NeverScrollableScrollPhysics(),
                   child: buildFinalStep(),
                 ),
-                isActive: _currentStep >= 4,
+                isActive: _currentStep >= 5,
               ),
             ],
           ),
@@ -597,8 +678,8 @@ class DailyReportState extends State<DailyReport> {
               icon: const Icon(Icons.add),
                 label: const Text('Ajouter un arrêt'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green[900],
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.secondary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -614,8 +695,8 @@ class DailyReportState extends State<DailyReport> {
                 icon: const Icon(Icons.list),
                 label: const Text('Voir les arrêts'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.green[900],
-                  side: BorderSide(color: Colors.green[900]!),
+                  foregroundColor: Theme.of(context).colorScheme.secondary,
+                  side: BorderSide(color: Theme.of(context).colorScheme.secondary),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -626,6 +707,332 @@ class DailyReportState extends State<DailyReport> {
     );
   }
 
+  // STOCK UI
+  Widget buildStockSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'ÉTAPE 5: STOCK',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _showAddStockDialog,
+                icon: const Icon(Icons.add),
+                label: const Text('Ajouter un stock'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _showStockList,
+                icon: const Icon(Icons.list),
+                label: const Text('Voir les stocks'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  void _showAddStockDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Ajouter un stock'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButtonFormField<Poste>(
+              value: _tempStockPoste,
+              decoration: const InputDecoration(
+                labelText: 'Poste',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => setState(() => _tempStockPoste = value),
+              items: Poste.values
+                  .map((p) => DropdownMenuItem(
+                        value: p,
+                        child: Text(posteToString(p)),
+                      ))
+                  .toList(),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<Park>(
+              value: _tempStockPark,
+              decoration: const InputDecoration(
+                labelText: 'PARK',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => setState(() => _tempStockPark = value),
+              items: Park.values
+                  .map((p) => DropdownMenuItem(
+                        value: p,
+                        child: Text(parkToString(p)),
+                      ))
+                  .toList(),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<StockType>(
+              value: _tempStockType,
+              decoration: const InputDecoration(
+                labelText: 'Type Produit',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => setState(() => _tempStockType = value),
+              items: StockType.values
+                  .map((t) => DropdownMenuItem(
+                        value: t,
+                        child: Text(stockTypeToString(t)),
+                      ))
+                  .toList(),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              decoration: const InputDecoration(
+                labelText: 'Quantité',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => setState(() => _tempStockQuantity = value),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (_tempStockPoste != null &&
+                  _tempStockPark != null &&
+                  _tempStockType != null &&
+                  _tempStockQuantity.isNotEmpty) {
+                setState(() {
+                  stockEntries.add(DailyStockEntry(
+                    id: const Uuid().v4(),
+                    poste: _tempStockPoste,
+                    park: _tempStockPark,
+                    type: _tempStockType,
+                    quantity: _tempStockQuantity,
+                  ));
+                  _tempStockPoste = null;
+                  _tempStockPark = null;
+                  _tempStockType = null;
+                  _tempStockQuantity = '';
+                });
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Ajouter'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showStockList() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Liste des stocks'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: stockEntries.length,
+            itemBuilder: (context, index) {
+              final entry = stockEntries[index];
+              return ListTile(
+                title: Text('Poste: ${posteToString(entry.poste)}'),
+                subtitle: Text(
+                  'PARK: ${parkToString(entry.park)}\n'
+                  'Type: ${stockTypeToString(entry.type)}\n'
+                  'Quantité: ${entry.quantity}',
+                ),
+                trailing: PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_horiz, size: 20),
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  position: PopupMenuPosition.under,
+                  itemBuilder: (BuildContext context) => [
+                    PopupMenuItem<String>(
+                      value: 'edit',
+                      height: 36,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Modifier',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'delete',
+                      height: 36,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Supprimer',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      Navigator.pop(context);
+                      _showEditStockDialog(entry, index);
+                    } else if (value == 'delete') {
+                      setState(() {
+                        stockEntries.removeAt(index);
+                      });
+                      Navigator.pop(context);
+                      _showStockList();
+                    }
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditStockDialog(DailyStockEntry entry, int index) {
+    _tempStockPoste = entry.poste;
+    _tempStockPark = entry.park;
+    _tempStockType = entry.type;
+    _tempStockQuantity = entry.quantity;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Modifier le stock'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButtonFormField<Poste>(
+              value: _tempStockPoste,
+              decoration: const InputDecoration(
+                labelText: 'Poste',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => setState(() => _tempStockPoste = value),
+              items: Poste.values
+                  .map((p) => DropdownMenuItem(
+                        value: p,
+                        child: Text(posteToString(p)),
+                      ))
+                  .toList(),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<Park>(
+              value: _tempStockPark,
+              decoration: const InputDecoration(
+                labelText: 'PARK',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => setState(() => _tempStockPark = value),
+              items: Park.values
+                  .map((p) => DropdownMenuItem(
+                        value: p,
+                        child: Text(parkToString(p)),
+                      ))
+                  .toList(),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<StockType>(
+              value: _tempStockType,
+              decoration: const InputDecoration(
+                labelText: 'Type Produit',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => setState(() => _tempStockType = value),
+              items: StockType.values
+                  .map((t) => DropdownMenuItem(
+                        value: t,
+                        child: Text(stockTypeToString(t)),
+                      ))
+                  .toList(),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              decoration: const InputDecoration(
+                labelText: 'Quantité',
+                border: OutlineInputBorder(),
+              ),
+              controller: TextEditingController(text: _tempStockQuantity),
+              onChanged: (value) => setState(() => _tempStockQuantity = value),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (_tempStockPoste != null &&
+                  _tempStockPark != null &&
+                  _tempStockType != null &&
+                  _tempStockQuantity.isNotEmpty) {
+                setState(() {
+                  stockEntries[index] = DailyStockEntry(
+                    id: entry.id,
+                    poste: _tempStockPoste,
+                    park: _tempStockPark,
+                    type: _tempStockType,
+                    quantity: _tempStockQuantity,
+                  );
+                  _tempStockPoste = null;
+                  _tempStockPark = null;
+                  _tempStockType = null;
+                  _tempStockQuantity = '';
+                });
+                Navigator.pop(context);
+                _showStockList();
+              }
+            },
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+  }
   void _showStopsList(int module, List<ModuleStop> stops) {
     showDialog(
       context: context,
@@ -795,11 +1202,11 @@ class DailyReportState extends State<DailyReport> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'ÉTAPE 5: VÉRIFICATION',
+          'ÉTAPE 6: VÉRIFICATION',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.green[700],
+            color: Theme.of(context).colorScheme.primary,
           ),
         ),
         const SizedBox(height: 16),
@@ -914,6 +1321,33 @@ class DailyReportState extends State<DailyReport> {
                                     child: Text('${stop.duration} - ${stop.nature}'),
                                   )),
                                 ],
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Stocks Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Stocks',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                if (stockEntries.isEmpty)
+                                  const Text('Aucun stock ajouté', style: TextStyle(color: Colors.grey)),
+                                if (stockEntries.isNotEmpty)
+                                  ...stockEntries.map((entry) => Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 2),
+                                        child: Text(
+                                          '• Poste: ${posteToString(entry.poste)} | PARK: ${parkToString(entry.park)} | Type: ${stockTypeToString(entry.type)} | Qté: ${entry.quantity}',
+                                        ),
+                                      )),
                               ],
                             ),
                           ),

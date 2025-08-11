@@ -7,18 +7,27 @@ class OcpLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context).colorScheme;
     return CustomPaint(
       size: Size.square(size),
-      painter: _OcpLogoPainter(),
+      painter: _OcpLogoPainter(
+        primary: theme.primary,
+        primaryDark: theme.secondary,
+      ),
     );
   }
 }
 
 class _OcpLogoPainter extends CustomPainter {
+  final Color primary;
+  final Color primaryDark;
+
+  _OcpLogoPainter({required this.primary, required this.primaryDark});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.green[700]!
+      ..color = primary
       ..style = PaintingStyle.fill;
 
     // Draw bar chart
@@ -48,7 +57,7 @@ class _OcpLogoPainter extends CustomPainter {
 
     // Draw arrow
     final arrowPaint = Paint()
-      ..color = Colors.green[800]!
+      ..color = primaryDark
       ..strokeWidth = size.width * 0.06
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -72,14 +81,14 @@ class _OcpLogoPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
     canvas.drawCircle(circleCenter, circleRadius, circlePaint);
     final circleBorder = Paint()
-      ..color = Colors.green[700]!
+      ..color = primary
       ..style = PaintingStyle.stroke
       ..strokeWidth = size.width * 0.02;
     canvas.drawCircle(circleCenter, circleRadius, circleBorder);
 
     // Draw star (simple 5-pointed)
     final starPaint = Paint()
-      ..color = Colors.green[700]!
+      ..color = primary
       ..style = PaintingStyle.fill;
     final starPath = Path();
     const n = 5;
@@ -101,7 +110,7 @@ class _OcpLogoPainter extends CustomPainter {
 
     // Draw laurel (simplified as arcs)
     final laurelPaint = Paint()
-      ..color = Colors.green[700]!
+      ..color = primary
       ..style = PaintingStyle.stroke
       ..strokeWidth = size.width * 0.015;
     canvas.drawArc(
@@ -124,7 +133,7 @@ class _OcpLogoPainter extends CustomPainter {
       text: TextSpan(
         text: 'OCP',
         style: TextStyle(
-          color: Colors.green[800],
+          color: primaryDark,
           fontWeight: FontWeight.bold,
           fontSize: size.width * 0.16,
           letterSpacing: 2,

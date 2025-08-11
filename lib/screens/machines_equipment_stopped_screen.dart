@@ -116,7 +116,7 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocalizations.of(context)!.reportSaved),
-            backgroundColor: Colors.green,
+            backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
       }
@@ -181,8 +181,8 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                                   ? ElevatedButton.icon(
                                       icon: const Icon(Icons.check_circle, color: Colors.white),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green[800],
-                                        foregroundColor: Colors.white,
+                                        backgroundColor: Theme.of(context).colorScheme.secondary,
+                                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                         padding: const EdgeInsets.symmetric(vertical: 16),
                                         textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                         shape: RoundedRectangleBorder(
@@ -312,8 +312,8 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                 icon: const Icon(Icons.add),
                 label: const Text('Ajouter un équipement'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green[900],
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.secondary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -329,8 +329,8 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                 icon: const Icon(Icons.list),
                 label: const Text('Voir les équipements'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.green[900],
-                  side: BorderSide(color: Colors.green[900]!),
+                  foregroundColor: Theme.of(context).colorScheme.secondary,
+                  side: BorderSide(color: Theme.of(context).colorScheme.secondary),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -358,8 +358,8 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                 icon: const Icon(Icons.visibility),
                 label: const Text('Voir les détails'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.green[900],
-                  side: BorderSide(color: Colors.green[900]!),
+                  foregroundColor: Theme.of(context).colorScheme.secondary,
+                  side: BorderSide(color: Theme.of(context).colorScheme.secondary),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -371,19 +371,19 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.green[50],
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.green[200]!),
+              border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.green[700]),
+                Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     '${_equipmentList.length} équipement${_equipmentList.length > 1 ? 's' : ''} prêt${_equipmentList.length > 1 ? 's' : ''} à être soumis',
                     style: TextStyle(
-                      color: Colors.green[700],
+                      color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -510,10 +510,11 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                                         });
                                       });
                       Navigator.pop(context);
+                      if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Équipement ajouté'),
-                          backgroundColor: Colors.green,
+                        SnackBar(
+                          content: const Text('Équipement ajouté'),
+                          backgroundColor: Theme.of(context).colorScheme.primary,
                         ),
                       );
                     }
@@ -656,10 +657,11 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                                         };
                                       });
                                       Navigator.pop(context);
+                                      if (!mounted) return;
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Équipement modifié'),
-                                          backgroundColor: Colors.green,
+                                        SnackBar(
+                                          content: const Text('Équipement modifié'),
+                                          backgroundColor: Theme.of(context).colorScheme.primary,
                                         ),
                                       );
                                     }
@@ -882,19 +884,19 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.green[50],
+                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.06),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.green[200]!),
+                              border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.check_circle, color: Colors.green[700]),
+                                Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
                                 const SizedBox(width: 8),
           Expanded(
             child: Text(
                                     '${_equipmentList.length} équipement${_equipmentList.length > 1 ? 's' : ''} prêt${_equipmentList.length > 1 ? 's' : ''} à être soumis',
                                     style: TextStyle(
-                                      color: Colors.green[700],
+                                      color: Theme.of(context).colorScheme.primary,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),

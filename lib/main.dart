@@ -7,6 +7,7 @@ import 'firebase_options.dart';
 import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/providers/language_provider.dart';
 import 'package:r0/screens/home_screen.dart';
+import 'package:r0/theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,22 +38,7 @@ class MyApp extends StatelessWidget {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             title: 'R0',
-            theme: ThemeData(
-              primarySwatch: Colors.green,
-              primaryColor: Colors.green[700],
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: Colors.green[700]!,
-                primary: Colors.green[700]!,
-                secondary: Colors.green[800]!,
-                onPrimary: Colors.white,
-                onSecondary: Colors.white,
-                surface: Colors.white,
-                error: Colors.red,
-                onError: Colors.white,
-                brightness: Brightness.light,
-              ),
-              useMaterial3: true,
-            ),
+            theme: buildLightTheme(),
             localizationsDelegates: const [
               AppLocalizations.delegate,
               GlobalMaterialLocalizations.delegate,

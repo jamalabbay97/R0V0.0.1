@@ -859,7 +859,7 @@ class CamionReportState extends State<CamionReport> {
                                       Text(
                                         'Voyages',
                                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                          color: Colors.green[700],
+                                          color: Theme.of(context).colorScheme.primary,
                                         ),
                                       ),
                                       ...List.generate(truck['counts'].length, (index) {
@@ -1060,7 +1060,7 @@ class CamionReportState extends State<CamionReport> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.green[700],
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -1074,7 +1074,7 @@ class CamionReportState extends State<CamionReport> {
                             icon: const Icon(Icons.add),
                             label: const Text('Ajouter Informations'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green[700],
+                              backgroundColor: Theme.of(context).colorScheme.primary,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
@@ -1093,8 +1093,8 @@ class CamionReportState extends State<CamionReport> {
                             icon: const Icon(Icons.list),
                             label: const Text('Voir Informations'),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.green[700],
-                              side: BorderSide(color: Colors.green[700]!),
+                              foregroundColor: Theme.of(context).colorScheme.primary,
+                              side: BorderSide(color: Theme.of(context).colorScheme.primary),
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
                           ),

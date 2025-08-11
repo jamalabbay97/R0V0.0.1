@@ -6,30 +6,31 @@ class LoadingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    final scheme = Theme.of(context).colorScheme;
+    return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            OcpLogo(size: 150),
-            SizedBox(height: 32),
+            const OcpLogo(size: 150),
+            const SizedBox(height: 32),
             Text(
               'REPORTS DAILY',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: Colors.green,
+                color: scheme.primary,
                 letterSpacing: 2,
               ),
             ),
-            SizedBox(height: 32),
+            const SizedBox(height: 32),
             CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+              valueColor: AlwaysStoppedAnimation<Color>(scheme.primary),
             ),
           ],
         ),
       ),
     );
   }
-} 
+}

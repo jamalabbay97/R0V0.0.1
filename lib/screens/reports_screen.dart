@@ -426,7 +426,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Détails du rapport - Activity TNB',
+                        'Vérification des données',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -476,14 +476,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Résumé d\'activité',
+                                  'Résumé des données',
                                   style: Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
-                                Text('Temps d\'arrêt total: ${_formatMinutesToHoursMinutes(data['totalDowntime'] ?? 0)}'),
-                                Text('Temps de fonctionnement: ${_formatMinutesToHoursMinutes(data['operatingTime'] ?? 0)}'),
-                                Text('Temps vibreurs: ${_formatMinutesToHoursMinutes(data['totalVibratorMinutes'] ?? 0)}'),
-                                Text('Temps liaison: ${_formatMinutesToHoursMinutes(data['totalLiaisonMinutes'] ?? 0)}'),
+                                _buildSummaryRow('T H.A:', _formatMinutesToHoursMinutes(data['totalDowntime'] ?? 0)),
+                                _buildSummaryRow('T H.M:', _formatMinutesToHoursMinutes(data['operatingTime'] ?? 0)),
+                                _buildSummaryRow('T H.V:', _formatMinutesToHoursMinutes(data['totalVibratorMinutes'] ?? 0)),
+                                _buildSummaryRow('T H.L:', _formatMinutesToHoursMinutes(data['totalLiaisonMinutes'] ?? 0)),
+                                const SizedBox(height: 8),
+                                _buildSummaryRow('T Nr.A:', (data['stops'] is List ? (data['stops'] as List).length : 0).toString()),
+                                _buildSummaryRow('T Nr.V:', (data['vibratorCounters'] is List ? (data['vibratorCounters'] as List).length : 0).toString()),
+                                _buildSummaryRow('T Nr.L:', (data['liaisonCounters'] is List ? (data['liaisonCounters'] as List).length : 0).toString()),
                               ],
                             ),
                           ),
@@ -513,7 +517,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           ),
                         if (data['stops'] is List && (data['stops'] as List).isNotEmpty)
                           const SizedBox(height: 16),
-                        // Counters Card
+                        // Vibreurs Counters Card
                         if (data['vibratorCounters'] is List && (data['vibratorCounters'] as List).isNotEmpty)
                           Card(
                             margin: EdgeInsets.zero,
@@ -523,19 +527,43 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Compteurs vibreurs',
+                                    'Compteurs Vibreurs',
                                     style: Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const Divider(height: 16),
                                   ...List.from(data['vibratorCounters']).map((counter) => Padding(
                                     padding: const EdgeInsets.symmetric(vertical: 2),
-                                    child: Text('• Poste: ${counter['poste'] ?? '-'}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
+                                    child: Text('• Poste: ${_getPosteString(counter['poste'])}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
                                   )),
                                 ],
                               ),
                             ),
                           ),
                         if (data['vibratorCounters'] is List && (data['vibratorCounters'] as List).isNotEmpty)
+                          const SizedBox(height: 16),
+                        // Liaison Counters Card
+                        if (data['liaisonCounters'] is List && (data['liaisonCounters'] as List).isNotEmpty)
+                          Card(
+                            margin: EdgeInsets.zero,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Compteurs Liaison',
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  const Divider(height: 16),
+                                  ...List.from(data['liaisonCounters']).map((counter) => Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 2),
+                                    child: Text('• Poste: ${_getPosteString(counter['poste'])}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
+                                  )),
+                                ],
+                              ),
+                            ),
+                          ),
+                        if (data['liaisonCounters'] is List && (data['liaisonCounters'] as List).isNotEmpty)
                           const SizedBox(height: 16),
                         // Stock Card
                         if (data['stockEntries'] is List && (data['stockEntries'] as List).isNotEmpty)
@@ -553,7 +581,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   const Divider(height: 16),
                                   ...List.from(data['stockEntries']).map((entry) => Padding(
                                     padding: const EdgeInsets.symmetric(vertical: 2),
-                                    child: Text('• Poste: ${entry['poste'] ?? '-'}, Parc: ${entry['park'] ?? '-'}, Type: ${entry['type'] ?? '-'}, Qté: ${entry['quantity'] ?? '-'}'),
+                                    child: Text(
+                                      'Poste: ${_getPosteString(entry['poste'])} | '
+                                      'Park: ${_getParkString(entry['park'])} | '
+                                      'Type: ${_getStockTypeString(entry['type'])} | '
+                                      'Qte: ${entry['quantity'] ?? '-'} |',
+                                    ),
                                   )),
                                 ],
                               ),
@@ -646,6 +679,30 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     ),
                   ),
                 ),
+                // Stocks Card (if any)
+                if (data['stockEntries'] is List && (data['stockEntries'] as List).isNotEmpty)
+                  Card(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Stocks', style: Theme.of(context).textTheme.titleMedium),
+                          const SizedBox(height: 4),
+                          ...List.from(data['stockEntries']).map((entry) => Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 2),
+                                child: Text(
+                                  'Poste: ${_getPosteString(entry['poste'])} | '
+                                  'Park: ${_getParkString(entry['park'])} | '
+                                  'Type: ${_getStockTypeString(entry['type'])} | '
+                                  'Qte: ${entry['quantity'] ?? '-'} |',
+                                ),
+                              )),
+                        ],
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -1171,7 +1228,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         Text(
                                           'Voyages',
                                           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                            color: Colors.green[700],
+                                            color: Theme.of(context).colorScheme.primary,
                                           ),
                                         ),
                                         ...List.generate((truck['counts'] as List).length, (index) {
@@ -1351,7 +1408,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.green[700],
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -1426,7 +1483,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   const Text('Stocks', style: TextStyle(fontWeight: FontWeight.bold)),
                   ...stockEntries.map((entry) => Padding(
                     padding: const EdgeInsets.only(left: 16, top: 4),
-                    child: Text('Poste: ${entry['poste'] ?? '-'}, Parc: ${entry['park'] ?? '-'}, Type: ${entry['type'] ?? '-'}, Qté: ${entry['quantity'] ?? '-'}, Début: ${entry['startTime'] ?? '-'}'),
+                    child: Text('Poste: ${entry['poste'] ?? '-'}, Parc: ${entry['park'] ?? '-'}, Type: ${entry['type'] ?? '-'}, Qté: ${entry['quantity'] ?? '-'}'),
                   )),
                 ],
               ),
@@ -1441,6 +1498,48 @@ class _ReportsScreenState extends State<ReportsScreen> {
     int hours = totalMinutes ~/ 60;
     int minutes = totalMinutes % 60;
     return "${hours}h ${minutes}m";
+  }
+
+  String _getPosteString(dynamic posteIndex) {
+    if (posteIndex == null) return '-';
+    switch (posteIndex) {
+      case 0:
+        return '3ème';
+      case 1:
+        return '1er';
+      case 2:
+        return '2ème';
+      default:
+        return '-';
+    }
+  }
+
+  String _getParkString(dynamic parkIndex) {
+    if (parkIndex == null) return '-';
+    switch (parkIndex) {
+      case 0:
+        return 'PARK 1';
+      case 1:
+        return 'PARK 2';
+      case 2:
+        return 'PARK 3';
+      default:
+        return '-';
+    }
+  }
+
+  String _getStockTypeString(dynamic typeIndex) {
+    if (typeIndex == null) return '-';
+    switch (typeIndex) {
+      case 0:
+        return 'NORMAL';
+      case 1:
+        return 'OCEANE';
+      case 2:
+        return 'PB30';
+      default:
+        return '-';
+    }
   }
 
   Widget _buildSummaryRow(String label, String value) {
@@ -1605,7 +1704,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 const Text('Équipements arrêtés', style: TextStyle(fontWeight: FontWeight.bold)),
                 const Divider(height: 16),
                 if (equipmentList.isEmpty)
-                  const Text('Aucun équipement ajouté', style: TextStyle(color: Colors.grey)),
+                       const Text('Aucun équipement ajouté', style: TextStyle(color: Colors.grey)),
                 if (equipmentList.isNotEmpty)
                   ...equipmentList.asMap().entries.map((entry) {
                     final index = entry.key;
@@ -1634,19 +1733,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.green[50],
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green[200]!),
+                border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.green[700]),
+                  Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       '${equipmentList.length} équipement${equipmentList.length > 1 ? 's' : ''} prêt${equipmentList.length > 1 ? 's' : ''} à être soumis',
                       style: TextStyle(
-                        color: Colors.green[700],
+                        color: Theme.of(context).colorScheme.primary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -2054,15 +2153,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
-                        color: Colors.blue[50],
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.06),
                         child: Row(
                           children: [
-                            Icon(Icons.filter_list, color: Colors.blue[700], size: 20),
+                            Icon(Icons.filter_list, color: Theme.of(context).colorScheme.primary, size: 20),
                             const SizedBox(width: 8),
                             Text(
                               '${_filteredReports.length} rapport${_filteredReports.length > 1 ? 's' : ''} trouvé${_filteredReports.length > 1 ? 's' : ''} pour le poste $_selectedPosteFilter',
                               style: TextStyle(
-                                color: Colors.blue[700],
+                                color: Theme.of(context).colorScheme.primary,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
