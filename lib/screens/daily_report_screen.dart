@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import 'package:r0/services/database_helper.dart';
 import 'package:r0/models/report.dart';
 import 'package:intl/intl.dart';
+import 'package:r0/theme.dart';
 
 class ModuleStop {
   final String id;
@@ -393,7 +394,7 @@ class DailyReportState extends State<DailyReport> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erreur: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -588,9 +589,9 @@ class DailyReportState extends State<DailyReport> {
                                         const SizedBox(height: 8),
                                         Text(
                                           'Arrêts: ${formatMinutesToHoursMinutes(module1TotalDowntime)}',
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                             fontSize: 14,
-                                            color: Colors.red[700],
+                                            color: AppColors.error,
                                           ),
                                         ),
                                       ],
@@ -618,9 +619,9 @@ class DailyReportState extends State<DailyReport> {
                                         const SizedBox(height: 8),
                                         Text(
                                           'Arrêts: ${formatMinutesToHoursMinutes(module2TotalDowntime)}',
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                             fontSize: 14,
-                                            color: Colors.red[700],
+                                            color: AppColors.error,
                                           ),
                                         ),
                                       ],

@@ -3,6 +3,7 @@ import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/services/database_helper.dart';
 import 'package:r0/models/report.dart';
 import 'package:r0/screens/home_screen.dart';
+import 'package:r0/theme.dart';
 
 class MachinesEquipmentStoppedScreen extends StatefulWidget {
   final DateTime selectedDate;
@@ -35,27 +36,24 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
 
   // Equipment data structure
   final Map<String, Map<String, List<String>>> _equipmentData = {
-    'Camions Servitude': {
-      'camion citerne': ['16979-A-68', '17492-A-68', 'TEXAS'],
-      'camion DCI': ['19164-A-68', '5636-A-68'],
-      'camion de ravitaillmenet': ['1462443', '93292-D-8'],
-      'camion Grue': ['12097-A-68'],
-      'camion Nacelle': ['17080-A-68'],
-      'camion Ridelle': ['11053-A-68', '15836-A-68', '34866-A-54'],
-      'Vehicule DC': ['513714'],
+    'Excavation': {
+      'Excavateurs': ['Excavateur 1', 'Excavateur 2', 'Excavateur 3'],
+      'Chargeurs': ['Chargeur 1', 'Chargeur 2'],
+      'Bulldozers': ['Bulldozer 1', 'Bulldozer 2'],
     },
-    'ENGINS': {
-      'BULLDOZERS': ['BULL D9R 76', 'BULL D9R 79', 'BULL D9R 80', 'BULL D9R 81', 'BULL D9R 82', 'BULL D9R 83', 'BULL LIB 84', 'BULL LIB 85', 'BULL D9R 86', 'BULL D9R 87'],
-      'CAMIONS': ['CAMION T24', 'CAMION T25', 'CAMION T26', 'CAMION T27', 'CAMION T28', 'CAMION T29', 'CAMION T30', 'CAMION T31', 'CAMION T32', 'CAMION T33', 'WABCO 13', 'WABCO 19'],
-      'CHARGEUSES': ['CHRG 992C', 'CHRG 992K', 'CHRG 994H'],
-      'NIVELEUSES': ['NIV 14G', 'NIV 16H', 'NIV KOM01', 'NIV KOM02'],
-      'PAYDOZERS': ['PAY CAT03', 'PAY KOM04', 'PAY KOM05'],
-      'PELLE HYDRAULIQUE': ['PH365-C', 'PH5130'],
+    'Transport': {
+      'Camions': ['Camion 1', 'Camion 2', 'Camion 3', 'Camion 4'],
+      'Transporteurs': ['Transporteur 1', 'Transporteur 2'],
     },
-    'MACHINES': {
-      'DRAGLINES': ['1370 W1', '1370 W2'],
-      'PELLE ELECTRIQUE': ['195 P1', '195 P2'],
-      'SONDEUSES': ['PV275-1', 'PV275-2', 'PV275-3'],
+    'Concassage': {
+      'Concasseurs': ['Concasseur Primaire', 'Concasseur Secondaire'],
+      'Cribles': ['Crible 1', 'Crible 2', 'Crible 3'],
+      'Broyeurs': ['Broyeur 1', 'Broyeur 2'],
+    },
+    'Usine': {
+      'Broyeurs': ['Broyeur à boulets', 'Broyeur vertical'],
+      'Séparateurs': ['Séparateur magnétique', 'Séparateur gravimétrique'],
+      'Filtres': ['Filtre presse', 'Filtre à bande'],
     },
   };
 
@@ -76,7 +74,7 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      lastDate: DateTime(2030),
     );
     if (picked != null && picked != _selectedDate) {
       setState(() {
@@ -90,9 +88,9 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
     if (_equipmentList.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ajoutez au moins un équipement avant de soumettre.'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.addAtLeastOneEquipment),
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -125,7 +123,7 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocalizations.of(context)!.errorSavingReport),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -182,12 +180,13 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                                       icon: const Icon(Icons.check_circle, color: Colors.white),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: Theme.of(context).colorScheme.secondary,
-                                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                                        foregroundColor: Theme.of(context).colorScheme.onSecondary,
                                         padding: const EdgeInsets.symmetric(vertical: 16),
                                         textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(8),
                                         ),
+                                        elevation: 2,
                                       ),
                                       onPressed: _equipmentList.isNotEmpty
                                           ? () async {
@@ -213,7 +212,8 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                                                 await _saveReport();
                                                 // ignore: use_build_context_synchronously
                                                 if (!mounted) return;
-                                                Navigator.of(context).pushAndRemoveUntil(
+                                                final navigator = Navigator.of(context);
+                                                navigator.pushAndRemoveUntil(
                                                   MaterialPageRoute(builder: (context) => const HomeScreen()),
                                                   (route) => false,
                                                 );
@@ -311,11 +311,7 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                 onPressed: () => _addEquipment(),
                 icon: const Icon(Icons.add),
                 label: const Text('Ajouter un équipement'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.secondary,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
+                style: ButtonStyles.secondaryButton(context),
               ),
             ),
           ],
@@ -328,11 +324,7 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                 onPressed: () => _showEquipmentList(),
                 icon: const Icon(Icons.list),
                 label: const Text('Voir les équipements'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.secondary,
-                  side: BorderSide(color: Theme.of(context).colorScheme.secondary),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
+                style: ButtonStyles.outlinedSecondaryButton(context),
               ),
             ),
           ],
@@ -357,11 +349,7 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                 onPressed: () => _showVerificationDetails(),
                 icon: const Icon(Icons.visibility),
                 label: const Text('Voir les détails'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.secondary,
-                  side: BorderSide(color: Theme.of(context).colorScheme.secondary),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
+                style: ButtonStyles.outlinedSecondaryButton(context),
               ),
             ),
           ],

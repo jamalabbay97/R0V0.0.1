@@ -4,6 +4,7 @@ import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/services/database_helper.dart';
 import 'package:r0/models/report.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
+import 'package:r0/theme.dart';
 
 enum QualiteType {
   normal,
@@ -990,7 +991,7 @@ class CamionReportState extends State<CamionReport> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erreur: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -1075,7 +1076,7 @@ class CamionReportState extends State<CamionReport> {
                             label: const Text('Ajouter Informations'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Theme.of(context).colorScheme.primary,
-                              foregroundColor: Colors.white,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
                           ),
@@ -1230,8 +1231,8 @@ class CamionReportState extends State<CamionReport> {
                                                                     ElevatedButton(
                                                                       onPressed: () => Navigator.of(context).pop(true),
                                                                       style: ElevatedButton.styleFrom(
-                                                                        backgroundColor: Colors.red,
-                                                                        foregroundColor: Colors.white,
+                                                                        backgroundColor: AppColors.error,
+                                                                        foregroundColor: Theme.of(context).colorScheme.onError,
                                                                       ),
                                                                       child: const Text('Supprimer'),
                                                                     ),
@@ -1686,7 +1687,7 @@ class CamionReportState extends State<CamionReport> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Erreur lors de l\'ajout du voyage: ${e.toString()}'),
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.error,
             ),
           );
         }

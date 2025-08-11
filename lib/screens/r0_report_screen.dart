@@ -3,6 +3,7 @@ import 'package:r0/services/database_helper.dart';
 import 'package:r0/models/report.dart';
 // import 'package:r0/l10n/app_localizations.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
+import 'package:r0/theme.dart';
 
 // Data models
 class IndexCompteurPoste {
@@ -574,7 +575,7 @@ static const Map<String, List<String>> machinesData = {
           const SizedBox(height: 12),
           Text(
             errorText,
-            style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.bold),
           ),
         ],
       ],
@@ -652,7 +653,8 @@ static const Map<String, List<String>> machinesData = {
       // Delay navigation so the SnackBar is visible
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          final navigator = Navigator.of(context);
+          navigator.popUntil((route) => route.isFirst);
         }
       });
     } catch (e) {
@@ -660,7 +662,7 @@ static const Map<String, List<String>> machinesData = {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erreur: ${e.toString()}'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.error,
         ),
       );
     } finally {
@@ -1071,7 +1073,8 @@ static const Map<String, List<String>> machinesData = {
                                     if (!mounted) return;
                                     // After saving, pop to home page
                                     if (mounted) {
-                                      Navigator.of(context).popUntil((route) => route.isFirst);
+                                      final navigator = Navigator.of(context);
+                                      navigator.popUntil((route) => route.isFirst);
                                     }
                                   }
                                 },
@@ -1308,9 +1311,9 @@ static const Map<String, List<String>> machinesData = {
                                     final selectedPosteIndex = posteOrder.indexOf(formData.selectedPoste);
                                     if (selectedPosteIndex == -1) {
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Veuillez d\'abord sélectionner un poste'),
-                                          backgroundColor: Colors.orange,
+                                        SnackBar(
+                                          content: const Text('Veuillez d\'abord sélectionner un poste'),
+                                          backgroundColor: AppColors.warning,
                                         ),
                                       );
                                       return;

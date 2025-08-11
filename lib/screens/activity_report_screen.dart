@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:r0/models/report.dart';
 import 'package:r0/services/database_helper.dart';
 import 'package:r0/l10n/app_localizations.dart';
+import 'package:r0/theme.dart';
 
 enum Poste { premier, deuxieme, troisieme }
 enum Park { park1, park2, park3 }
@@ -272,7 +273,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erreur lors de la sauvegarde du rapport: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -816,7 +817,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                       if (hasVibratorErrors || hasLiaisonErrors || hasStockErrors) ...[
                         const SizedBox(height: 16),
                         Card(
-                          color: Colors.red[50],
+                          color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Column(
@@ -827,16 +828,16 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.red[900],
+                                    color: Theme.of(context).colorScheme.error,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
                                 if (hasVibratorErrors)
-                                  Text('• Erreurs dans les compteurs vibreurs', style: TextStyle(color: Colors.red[900])),
+                                  Text('• Erreurs dans les compteurs vibreurs', style: TextStyle(color: Theme.of(context).colorScheme.error)),
                                 if (hasLiaisonErrors)
-                                  Text('• Erreurs dans les compteurs liaison', style: TextStyle(color: Colors.red[900])),
+                                  Text('• Erreurs dans les compteurs liaison', style: TextStyle(color: Theme.of(context).colorScheme.error)),
                                 if (hasStockErrors)
-                                  Text('• Erreurs dans les entrées stock', style: TextStyle(color: Colors.red[900])),
+                                  Text('• Erreurs dans les entrées stock', style: TextStyle(color: Theme.of(context).colorScheme.error)),
                               ],
                             ),
                           ),

@@ -2090,10 +2090,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
             margin: const EdgeInsets.only(right: 8),
             child: DropdownButton<String>(
               value: _selectedPosteFilter,
-              hint: const Text('Tous les postes', style: TextStyle(color: Colors.white)),
+              hint: Text('Tous les postes', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
               dropdownColor: Theme.of(context).colorScheme.surface,
               underline: Container(),
-              icon: const Icon(Icons.filter_list, color: Colors.white),
+              icon: Icon(Icons.filter_list, color: Theme.of(context).colorScheme.onPrimary),
               items: [
                 const DropdownMenuItem<String>(
                   value: null,
