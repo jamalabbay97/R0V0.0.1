@@ -143,184 +143,285 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final l10n = AppLocalizations.of(context)!;
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-    // Get the steps from additionalData
-    final steps = report.additionalData?.entries ?? [];
-    
-    // First show the list of steps
+    // Close the details dialog if it's open
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
+
+    // Show a simple, direct editing interface
     await showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.editReport),
-        content: SingleChildScrollView(
+      builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 600,
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Basic report info
-              ListTile(
-                title: Text(l10n.description),
-                subtitle: Text(report.description),
-                onTap: () async {
-                  Navigator.pop(dialogContext);
-                  await _editStep(
-                    context: context,
-                    title: l10n.description,
-                    initialValue: report.description,
-                    onSave: (value) async {
-                      final updatedReport = Report(
-                        id: report.id,
-                        description: value,
-                        type: report.type,
-                        group: report.group,
-                        date: report.date,
-                        additionalData: report.additionalData,
-                      );
-                      await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                    },
-                  );
-                },
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Modifier le rapport',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(dialogContext),
+                    ),
+                  ],
+                ),
               ),
-              ListTile(
-                title: Text(l10n.type),
-                subtitle: Text(report.type),
-                onTap: () async {
-                  Navigator.pop(dialogContext);
-                  await _editStep(
-                    context: context,
-                    title: l10n.type,
-                    initialValue: report.type,
-                    onSave: (value) async {
-                      final updatedReport = Report(
-                        id: report.id,
-                        description: report.description,
-                        type: value,
-                        group: report.group,
-                        date: report.date,
-                        additionalData: report.additionalData,
-                      );
-                      await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                    },
-                  );
-                },
+              const Divider(height: 1),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Basic report info section
+                      Card(
+                        margin: EdgeInsets.zero,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Informations de base',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const Divider(height: 16),
+                              _buildEditableField(
+                                context: context,
+                                label: 'Description',
+                                value: report.description,
+                                onSave: (value) async {
+                                  final updatedReport = Report(
+                                    id: report.id,
+                                    description: value,
+                                    type: report.type,
+                                    group: report.group,
+                                    date: report.date,
+                                    additionalData: report.additionalData,
+                                  );
+                                  await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                },
+                              ),
+                              const SizedBox(height: 8),
+                              _buildEditableField(
+                                context: context,
+                                label: 'Type',
+                                value: report.type,
+                                onSave: (value) async {
+                                  final updatedReport = Report(
+                                    id: report.id,
+                                    description: report.description,
+                                    type: value,
+                                    group: report.group,
+                                    date: report.date,
+                                    additionalData: report.additionalData,
+                                  );
+                                  await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                },
+                              ),
+                              const SizedBox(height: 8),
+                              _buildEditableField(
+                                context: context,
+                                label: 'Groupe',
+                                value: report.group,
+                                onSave: (value) async {
+                                  final updatedReport = Report(
+                                    id: report.id,
+                                    description: report.description,
+                                    type: report.type,
+                                    group: value,
+                                    date: report.date,
+                                    additionalData: report.additionalData,
+                                  );
+                                  await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                },
+                              ),
+                              const SizedBox(height: 8),
+                              _buildEditableDateField(
+                                context: context,
+                                label: 'Date',
+                                value: report.date,
+                                onSave: (value) async {
+                                  final updatedReport = Report(
+                                    id: report.id,
+                                    description: report.description,
+                                    type: report.type,
+                                    group: report.group,
+                                    date: value,
+                                    additionalData: report.additionalData,
+                                  );
+                                  await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Additional data section
+                      if (report.additionalData != null && report.additionalData!.isNotEmpty)
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Données supplémentaires',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                ...report.additionalData!.entries.map((entry) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: _buildEditableField(
+                                    context: context,
+                                    label: entry.key,
+                                    value: entry.value.toString(),
+                                    onSave: (value) async {
+                                      final updatedAdditionalData = Map<String, dynamic>.from(report.additionalData ?? {});
+                                      updatedAdditionalData[entry.key] = value;
+                                      final updatedReport = Report(
+                                        id: report.id,
+                                        description: report.description,
+                                        type: report.type,
+                                        group: report.group,
+                                        date: report.date,
+                                        additionalData: updatedAdditionalData,
+                                      );
+                                      await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                    },
+                                  ),
+                                )),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
-              ListTile(
-                title: Text(l10n.group),
-                subtitle: Text(report.group),
-                onTap: () async {
-                  Navigator.pop(dialogContext);
-                  await _editStep(
-                    context: context,
-                    title: l10n.group,
-                    initialValue: report.group,
-                    onSave: (value) async {
-                      final updatedReport = Report(
-                        id: report.id,
-                        description: report.description,
-                        type: report.type,
-                        group: value,
-                        date: report.date,
-                        additionalData: report.additionalData,
-                      );
-                      await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                    },
-                  );
-                },
-              ),
-              ListTile(
-                title: Text(l10n.date),
-                subtitle: Text(DateFormat('yyyy-MM-dd HH:mm').format(report.date)),
-                onTap: () async {
-                  Navigator.pop(dialogContext);
-                  await _editDate(
-                    context: context,
-                    initialDate: report.date,
-                    onSave: (value) async {
-                      final updatedReport = Report(
-                        id: report.id,
-                        description: report.description,
-                        type: report.type,
-                        group: report.group,
-                        date: value,
-                        additionalData: report.additionalData,
-                      );
-                      await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                    },
-                  );
-                },
-              ),
-              const Divider(),
-              // Additional data steps
-              ...steps.map((step) => ListTile(
-                title: Text(step.key),
-                subtitle: Text(step.value.toString()),
-                onTap: () async {
-                  Navigator.pop(dialogContext);
-                  await _editStep(
-                    context: context,
-                    title: step.key,
-                    initialValue: step.value.toString(),
-                    onSave: (value) async {
-                      final updatedAdditionalData = Map<String, dynamic>.from(report.additionalData ?? {});
-                      updatedAdditionalData[step.key] = value;
-                      final updatedReport = Report(
-                        id: report.id,
-                        description: report.description,
-                        type: report.type,
-                        group: report.group,
-                        date: report.date,
-                        additionalData: updatedAdditionalData,
-                      );
-                      await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                    },
-                  );
-                },
-              )),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(l10n.cancel),
-          ),
-        ],
       ),
     );
   }
 
-  Future<void> _editStep({
+  Widget _buildEditableField({
     required BuildContext context,
-    required String title,
-    required String initialValue,
+    required String label,
+    required String value,
     required Future<void> Function(String) onSave,
-  }) async {
-    final TextEditingController controller = TextEditingController(text: initialValue);
-    final l10n = AppLocalizations.of(context)!;
-
-    await showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: title,
-            border: const OutlineInputBorder(),
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 120,
+          child: Text(
+            '$label:',
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(l10n.cancel),
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(value.isEmpty ? '-' : value),
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit, size: 18),
+                onPressed: () async {
+                  final TextEditingController controller = TextEditingController(text: value);
+                  await showDialog(
+                    context: context,
+                    builder: (editContext) => AlertDialog(
+                      title: Text('Modifier $label'),
+                      content: TextField(
+                        controller: controller,
+                        decoration: InputDecoration(
+                          labelText: label,
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(editContext),
+                          child: const Text('Annuler'),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            Navigator.pop(editContext);
+                            await onSave(controller.text);
+                          },
+                          child: const Text('Enregistrer'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                tooltip: 'Modifier $label',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              await onSave(controller.text);
-            },
-            child: Text(l10n.save),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEditableDateField({
+    required BuildContext context,
+    required String label,
+    required DateTime value,
+    required Future<void> Function(DateTime) onSave,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 120,
+          child: Text(
+            '$label:',
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
-        ],
-      ),
+        ),
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(DateFormat('yyyy-MM-dd HH:mm').format(value)),
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit, size: 18),
+                onPressed: () async {
+                  await _editDate(
+                    context: context,
+                    initialDate: value,
+                    onSave: onSave,
+                  );
+                },
+                tooltip: 'Modifier $label',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -403,200 +504,209 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     final typeLower = report.type.toLowerCase();
 
-
-
     // Special handling for Activity TNB report (case-insensitive)
     if (typeLower == 'activity tnb') {
       final data = report.additionalData ?? {};
       await showDialog(
         context: context,
-        builder: (dialogContext) => Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: 600,
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Vérification des données',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(dialogContext),
-                        padding: const EdgeInsets.all(6),
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setState) => Dialog(
+            insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 600,
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Date Card
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Date',
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const Divider(height: 16),
-                                Text('${report.date.day}/${report.date.month}/${report.date.year}'),
-                              ],
-                            ),
+                        const Text(
+                          'Vérification des données',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        // Activity Summary Card
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Résumé des données',
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const Divider(height: 16),
-                                _buildSummaryRow('T H.A:', _formatMinutesToHoursMinutes(data['totalDowntime'] ?? 0)),
-                                _buildSummaryRow('T H.M:', _formatMinutesToHoursMinutes(data['operatingTime'] ?? 0)),
-                                _buildSummaryRow('T H.V:', _formatMinutesToHoursMinutes(data['totalVibratorMinutes'] ?? 0)),
-                                _buildSummaryRow('T H.L:', _formatMinutesToHoursMinutes(data['totalLiaisonMinutes'] ?? 0)),
-                                const SizedBox(height: 8),
-                                _buildSummaryRow('T Nr.A:', (data['stops'] is List ? (data['stops'] as List).length : 0).toString()),
-                                _buildSummaryRow('T Nr.V:', (data['vibratorCounters'] is List ? (data['vibratorCounters'] as List).length : 0).toString()),
-                                _buildSummaryRow('T Nr.L:', (data['liaisonCounters'] is List ? (data['liaisonCounters'] as List).length : 0).toString()),
-                              ],
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit),
+                              onPressed: () => _editReport(report),
+                              tooltip: 'Modifier le rapport',
                             ),
-                          ),
+                            IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () => Navigator.pop(dialogContext),
+                              padding: const EdgeInsets.all(6),
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 16),
-                        // Stops Card
-                        if (data['stops'] is List && (data['stops'] as List).isNotEmpty)
-                          Card(
-                            margin: EdgeInsets.zero,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Arrêts',
-                                    style: Theme.of(context).textTheme.titleMedium,
-                                  ),
-                                  const Divider(height: 16),
-                                  ...List.from(data['stops']).map((stop) => Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 2),
-                                    child: Text('• ${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
-                                  )),
-                                ],
-                              ),
-                            ),
-                          ),
-                        if (data['stops'] is List && (data['stops'] as List).isNotEmpty)
-                          const SizedBox(height: 16),
-                        // Vibreurs Counters Card
-                        if (data['vibratorCounters'] is List && (data['vibratorCounters'] as List).isNotEmpty)
-                          Card(
-                            margin: EdgeInsets.zero,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Compteurs Vibreurs',
-                                    style: Theme.of(context).textTheme.titleMedium,
-                                  ),
-                                  const Divider(height: 16),
-                                  ...List.from(data['vibratorCounters']).map((counter) => Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 2),
-                                    child: Text('• Poste: ${_getPosteString(counter['poste'])}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
-                                  )),
-                                ],
-                              ),
-                            ),
-                          ),
-                        if (data['vibratorCounters'] is List && (data['vibratorCounters'] as List).isNotEmpty)
-                          const SizedBox(height: 16),
-                        // Liaison Counters Card
-                        if (data['liaisonCounters'] is List && (data['liaisonCounters'] as List).isNotEmpty)
-                          Card(
-                            margin: EdgeInsets.zero,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Compteurs Liaison',
-                                    style: Theme.of(context).textTheme.titleMedium,
-                                  ),
-                                  const Divider(height: 16),
-                                  ...List.from(data['liaisonCounters']).map((counter) => Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 2),
-                                    child: Text('• Poste: ${_getPosteString(counter['poste'])}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
-                                  )),
-                                ],
-                              ),
-                            ),
-                          ),
-                        if (data['liaisonCounters'] is List && (data['liaisonCounters'] as List).isNotEmpty)
-                          const SizedBox(height: 16),
-                        // Stock Card
-                        if (data['stockEntries'] is List && (data['stockEntries'] as List).isNotEmpty)
-                          Card(
-                            margin: EdgeInsets.zero,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Stocks',
-                                    style: Theme.of(context).textTheme.titleMedium,
-                                  ),
-                                  const Divider(height: 16),
-                                  ...List.from(data['stockEntries']).map((entry) => Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 2),
-                                    child: Text(
-                                      'Poste: ${_getPosteString(entry['poste'])} | '
-                                      'Park: ${_getParkString(entry['park'])} | '
-                                      'Type: ${_getStockTypeString(entry['type'])} | '
-                                      'Qte: ${entry['quantity'] ?? '-'} |',
-                                    ),
-                                  )),
-                                ],
-                              ),
-                            ),
-                          ),
                       ],
                     ),
                   ),
-                ),
-              ],
+                  const Divider(height: 1),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Date Card
+                          Card(
+                            margin: EdgeInsets.zero,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Date',
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  const Divider(height: 16),
+                                  Text('${report.date.day}/${report.date.month}/${report.date.year}'),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          // Activity Summary Card
+                          Card(
+                            margin: EdgeInsets.zero,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Résumé des données',
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  const Divider(height: 16),
+                                  _buildSummaryRow('T H.A:', _formatMinutesToHoursMinutes(data['totalDowntime'] ?? 0)),
+                                  _buildSummaryRow('T H.M:', _formatMinutesToHoursMinutes(data['operatingTime'] ?? 0)),
+                                  _buildSummaryRow('T H.V:', _formatMinutesToHoursMinutes(data['totalVibratorMinutes'] ?? 0)),
+                                  _buildSummaryRow('T H.L:', _formatMinutesToHoursMinutes(data['totalLiaisonMinutes'] ?? 0)),
+                                  const SizedBox(height: 8),
+                                  _buildSummaryRow('T Nr.A:', (data['stops'] is List ? (data['stops'] as List).length : 0).toString()),
+                                  _buildSummaryRow('T Nr.V:', (data['vibratorCounters'] is List ? (data['vibratorCounters'] as List).length : 0).toString()),
+                                  _buildSummaryRow('T Nr.L:', (data['liaisonCounters'] is List ? (data['liaisonCounters'] as List).length : 0).toString()),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          // Stops Card
+                          if (data['stops'] is List && (data['stops'] as List).isNotEmpty)
+                            Card(
+                              margin: EdgeInsets.zero,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Arrêts',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    const Divider(height: 16),
+                                    ...List.from(data['stops']).map((stop) => Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 2),
+                                      child: Text('• ${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
+                                    )),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          if (data['stops'] is List && (data['stops'] as List).isNotEmpty)
+                            const SizedBox(height: 16),
+                          // Vibreurs Counters Card
+                          if (data['vibratorCounters'] is List && (data['vibratorCounters'] as List).isNotEmpty)
+                            Card(
+                              margin: EdgeInsets.zero,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Compteurs Vibreurs',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    const Divider(height: 16),
+                                    ...List.from(data['vibratorCounters']).map((counter) => Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 2),
+                                      child: Text('• Poste: ${_getPosteString(counter['poste'])}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
+                                    )),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          if (data['vibratorCounters'] is List && (data['vibratorCounters'] as List).isNotEmpty)
+                            const SizedBox(height: 16),
+                          // Liaison Counters Card
+                          if (data['liaisonCounters'] is List && (data['liaisonCounters'] as List).isNotEmpty)
+                            Card(
+                              margin: EdgeInsets.zero,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Compteurs Liaison',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    const Divider(height: 16),
+                                    ...List.from(data['liaisonCounters']).map((counter) => Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 2),
+                                      child: Text('• Poste: ${_getPosteString(counter['poste'])}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
+                                    )),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          if (data['liaisonCounters'] is List && (data['liaisonCounters'] as List).isNotEmpty)
+                            const SizedBox(height: 16),
+                          // Stock Card
+                          if (data['stockEntries'] is List && (data['stockEntries'] as List).isNotEmpty)
+                            Card(
+                              margin: EdgeInsets.zero,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Stocks',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    const Divider(height: 16),
+                                    ...List.from(data['stockEntries']).map((entry) => Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 2),
+                                      child: Text(
+                                        'Poste: ${_getPosteString(entry['poste'])} | '
+                                        'Park: ${_getParkString(entry['park'])} | '
+                                        'Type: ${_getStockTypeString(entry['type'])} | '
+                                        'Qte: ${entry['quantity'] ?? '-'} |',
+                                      ),
+                                    )),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -610,7 +720,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
       await showDialog(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: Text(l10n.reportDetails),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(l10n.reportDetails),
+              IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () => _editReport(report),
+                tooltip: 'Modifier le rapport',
+              ),
+            ],
+          ),
           content: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -723,7 +843,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
       await showDialog(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: Text(l10n.reportDetails),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(l10n.reportDetails),
+              IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () => _editReport(report),
+                tooltip: 'Modifier le rapport',
+              ),
+            ],
+          ),
           content: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -822,11 +952,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(dialogContext),
-                        padding: const EdgeInsets.all(6),
-                        constraints: const BoxConstraints(),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit),
+                            onPressed: () => _editReport(report),
+                            tooltip: 'Modifier le rapport',
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(dialogContext),
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -1102,11 +1241,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(dialogContext),
-                        padding: const EdgeInsets.all(6),
-                        constraints: const BoxConstraints(),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit),
+                            onPressed: () => _editReport(report),
+                            tooltip: 'Modifier le rapport',
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(dialogContext),
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -1303,7 +1451,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
     await showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.reportDetails),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(l10n.reportDetails),
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () => _editReport(report),
+              tooltip: 'Modifier le rapport',
+            ),
+          ],
+        ),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2189,77 +2347,78 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     Text('Group: ${report.group}'),
                                   ],
                                 ),
-                                trailing: PopupMenuButton<String>(
-                                  icon: const Icon(Icons.more_horiz, size: 20),
-                                  padding: EdgeInsets.zero,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  position: PopupMenuPosition.under,
-                                  itemBuilder: (BuildContext context) => [
-                                    PopupMenuItem<String>(
-                                      value: 'edit',
-                                      height: 36,
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            'Modifier',
-                                            style: TextStyle(
-                                              color: Theme.of(context).colorScheme.primary,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                        ],
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Edit button
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: IconButton(
+                                        icon: Icon(Icons.edit, size: 20, color: Theme.of(context).colorScheme.primary),
+                                        onPressed: () => _editReport(report),
+                                        tooltip: 'Modifier le rapport',
+                                        padding: const EdgeInsets.all(8),
+                                        constraints: const BoxConstraints(),
                                       ),
                                     ),
-                                    PopupMenuItem<String>(
-                                      value: 'delete',
-                                      height: 36,
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            'Supprimer',
-                                            style: TextStyle(
-                                              color: Theme.of(context).colorScheme.error,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                        ],
+                                    const SizedBox(width: 4),
+                                    // Popup menu for additional actions
+                                    PopupMenuButton<String>(
+                                      icon: const Icon(Icons.more_horiz, size: 20),
+                                      padding: EdgeInsets.zero,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
+                                      position: PopupMenuPosition.under,
+                                      itemBuilder: (BuildContext context) => [
+                                        PopupMenuItem<String>(
+                                          value: 'delete',
+                                          height: 36,
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Supprimer',
+                                                style: TextStyle(
+                                                  color: Theme.of(context).colorScheme.error,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                      onSelected: (String value) {
+                                        if (value == 'delete') {
+                                          showDialog(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              title: Text(l10n.delete),
+                                              content: const Text('Are you sure you want to delete this report?'),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.pop(context),
+                                                  child: Text(l10n.cancel),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () {
+                                                    Navigator.pop(context);
+                                                    _deleteReport(report);
+                                                  },
+                                                  child: Text(l10n.delete),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }
+                                      },
                                     ),
                                   ],
-                                  onSelected: (String value) {
-                                    if (value == 'delete') {
-                                      showDialog(
-                                        context: context,
-                                        builder: (context) => AlertDialog(
-                                          title: Text(l10n.delete),
-                                          content: const Text('Are you sure you want to delete this report?'),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.pop(context),
-                                              child: Text(l10n.cancel),
-                                            ),
-                                            TextButton(
-                                              onPressed: () {
-                                                Navigator.pop(context);
-                                                _deleteReport(report);
-                                              },
-                                              child: Text(l10n.delete),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    } else if (value == 'edit') {
-                                      _editReport(report);
-                                    }
-                                  },
                                 ),
                                 onTap: () {
                                   _showReportDetails(report);

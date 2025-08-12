@@ -1311,8 +1311,8 @@ static const Map<String, List<String>> machinesData = {
                                     final selectedPosteIndex = posteOrder.indexOf(formData.selectedPoste);
                                     if (selectedPosteIndex == -1) {
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: const Text('Veuillez d\'abord sélectionner un poste'),
+                                        const SnackBar(
+                                          content: Text('Veuillez d\'abord sélectionner un poste'),
                                           backgroundColor: AppColors.warning,
                                         ),
                                       );
