@@ -1127,8 +1127,10 @@ class CamionReportState extends State<CamionReport> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            ElevatedButton.icon(
-                              onPressed: () async {
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () async {
                                 await showDialog(
                                   context: context,
                                   builder: (context) {
@@ -1454,12 +1456,12 @@ class CamionReportState extends State<CamionReport> {
                               },
                               icon: const Icon(Icons.list),
                               label: const Text("Voir les camions"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
+                              style: OutlinedButton.styleFrom(
                                 foregroundColor: Theme.of(context).colorScheme.primary,
                                 side: BorderSide(color: Theme.of(context).colorScheme.primary),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
                               ),
+                            ),
                             ),
                           ],
                         ),
@@ -1480,15 +1482,14 @@ class CamionReportState extends State<CamionReport> {
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 16),
-                      ElevatedButton.icon(
+                      OutlinedButton.icon(
                         onPressed: () => _showVerificationDialog(context),
                         icon: const Icon(Icons.visibility),
                         label: const Text("Voir tous les details"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
+                        style: OutlinedButton.styleFrom(
                           foregroundColor: Theme.of(context).colorScheme.primary,
                           side: BorderSide(color: Theme.of(context).colorScheme.primary),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
                         ),
                       ),
                     ],

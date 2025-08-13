@@ -95,8 +95,8 @@ ThemeData buildLightTheme() {
     primaryColor: primary,
     scaffoldBackgroundColor: Colors.white,
     appBarTheme: const AppBarTheme(
-      backgroundColor: primary,
-      foregroundColor: Colors.white,
+      backgroundColor: Colors.white,
+      foregroundColor: Colors.black,
       elevation: 0,
       centerTitle: false,
     ),

@@ -59,7 +59,6 @@ class R0ReportFormData {
   List<IndexCompteurPoste> indexCompteurs = List.generate(3, (_) => IndexCompteurPoste());
   String selectedPoste = '';
   List<VentilationItem> ventilation = [];
-  String arretsExplication = '';
   Map<String, String> exploitation = {
     'heuresBrutes': '',
     'heuresArrets': '',
@@ -701,7 +700,6 @@ static const Map<String, List<String>> machinesData = {
         'Début': v.duree,
         'Fin': v.note,
       }).toList(),
-      'Explication Arrets': formData.arretsExplication,
       'exploitation': formData.exploitation,
       'Répartition Travail': formData.repartitionTravail
           .where((r) => r.chantier.isNotEmpty || r.temps.isNotEmpty || r.imputation.isNotEmpty)
@@ -1827,7 +1825,7 @@ static const Map<String, List<String>> machinesData = {
                                               // Exploitation Section
                                               Text('Exploitation', style: Theme.of(context).textTheme.titleMedium),
                                               const Divider(height: 16),
-                                              Text('Heures marche: ${formData.exploitation['heuresBrutes']}'),
+                                              Text('Heures marche: ${formData.exploitation['heuresMarche']}'),
                                               Text('Heures Arrêts: ${formData.exploitation['heuresArrets']}'),
                                               Text('Tonnage: ${formData.exploitation['tonnage']}t'),
                                               Text('Rendement: ${formData.exploitation['rendement']}%'),
