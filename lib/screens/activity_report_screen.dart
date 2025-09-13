@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
+import 'package:uuid/uuid.dart';
 import 'package:r0/models/report.dart';
 import 'package:r0/services/database_helper.dart';
 import 'package:r0/l10n/app_localizations.dart';
@@ -122,9 +123,20 @@ double? validateAndParseCounterValue(String value) {
 }
 
 class ActivityReportScreen extends StatefulWidget {
-  final DateTime selectedDate;
+  final DateTime? selectedDate;
   final String? previousDayThirdShiftEnd;
-  const ActivityReportScreen({super.key, required this.selectedDate, this.previousDayThirdShiftEnd});
+  final Report? initialReport;
+  final Function(Report)? onSave;
+  final bool isEditing;
+  
+  const ActivityReportScreen({
+    super.key, 
+    this.selectedDate, 
+    this.previousDayThirdShiftEnd,
+    this.initialReport,
+    this.onSave,
+    this.isEditing = false,
+  });
 
   static const int totalPeriodMinutes = 24 * 60; // 24 hours in minutes
   static const int maxHoursPerPoste = 12; // Maximum hours per poste
@@ -168,12 +180,124 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedDate = widget.selectedDate;
-    stops = [];
-    vibratorCounters = [];
-    liaisonCounters = [];
-    stockEntries = [];
+    
+    if (widget.isEditing && widget.initialReport != null) {
+      // Editing mode - load existing data
+      _selectedDate = widget.initialReport!.date;
+      _loadExistingData();
+    } else {
+      // Creation mode
+      _selectedDate = widget.selectedDate ?? DateTime.now();
+      stops = [];
+      vibratorCounters = [];
+      liaisonCounters = [];
+      stockEntries = [];
+    }
+    
     recalculateTimes();
+  }
+
+  void _loadExistingData() {
+    if (widget.initialReport?.additionalData == null) return;
+    
+    final data = widget.initialReport!.additionalData!;
+    
+    // Load stops
+    if (data['Arrets'] is List) {
+      stops = (data['Arrets'] as List).map((stop) => Stop(
+        id: stop['id'] ?? const Uuid().v4(),
+        duration: stop['duration'] ?? '',
+        nature: stop['nature'] ?? '',
+      )).toList();
+    }
+    
+    // Load vibrator counters
+    if (data['vibrator Counters'] is List) {
+      vibratorCounters = (data['vibrator Counters'] as List).map((counter) => Counter(
+        id: counter['id'] ?? const Uuid().v4(),
+        poste: _parsePosteFromString(counter['poste']),
+        start: counter['start'] ?? '',
+        end: counter['end'] ?? '',
+        error: counter['error'],
+      )).toList();
+    }
+    
+    // Load liaison counters
+    if (data['liaison Counters'] is List) {
+      liaisonCounters = (data['liaison Counters'] as List).map((counter) => LiaisonCounter(
+        id: counter['id'] ?? const Uuid().v4(),
+        poste: _parsePosteFromString(counter['poste']),
+        start: counter['start'] ?? '',
+        end: counter['end'] ?? '',
+        error: counter['error'],
+      )).toList();
+    }
+    
+    // Load stock entries
+    if (data['stock'] is List) {
+      stockEntries = (data['stock'] as List).map((entry) => StockEntry(
+        id: entry['id'] ?? const Uuid().v4(),
+        poste: _parsePosteFromString(entry['poste']),
+        park: _parseParkFromString(entry['park']),
+        type: _parseStockTypeFromString(entry['type']),
+        quantity: entry['quantity'] ?? '',
+        startTime: entry['startTime'] ?? '',
+      )).toList();
+    }
+  }
+
+  Poste? _parsePosteFromString(dynamic posteValue) {
+    if (posteValue == null) return null;
+    final posteStr = posteValue.toString();
+    switch (posteStr) {
+      case '0':
+      case '3ème':
+        return Poste.premier;
+      case '1':
+      case '1er':
+        return Poste.deuxieme;
+      case '2':
+      case '2ème':
+        return Poste.troisieme;
+      default:
+        return null;
+    }
+  }
+
+  Park? _parseParkFromString(dynamic parkValue) {
+    if (parkValue == null) return null;
+    final parkStr = parkValue.toString();
+    switch (parkStr) {
+      case '0':
+      case 'PARK 1':
+        return Park.park1;
+      case '1':
+      case 'PARK 2':
+        return Park.park2;
+      case '2':
+      case 'PARK 3':
+        return Park.park3;
+      default:
+        return null;
+    }
+  }
+
+  StockType? _parseStockTypeFromString(dynamic typeValue) {
+    if (typeValue == null) return null;
+    final typeStr = typeValue.toString();
+    switch (typeStr) {
+      case '0':
+      case 'NORMAL':
+        return StockType.normal;
+      case '1':
+      case 'OCEANE':
+        return StockType.pb30;
+      case '2':
+      case 'PB30':
+        return StockType.pb30;
+      default:
+        return null;
+    }
   }
 
   void recalculateTimes() {
@@ -208,29 +332,30 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
   Future<void> _saveReport() async {
     try {
       final report = Report(
+        id: widget.initialReport?.id,
         description: 'Activity TNB - ${DateFormat('yyyy-MM-dd').format(_selectedDate)}',
         date: _selectedDate,
         group: 'MIB/U/E/I',
         type: 'Activity TNB',
         additionalData: {
-          'stops': stops.map((stop) => {
+          'Arrets': stops.map((stop) => {
             'id': stop.id,
             'duration': stop.duration,
             'nature': stop.nature,
           }).toList(),
-          'vibratorCounters': vibratorCounters.map((counter) => {
+          'vibrator Counters': vibratorCounters.map((counter) => {
             'id': counter.id,
             'poste': counter.poste?.index,
             'start': counter.start,
             'end': counter.end,
           }).toList(),
-          'liaisonCounters': liaisonCounters.map((counter) => {
+          'liaison Counters': liaisonCounters.map((counter) => {
             'id': counter.id,
             'poste': counter.poste?.index,
             'start': counter.start,
             'end': counter.end,
           }).toList(),
-          'stockEntries': stockEntries.map((entry) => {
+          'stock': stockEntries.map((entry) => {
             'id': entry.id,
             'poste': entry.poste?.index,
             'park': entry.park?.index,
@@ -238,35 +363,41 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
             'quantity': entry.quantity,
             'startTime': entry.startTime,
           }).toList(),
-          'totalDowntime': totalDowntime,
-          'operatingTime': operatingTime,
-          'totalVibratorMinutes': totalVibratorMinutes,
-          'totalLiaisonMinutes': totalLiaisonMinutes,
+          'T H.A': totalDowntime,
+          'T H.M': operatingTime,
+          'T H.V': totalVibratorMinutes,
+          'T H.L': totalLiaisonMinutes,
         },
       );
 
-      await _databaseHelper.insertReport(report);
-      if (mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        // Show confirmation dialog
-        await showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text(l10n.reportConfirmationTitle),
-              content: Text(l10n.reportConfirmationMessage),
-              actions: [
-                TextButton(
-                  child: Text(l10n.done),
-                  onPressed: () {
-                    Navigator.of(context).pop(); // Close dialog
-                    Navigator.of(context).pop(); // Return to home
-                  },
-                ),
-              ],
-            );
-          },
-        );
+      if (widget.isEditing && widget.onSave != null) {
+        // Editing mode - call the onSave callback
+        widget.onSave!(report);
+      } else {
+        // Creation mode - save to database
+        await _databaseHelper.insertReport(report);
+        if (mounted) {
+          final l10n = AppLocalizations.of(context)!;
+          // Show confirmation dialog
+          await showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: Text(l10n.reportConfirmationTitle),
+                content: Text(l10n.reportConfirmationMessage),
+                actions: [
+                  TextButton(
+                    child: Text(l10n.done),
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Close dialog
+                      Navigator.of(context).pop(); // Return to home
+                    },
+                  ),
+                ],
+              );
+            },
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -286,7 +417,9 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       "${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}";
 
     return Scaffold(
-      appBar: AppBar(title: const Text("RAPPORT D'ACTIVITÉ TNB")),
+      appBar: AppBar(
+        title: Text(widget.isEditing ? "MODIFIER RAPPORT D'ACTIVITÉ TNB" : "RAPPORT D'ACTIVITÉ TNB"),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -331,7 +464,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                               ? null
                               : () async { await _saveReport(); }
                             : details.onStepContinue,
-                          child: Text(_currentStep == 5 ? 'Soumettre' : 'Suivant'),
+                          child: Text(_currentStep == 5 ? (widget.isEditing ? 'Enregistrer' : 'Soumettre') : 'Suivant'),
                         ),
                       ),
                     ],

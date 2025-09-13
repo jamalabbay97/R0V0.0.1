@@ -1,11 +1,11 @@
 {
-    "name": "r0_app",
-    "short_name": "r0_app",
+    "name": "R0 - Workflow Reports",
+    "short_name": "R0",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Professional workflow reporting app for trucks, heavy vehicles, and factory operations.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

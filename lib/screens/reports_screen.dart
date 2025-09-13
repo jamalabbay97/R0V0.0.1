@@ -25,6 +25,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
   List<Report> _filteredReports = [];
   bool _isLoading = true;
   String? _selectedPosteFilter;
+  
+  // Selection state management
+  int? _selectedEquipmentIndex;
+  int? _selectedStopIndex;
+  int? _selectedCounterIndex;
+  int? _selectedStockIndex;
 
   // Available postes for filtering
   List<String> _availablePostes = [
@@ -148,129 +154,71 @@ class _ReportsScreenState extends State<ReportsScreen> {
       Navigator.pop(context);
     }
 
-    // Show a simple, direct editing interface
+    // Show the appropriate editing interface based on report type
+    final typeLower = report.type.toLowerCase();
+    
+    if (typeLower == 'activity tnb') {
+      await _showActivityReportEditor(report, scaffoldMessenger, l10n);
+    } else if (typeLower == 'daily tsud') {
+      await _showDailyReportEditor(report, scaffoldMessenger, l10n);
+    } else if (typeLower == 'machine/engin arrêtés') {
+      await _showMachinesEquipmentStoppedEditor(report, scaffoldMessenger, l10n);
+    } else if (typeLower == 'suivi camion' || 
+               typeLower.contains('chargeuse') || 
+               typeLower.contains('pelle') ||
+               (report.additionalData != null && report.additionalData!.containsKey('truckData'))) {
+      await _showTruckTrackingEditor(report, scaffoldMessenger, l10n);
+    } else if (typeLower == 'r0' || 
+               (report.additionalData != null && report.additionalData!.containsKey('mine') && report.additionalData!.containsKey('selectedPoste'))) {
+      await _showR0ReportEditor(report, scaffoldMessenger, l10n);
+    } else {
+      // Fallback to generic editor
+      await _showGenericEditor(report, scaffoldMessenger, l10n);
+    }
+  }
+
+  // Activity Report Editor
+  Future<void> _showActivityReportEditor(Report report, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final data = report.additionalData ?? {};
+    final maxHeight = MediaQuery.of(context).size.height * 0.9;
+    
     await showDialog(
       context: context,
-      builder: (dialogContext) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: 600,
-            maxHeight: MediaQuery.of(context).size.height * 0.8,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Modifier le rapport',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(dialogContext),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 800,
+              maxHeight: maxHeight,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Basic report info section
-                      Card(
-                        margin: EdgeInsets.zero,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Informations de base',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const Divider(height: 16),
-                              _buildEditableField(
-                                context: context,
-                                label: 'Description',
-                                value: report.description,
-                                onSave: (value) async {
-                                  final updatedReport = Report(
-                                    id: report.id,
-                                    description: value,
-                                    type: report.type,
-                                    group: report.group,
-                                    date: report.date,
-                                    additionalData: report.additionalData,
-                                  );
-                                  await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                                },
-                              ),
-                              const SizedBox(height: 8),
-                              _buildEditableField(
-                                context: context,
-                                label: 'Type',
-                                value: report.type,
-                                onSave: (value) async {
-                                  final updatedReport = Report(
-                                    id: report.id,
-                                    description: report.description,
-                                    type: value,
-                                    group: report.group,
-                                    date: report.date,
-                                    additionalData: report.additionalData,
-                                  );
-                                  await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                                },
-                              ),
-                              const SizedBox(height: 8),
-                              _buildEditableField(
-                                context: context,
-                                label: 'Groupe',
-                                value: report.group,
-                                onSave: (value) async {
-                                  final updatedReport = Report(
-                                    id: report.id,
-                                    description: report.description,
-                                    type: report.type,
-                                    group: value,
-                                    date: report.date,
-                                    additionalData: report.additionalData,
-                                  );
-                                  await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                                },
-                              ),
-                              const SizedBox(height: 8),
-                              _buildEditableDateField(
-                                context: context,
-                                label: 'Date',
-                                value: report.date,
-                                onSave: (value) async {
-                                  final updatedReport = Report(
-                                    id: report.id,
-                                    description: report.description,
-                                    type: report.type,
-                                    group: report.group,
-                                    date: value,
-                                    additionalData: report.additionalData,
-                                  );
-                                  await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
+                      Text(
+                        'Modifier - Rapport d\'activité TNB',
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
-                      const SizedBox(height: 16),
-                      // Additional data section
-                      if (report.additionalData != null && report.additionalData!.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(dialogContext),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Basic Info Card
                         Card(
                           margin: EdgeInsets.zero,
                           child: Padding(
@@ -279,42 +227,1360 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Données supplémentaires',
+                                  'Informations de base',
                                   style: Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
-                                ...report.additionalData!.entries.map((entry) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: _buildEditableField(
-                                    context: context,
-                                    label: entry.key,
-                                    value: entry.value.toString(),
-                                    onSave: (value) async {
-                                      final updatedAdditionalData = Map<String, dynamic>.from(report.additionalData ?? {});
-                                      updatedAdditionalData[entry.key] = value;
-                                      final updatedReport = Report(
-                                        id: report.id,
-                                        description: report.description,
-                                        type: report.type,
-                                        group: report.group,
-                                        date: report.date,
-                                        additionalData: updatedAdditionalData,
-                                      );
-                                      await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                                    },
-                                  ),
-                                )),
+                                _buildEditableField(
+                                  context: context,
+                                  label: 'Description',
+                                  value: report.description,
+                                  onSave: (value) async {
+                                    final updatedReport = Report(
+                                      id: report.id,
+                                      description: value,
+                                      type: report.type,
+                                      group: report.group,
+                                      date: report.date,
+                                      additionalData: report.additionalData,
+                                    );
+                                    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                _buildEditableDateField(
+                                  context: context,
+                                  label: 'Date',
+                                  value: report.date,
+                                  onSave: (value) async {
+                                    final updatedReport = Report(
+                                      id: report.id,
+                                      description: report.description,
+                                      type: report.type,
+                                      group: report.group,
+                                      date: value,
+                                      additionalData: report.additionalData,
+                                    );
+                                    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                  },
+                                ),
                               ],
                             ),
                           ),
                         ),
-                    ],
+                        const SizedBox(height: 16),
+                        
+                        // Stops Management Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Gestion des arrêts',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _showAddStopDialog(report, data, setDialogState, scaffoldMessenger, l10n),
+                                      icon: const Icon(Icons.add),
+                                      label: const Text('Ajouter un arrêt'),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                if (data['stops'] is List && (data['stops'] as List).isNotEmpty)
+                                  ...List.from(data['stops']).asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final stop = entry.value;
+                                    final isSelected = _selectedStopIndex == index;
+                                    return Card(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      color: isSelected ? Colors.green.withOpacity(0.1) : null,
+                                      elevation: isSelected ? 4 : 1,
+                                      child: ListTile(
+                                        selected: isSelected,
+                                        selectedTileColor: Colors.green.withOpacity(0.1),
+                                        title: Text('Arrêt ${index + 1}'),
+                                        subtitle: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Durée: ${stop['duration'] ?? '-'}'),
+                                            Text('Nature: ${stop['nature'] ?? '-'}'),
+                                          ],
+                                        ),
+                                        leading: isSelected ? const Icon(Icons.check_circle, color: Colors.green) : null,
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedStopIndex = isSelected ? null : index;
+                                          });
+                                        },
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.edit, size: 18),
+                                              onPressed: () => _showEditStopDialog(report, data, index, setDialogState, scaffoldMessenger, l10n),
+                                              tooltip: 'Modifier l\'arrêt',
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                                              onPressed: () => _showDeleteStopDialog(report, data, index, setDialogState, scaffoldMessenger, l10n),
+                                              tooltip: 'Supprimer l\'arrêt',
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  })
+                                else
+                                  const Text('Aucun arrêt ajouté', style: TextStyle(color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Vibreurs Counters Management Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Compteurs Vibreurs',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _showAddVibratorCounterDialog(report, data, setDialogState, scaffoldMessenger, l10n),
+                                      icon: const Icon(Icons.add),
+                                      label: const Text('Ajouter un compteur'),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                if (data['vibrator Counters'] is List && (data['vibrator Counters'] as List).isNotEmpty)
+                                  ...List.from(data['vibrator Counters']).asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final counter = entry.value;
+                                    final isSelected = _selectedCounterIndex == index;
+                                    return Card(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      color: isSelected ? Colors.orange.withOpacity(0.1) : null,
+                                      elevation: isSelected ? 4 : 1,
+                                      child: ListTile(
+                                        selected: isSelected,
+                                        selectedTileColor: Colors.orange.withOpacity(0.1),
+                                        title: Text('Compteur Vibreur ${index + 1}'),
+                                        subtitle: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Poste: ${_getPosteString(counter['poste'])}'),
+                                            Text('Début: ${counter['start'] ?? '-'}'),
+                                            Text('Fin: ${counter['end'] ?? '-'}'),
+                                          ],
+                                        ),
+                                        leading: isSelected ? const Icon(Icons.check_circle, color: Colors.orange) : null,
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedCounterIndex = isSelected ? null : index;
+                                          });
+                                        },
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.edit, size: 18),
+                                              onPressed: () => _showEditVibratorCounterDialog(report, data, index, setDialogState, scaffoldMessenger, l10n),
+                                              tooltip: 'Modifier le compteur',
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                                              onPressed: () => _showDeleteVibratorCounterDialog(report, data, index, setDialogState, scaffoldMessenger, l10n),
+                                              tooltip: 'Supprimer le compteur',
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  })
+                                else
+                                  const Text('Aucun compteur vibreur ajouté', style: TextStyle(color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Liaison Counters Management Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Compteurs Liaison',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _showAddLiaisonCounterDialog(report, data, setDialogState, scaffoldMessenger, l10n),
+                                      icon: const Icon(Icons.add),
+                                      label: const Text('Ajouter un compteur'),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                if (data['liaison Counters'] is List && (data['liaison Counters'] as List).isNotEmpty)
+                                  ...List.from(data['liaison Counters']).asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final counter = entry.value;
+                                    return Card(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      child: ListTile(
+                                        title: Text('Compteur Liaison ${index + 1}'),
+                                        subtitle: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Poste: ${_getPosteString(counter['poste'])}'),
+                                            Text('Début: ${counter['start'] ?? '-'}'),
+                                            Text('Fin: ${counter['end'] ?? '-'}'),
+                                          ],
+                                        ),
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.edit, size: 18),
+                                              onPressed: () => _showEditLiaisonCounterDialog(report, data, index, setDialogState, scaffoldMessenger, l10n),
+                                              tooltip: 'Modifier le compteur',
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                                              onPressed: () => _showDeleteLiaisonCounterDialog(report, data, index, setDialogState, scaffoldMessenger, l10n),
+                                              tooltip: 'Supprimer le compteur',
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  })
+                                else
+                                  const Text('Aucun compteur liaison ajouté', style: TextStyle(color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Stock Entries Management Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Entrées de stock',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _showAddStockEntryDialog(report, data, setDialogState, scaffoldMessenger, l10n),
+                                      icon: const Icon(Icons.add),
+                                      label: const Text('Ajouter une entrée'),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                if (data['stock'] is List && (data['stock'] as List).isNotEmpty)
+                                  ...List.from(data['stock']).asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final stock = entry.value;
+                                    final isSelected = _selectedStockIndex == index;
+                                    return Card(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      color: isSelected ? Colors.purple.withOpacity(0.1) : null,
+                                      elevation: isSelected ? 4 : 1,
+                                      child: ListTile(
+                                        selected: isSelected,
+                                        selectedTileColor: Colors.purple.withOpacity(0.1),
+                                        title: Text('Stock ${index + 1}'),
+                                        subtitle: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Poste: ${_getPosteString(stock['poste'])}'),
+                                            Text('Parc: ${_getParkString(stock['park'])}'),
+                                            Text('Type: ${_getStockTypeString(stock['type'])}'),
+                                            Text('Quantité: ${stock['quantity'] ?? '-'}'),
+                                          ],
+                                        ),
+                                        leading: isSelected ? const Icon(Icons.check_circle, color: Colors.purple) : null,
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedStockIndex = isSelected ? null : index;
+                                          });
+                                        },
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.edit, size: 18),
+                                              onPressed: () => _showEditStockEntryDialog(report, data, index, setDialogState, scaffoldMessenger, l10n),
+                                              tooltip: 'Modifier l\'entrée de stock',
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                                              onPressed: () => _showDeleteStockEntryDialog(report, data, index, setDialogState, scaffoldMessenger, l10n),
+                                              tooltip: 'Supprimer l\'entrée de stock',
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  })
+                                else
+                                  const Text('Aucune entrée de stock ajoutée', style: TextStyle(color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Add Stop Dialog for Activity Report
+  Future<void> _showAddStopDialog(Report report, Map<String, dynamic> data, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    const List<String> predefinedNatures = [
+      'Manque Produit',
+      'Attente Saturation Silo',
+      'Vidange Extraction 2',
+      'Arret Mécanique sur:',
+      'Dèfout Élèctrique sur:', 
+      'Arret d\'instalation sur:',
+      'Travoux Mècanique sur:',
+      'Travoux Elèctrique sur:',
+      'Travoux dans l\'instalation sur:',
+      'Autre:',
+    ];
+    
+    String? selectedNature;
+    String customNature = '';
+    String tempStopDuration = '';
+    final customNatureController = TextEditingController();
+    
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Ajouter un arrêt'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                value: selectedNature,
+                decoration: const InputDecoration(
+                  labelText: 'Nature prédéfinie',
+                  border: OutlineInputBorder(),
+                ),
+                items: predefinedNatures.map((nature) => DropdownMenuItem(
+                  value: nature,
+                  child: Text(nature),
+                )).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedNature = value;
+                    customNature = '';
+                    customNatureController.clear();
+                  });
+                },
+                hint: const Text('Sélectionner une nature'),
+                isExpanded: true,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Durée (ex: 1h 30)',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => tempStopDuration = value),
+              ),
+              if (selectedNature?.endsWith(':') == true) ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: customNatureController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nature (complément)',
+                    border: OutlineInputBorder(),
+                    hintText: 'Maximum 20 caractères par ligne',
+                  ),
+                  maxLines: 5,
+                  onChanged: (value) {
+                    final words = value.split(' ');
+                    final lines = <String>[];
+                    String currentLine = '';
+                    for (var word in words) {
+                      if ((currentLine + (currentLine.isEmpty ? '' : ' ') + word).length <= 20) {
+                        currentLine += (currentLine.isEmpty ? '' : ' ') + word;
+                      } else {
+                        if (currentLine.isNotEmpty) {
+                          lines.add(currentLine);
+                        }
+                        currentLine = word;
+                      }
+                    }
+                    if (currentLine.isNotEmpty) {
+                      lines.add(currentLine);
+                    }
+                    setState(() => customNature = lines.join('\n'));
+                  },
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                String finalNature = '';
+                if (selectedNature != null) {
+                  if (selectedNature?.endsWith(':') == true) {
+                    if (customNature.trim().isEmpty) return;
+                    finalNature = '$selectedNature\n${customNature.trim()}';
+                  } else {
+                    finalNature = selectedNature!;
+                  }
+                } else {
+                  return;
+                }
+                if (tempStopDuration.isNotEmpty && finalNature.isNotEmpty) {
+                  final updatedData = Map<String, dynamic>.from(data);
+                  if (updatedData['stops'] == null) {
+                    updatedData['stops'] = [];
+                  }
+                  (updatedData['stops'] as List).add({
+                    'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                    'duration': tempStopDuration,
+                    'nature': finalNature,
+                  });
+                  
+                  final updatedReport = Report(
+                    id: report.id,
+                    description: report.description,
+                    type: report.type,
+                    group: report.group,
+                    date: report.date,
+                    additionalData: updatedData,
+                  );
+                  
+                  Navigator.pop(context);
+                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                }
+              },
+              child: const Text('Ajouter'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Edit Stop Dialog for Activity Report
+  Future<void> _showEditStopDialog(Report report, Map<String, dynamic> data, int index, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final stop = (data['stops'] as List)[index];
+    const List<String> predefinedNatures = [
+      'Manque Produit',
+      'Attente Saturation Silo',
+      'Vidange Extraction 2',
+      'Arret Mécanique sur:',
+      'Dèfout Élèctrique sur:', 
+      'Arret d\'instalation sur:',
+      'Travoux Mècanique sur:',
+      'Travoux Elèctrique sur:',
+      'Travoux dans l\'instalation sur:',
+      'Autre:',
+    ];
+    
+    String? selectedNature;
+    String customNature = '';
+    String tempStopDuration = stop['duration'] ?? '';
+    final customNatureController = TextEditingController();
+    
+    // Parse the nature to determine selected nature and custom part
+    String currentNature = stop['nature'] ?? '';
+    for (String nature in predefinedNatures) {
+      if (currentNature.startsWith(nature)) {
+        selectedNature = nature;
+        if (nature.endsWith(':')) {
+          customNature = currentNature.substring(nature.length).trim();
+          customNatureController.text = customNature;
+        }
+        break;
+      }
+    }
+    
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Modifier l\'arrêt'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                value: selectedNature,
+                decoration: const InputDecoration(
+                  labelText: 'Nature prédéfinie',
+                  border: OutlineInputBorder(),
+                ),
+                items: predefinedNatures.map((nature) => DropdownMenuItem(
+                  value: nature,
+                  child: Text(nature),
+                )).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedNature = value;
+                    customNature = '';
+                    customNatureController.clear();
+                  });
+                },
+                hint: const Text('Sélectionner une nature'),
+                isExpanded: true,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Durée (ex: 1h 30)',
+                  border: OutlineInputBorder(),
+                ),
+                controller: TextEditingController(text: tempStopDuration),
+                onChanged: (value) => setState(() => tempStopDuration = value),
+              ),
+              if (selectedNature?.endsWith(':') == true) ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: customNatureController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nature (complément)',
+                    border: OutlineInputBorder(),
+                    hintText: 'Maximum 20 caractères par ligne',
+                  ),
+                  maxLines: 5,
+                  onChanged: (value) {
+                    final words = value.split(' ');
+                    final lines = <String>[];
+                    String currentLine = '';
+                    for (var word in words) {
+                      if ((currentLine + (currentLine.isEmpty ? '' : ' ') + word).length <= 20) {
+                        currentLine += (currentLine.isEmpty ? '' : ' ') + word;
+                      } else {
+                        if (currentLine.isNotEmpty) {
+                          lines.add(currentLine);
+                        }
+                        currentLine = word;
+                      }
+                    }
+                    if (currentLine.isNotEmpty) {
+                      lines.add(currentLine);
+                    }
+                    setState(() => customNature = lines.join('\n'));
+                  },
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                String finalNature = '';
+                if (selectedNature != null) {
+                  if (selectedNature?.endsWith(':') == true) {
+                    if (customNature.trim().isEmpty) return;
+                    finalNature = '$selectedNature\n${customNature.trim()}';
+                  } else {
+                    finalNature = selectedNature!;
+                  }
+                } else {
+                  return;
+                }
+                if (tempStopDuration.isNotEmpty && finalNature.isNotEmpty) {
+                  final updatedData = Map<String, dynamic>.from(data);
+                  (updatedData['stops'] as List)[index] = {
+                    'id': stop['id'],
+                    'duration': tempStopDuration,
+                    'nature': finalNature,
+                  };
+                  
+                  final updatedReport = Report(
+                    id: report.id,
+                    description: report.description,
+                    type: report.type,
+                    group: report.group,
+                    date: report.date,
+                    additionalData: updatedData,
+                  );
+                  
+                  Navigator.pop(context);
+                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                }
+              },
+              child: const Text('Modifier'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Delete Stop Dialog for Activity Report
+  Future<void> _showDeleteStopDialog(Report report, Map<String, dynamic> data, int index, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer l\'arrêt'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer cet arrêt ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final updatedData = Map<String, dynamic>.from(data);
+              (updatedData['stops'] as List).removeAt(index);
+              
+              final updatedReport = Report(
+                id: report.id,
+                description: report.description,
+                type: report.type,
+                group: report.group,
+                date: report.date,
+                additionalData: updatedData,
+              );
+              
+              Navigator.pop(context);
+              _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Add Vibreur Counter Dialog for Activity Report
+  Future<void> _showAddVibratorCounterDialog(Report report, Map<String, dynamic> data, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    int? selectedPoste;
+    String startIndex = '';
+    String endIndex = '';
+    
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Ajouter un compteur vibreur'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<int>(
+                value: selectedPoste,
+                decoration: const InputDecoration(
+                  labelText: 'Poste',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('3ème Poste')),
+                  DropdownMenuItem(value: 1, child: Text('1er Poste')),
+                  DropdownMenuItem(value: 2, child: Text('2ème Poste')),
+                ],
+                onChanged: (value) => setState(() => selectedPoste = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Index début',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => startIndex = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Index fin',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => endIndex = value),
               ),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (selectedPoste != null && startIndex.isNotEmpty && endIndex.isNotEmpty) {
+                  final updatedData = Map<String, dynamic>.from(data);
+                  if (updatedData['vibrator Counters'] == null) {
+                    updatedData['vibrator Counters'] = [];
+                  }
+                  (updatedData['vibrator Counters'] as List).add({
+                    'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                    'poste': selectedPoste,
+                    'start': startIndex,
+                    'end': endIndex,
+                  });
+                  
+                  final updatedReport = Report(
+                    id: report.id,
+                    description: report.description,
+                    type: report.type,
+                    group: report.group,
+                    date: report.date,
+                    additionalData: updatedData,
+                  );
+                  
+                  Navigator.pop(context);
+                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                }
+              },
+              child: const Text('Ajouter'),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  // Edit Vibreur Counter Dialog for Activity Report
+  Future<void> _showEditVibratorCounterDialog(Report report, Map<String, dynamic> data, int index, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final counter = (data['vibrator Counters'] as List)[index];
+    int? selectedPoste = counter['poste'];
+    String startIndex = counter['start'] ?? '';
+    String endIndex = counter['end'] ?? '';
+    
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Modifier le compteur vibreur'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<int>(
+                value: selectedPoste,
+                decoration: const InputDecoration(
+                  labelText: 'Poste',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('3ème Poste')),
+                  DropdownMenuItem(value: 1, child: Text('1er Poste')),
+                  DropdownMenuItem(value: 2, child: Text('2ème Poste')),
+                ],
+                onChanged: (value) => setState(() => selectedPoste = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Index début',
+                  border: OutlineInputBorder(),
+                ),
+                controller: TextEditingController(text: startIndex),
+                onChanged: (value) => setState(() => startIndex = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Index fin',
+                  border: OutlineInputBorder(),
+                ),
+                controller: TextEditingController(text: endIndex),
+                onChanged: (value) => setState(() => endIndex = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (selectedPoste != null && startIndex.isNotEmpty && endIndex.isNotEmpty) {
+                  final updatedData = Map<String, dynamic>.from(data);
+                  (updatedData['vibrator Counters'] as List)[index] = {
+                    'id': counter['id'],
+                    'poste': selectedPoste,
+                    'start': startIndex,
+                    'end': endIndex,
+                  };
+                  
+                  final updatedReport = Report(
+                    id: report.id,
+                    description: report.description,
+                    type: report.type,
+                    group: report.group,
+                    date: report.date,
+                    additionalData: updatedData,
+                  );
+                  
+                  Navigator.pop(context);
+                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                }
+              },
+              child: const Text('Modifier'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Delete Vibreur Counter Dialog for Activity Report
+  Future<void> _showDeleteVibratorCounterDialog(Report report, Map<String, dynamic> data, int index, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer le compteur vibreur'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer ce compteur vibreur ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final updatedData = Map<String, dynamic>.from(data);
+              (updatedData['vibrator Counters'] as List).removeAt(index);
+              
+              final updatedReport = Report(
+                id: report.id,
+                description: report.description,
+                type: report.type,
+                group: report.group,
+                date: report.date,
+                additionalData: updatedData,
+              );
+              
+              Navigator.pop(context);
+              _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Add Liaison Counter Dialog for Activity Report
+  Future<void> _showAddLiaisonCounterDialog(Report report, Map<String, dynamic> data, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    int? selectedPoste;
+    String startIndex = '';
+    String endIndex = '';
+    
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Ajouter un compteur liaison'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<int>(
+                value: selectedPoste,
+                decoration: const InputDecoration(
+                  labelText: 'Poste',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('3ème Poste')),
+                  DropdownMenuItem(value: 1, child: Text('1er Poste')),
+                  DropdownMenuItem(value: 2, child: Text('2ème Poste')),
+                ],
+                onChanged: (value) => setState(() => selectedPoste = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Index début',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => startIndex = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Index fin',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => endIndex = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (selectedPoste != null && startIndex.isNotEmpty && endIndex.isNotEmpty) {
+                  final updatedData = Map<String, dynamic>.from(data);
+                  if (updatedData['liaison Counters'] == null) {
+                    updatedData['liaison Counters'] = [];
+                  }
+                  (updatedData['liaison Counters'] as List).add({
+                    'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                    'poste': selectedPoste,
+                    'start': startIndex,
+                    'end': endIndex,
+                  });
+                  
+                  final updatedReport = Report(
+                    id: report.id,
+                    description: report.description,
+                    type: report.type,
+                    group: report.group,
+                    date: report.date,
+                    additionalData: updatedData,
+                  );
+                  
+                  Navigator.pop(context);
+                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                }
+              },
+              child: const Text('Ajouter'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Edit Liaison Counter Dialog for Activity Report
+  Future<void> _showEditLiaisonCounterDialog(Report report, Map<String, dynamic> data, int index, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final counter = (data['liaison Counters'] as List)[index];
+    int? selectedPoste = counter['poste'];
+    String startIndex = counter['start'] ?? '';
+    String endIndex = counter['end'] ?? '';
+    
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Modifier le compteur liaison'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<int>(
+                value: selectedPoste,
+                decoration: const InputDecoration(
+                  labelText: 'Poste',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('3ème Poste')),
+                  DropdownMenuItem(value: 1, child: Text('1er Poste')),
+                  DropdownMenuItem(value: 2, child: Text('2ème Poste')),
+                ],
+                onChanged: (value) => setState(() => selectedPoste = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Index début',
+                  border: OutlineInputBorder(),
+                ),
+                controller: TextEditingController(text: startIndex),
+                onChanged: (value) => setState(() => startIndex = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Index fin',
+                  border: OutlineInputBorder(),
+                ),
+                controller: TextEditingController(text: endIndex),
+                onChanged: (value) => setState(() => endIndex = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (selectedPoste != null && startIndex.isNotEmpty && endIndex.isNotEmpty) {
+                  final updatedData = Map<String, dynamic>.from(data);
+                  (updatedData['liaison Counters'] as List)[index] = {
+                    'id': counter['id'],
+                    'poste': selectedPoste,
+                    'start': startIndex,
+                    'end': endIndex,
+                  };
+                  
+                  final updatedReport = Report(
+                    id: report.id,
+                    description: report.description,
+                    type: report.type,
+                    group: report.group,
+                    date: report.date,
+                    additionalData: updatedData,
+                  );
+                  
+                  Navigator.pop(context);
+                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                }
+              },
+              child: const Text('Modifier'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Delete Liaison Counter Dialog for Activity Report
+  Future<void> _showDeleteLiaisonCounterDialog(Report report, Map<String, dynamic> data, int index, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer le compteur liaison'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer ce compteur liaison ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final updatedData = Map<String, dynamic>.from(data);
+              (updatedData['liaison Counters'] as List).removeAt(index);
+              
+              final updatedReport = Report(
+                id: report.id,
+                description: report.description,
+                type: report.type,
+                group: report.group,
+                date: report.date,
+                additionalData: updatedData,
+              );
+              
+              Navigator.pop(context);
+              _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Add Stock Entry Dialog for Activity Report
+  Future<void> _showAddStockEntryDialog(Report report, Map<String, dynamic> data, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    int? selectedPoste;
+    int? selectedPark;
+    int? selectedType;
+    String quantity = '';
+    String startTime = '';
+    
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Ajouter une entrée de stock'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<int>(
+                value: selectedPoste,
+                decoration: const InputDecoration(
+                  labelText: 'Poste',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('3ème Poste')),
+                  DropdownMenuItem(value: 1, child: Text('1er Poste')),
+                  DropdownMenuItem(value: 2, child: Text('2ème Poste')),
+                ],
+                onChanged: (value) => setState(() => selectedPoste = value),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<int>(
+                value: selectedPark,
+                decoration: const InputDecoration(
+                  labelText: 'Parc',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('PARK 1')),
+                  DropdownMenuItem(value: 1, child: Text('PARK 2')),
+                  DropdownMenuItem(value: 2, child: Text('PARK 3')),
+                ],
+                onChanged: (value) => setState(() => selectedPark = value),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<int>(
+                value: selectedType,
+                decoration: const InputDecoration(
+                  labelText: 'Type',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('NORMAL')),
+                  DropdownMenuItem(value: 1, child: Text('OCEANE')),
+                  DropdownMenuItem(value: 2, child: Text('PB30')),
+                ],
+                onChanged: (value) => setState(() => selectedType = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Quantité',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => quantity = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Heure de début',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => startTime = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (selectedPoste != null && selectedPark != null && selectedType != null && quantity.isNotEmpty && startTime.isNotEmpty) {
+                  final updatedData = Map<String, dynamic>.from(data);
+                  if (updatedData['stock'] == null) {
+                    updatedData['stock'] = [];
+                  }
+                  (updatedData['stock'] as List).add({
+                    'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                    'poste': selectedPoste,
+                    'park': selectedPark,
+                    'type': selectedType,
+                    'quantity': quantity,
+                    'startTime': startTime,
+                  });
+                  
+                  final updatedReport = Report(
+                    id: report.id,
+                    description: report.description,
+                    type: report.type,
+                    group: report.group,
+                    date: report.date,
+                    additionalData: updatedData,
+                  );
+                  
+                  Navigator.pop(context);
+                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                }
+              },
+              child: const Text('Ajouter'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Edit Stock Entry Dialog for Activity Report
+  Future<void> _showEditStockEntryDialog(Report report, Map<String, dynamic> data, int index, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final stock = (data['stock'] as List)[index];
+    int? selectedPoste = stock['poste'];
+    int? selectedPark = stock['park'];
+    int? selectedType = stock['type'];
+    String quantity = stock['quantity'] ?? '';
+    String startTime = stock['startTime'] ?? '';
+    
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Modifier l\'entrée de stock'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<int>(
+                value: selectedPoste,
+                decoration: const InputDecoration(
+                  labelText: 'Poste',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('3ème Poste')),
+                  DropdownMenuItem(value: 1, child: Text('1er Poste')),
+                  DropdownMenuItem(value: 2, child: Text('2ème Poste')),
+                ],
+                onChanged: (value) => setState(() => selectedPoste = value),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<int>(
+                value: selectedPark,
+                decoration: const InputDecoration(
+                  labelText: 'Parc',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('PARK 1')),
+                  DropdownMenuItem(value: 1, child: Text('PARK 2')),
+                  DropdownMenuItem(value: 2, child: Text('PARK 3')),
+                ],
+                onChanged: (value) => setState(() => selectedPark = value),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<int>(
+                value: selectedType,
+                decoration: const InputDecoration(
+                  labelText: 'Type',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('NORMAL')),
+                  DropdownMenuItem(value: 1, child: Text('OCEANE')),
+                  DropdownMenuItem(value: 2, child: Text('PB30')),
+                ],
+                onChanged: (value) => setState(() => selectedType = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Quantité',
+                  border: OutlineInputBorder(),
+                ),
+                controller: TextEditingController(text: quantity),
+                onChanged: (value) => setState(() => quantity = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Heure de début',
+                  border: OutlineInputBorder(),
+                ),
+                controller: TextEditingController(text: startTime),
+                onChanged: (value) => setState(() => startTime = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (selectedPoste != null && selectedPark != null && selectedType != null && quantity.isNotEmpty && startTime.isNotEmpty) {
+                  final updatedData = Map<String, dynamic>.from(data);
+                  (updatedData['stock'] as List)[index] = {
+                    'id': stock['id'],
+                    'poste': selectedPoste,
+                    'park': selectedPark,
+                    'type': selectedType,
+                    'quantity': quantity,
+                    'startTime': startTime,
+                  };
+                  
+                  final updatedReport = Report(
+                    id: report.id,
+                    description: report.description,
+                    type: report.type,
+                    group: report.group,
+                    date: report.date,
+                    additionalData: updatedData,
+                  );
+                  
+                  Navigator.pop(context);
+                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                }
+              },
+              child: const Text('Modifier'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Delete Stock Entry Dialog for Activity Report
+  Future<void> _showDeleteStockEntryDialog(Report report, Map<String, dynamic> data, int index, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer l\'entrée de stock'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer cette entrée de stock ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final updatedData = Map<String, dynamic>.from(data);
+              (updatedData['stock'] as List).removeAt(index);
+              
+              final updatedReport = Report(
+                id: report.id,
+                description: report.description,
+                type: report.type,
+                group: report.group,
+                date: report.date,
+                additionalData: updatedData,
+              );
+              
+              Navigator.pop(context);
+              _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
       ),
     );
   }
@@ -446,29 +1712,29 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 trailing: IconButton(
                   icon: const Icon(Icons.calendar_today),
                   onPressed: () async {
+                    final currentContext = dialogContext;
                     final DateTime? picked = await showDatePicker(
-                      context: dialogContext,
+                      context: currentContext,
                       initialDate: selectedDate,
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2100),
                     );
                     if (picked != null) {
                       final TimeOfDay? time = await showTimePicker(
-                        context: dialogContext,
+                        context: currentContext,
                         initialTime: TimeOfDay.fromDateTime(selectedDate),
                       );
                       if (time != null) {
-                        if (mounted) {
-                          setState(() {
-                            selectedDate = DateTime(
-                              picked.year,
-                              picked.month,
-                              picked.day,
-                              time.hour,
-                              time.minute,
-                            );
-                          });
-                        }
+                        final newDate = DateTime(
+                          picked.year,
+                          picked.month,
+                          picked.day,
+                          time.hour,
+                          time.minute,
+                        );
+                        setState(() {
+                          selectedDate = newDate;
+                        });
                       }
                     }
                   },
@@ -507,6 +1773,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     // Special handling for Activity TNB report (case-insensitive)
     if (typeLower == 'activity tnb') {
       final data = report.additionalData ?? {};
+      final maxHeight = MediaQuery.of(context).size.height * 0.8;
       await showDialog(
         context: context,
         builder: (dialogContext) => StatefulBuilder(
@@ -515,7 +1782,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxWidth: 600,
-                maxHeight: MediaQuery.of(context).size.height * 0.8,
+                maxHeight: maxHeight,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -589,45 +1856,56 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     style: Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const Divider(height: 16),
-                                  _buildSummaryRow('T H.A:', _formatMinutesToHoursMinutes(data['totalDowntime'] ?? 0)),
-                                  _buildSummaryRow('T H.M:', _formatMinutesToHoursMinutes(data['operatingTime'] ?? 0)),
-                                  _buildSummaryRow('T H.V:', _formatMinutesToHoursMinutes(data['totalVibratorMinutes'] ?? 0)),
-                                  _buildSummaryRow('T H.L:', _formatMinutesToHoursMinutes(data['totalLiaisonMinutes'] ?? 0)),
+                                  _buildSummaryRow('T H.A:', _formatMinutesToHoursMinutes(data['T H.A'] ?? 0)),
+                                  _buildSummaryRow('T H.M:', _formatMinutesToHoursMinutes(data['T H.M'] ?? 0)),
+                                  _buildSummaryRow('T H.V:', _formatMinutesToHoursMinutes(data['T H.V'] ?? 0)),
+                                  _buildSummaryRow('T H.L:', _formatMinutesToHoursMinutes(data['T H.L'] ?? 0)),
                                   const SizedBox(height: 8),
                                   _buildSummaryRow('T Nr.A:', (data['stops'] is List ? (data['stops'] as List).length : 0).toString()),
-                                  _buildSummaryRow('T Nr.V:', (data['vibratorCounters'] is List ? (data['vibratorCounters'] as List).length : 0).toString()),
-                                  _buildSummaryRow('T Nr.L:', (data['liaisonCounters'] is List ? (data['liaisonCounters'] as List).length : 0).toString()),
+                                  _buildSummaryRow('T Nr.V:', (data['vibrator Counters'] is List ? (data['vibrator Counters'] as List).length : 0).toString()),
+                                  _buildSummaryRow('T Nr.L:', (data['liaison Counters'] is List ? (data['liaison Counters'] as List).length : 0).toString()),
                                 ],
                               ),
                             ),
                           ),
                           const SizedBox(height: 16),
-                          // Stops Card
-                          if (data['stops'] is List && (data['stops'] as List).isNotEmpty)
-                            Card(
-                              margin: EdgeInsets.zero,
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Arrêts',
-                                      style: Theme.of(context).textTheme.titleMedium,
-                                    ),
-                                    const Divider(height: 16),
+                          // Stops Card - Debug version
+                          Card(
+                            margin: EdgeInsets.zero,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Arrêts (Debug)',
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  const Divider(height: 16),
+                                  // Debug information
+                                  Text('Data type: ${data['stops'].runtimeType}'),
+                                  Text('Is List: ${data['stops'] is List}'),
+                                  Text('Is not null: ${data['stops'] != null}'),
+                                  if (data['stops'] is List)
+                                    Text('List length: ${(data['stops'] as List).length}'),
+                                  if (data['stops'] is List && (data['stops'] as List).isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    const Text('Stops details:'),
                                     ...List.from(data['stops']).map((stop) => Padding(
                                       padding: const EdgeInsets.symmetric(vertical: 2),
                                       child: Text('• ${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
                                     )),
-                                  ],
-                                ),
+                                  ] else if (data['stops'] is List && (data['stops'] as List).isEmpty)
+                                    const Text('Stops list is empty'),
+                                  else
+                                    Text('Raw stops data: ${data['stops']}'),
+                                ],
                               ),
                             ),
-                          if (data['stops'] is List && (data['stops'] as List).isNotEmpty)
-                            const SizedBox(height: 16),
+                          ),
+                          const SizedBox(height: 16),
                           // Vibreurs Counters Card
-                          if (data['vibratorCounters'] is List && (data['vibratorCounters'] as List).isNotEmpty)
+                          if (data['vibrator Counters'] is List && (data['vibrator Counters'] as List).isNotEmpty)
                             Card(
                               margin: EdgeInsets.zero,
                               child: Padding(
@@ -640,18 +1918,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       style: Theme.of(context).textTheme.titleMedium,
                                     ),
                                     const Divider(height: 16),
-                                    ...List.from(data['vibratorCounters']).map((counter) => Padding(
+                                    ...List.from(data['vibrator Counters']).map((counter) => Padding(
                                       padding: const EdgeInsets.symmetric(vertical: 2),
-                                      child: Text('• Poste: ${_getPosteString(counter['poste'])}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('• Poste: ${_getPosteString(counter['poste'])}'),
+                                          if (counter['start'] != null && counter['start'].toString().isNotEmpty)
+                                            Text('  Début: ${counter['start']}'),
+                                          if (counter['end'] != null && counter['end'].toString().isNotEmpty)
+                                            Text('  Fin: ${counter['end']}'),
+                                        ],
+                                      ),
                                     )),
                                   ],
                                 ),
                               ),
                             ),
-                          if (data['vibratorCounters'] is List && (data['vibratorCounters'] as List).isNotEmpty)
+                          if (data['vibrator Counters'] is List && (data['vibrator Counters'] as List).isNotEmpty)
                             const SizedBox(height: 16),
                           // Liaison Counters Card
-                          if (data['liaisonCounters'] is List && (data['liaisonCounters'] as List).isNotEmpty)
+                          if (data['liaison Counters'] is List && (data['liaison Counters'] as List).isNotEmpty)
                             Card(
                               margin: EdgeInsets.zero,
                               child: Padding(
@@ -664,18 +1951,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       style: Theme.of(context).textTheme.titleMedium,
                                     ),
                                     const Divider(height: 16),
-                                    ...List.from(data['liaisonCounters']).map((counter) => Padding(
+                                    ...List.from(data['liaison Counters']).map((counter) => Padding(
                                       padding: const EdgeInsets.symmetric(vertical: 2),
-                                      child: Text('• Poste: ${_getPosteString(counter['poste'])}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('• Poste: ${_getPosteString(counter['poste'])}'),
+                                          if (counter['start'] != null && counter['start'].toString().isNotEmpty)
+                                            Text('  Début: ${counter['start']}'),
+                                          if (counter['end'] != null && counter['end'].toString().isNotEmpty)
+                                            Text('  Fin: ${counter['end']}'),
+                                        ],
+                                      ),
                                     )),
                                   ],
                                 ),
                               ),
                             ),
-                          if (data['liaisonCounters'] is List && (data['liaisonCounters'] as List).isNotEmpty)
+                          if (data['liaison Counters'] is List && (data['liaison Counters'] as List).isNotEmpty)
                             const SizedBox(height: 16),
                           // Stock Card
-                          if (data['stockEntries'] is List && (data['stockEntries'] as List).isNotEmpty)
+                          if (data['stock'] is List && (data['stock'] as List).isNotEmpty)
                             Card(
                               margin: EdgeInsets.zero,
                               child: Padding(
@@ -688,7 +1984,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       style: Theme.of(context).textTheme.titleMedium,
                                     ),
                                     const Divider(height: 16),
-                                    ...List.from(data['stockEntries']).map((entry) => Padding(
+                                    ...List.from(data['stock']).map((entry) => Padding(
                                       padding: const EdgeInsets.symmetric(vertical: 2),
                                       child: Text(
                                         'Poste: ${_getPosteString(entry['poste'])} | '
@@ -752,55 +2048,73 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                 ),
                 // Module 1 Card
-                Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Module 1', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 4),
-                        Text('Temps de fonctionnement: ${_formatMinutesToHoursMinutes(data['module1OperatingTime'] ?? 0)}'),
-                        Text('Temps d\'arrêt: ${_formatMinutesToHoursMinutes(data['module1TotalDowntime'] ?? 0)}'),
-                        if (data['module1Stops'] is List && (data['module1Stops'] as List).isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          const Text('Arrêts:', style: TextStyle(fontWeight: FontWeight.bold)),
-                          ...List.from(data['module1Stops']).map((stop) => Padding(
-                            padding: const EdgeInsets.only(left: 16, top: 4),
-                            child: Text('${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
-                          )),
-                        ],
-                      ],
-                    ),
-                  ),
+                Builder(
+                  builder: (context) {
+                    final module1Stops = (data['module1Stops'] is List) ? List.from(data['module1Stops']) : [];
+                    final module1Downtime = _calculateDowntimeFromStops(module1Stops);
+                    final totalPeriod = (data['T H.M'] ?? 0) + (data['T H.A'] ?? 0);
+                    final module1OperatingTime = (totalPeriod - module1Downtime).clamp(0, totalPeriod);
+                    
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Module 1', style: Theme.of(context).textTheme.titleMedium),
+                            const SizedBox(height: 4),
+                            Text('Temps de fonctionnement: ${_formatMinutesToHoursMinutes(module1OperatingTime)}'),
+                            Text('Temps d\'arrêt: ${_formatMinutesToHoursMinutes(module1Downtime)}'),
+                            if (module1Stops.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              const Text('Arrêts:', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ...module1Stops.map((stop) => Padding(
+                                padding: const EdgeInsets.only(left: 16, top: 4),
+                                child: Text('${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
+                              )),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
                 // Module 2 Card
-                Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Module 2', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 4),
-                        Text('Temps de fonctionnement: ${_formatMinutesToHoursMinutes(data['module2OperatingTime'] ?? 0)}'),
-                        Text('Temps d\'arrêt: ${_formatMinutesToHoursMinutes(data['module2TotalDowntime'] ?? 0)}'),
-                        if (data['module2Stops'] is List && (data['module2Stops'] as List).isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          const Text('Arrêts:', style: TextStyle(fontWeight: FontWeight.bold)),
-                          ...List.from(data['module2Stops']).map((stop) => Padding(
-                            padding: const EdgeInsets.only(left: 16, top: 4),
-                            child: Text('${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
-                          )),
-                        ],
-                      ],
-                    ),
-                  ),
+                Builder(
+                  builder: (context) {
+                    final module2Stops = (data['module2Stops'] is List) ? List.from(data['module2Stops']) : [];
+                    final module2Downtime = _calculateDowntimeFromStops(module2Stops);
+                    final totalPeriod = (data['T H.M'] ?? 0) + (data['T H.A'] ?? 0);
+                    final module2OperatingTime = (totalPeriod - module2Downtime).clamp(0, totalPeriod);
+                    
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Module 2', style: Theme.of(context).textTheme.titleMedium),
+                            const SizedBox(height: 4),
+                            Text('Temps de fonctionnement: ${_formatMinutesToHoursMinutes(module2OperatingTime)}'),
+                            Text('Temps d\'arrêt: ${_formatMinutesToHoursMinutes(module2Downtime)}'),
+                            if (module2Stops.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              const Text('Arrêts:', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ...module2Stops.map((stop) => Padding(
+                                padding: const EdgeInsets.only(left: 16, top: 4),
+                                child: Text('${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
+                              )),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
                 // Stocks Card (if any)
-                if (data['stockEntries'] is List && (data['stockEntries'] as List).isNotEmpty)
+                if (data['stock'] is List && (data['stock'] as List).isNotEmpty)
                   Card(
                     margin: const EdgeInsets.symmetric(vertical: 4),
                     child: Padding(
@@ -810,7 +2124,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         children: [
                           Text('Stocks', style: Theme.of(context).textTheme.titleMedium),
                           const SizedBox(height: 4),
-                          ...List.from(data['stockEntries']).map((entry) => Padding(
+                          ...List.from(data['stock']).map((entry) => Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 2),
                                 child: Text(
                                   'Poste: ${_getPosteString(entry['poste'])} | '
@@ -895,8 +2209,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 children: [
                                   Text('Équipement ${index + 1}:', style: const TextStyle(fontWeight: FontWeight.bold)),
                                   const SizedBox(height: 4),
-                                  Text('Type: ${equipment['equipmentType'] ?? '-'}'),
-                                  Text('Raison: ${equipment['stopReason'] ?? '-'}'),
+                                  Text('Type: ${equipment['Type'] ?? '-'}'),
+                                  Text('Raison: ${equipment['Reason'] ?? '-'}'),
                                   if (index < (data['equipmentList'] as List).length - 1) const Divider(),
                                 ],
                               ),
@@ -927,6 +2241,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     if (typeLower == 'r0' || 
         (report.additionalData != null && report.additionalData!.containsKey('mine') && report.additionalData!.containsKey('selectedPoste'))) {
       final data = report.additionalData ?? {};
+      final maxHeight = MediaQuery.of(context).size.height * 0.8;
       
       await showDialog(
         context: context,
@@ -935,7 +2250,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           child: ConstrainedBox(
             constraints: BoxConstraints(
               maxWidth: 600,
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
+              maxHeight: maxHeight,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1015,7 +2330,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 _buildInfoRow('Catégorie', data['Category'] ?? '-'),
                                 _buildInfoRow('Type', data['Type'] ?? '-'),
                                 _buildInfoRow('Modèle', data['Model'] ?? '-'),
-                                _buildInfoRow('Poste', data['Poste'] ?? '-'),
+                                _buildInfoRow('Poste', data['selectedPoste'] ?? data['poste'] ?? data['Poste'] ?? '-'),
                               ],
                             ),
                           ),
@@ -1041,10 +2356,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     return Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          '${index == 0 ? '3ème' : index == 1 ? '1er' : '2ème'} Poste',
-                                          style: Theme.of(context).textTheme.titleSmall,
-                                        ),
                                         const SizedBox(height: 8),
                                         _buildInfoRow('Début', compteur['duree'] ?? '-'),
                                         _buildInfoRow('Fin', compteur['note'] ?? '-'),
@@ -1107,7 +2418,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   _buildInfoRow('H.M', data['exploitation']['H.M'] ?? '-'),
                                   _buildInfoRow('H.A', data['exploitation']['H.A'] ?? '-'),
                                   _buildInfoRow('Tonnage', data['exploitation']['Tonnage'] ?? '-'),
-                                  _buildInfoRow('Rendement', data['exploitation']['Rendement'] ?? '-'),
+                                  _buildInfoRow('Rendeme', data['exploitation']['Rendeme'] ?? '-'),
                                 ],
                               ),
                             ),
@@ -1133,9 +2444,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        _buildInfoRow('Chantier', repartition['Chantier'] ?? '-'),
-                                        _buildInfoRow('Temps', repartition['Temps'] ?? '-'),
-                                        _buildInfoRow('Imputation', repartition['Imputation'] ?? '-'),
+                                        _buildInfoRow('Chantier', repartition['Chantier'] ?? repartition['chantier'] ?? '-'),
+                                        _buildInfoRow('Temps', repartition['Temps'] ?? repartition['temps'] ?? '-'),
+                                        _buildInfoRow('Imputation', repartition['Imputation'] ?? repartition['imputation'] ?? '-'),
                                         const Divider(height: 8),
                                       ],
                                     ),
@@ -1160,7 +2471,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     style: Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const Divider(height: 16),
-                                  _buildInfoRow('Conducteur', data['personnel']['conducteur'] ?? '-'),
+                                  _buildInfoRow('Conductr', data['personnel']['conductr'] ?? '-'),
                                   _buildInfoRow('Graisseur', data['personnel']['graisseur'] ?? '-'),
                                   _buildInfoRow('Matricules', data['personnel']['matricules'] ?? '-'),
                                 ],
@@ -1216,6 +2527,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         final eq = trip['equipment'] ?? '-';
         equipmentCounts[eq] = (equipmentCounts[eq] ?? 0) + 1;
       }
+      final maxHeight = MediaQuery.of(context).size.height * 0.8;
       
       await showDialog(
         context: context,
@@ -1224,7 +2536,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           child: ConstrainedBox(
             constraints: BoxConstraints(
               maxWidth: 600,
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
+              maxHeight: maxHeight,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1548,9 +2860,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
 
     final stops = (data['stops'] is List) ? List.from(data['stops']) : [];
-    final vibratorCounters = (data['vibratorCounters'] is List) ? List.from(data['vibratorCounters']) : [];
-    final liaisonCounters = (data['liaisonCounters'] is List) ? List.from(data['liaisonCounters']) : [];
-    final stockEntries = (data['stockEntries'] is List) ? List.from(data['stockEntries']) : [];
+    final vibratorCounters = (data['vibrator Counters'] is List) ? List.from(data['vibrator Counters']) : [];
+    final liaisonCounters = (data['liaison Counters'] is List) ? List.from(data['liaison Counters']) : [];
+    final stockEntries = (data['stock'] is List) ? List.from(data['stock']) : [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1570,10 +2882,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _buildSummaryRow('T H.A:', formatMinutesToHoursMinutes(data['totalDowntime'] is int ? data['totalDowntime'] : 0)),
-                _buildSummaryRow('T H.M:', formatMinutesToHoursMinutes(data['operatingTime'] is int ? data['operatingTime'] : 0)),
-                _buildSummaryRow('T H.V:', formatMinutesToHoursMinutes(data['totalVibratorMinutes'] is int ? data['totalVibratorMinutes'] : 0)),
-                _buildSummaryRow('T H.L:', formatMinutesToHoursMinutes(data['totalLiaisonMinutes'] is int ? data['totalLiaisonMinutes'] : 0)),
+                _buildSummaryRow('T H.A:', formatMinutesToHoursMinutes(data['T H.A'] is int ? data['T H.A'] : 0)),
+                _buildSummaryRow('T H.M:', formatMinutesToHoursMinutes(data['T H.M'] is int ? data['T H.M'] : 0)),
+                _buildSummaryRow('T H.V:', formatMinutesToHoursMinutes(data['T H.V'] is int ? data['T H.V'] : 0)),
+                _buildSummaryRow('T H.L:', formatMinutesToHoursMinutes(data['T H.L'] is int ? data['T H.L'] : 0)),
                 const SizedBox(height: 8),
                 _buildSummaryRow('T Nr.A:', stops.length.toString()),
                 _buildSummaryRow('T Nr.V:', vibratorCounters.length.toString()),
@@ -1656,6 +2968,37 @@ class _ReportsScreenState extends State<ReportsScreen> {
     int hours = totalMinutes ~/ 60;
     int minutes = totalMinutes % 60;
     return "${hours}h ${minutes}m";
+  }
+
+  // Calculate downtime from stops list
+  int _calculateDowntimeFromStops(List stops) {
+    if (stops.isEmpty) return 0;
+    return stops.map((stop) => _parseDurationToMinutes(stop['duration'] ?? '')).fold(0, (a, b) => a + b);
+  }
+
+  // Parse duration string to minutes
+  int _parseDurationToMinutes(String duration) {
+    if (duration.isEmpty) return 0;
+    final cleaned = duration.replaceAll(RegExp(r'[^0-9Hh:·\s]'), '').trim();
+    final regex1 = RegExp(r'^(?:(\d{1,2})\s?[Hh:·]\s?)?(\d{1,2})$');
+    final regex2 = RegExp(r'^(\d{1,2})\s?[Hh]$');
+    final regex3 = RegExp(r'^(\d+)$');
+    var match = regex1.firstMatch(cleaned);
+    if (match != null) {
+      int hours = int.tryParse(match.group(1) ?? '0') ?? 0;
+      int minutes = int.tryParse(match.group(2) ?? '0') ?? 0;
+      return hours * 60 + minutes;
+    }
+    match = regex2.firstMatch(cleaned);
+    if (match != null) {
+      int hours = int.tryParse(match.group(1) ?? '0') ?? 0;
+      return hours * 60;
+    }
+    match = regex3.firstMatch(cleaned);
+    if (match != null) {
+      return int.tryParse(match.group(1) ?? '0') ?? 0;
+    }
+    return 0;
   }
 
   String _getPosteString(dynamic posteIndex) {
@@ -1787,8 +3130,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
               children: [
                 const Text('Module 1', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const Divider(height: 16),
-                Text('Temps de fonctionnement: ${formatMinutesToHoursMinutes(data['module1OperatingTime'] is int ? data['module1OperatingTime'] : 0)}'),
-                Text('Temps d\'arrêt: ${formatMinutesToHoursMinutes(data['module1TotalDowntime'] is int ? data['module1TotalDowntime'] : 0)}'),
+                Text('Temps de fonctionnement: ${formatMinutesToHoursMinutes(data['Temps de fonctionnement'] is int ? data['Temps de fonctionnement'] : 0)}'),
+                Text('Temps d\'arrêt: ${formatMinutesToHoursMinutes(data['Temps d\'arrêt'] is int ? data['Temps d\'arrêt'] : 0)}'),
                 if (module1Stops.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   const Text('Arrêts:', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -1812,8 +3155,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
               children: [
                 const Text('Module 2', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const Divider(height: 16),
-                Text('Temps de fonctionnement: ${formatMinutesToHoursMinutes(data['module2OperatingTime'] is int ? data['module2OperatingTime'] : 0)}'),
-                Text('Temps d\'arrêt: ${formatMinutesToHoursMinutes(data['module2TotalDowntime'] is int ? data['module2TotalDowntime'] : 0)}'),
+                Text('Temps de fonctionnement: ${formatMinutesToHoursMinutes(data['Temps de fonctionnement'] is int ? data['Temps de fonctionnement'] : 0)}'),
+                Text('Temps d\'arrêt: ${formatMinutesToHoursMinutes(data['Temps d\'arrêt'] is int ? data['Temps d\'arrêt'] : 0)}'),
                 if (module2Stops.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   const Text('Arrêts:', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -1875,7 +3218,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           Text('Équipement ${index + 1}:', style: const TextStyle(fontWeight: FontWeight.bold)),
                           const SizedBox(height: 4),
                           Text('Type: ${equipment['equipmentType'] ?? '-'}'),
-                          Text('Raison: ${equipment['stopReason'] ?? '-'}'),
+                          Text('Raison: ${equipment['Reason'] ?? '-'}'),
                           if (index < equipmentList.length - 1) const Divider(),
                         ],
                       ),
@@ -2056,7 +3399,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 _buildSummaryItem('Catégorie', data['Category'] ?? ''),
                 _buildSummaryItem('Type', data['Type'] ?? ''),
                 _buildSummaryItem('Modèle', data['Model'] ?? ''),
-                _buildSummaryItem('Poste', data['selectedPoste'] ?? ''),
+                _buildSummaryItem('Poste', data['selectedPoste'] ?? data['poste'] ?? ''),
               ],
             ),
           ),
@@ -2079,7 +3422,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('${index == 0 ? '3ème' : index == 1 ? '1er' : '2ème'} Poste'),
                         _buildSummaryItem('Début', compteur['duree'] ?? ''),
                         _buildSummaryItem('Fin', compteur['note'] ?? ''),
                         if (index < (data['Compteurs'] as List).length - 1) const Divider(height: 12),
@@ -2132,10 +3474,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 children: [
                   const Text('Exploitation', style: TextStyle(fontWeight: FontWeight.bold)),
                   const Divider(height: 16),
-                  _buildSummaryItem('H.M', data['exploitation']['heuresBrutes'] ?? ''),
-                  _buildSummaryItem('H.A', data['exploitation']['heuresArrets'] ?? ''),
-                  _buildSummaryItem('Tonnage', data['exploitation']['tonnage'] ?? ''),
-                  _buildSummaryItem('Rendement', data['exploitation']['rendement'] ?? ''),
+                  _buildSummaryItem('H.M', data['exploitation']['H.M'] ?? ''),
+                  _buildSummaryItem('H.A', data['exploitation']['H.A'] ?? ''),
+                  _buildSummaryItem('H.N', data['exploitation']['H.N'] ?? ''),
+                  _buildSummaryItem('Tonnage', data['exploitation']['Tonnage'] ?? ''),
+                  _buildSummaryItem('Rendeme', data['exploitation']['Rendeme'] ?? data['exploitation']['Rendeme'] ?? ''),
                 ],
               ),
             ),
@@ -2151,16 +3494,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Répartition', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text('Répartition Travail', style: TextStyle(fontWeight: FontWeight.bold)),
                   const Divider(height: 16),
                   ...List.from(data['Répartition Travail']).map((repartition) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildSummaryItem('Chantier', repartition['Chantier'] ?? ''),
-                        _buildSummaryItem('Temps', repartition['temps'] ?? ''),
-                        _buildSummaryItem('Imputation', repartition['imputation'] ?? ''),
+                        _buildSummaryItem('Chantier', repartition['Chantier'] ?? repartition['chantier'] ?? ''),
+                        _buildSummaryItem('Temps', repartition['temps'] ?? repartition['Temps'] ?? ''),
+                        _buildSummaryItem('Imputation', repartition['imputation'] ?? repartition['Imputation'] ?? ''),
                         const Divider(height: 8),
                       ],
                     ),
@@ -2182,7 +3525,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 children: [
                   const Text('Personnel', style: TextStyle(fontWeight: FontWeight.bold)),
                   const Divider(height: 16),
-                  _buildSummaryItem('Conducteur', data['personnel']['conducteur'] ?? ''),
+                  _buildSummaryItem('Conductr', data['personnel']['conductr'] ?? data['personnel']['conductr'] ?? ''),
                   _buildSummaryItem('Graisseur', data['personnel']['graisseur'] ?? ''),
                   _buildSummaryItem('Matricules', data['personnel']['matricules'] ?? ''),
                 ],
@@ -2432,5 +3775,1803 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ],
                 ),
               );
+  }
+
+  // Daily Report Editor
+  Future<void> _showDailyReportEditor(Report report, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final data = report.additionalData ?? {};
+    final maxHeight = MediaQuery.of(context).size.height * 0.9;
+    
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 800,
+              maxHeight: maxHeight,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Modifier - Rapport quotidien TSUD',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(dialogContext),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Basic Info Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Informations de base',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                _buildEditableField(
+                                  context: context,
+                                  label: 'Description',
+                                  value: report.description,
+                                  onSave: (value) async {
+                                    final updatedReport = Report(
+                                      id: report.id,
+                                      description: value,
+                                      type: report.type,
+                                      group: report.group,
+                                      date: report.date,
+                                      additionalData: report.additionalData,
+                                    );
+                                    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                _buildEditableDateField(
+                                  context: context,
+                                  label: 'Date',
+                                  value: report.date,
+                                  onSave: (value) async {
+                                    final updatedReport = Report(
+                                      id: report.id,
+                                      description: report.description,
+                                      type: report.type,
+                                      group: report.group,
+                                      date: value,
+                                      additionalData: report.additionalData,
+                                    );
+                                    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Module 1 Management Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Module 1',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _showEditModuleDialog(report, data, 'module1', setDialogState, scaffoldMessenger, l10n),
+                                      icon: const Icon(Icons.edit),
+                                      label: const Text('Modifier'),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                _buildInfoRow('Temps de fonctionnement', _formatMinutesToHoursMinutes(data['Temps de fonctionnement'] ?? 0)),
+                                _buildInfoRow('Temps d\'arrêt', _formatMinutesToHoursMinutes(data['Temps d\'arrêt'] ?? 0)),
+                                if (data['module1Stops'] is List && (data['module1Stops'] as List).isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  const Text('Arrêts:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  ...List.from(data['module1Stops']).map((stop) => Padding(
+                                    padding: const EdgeInsets.only(left: 16, top: 4),
+                                    child: Text('${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
+                                  )),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Module 2 Management Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Module 2',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _showEditModuleDialog(report, data, 'module2', setDialogState, scaffoldMessenger, l10n),
+                                      icon: const Icon(Icons.edit),
+                                      label: const Text('Modifier'),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                _buildInfoRow('Temps de fonctionnement', _formatMinutesToHoursMinutes(data['Temps de fonctionnement'] ?? 0)),
+                                _buildInfoRow('Temps d\'arrêt', _formatMinutesToHoursMinutes(data['Temps d\'arrêt'] ?? 0)),
+                                if (data['module2Stops'] is List && (data['module2Stops'] as List).isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  const Text('Arrêts:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  ...List.from(data['module2Stops']).map((stop) => Padding(
+                                    padding: const EdgeInsets.only(left: 16, top: 4),
+                                    child: Text('${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
+                                  )),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Stock Entries Management Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Entrées de stock',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _showAddStockEntryDialog(report, data, setDialogState, scaffoldMessenger, l10n),
+                                      icon: const Icon(Icons.add),
+                                      label: const Text('Ajouter une entrée'),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                if (data['stock'] is List && (data['stock'] as List).isNotEmpty)
+                                  ...List.from(data['stock']).asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final stock = entry.value;
+                                    final isSelected = _selectedStockIndex == index;
+                                    return Card(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      color: isSelected ? Colors.purple.withOpacity(0.1) : null,
+                                      elevation: isSelected ? 4 : 1,
+                                      child: ListTile(
+                                        selected: isSelected,
+                                        selectedTileColor: Colors.purple.withOpacity(0.1),
+                                        title: Text('Stock ${index + 1}'),
+                                        subtitle: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Poste: ${_getPosteString(stock['poste'])}'),
+                                            Text('Parc: ${_getParkString(stock['park'])}'),
+                                            Text('Type: ${_getStockTypeString(stock['type'])}'),
+                                            Text('Quantité: ${stock['quantity'] ?? '-'}'),
+                                          ],
+                                        ),
+                                        leading: isSelected ? const Icon(Icons.check_circle, color: Colors.purple) : null,
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedStockIndex = isSelected ? null : index;
+                                          });
+                                        },
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.edit, size: 18),
+                                              onPressed: () => _showEditStockEntryDialog(report, data, index, setDialogState, scaffoldMessenger, l10n),
+                                              tooltip: 'Modifier l\'entrée de stock',
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                                              onPressed: () => _showDeleteStockEntryDialog(report, data, index, setDialogState, scaffoldMessenger, l10n),
+                                              tooltip: 'Supprimer l\'entrée de stock',
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  })
+                                else
+                                  const Text('Aucune entrée de stock ajoutée', style: TextStyle(color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Edit Module Dialog for Daily Report
+  Future<void> _showEditModuleDialog(Report report, Map<String, dynamic> data, String modulePrefix, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    int operatingTime = data['${modulePrefix}OperatingTime'] ?? 0;
+    int totalDowntime = data['${modulePrefix}TotalDowntime'] ?? 0;
+    List stops = List.from(data['${modulePrefix}Stops'] ?? []);
+    
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Modifier $modulePrefix'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Temps de fonctionnement (minutes)',
+                  border: OutlineInputBorder(),
+                ),
+                controller: TextEditingController(text: operatingTime.toString()),
+                keyboardType: TextInputType.number,
+                onChanged: (value) => setState(() => operatingTime = int.tryParse(value) ?? 0),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Temps d\'arrêt (minutes)',
+                  border: OutlineInputBorder(),
+                ),
+                controller: TextEditingController(text: totalDowntime.toString()),
+                keyboardType: TextInputType.number,
+                onChanged: (value) => setState(() => totalDowntime = int.tryParse(value) ?? 0),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Arrêts (${stops.length})'),
+                  ElevatedButton.icon(
+                    onPressed: () => _showAddStopDialogForModule(report, data, modulePrefix, stops, setState, setDialogState, scaffoldMessenger, l10n),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Ajouter'),
+                  ),
+                ],
+              ),
+              if (stops.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                ...stops.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final stop = entry.value;
+                  return ListTile(
+                    title: Text('Arrêt ${index + 1}'),
+                    subtitle: Text('${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, size: 18),
+                          onPressed: () => _showEditStopDialogForModule(report, data, modulePrefix, stops, index, setState, setDialogState, scaffoldMessenger, l10n),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                          onPressed: () {
+                            setState(() => stops.removeAt(index));
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final updatedData = Map<String, dynamic>.from(data);
+                updatedData['${modulePrefix}OperatingTime'] = operatingTime;
+                updatedData['${modulePrefix}TotalDowntime'] = totalDowntime;
+                updatedData['${modulePrefix}Stops'] = stops;
+                
+                final updatedReport = Report(
+                  id: report.id,
+                  description: report.description,
+                  type: report.type,
+                  group: report.group,
+                  date: report.date,
+                  additionalData: updatedData,
+                );
+                
+                Navigator.pop(context);
+                _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+              },
+              child: const Text('Enregistrer'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Add Stop Dialog for Module
+  Future<void> _showAddStopDialogForModule(Report report, Map<String, dynamic> data, String modulePrefix, List stops, StateSetter setState, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    const List<String> predefinedNatures = [
+      'Manque Produit',
+      'Attente Saturation Silo',
+      'Vidange Extraction 2',
+      'Arret Mécanique sur:',
+      'Dèfout Élèctrique sur:', 
+      'Arret d\'instalation sur:',
+      'Travoux Mècanique sur:',
+      'Travoux Elèctrique sur:',
+      'Travoux dans l\'instalation sur:',
+      'Autre:',
+    ];
+    
+    String? selectedNature;
+    String customNature = '';
+    String tempStopDuration = '';
+    final customNatureController = TextEditingController();
+    
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setLocalState) => AlertDialog(
+          title: const Text('Ajouter un arrêt'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                value: selectedNature,
+                decoration: const InputDecoration(
+                  labelText: 'Nature prédéfinie',
+                  border: OutlineInputBorder(),
+                ),
+                items: predefinedNatures.map((nature) => DropdownMenuItem(
+                  value: nature,
+                  child: Text(nature),
+                )).toList(),
+                onChanged: (value) {
+                  setLocalState(() {
+                    selectedNature = value;
+                    customNature = '';
+                    customNatureController.clear();
+                  });
+                },
+                hint: const Text('Sélectionner une nature'),
+                isExpanded: true,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Durée (ex: 1h 30)',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setLocalState(() => tempStopDuration = value),
+              ),
+              if (selectedNature?.endsWith(':') == true) ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: customNatureController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nature (complément)',
+                    border: OutlineInputBorder(),
+                    hintText: 'Maximum 20 caractères par ligne',
+                  ),
+                  maxLines: 5,
+                  onChanged: (value) {
+                    final words = value.split(' ');
+                    final lines = <String>[];
+                    String currentLine = '';
+                    for (var word in words) {
+                      if ((currentLine + (currentLine.isEmpty ? '' : ' ') + word).length <= 20) {
+                        currentLine += (currentLine.isEmpty ? '' : ' ') + word;
+                      } else {
+                        if (currentLine.isNotEmpty) {
+                          lines.add(currentLine);
+                        }
+                        currentLine = word;
+                      }
+                    }
+                    if (currentLine.isNotEmpty) {
+                      lines.add(currentLine);
+                    }
+                    setLocalState(() => customNature = lines.join('\n'));
+                  },
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                String finalNature = '';
+                if (selectedNature != null) {
+                  if (selectedNature?.endsWith(':') == true) {
+                    if (customNature.trim().isEmpty) return;
+                    finalNature = '$selectedNature\n${customNature.trim()}';
+                  } else {
+                    finalNature = selectedNature!;
+                  }
+                } else {
+                  return;
+                }
+                if (tempStopDuration.isNotEmpty && finalNature.isNotEmpty) {
+                  setState(() {
+                    stops.add({
+                      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                      'duration': tempStopDuration,
+                      'nature': finalNature,
+                    });
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Ajouter'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Edit Stop Dialog for Module
+  Future<void> _showEditStopDialogForModule(Report report, Map<String, dynamic> data, String modulePrefix, List stops, int index, StateSetter setState, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final stop = stops[index];
+    const List<String> predefinedNatures = [
+      'Manque Produit',
+      'Attente Saturation Silo',
+      'Vidange Extraction 2',
+      'Arret Mécanique sur:',
+      'Dèfout Élèctrique sur:', 
+      'Arret d\'instalation sur:',
+      'Travoux Mècanique sur:',
+      'Travoux Elèctrique sur:',
+      'Travoux dans l\'instalation sur:',
+      'Autre:',
+    ];
+    
+    String? selectedNature;
+    String customNature = '';
+    String tempStopDuration = stop['duration'] ?? '';
+    final customNatureController = TextEditingController();
+    
+    // Parse the nature to determine selected nature and custom part
+    String currentNature = stop['nature'] ?? '';
+    for (String nature in predefinedNatures) {
+      if (currentNature.startsWith(nature)) {
+        selectedNature = nature;
+        if (nature.endsWith(':')) {
+          customNature = currentNature.substring(nature.length).trim();
+          customNatureController.text = customNature;
+        }
+        break;
+      }
+    }
+    
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setLocalState) => AlertDialog(
+          title: const Text('Modifier l\'arrêt'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                value: selectedNature,
+                decoration: const InputDecoration(
+                  labelText: 'Nature prédéfinie',
+                  border: OutlineInputBorder(),
+                ),
+                items: predefinedNatures.map((nature) => DropdownMenuItem(
+                  value: nature,
+                  child: Text(nature),
+                )).toList(),
+                onChanged: (value) {
+                  setLocalState(() {
+                    selectedNature = value;
+                    customNature = '';
+                    customNatureController.clear();
+                  });
+                },
+                hint: const Text('Sélectionner une nature'),
+                isExpanded: true,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Durée (ex: 1h 30)',
+                  border: OutlineInputBorder(),
+                ),
+                controller: TextEditingController(text: tempStopDuration),
+                onChanged: (value) => setLocalState(() => tempStopDuration = value),
+              ),
+              if (selectedNature?.endsWith(':') == true) ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: customNatureController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nature (complément)',
+                    border: OutlineInputBorder(),
+                    hintText: 'Maximum 20 caractères par ligne',
+                  ),
+                  maxLines: 5,
+                  onChanged: (value) {
+                    final words = value.split(' ');
+                    final lines = <String>[];
+                    String currentLine = '';
+                    for (var word in words) {
+                      if ((currentLine + (currentLine.isEmpty ? '' : ' ') + word).length <= 20) {
+                        currentLine += (currentLine.isEmpty ? '' : ' ') + word;
+                      } else {
+                        if (currentLine.isNotEmpty) {
+                          lines.add(currentLine);
+                        }
+                        currentLine = word;
+                      }
+                    }
+                    if (currentLine.isNotEmpty) {
+                      lines.add(currentLine);
+                    }
+                    setLocalState(() => customNature = lines.join('\n'));
+                  },
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                String finalNature = '';
+                if (selectedNature != null) {
+                  if (selectedNature?.endsWith(':') == true) {
+                    if (customNature.trim().isEmpty) return;
+                    finalNature = '$selectedNature\n${customNature.trim()}';
+                  } else {
+                    finalNature = selectedNature!;
+                  }
+                } else {
+                  return;
+                }
+                if (tempStopDuration.isNotEmpty && finalNature.isNotEmpty) {
+                  setState(() {
+                    stops[index] = {
+                      'id': stop['id'],
+                      'duration': tempStopDuration,
+                      'nature': finalNature,
+                    };
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Modifier'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Machines/Equipment Stopped Editor
+  Future<void> _showMachinesEquipmentStoppedEditor(Report report, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final data = report.additionalData ?? {};
+    final maxHeight = MediaQuery.of(context).size.height * 0.9;
+    
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 800,
+              maxHeight: maxHeight,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Modifier - Machines/Engins Arrêtés',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(dialogContext),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Basic Info Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Informations de base',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                _buildEditableField(
+                                  context: context,
+                                  label: 'Description',
+                                  value: report.description,
+                                  onSave: (value) async {
+                                    final updatedReport = Report(
+                                      id: report.id,
+                                      description: value,
+                                      type: report.type,
+                                      group: report.group,
+                                      date: report.date,
+                                      additionalData: report.additionalData,
+                                    );
+                                    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                _buildEditableDateField(
+                                  context: context,
+                                  label: 'Date',
+                                  value: report.date,
+                                  onSave: (value) async {
+                                    final updatedReport = Report(
+                                      id: report.id,
+                                      description: report.description,
+                                      type: report.type,
+                                      group: report.group,
+                                      date: value,
+                                      additionalData: report.additionalData,
+                                    );
+                                    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Equipment List Management Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Équipements arrêtés',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _showAddEquipmentDialog(report, data, setDialogState, scaffoldMessenger, l10n),
+                                      icon: const Icon(Icons.add),
+                                      label: const Text('Ajouter un équipement'),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                if (data['equipmentList'] is List && (data['equipmentList'] as List).isNotEmpty)
+                                  ...List.from(data['equipmentList']).asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final equipment = entry.value;
+                                    final isSelected = _selectedEquipmentIndex == index;
+                                    return Card(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      color: isSelected ? Colors.blue.withOpacity(0.1) : null,
+                                      elevation: isSelected ? 4 : 1,
+                                      child: ListTile(
+                                        selected: isSelected,
+                                        selectedTileColor: Colors.blue.withOpacity(0.1),
+                                        title: Text('Équipement ${index + 1}'),
+                                        subtitle: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Type: ${equipment['equipmentType'] ?? '-'}'),
+                                            Text('Raison: ${equipment['Reason'] ?? '-'}'),
+                                          ],
+                                        ),
+                                        leading: isSelected ? const Icon(Icons.check_circle, color: Colors.blue) : null,
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedEquipmentIndex = isSelected ? null : index;
+                                          });
+                                        },
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.edit, size: 18),
+                                              onPressed: () => _showEditEquipmentDialog(report, data, index, setDialogState, scaffoldMessenger, l10n),
+                                              tooltip: 'Modifier l\'équipement',
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                                              onPressed: () => _showDeleteEquipmentDialog(report, data, index, setDialogState, scaffoldMessenger, l10n),
+                                              tooltip: 'Supprimer l\'équipement',
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  })
+                                else
+                                  const Text('Aucun équipement arrêté ajouté', style: TextStyle(color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Add Equipment Dialog for Machines/Equipment Stopped
+  Future<void> _showAddEquipmentDialog(Report report, Map<String, dynamic> data, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    String equipmentType = '';
+    String stopReason = '';
+    
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Ajouter un équipement arrêté'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Type d\'équipement',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => equipmentType = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Raison de l\'arrêt',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+                onChanged: (value) => setState(() => stopReason = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (equipmentType.isNotEmpty && stopReason.isNotEmpty) {
+                  final updatedData = Map<String, dynamic>.from(data);
+                  if (updatedData['equipmentList'] == null) {
+                    updatedData['equipmentList'] = [];
+                  }
+                  (updatedData['equipmentList'] as List).add({
+                    'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                    'equipmentType': equipmentType,
+                    'Reason': stopReason,
+                  });
+                  
+                  final updatedReport = Report(
+                    id: report.id,
+                    description: report.description,
+                    type: report.type,
+                    group: report.group,
+                    date: report.date,
+                    additionalData: updatedData,
+                  );
+                  
+                  Navigator.pop(context);
+                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                }
+              },
+              child: const Text('Ajouter'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Edit Equipment Dialog for Machines/Equipment Stopped
+  Future<void> _showEditEquipmentDialog(Report report, Map<String, dynamic> data, int index, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final equipment = (data['equipmentList'] as List)[index];
+    String equipmentType = equipment['equipmentType'] ?? '';
+    String stopReason = equipment['Reason'] ?? '';
+    
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Modifier l\'équipement'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Type d\'équipement',
+                  border: OutlineInputBorder(),
+                ),
+                controller: TextEditingController(text: equipmentType),
+                onChanged: (value) => setState(() => equipmentType = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Raison de l\'arrêt',
+                  border: OutlineInputBorder(),
+                ),
+                controller: TextEditingController(text: stopReason),
+                maxLines: 3,
+                onChanged: (value) => setState(() => stopReason = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (equipmentType.isNotEmpty && stopReason.isNotEmpty) {
+                  final updatedData = Map<String, dynamic>.from(data);
+                  (updatedData['equipmentList'] as List)[index] = {
+                    'id': equipment['id'],
+                    'equipmentType': equipmentType,
+                    'Reason': stopReason,
+                  };
+                  
+                  final updatedReport = Report(
+                    id: report.id,
+                    description: report.description,
+                    type: report.type,
+                    group: report.group,
+                    date: report.date,
+                    additionalData: updatedData,
+                  );
+                  
+                  Navigator.pop(context);
+                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                }
+              },
+              child: const Text('Modifier'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Delete Equipment Dialog for Machines/Equipment Stopped
+  Future<void> _showDeleteEquipmentDialog(Report report, Map<String, dynamic> data, int index, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer l\'équipement'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer cet équipement ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final updatedData = Map<String, dynamic>.from(data);
+              (updatedData['equipmentList'] as List).removeAt(index);
+              
+              final updatedReport = Report(
+                id: report.id,
+                description: report.description,
+                type: report.type,
+                group: report.group,
+                date: report.date,
+                additionalData: updatedData,
+              );
+              
+              Navigator.pop(context);
+              _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Truck Tracking Editor
+  Future<void> _showTruckTrackingEditor(Report report, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final data = report.additionalData ?? {};
+    final maxHeight = MediaQuery.of(context).size.height * 0.9;
+    
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 800,
+              maxHeight: maxHeight,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Modifier - Suivi Camion',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(dialogContext),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Basic Info Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Informations de base',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                _buildEditableField(
+                                  context: context,
+                                  label: 'Description',
+                                  value: report.description,
+                                  onSave: (value) async {
+                                    final updatedReport = Report(
+                                      id: report.id,
+                                      description: value,
+                                      type: report.type,
+                                      group: report.group,
+                                      date: report.date,
+                                      additionalData: report.additionalData,
+                                    );
+                                    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                _buildEditableDateField(
+                                  context: context,
+                                  label: 'Date',
+                                  value: report.date,
+                                  onSave: (value) async {
+                                    final updatedReport = Report(
+                                      id: report.id,
+                                      description: report.description,
+                                      type: report.type,
+                                      group: report.group,
+                                      date: value,
+                                      additionalData: report.additionalData,
+                                    );
+                                    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Mine and Sortie Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Mine et Sortie',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                _buildEditableField(
+                                  context: context,
+                                  label: 'Mine',
+                                  value: data['mine'] ?? '',
+                                  onSave: (value) async {
+                                    final updatedData = Map<String, dynamic>.from(data);
+                                    updatedData['mine'] = value;
+                                    final updatedReport = Report(
+                                      id: report.id,
+                                      description: report.description,
+                                      type: report.type,
+                                      group: report.group,
+                                      date: report.date,
+                                      additionalData: updatedData,
+                                    );
+                                    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                _buildEditableField(
+                                  context: context,
+                                  label: 'Zone',
+                                  value: data['zone'] ?? '',
+                                  onSave: (value) async {
+                                    final updatedData = Map<String, dynamic>.from(data);
+                                    updatedData['zone'] = value;
+                                    final updatedReport = Report(
+                                      id: report.id,
+                                      description: report.description,
+                                      type: report.type,
+                                      group: report.group,
+                                      date: report.date,
+                                      additionalData: updatedData,
+                                    );
+                                    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                _buildEditableField(
+                                  context: context,
+                                  label: 'Sortie',
+                                  value: data['sortie'] ?? '',
+                                  onSave: (value) async {
+                                    final updatedData = Map<String, dynamic>.from(data);
+                                    updatedData['sortie'] = value;
+                                    final updatedReport = Report(
+                                      id: report.id,
+                                      description: report.description,
+                                      type: report.type,
+                                      group: report.group,
+                                      date: report.date,
+                                      additionalData: updatedData,
+                                    );
+                                    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Equipment and Operation Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Équipement et Opération',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                _buildEditableField(
+                                  context: context,
+                                  label: 'Type d\'équipement',
+                                  value: data['equipment'] ?? data['selectedEquipment'] ?? '',
+                                  onSave: (value) async {
+                                    final updatedData = Map<String, dynamic>.from(data);
+                                    updatedData['equipment'] = value;
+                                    updatedData['selectedEquipment'] = value;
+                                    final updatedReport = Report(
+                                      id: report.id,
+                                      description: report.description,
+                                      type: report.type,
+                                      group: report.group,
+                                      date: report.date,
+                                      additionalData: updatedData,
+                                    );
+                                    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                _buildEditableField(
+                                  context: context,
+                                  label: 'Type d\'opération',
+                                  value: data['operationType'] ?? '',
+                                  onSave: (value) async {
+                                    final updatedData = Map<String, dynamic>.from(data);
+                                    updatedData['operationType'] = value;
+                                    final updatedReport = Report(
+                                      id: report.id,
+                                      description: report.description,
+                                      type: report.type,
+                                      group: report.group,
+                                      date: report.date,
+                                      additionalData: updatedData,
+                                    );
+                                    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Trucks Management Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Camions',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _showAddTruckDialog(report, data, setDialogState, scaffoldMessenger, l10n),
+                                      icon: const Icon(Icons.add),
+                                      label: const Text('Ajouter un camion'),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                if (data['truckData'] is List && (data['truckData'] as List).isNotEmpty)
+                                  ...List.from(data['truckData']).asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final truck = entry.value;
+                                    return Card(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      child: ListTile(
+                                        title: Text('Camion ${truck['truckNumber'] ?? index + 1}'),
+                                        subtitle: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Chauffeur: ${truck['driver1'] ?? '-'}'),
+                                            if (truck['counts'] is List && (truck['counts'] as List).isNotEmpty)
+                                              Text('Voyages: ${(truck['counts'] as List).length}'),
+                                          ],
+                                        ),
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.edit, size: 18),
+                                              onPressed: () => _showEditTruckDialog(report, data, index, setDialogState, scaffoldMessenger, l10n),
+                                              tooltip: 'Modifier le camion',
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                                              onPressed: () => _showDeleteTruckDialog(report, data, index, setDialogState, scaffoldMessenger, l10n),
+                                              tooltip: 'Supprimer le camion',
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  })
+                                else
+                                  const Text('Aucun camion ajouté', style: TextStyle(color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Add Truck Dialog for Truck Tracking
+  Future<void> _showAddTruckDialog(Report report, Map<String, dynamic> data, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    String truckNumber = '';
+    String driver1 = '';
+    
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Ajouter un camion'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Numéro du camion',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => truckNumber = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Chauffeur',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => driver1 = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (truckNumber.isNotEmpty && driver1.isNotEmpty) {
+                  final updatedData = Map<String, dynamic>.from(data);
+                  if (updatedData['truckData'] == null) {
+                    updatedData['truckData'] = [];
+                  }
+                  (updatedData['truckData'] as List).add({
+                    'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                    'truckNumber': truckNumber,
+                    'driver1': driver1,
+                    'counts': [],
+                  });
+                  
+                  final updatedReport = Report(
+                    id: report.id,
+                    description: report.description,
+                    type: report.type,
+                    group: report.group,
+                    date: report.date,
+                    additionalData: updatedData,
+                  );
+                  
+                  Navigator.pop(context);
+                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                }
+              },
+              child: const Text('Ajouter'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Edit Truck Dialog for Truck Tracking
+  Future<void> _showEditTruckDialog(Report report, Map<String, dynamic> data, int index, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final truck = (data['truckData'] as List)[index];
+    String truckNumber = truck['truckNumber'] ?? '';
+    String driver1 = truck['driver1'] ?? '';
+    
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Modifier le camion'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Numéro du camion',
+                  border: OutlineInputBorder(),
+                ),
+                controller: TextEditingController(text: truckNumber),
+                onChanged: (value) => setState(() => truckNumber = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Chauffeur',
+                  border: OutlineInputBorder(),
+                ),
+                controller: TextEditingController(text: driver1),
+                onChanged: (value) => setState(() => driver1 = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (truckNumber.isNotEmpty && driver1.isNotEmpty) {
+                  final updatedData = Map<String, dynamic>.from(data);
+                  (updatedData['truckData'] as List)[index] = {
+                    ...truck,
+                    'truckNumber': truckNumber,
+                    'driver1': driver1,
+                  };
+                  
+                  final updatedReport = Report(
+                    id: report.id,
+                    description: report.description,
+                    type: report.type,
+                    group: report.group,
+                    date: report.date,
+                    additionalData: updatedData,
+                  );
+                  
+                  Navigator.pop(context);
+                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                }
+              },
+              child: const Text('Modifier'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Delete Truck Dialog for Truck Tracking
+  Future<void> _showDeleteTruckDialog(Report report, Map<String, dynamic> data, int index, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer le camion'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer ce camion ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final updatedData = Map<String, dynamic>.from(data);
+              (updatedData['truckData'] as List).removeAt(index);
+              
+              final updatedReport = Report(
+                id: report.id,
+                description: report.description,
+                type: report.type,
+                group: report.group,
+                date: report.date,
+                additionalData: updatedData,
+              );
+              
+              Navigator.pop(context);
+              _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // R0 Report Editor
+  Future<void> _showR0ReportEditor(Report report, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final data = report.additionalData ?? {};
+    final maxHeight = MediaQuery.of(context).size.height * 0.9;
+    
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 800,
+              maxHeight: maxHeight,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Modifier - Rapport R0',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(dialogContext),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Basic Info Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Informations de base',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                _buildEditableField(
+                                  context: dialogContext,
+                                  label: 'Description',
+                                  value: report.description,
+                                  onSave: (value) async {
+                                    final navigator = Navigator.of(dialogContext);
+                                    final updatedReport = Report(
+                                      id: report.id,
+                                      description: value,
+                                      type: report.type,
+                                      group: report.group,
+                                      date: report.date,
+                                      additionalData: report.additionalData,
+                                    );
+                                    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                    if (mounted) {
+                                      navigator.pop();
+                                    }
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                _buildEditableDateField(
+                                  context: dialogContext,
+                                  label: 'Date',
+                                  value: report.date,
+                                  onSave: (value) async {
+                                    final navigator = Navigator.of(dialogContext);
+                                    final updatedReport = Report(
+                                      id: report.id,
+                                      description: report.description,
+                                      type: report.type,
+                                      group: report.group,
+                                      date: value,
+                                      additionalData: report.additionalData,
+                                    );
+                                    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                    if (mounted) {
+                                      navigator.pop();
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // R0 Specific Data Card
+                        if (data.isNotEmpty) ...[
+                          Card(
+                            margin: EdgeInsets.zero,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Données R0',
+                                    style: Theme.of(dialogContext).textTheme.titleMedium,
+                                  ),
+                                  const Divider(height: 16),
+                                  _buildR0ReportAdditionalData(data),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Generic Editor
+  Future<void> _showGenericEditor(Report report, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final maxHeight = MediaQuery.of(context).size.height * 0.9;
+    
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 600,
+              maxHeight: maxHeight,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Modifier - ${report.type}',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(dialogContext),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Basic Info Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Informations de base',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                _buildEditableField(
+                                  context: dialogContext,
+                                  label: 'Description',
+                                  value: report.description,
+                                  onSave: (value) async {
+                                    final navigator = Navigator.of(dialogContext);
+                                    final updatedReport = Report(
+                                      id: report.id,
+                                      description: value,
+                                      type: report.type,
+                                      group: report.group,
+                                      date: report.date,
+                                      additionalData: report.additionalData,
+                                    );
+                                    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                    if (mounted) {
+                                      navigator.pop();
+                                    }
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                _buildEditableDateField(
+                                  context: dialogContext,
+                                  label: 'Date',
+                                  value: report.date,
+                                  onSave: (value) async {
+                                    final navigator = Navigator.of(dialogContext);
+                                    final updatedReport = Report(
+                                      id: report.id,
+                                      description: report.description,
+                                      type: report.type,
+                                      group: report.group,
+                                      date: value,
+                                      additionalData: report.additionalData,
+                                    );
+                                    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                    if (mounted) {
+                                      navigator.pop();
+                                    }
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                _buildEditableField(
+                                  context: dialogContext,
+                                  label: 'Type',
+                                  value: report.type,
+                                  onSave: (value) async {
+                                    final navigator = Navigator.of(dialogContext);
+                                    final updatedReport = Report(
+                                      id: report.id,
+                                      description: report.description,
+                                      type: value,
+                                      group: report.group,
+                                      date: report.date,
+                                      additionalData: report.additionalData,
+                                    );
+                                    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                    if (mounted) {
+                                      navigator.pop();
+                                    }
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                _buildEditableField(
+                                  context: dialogContext,
+                                  label: 'Groupe',
+                                  value: report.group,
+                                  onSave: (value) async {
+                                    final navigator = Navigator.of(dialogContext);
+                                    final updatedReport = Report(
+                                      id: report.id,
+                                      description: report.description,
+                                      type: report.type,
+                                      group: value,
+                                      date: report.date,
+                                      additionalData: report.additionalData,
+                                    );
+                                    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                                    if (mounted) {
+                                      navigator.pop();
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        
+                        // Additional Data Card (if any)
+                        if (report.additionalData != null && report.additionalData!.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          Card(
+                            margin: EdgeInsets.zero,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Données supplémentaires',
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  const Divider(height: 16),
+                                  _buildGenericAdditionalData(report.additionalData!),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Helper method to display generic additional data
+  Widget _buildGenericAdditionalData(Map<String, dynamic> data) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: data.entries.map((entry) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 120,
+                child: Text(
+                  '${entry.key}:',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  entry.value.toString(),
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
   }
 }

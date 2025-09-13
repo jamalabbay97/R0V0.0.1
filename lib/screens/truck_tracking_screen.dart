@@ -112,10 +112,16 @@ final List<MineData> minesData = [
 
 class TruckTrackingScreen extends StatefulWidget {
   final GlobalKey<FormState> formKey;
+  final Report? initialReport;
+  final Function(Report)? onSave;
+  final bool isEditing;
 
   const TruckTrackingScreen({
     super.key,
     required this.formKey,
+    this.initialReport,
+    this.onSave,
+    this.isEditing = false,
   });
 
   @override
@@ -127,12 +133,15 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.truckTracking),
+        title: Text(widget.isEditing ? "Modifier - ${AppLocalizations.of(context)!.truckTracking}" : AppLocalizations.of(context)!.truckTracking),
       ),
       body: Form(
         key: widget.formKey,
         child: CamionReport(
           formKey: widget.formKey,
+          initialReport: widget.initialReport,
+          onSave: widget.onSave,
+          isEditing: widget.isEditing,
         ),
       ),
     );
@@ -141,10 +150,16 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
 
 class CamionReport extends StatefulWidget {
   final GlobalKey<FormState> formKey;
+  final Report? initialReport;
+  final Function(Report)? onSave;
+  final bool isEditing;
 
   const CamionReport({
     super.key, 
     required this.formKey,
+    this.initialReport,
+    this.onSave,
+    this.isEditing = false,
   });
 
   @override
@@ -157,7 +172,8 @@ class CamionReportState extends State<CamionReport> {
   QualiteType? _selectedQualite;
   String? _selectedEquipment;
   Poste? _selectedPoste;
-  
+
+
   // Add for step 3 selection
   String? _selectedOperationType;
   // Mine and Sortie selection
@@ -187,7 +203,79 @@ class CamionReportState extends State<CamionReport> {
   @override
   void initState() {
     super.initState();
+    
+    if (widget.isEditing && widget.initialReport != null) {
+      // Editing mode - load existing data
+      _loadExistingData();
+    }
+    
     _initializeControllers();
+  }
+
+  void _loadExistingData() {
+    if (widget.initialReport?.additionalData == null) return;
+    
+    final data = widget.initialReport!.additionalData!;
+    
+    // Load truck data
+    if (data['truckData'] is List) {
+      truckData = List.from(data['truckData']);
+    }
+    
+    // Load other fields
+    if (data['mine'] != null) {
+      // Find and set selected mine
+      for (var mine in minesData) {
+        if (mine.name == data['mine']) {
+          _selectedMine = mine;
+          break;
+        }
+      }
+    }
+    
+    if (data['zone'] != null && _selectedMine != null) {
+      // Find and set selected zone
+      for (var zone in _selectedMine!.zones) {
+        if (zone.name == data['zone']) {
+          _selectedZone = zone;
+          break;
+        }
+      }
+    }
+    
+    if (data['sortie'] != null) {
+      _selectedSortie = data['sortie'];
+    }
+    
+    if (data['operationType'] != null) {
+      _selectedOperationType = data['operationType'];
+    }
+    
+    if (data['equipment'] != null) {
+      _selectedEquipment = data['equipment'];
+    }
+    
+    if (data['selectedPoste'] != null) {
+      _selectedPoste = _parsePosteFromString(data['selectedPoste']);
+    }
+  }
+
+  Poste? _parsePosteFromString(dynamic posteValue) {
+    if (posteValue == null) return null;
+    final posteStr = posteValue.toString();
+    switch (posteStr) {
+      case '0':
+      case '3ème':
+        return Poste.premier;
+      case '1':
+      case '1er':
+        return Poste.deuxieme;
+      case '2':
+      case '2ème':
+        return Poste.troisieme;
+      default:
+        return null;
+    }
   }
 
   void _initializeControllers() {
@@ -565,8 +653,10 @@ class CamionReportState extends State<CamionReport> {
                                           var timeController = TextEditingController(text: trip['time']);
                                           String? selectedEquipment = trip['equipment'];
                                           DateTime selectedTripTime = DateTime.now();
+                                          if (!mounted) return;
+                                          final currentContext = context;
                                           await showDialog(
-                                            context: context,
+                                            context: currentContext,
                                             builder: (context) {
                                               return AlertDialog(
                                                 title: const Text('Modifier le voyage'),
@@ -946,6 +1036,7 @@ class CamionReportState extends State<CamionReport> {
 
     try {
       final report = Report(
+        id: widget.initialReport?.id,
         description: 'Suivi des camions - ${_selectedEquipment ?? ''}',
         date: _selectedDate,
         group: posteToString(_selectedPoste),
@@ -961,30 +1052,36 @@ class CamionReportState extends State<CamionReport> {
         },
       );
 
-      final dbHelper = DatabaseHelper();
-      await dbHelper.insertReport(report);
+      if (widget.isEditing && widget.onSave != null) {
+        // Editing mode - call the onSave callback
+        widget.onSave!(report);
+      } else {
+        // Creation mode - save to database
+        final dbHelper = DatabaseHelper();
+        await dbHelper.insertReport(report);
 
-      if (mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        // Show confirmation dialog
-        await showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text(l10n.reportConfirmationTitle),
-              content: Text(l10n.reportConfirmationMessage),
-              actions: [
-                TextButton(
-                  child: Text(l10n.done),
-                  onPressed: () {
-                    Navigator.of(context).pop(); // Close dialog
-                    Navigator.of(context).pop(); // Return to home
-                  },
-                ),
-              ],
-            );
-          },
-        );
+        if (mounted) {
+          final l10n = AppLocalizations.of(context)!;
+          // Show confirmation dialog
+          await showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: Text(l10n.reportConfirmationTitle),
+                content: Text(l10n.reportConfirmationMessage),
+                actions: [
+                  TextButton(
+                    child: Text(l10n.done),
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Close dialog
+                      Navigator.of(context).pop(); // Return to home
+                    },
+                  ),
+                ],
+              );
+            },
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -1356,8 +1453,9 @@ class CamionReportState extends State<CamionReport> {
                                                                   var timeController = TextEditingController(text: trip['time']);
                                                                   String? selectedEquipment = trip['equipment'];
                                                                   DateTime selectedTripTime = DateTime.now();
+                                                                  final currentContext = context;
                                                                   await showDialog(
-                                                                    context: context,
+                                                                    context: currentContext,
                                                                     builder: (context) {
                                                                       return AlertDialog(
                                                                         title: const Text('Modifier le voyage'),
@@ -1890,10 +1988,10 @@ class CamionReportState extends State<CamionReport> {
               _buildInfoRow('Mine', _selectedMine?.name ?? '-'),
               _buildInfoRow('Zone', _selectedZone?.name ?? '-'),
               _buildInfoRow('Sortie', _selectedSortie ?? '-'),
-              _buildInfoRow('Poste', _selectedPoste != null ? posteToString(_selectedPoste) : '-'),
+              _buildInfoRow('Poste', _selectedPoste?.name ?? '-'),
               _buildInfoRow('Equipment', _selectedEquipment ?? '-'),
               _buildInfoRow('Opération', _selectedOperationType ?? '-'),
-              _buildInfoRow('Produits', _selectedQualite != null ? qualiteTypeToString(_selectedQualite) : '-'),
+              _buildInfoRow('Produits', _selectedQualite?.name ?? '-'),
             ],
           ),
         ),

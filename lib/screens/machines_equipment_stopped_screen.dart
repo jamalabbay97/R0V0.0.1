@@ -5,12 +5,19 @@ import 'package:r0/models/report.dart';
 import 'package:r0/screens/home_screen.dart';
 import 'package:r0/theme.dart';
 
+
 class MachinesEquipmentStoppedScreen extends StatefulWidget {
-  final DateTime selectedDate;
+  final DateTime? selectedDate;
+  final Report? initialReport;
+  final Function(Report)? onSave;
+  final bool isEditing;
 
   const MachinesEquipmentStoppedScreen({
     super.key,
-    required this.selectedDate,
+    this.selectedDate,
+    this.initialReport,
+    this.onSave,
+    this.isEditing = false,
   });
 
   @override
@@ -33,34 +40,131 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
   final List<Map<String, String>> _equipmentList = [];
   
 
-
   // Equipment data structure
   final Map<String, Map<String, List<String>>> _equipmentData = {
-    'Excavation': {
-      'Excavateurs': ['Excavateur 1', 'Excavateur 2', 'Excavateur 3'],
-      'Chargeurs': ['Chargeur 1', 'Chargeur 2'],
-      'Bulldozers': ['Bulldozer 1', 'Bulldozer 2'],
-    },
-    'Transport': {
-      'Camions': ['Camion 1', 'Camion 2', 'Camion 3', 'Camion 4'],
-      'Transporteurs': ['Transporteur 1', 'Transporteur 2'],
-    },
-    'Concassage': {
-      'Concasseurs': ['Concasseur Primaire', 'Concasseur Secondaire'],
-      'Cribles': ['Crible 1', 'Crible 2', 'Crible 3'],
-      'Broyeurs': ['Broyeur 1', 'Broyeur 2'],
-    },
-    'Usine': {
-      'Broyeurs': ['Broyeur à boulets', 'Broyeur vertical'],
-      'Séparateurs': ['Séparateur magnétique', 'Séparateur gravimétrique'],
-      'Filtres': ['Filtre presse', 'Filtre à bande'],
-    },
-  };
+  'Camions Servitude': {
+    'Camion Citerne': [
+      '16979-A-68',
+      '17492-A-68',
+      'TEXAS',
+    ],
+    'Camion DCI': [
+      '19164-A-68',
+      '5636-A-68',
+    ],
+    'Camion de Ravitaillmenet': [
+      '1462443',
+      '93292-D-8',
+    ],
+    'Camion Grue': [
+      '12097-A-68',
+    ],
+    'Camion Nacelle': [
+      '17080-A-68',
+    ],
+    'Camion Ridelle': [
+      '11053-A-68',
+      '15836-A-68',
+      '34866-A-54',
+    ],
+    'Vehicule DC': [
+      '513714',
+    ],
+  },
+  'Engins': {
+    'Bulldozers': [
+      'BULL D9R 76',
+      'BULL D9R 79',
+      'BULL D9R 80',
+      'BULL D9R 81',
+      'BULL D9R 82',
+      'BULL D9R 83',
+      'BULL LIB 84',
+      'BULL LIB 85',
+      'BULL D9R 86',
+      'BULL D9R 87',
+    ],
+    'Camions': [
+      'CAMION T24',
+      'CAMION T25',
+      'CAMION T26',
+      'CAMION T27',
+      'CAMION T28',
+      'CAMION T29',
+      'CAMION T30',
+      'CAMION T31',
+      'CAMION T32',
+      'CAMION T33',
+      'WABCO 13',
+      'WABCO 19',
+    ],
+    'Chargeuses': [
+      'CHRG 992C',
+      'CHRG 992K',
+      'CHRG 994H',
+    ],
+    'Niveleuses': [
+      'NIV 14G',
+      'NIV 16H',
+      'NIV KOM01',
+      'NIV KOM02',
+    ],
+    'Paydozers': [
+      'PAY CAT03',
+      'PAY KOM04',
+      'PAY KOM05',
+    ],
+    'Pelle Hydraulique': [
+      'PH365-C',
+      'PH5130',
+    ],
+  },
+  'Machines': {
+    'Draglines': [
+      '1370 W1',
+      '1370 W2',
+    ],
+    'Pelle Electrique': [
+      '195 P1',
+      '195 P2',
+    ],
+    'Sondeuses': [
+      'PV275-1',
+      'PV275-2',
+      'PV275-3',
+    ],
+  },
+};
 
   @override
   void initState() {
     super.initState();
-    _selectedDate = widget.selectedDate;
+    
+    if (widget.isEditing && widget.initialReport != null) {
+      // Editing mode - load existing data
+      _selectedDate = widget.initialReport!.date;
+      _loadExistingData();
+    } else {
+      // Creation mode
+      _selectedDate = widget.selectedDate ?? DateTime.now();
+    }
+  }
+
+  void _loadExistingData() {
+    if (widget.initialReport?.additionalData == null) return;
+    
+    final data = widget.initialReport!.additionalData!;
+    
+    // Load equipment list
+    if (data['equipmentList'] is List) {
+      _equipmentList.clear();
+      for (var equipment in data['equipmentList']) {
+        _equipmentList.add({
+          'equipmentType': equipment['equipmentType'] ?? '',
+          'Reason': equipment['Reason'] ?? '',
+        });
+      }
+    }
   }
 
   @override
@@ -99,6 +203,7 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
 
     try {
       final report = Report(
+        id: widget.initialReport?.id,
         description: 'Machine/Engin Arrêtés',
         date: _selectedDate,
         type: 'Machine/Engin Arrêtés',
@@ -108,15 +213,21 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
         },
       );
 
-      await _databaseHelper.insertReport(report);
+      if (widget.isEditing && widget.onSave != null) {
+        // Editing mode - call the onSave callback
+        widget.onSave!(report);
+      } else {
+        // Creation mode - save to database
+        await _databaseHelper.insertReport(report);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.reportSaved),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.reportSaved),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -135,7 +246,9 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
     final String formattedDate = "${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}";
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Les Machines et l'Engins a l'Arret")),
+      appBar: AppBar(
+        title: Text(widget.isEditing ? "Modifier - Machines et Engins Arrêtés" : "Les Machines et l'Engins a l'Arret"),
+      ),
       body: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -173,7 +286,7 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                                 ),
                               ),
                             if (_currentStep > 0)
-                              const SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Expanded(
                               child: isLastStep
                                   ? ElevatedButton.icon(
@@ -190,6 +303,7 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                                       ),
                                       onPressed: _equipmentList.isNotEmpty
                                           ? () async {
+                                              final navigator = Navigator.of(context);
                                               final shouldSave = await showDialog<bool>(
                                                 context: context,
                                                 barrierDismissible: false,
@@ -206,13 +320,10 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                                                   ],
                                                 ),
                                               );
-                                              // ignore: use_build_context_synchronously
                                               if (!mounted) return;
                                               if (shouldSave == true) {
                                                 await _saveReport();
-                                                // ignore: use_build_context_synchronously
                                                 if (!mounted) return;
-                                                final navigator = Navigator.of(context);
                                                 navigator.pushAndRemoveUntil(
                                                   MaterialPageRoute(builder: (context) => const HomeScreen()),
                                                   (route) => false,
@@ -482,11 +593,11 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-          TextButton(
-                              onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Annuler'),
-          ),
-                            const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Annuler'),
+                        ),
+                      const SizedBox(width: 8),
                       ElevatedButton(
                               onPressed: _selectedEquipment.isNotEmpty && _stopReason.isNotEmpty
                                   ? () {
@@ -494,7 +605,7 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                                       setState(() {
                                         _equipmentList.add({
                                           'equipmentType': _selectedEquipmentType,
-                                          'stopReason': _stopReason,
+                                          'Reason': _stopReason,
                                         });
                                       });
                       Navigator.pop(context);
@@ -536,7 +647,7 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
       _selectedEquipment = parts[2];
       _selectedEquipmentType = equipmentType;
     }
-    _stopReason = equipment['stopReason'] ?? '';
+    _stopReason = equipment['Reason'] ?? '';
     
     showDialog(
       context: context,
@@ -641,7 +752,7 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                                       setState(() {
                                         _equipmentList[index] = {
                                           'equipmentType': _selectedEquipmentType,
-                                          'stopReason': _stopReason,
+                                          'Reason': _stopReason,
                                         };
                                       });
                                       Navigator.pop(context);
@@ -655,9 +766,9 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                                     }
                                   : null,
                               child: const Text('Enregistrer'),
-            ),
-        ],
-      ),
+                            ),
+                          ],
+                        ),
                       ],
                     );
                   },
@@ -685,7 +796,7 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                     final equipment = _equipmentList[index];
                     return ListTile(
                       title: Text('Équipement: ${equipment['equipmentType']}'),
-                      subtitle: Text('Raison: ${equipment['stopReason']}'),
+                      subtitle: Text('Raison: ${equipment['Reason']}'),
                       trailing: PopupMenuButton<String>(
                         icon: const Icon(Icons.more_horiz, size: 20),
                         padding: EdgeInsets.zero,
@@ -819,10 +930,10 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                                   '${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}',
                                   style: const TextStyle(fontSize: 16),
                                 ),
-              ],
-            ),
-          ),
-        ),
+                            ],
+                         ),
+                       ),
+                     ),
                         const SizedBox(height: 16),
                         // Equipment Section
                         Card(
@@ -846,23 +957,23 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                                   ..._equipmentList.asMap().entries.map((entry) {
                                     final index = entry.key;
                                     final equipment = entry.value;
-    return Padding(
+                                return Padding(
                                       padding: const EdgeInsets.only(bottom: 8.0),
                                       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
                                           Text(
                                             'Équipement ${index + 1}:',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
+                                   style: const TextStyle(fontWeight: FontWeight.bold),
+                                          ),
                                           const SizedBox(height: 4),
                                           Text('Type: ${equipment['equipmentType']}'),
-                                          Text('Raison: ${equipment['stopReason']}'),
+                                          Text('Raison: ${equipment['Reason']}'),
                                           if (index < _equipmentList.length - 1) const Divider(),
                                         ],
                                       ),
                                     );
-                                  }),
+                                 }),
                               ],
                             ),
                           ),
@@ -880,8 +991,8 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                               children: [
                                 Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
                                 const SizedBox(width: 8),
-          Expanded(
-            child: Text(
+                                Expanded(
+                                child: Text(
                                     '${_equipmentList.length} équipement${_equipmentList.length > 1 ? 's' : ''} prêt${_equipmentList.length > 1 ? 's' : ''} à être soumis',
                                     style: TextStyle(
                                       color: Theme.of(context).colorScheme.primary,
@@ -891,13 +1002,13 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
                                 ),
                               ],
                             ),
-                          ),
+                         ),
                       ],
                     ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
           ),
         );
       },

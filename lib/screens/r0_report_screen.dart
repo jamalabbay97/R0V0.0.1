@@ -59,12 +59,13 @@ class R0ReportFormData {
   List<IndexCompteurPoste> indexCompteurs = List.generate(3, (_) => IndexCompteurPoste());
   String selectedPoste = '';
   List<VentilationItem> ventilation = [];
+  // Use consistent keys across app: H.M, H.A, H.N, Tonnage, Rendement
   Map<String, String> exploitation = {
-    'heuresBrutes': '',
-    'heuresArrets': '',
-    'heuresNettes': '',
-    'tonnage': '',
-    'rendement': '',
+    'H.M': '',
+    'H.A': '',
+    'H.N': '',
+    'Tonnage': '',
+    'Rendeme': '',
   };
   List<RepartitionItem> repartitionTravail = List.generate(3, (_) => RepartitionItem());
   PersonnelItem personnel = PersonnelItem();
@@ -75,10 +76,20 @@ class R0ReportFormData {
 }
 
 class R0Report extends StatefulWidget {
-  final DateTime selectedDate;
+  final DateTime? selectedDate;
   final String? previousDayThirdShiftEnd;
+  final Report? initialReport;
+  final Function(Report)? onSave;
+  final bool isEditing;
 
-  const R0Report({super.key, required this.selectedDate, this.previousDayThirdShiftEnd});
+  const R0Report({
+    super.key, 
+    this.selectedDate, 
+    this.previousDayThirdShiftEnd,
+    this.initialReport,
+    this.onSave,
+    this.isEditing = false,
+  });
 
   @override
   R0ReportState createState() => R0ReportState();
@@ -178,8 +189,66 @@ static const Map<String, List<String>> machinesData = {
   @override
   void initState() {
     super.initState();
-    _selectedDate = widget.selectedDate;
+    
+    if (widget.isEditing && widget.initialReport != null) {
+      // Editing mode - load existing data
+      _selectedDate = widget.initialReport!.date;
+      _loadExistingData();
+    } else {
+      // Creation mode
+      _selectedDate = widget.selectedDate ?? DateTime.now();
+    }
+    
     _calculateHours();
+  }
+
+  void _loadExistingData() {
+    if (widget.initialReport?.additionalData == null) return;
+    
+    final data = widget.initialReport!.additionalData!;
+    
+    // Load basic fields
+    formData.selectedMine = data['mine'] ?? '';
+    formData.selectedZone = data['zone'] ?? '';
+    formData.selectedSortie = data['sortie'] ?? '';
+    formData.selectedPoste = data['selectedPoste'] ?? '';
+    formData.selectedCategory = data['Category'] ?? '';
+    formData.selectedType = data['Type'] ?? '';
+    formData.selectedModel = data['Model'] ?? '';
+    
+    // Load compteurs
+    if (data['Compteurs'] is List) {
+      final compteurs = data['Compteurs'] as List;
+      for (int i = 0; i < compteurs.length && i < formData.indexCompteurs.length; i++) {
+        formData.indexCompteurs[i].duree = compteurs[i]['duree'] ?? '';
+        formData.indexCompteurs[i].note = compteurs[i]['note'] ?? '';
+      }
+    }
+    
+    // Load exploitation data
+    if (data['exploitation'] is Map) {
+      final exploitation = data['exploitation'] as Map;
+      formData.exploitation['H.M'] = exploitation['H.M'] ?? '';
+      formData.exploitation['H.A'] = exploitation['H.A'] ?? '';
+      formData.exploitation['H.N'] = exploitation['H.N'] ?? '';
+      formData.exploitation['Tonnage'] = exploitation['Tonnage'] ?? '';
+      formData.exploitation['Rendeme'] = exploitation['Rendeme'] ?? '';
+    }
+    
+    // Load personnel data
+    if (data['personnel'] is Map) {
+      final personnel = data['personnel'] as Map;
+      formData.personnel.conducteur = personnel['conductr'] ?? '';
+      formData.personnel.graisseur = personnel['graisseur'] ?? '';
+      formData.personnel.matricules = personnel['matricules'] ?? '';
+    }
+    
+    // Load consommation data
+    if (data['consommation'] is Map) {
+      final consommation = data['consommation'] as Map;
+      formData.consommation.tricone = consommation['tricone'] ?? '';
+      formData.consommation.gasoil = consommation['gasoil'] ?? '';
+    }
   }
 
   // Helper functions
@@ -200,7 +269,7 @@ static const Map<String, List<String>> machinesData = {
       }
     }
     
-    formData.exploitation['heuresBrutes'] = totalGrossHours.toStringAsFixed(2);
+    formData.exploitation['H.M'] = totalGrossHours.toStringAsFixed(2);
     
     // Calculate total stoppage time from ventilation data
     double totalStoppageHours = 0;
@@ -225,7 +294,12 @@ static const Map<String, List<String>> machinesData = {
       }
     }
     
-    formData.exploitation['heuresArrets'] = totalStoppageHours.toStringAsFixed(2);
+    formData.exploitation['H.A'] = totalStoppageHours.toStringAsFixed(2);
+    // Calculate net hours
+    final gross = _parseNumeric(formData.exploitation['H.M'] ?? '');
+    final stops = _parseNumeric(formData.exploitation['H.A'] ?? '');
+    final net = (gross - stops).clamp(0, double.infinity);
+    formData.exploitation['H.N'] = net.toStringAsFixed(2);
   }
 
   // UI Building methods
@@ -632,6 +706,7 @@ static const Map<String, List<String>> machinesData = {
 
     try {
       final report = Report(
+        id: widget.initialReport?.id,
         description: 'Rapport R0 - ${formData.selectedPoste}',
         date: _selectedDate,
         group: 'R0',
@@ -639,23 +714,29 @@ static const Map<String, List<String>> machinesData = {
         additionalData: _serializeFormData(),
       );
 
-      await _databaseHelper.insertReport(report);
-      
-      if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Rapport soumis avec succès'),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-        ),
-      );
-      // Delay navigation so the SnackBar is visible
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          final navigator = Navigator.of(context);
-          navigator.popUntil((route) => route.isFirst);
-        }
-      });
+      if (widget.isEditing && widget.onSave != null) {
+        // Editing mode - call the onSave callback
+        widget.onSave!(report);
+      } else {
+        // Creation mode - save to database
+        await _databaseHelper.insertReport(report);
+        
+        if (!mounted) return;
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Rapport soumis avec succès'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+          ),
+        );
+        // Delay navigation so the SnackBar is visible
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            final navigator = Navigator.of(context);
+            navigator.popUntil((route) => route.isFirst);
+          }
+        });
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -689,9 +770,11 @@ static const Map<String, List<String>> machinesData = {
           })
           .map((entry) {
             final compteur = entry.value;
+            final posteOrder = ['3ème', '1er', '2ème'];
             return {
               'duree': compteur.duree,
               'note': compteur.note,
+              'poste': posteOrder[entry.key],
             };
           })
           .toList(),
@@ -709,7 +792,7 @@ static const Map<String, List<String>> machinesData = {
         'imputation': r.imputation,
       }).toList(),
       'personnel': {
-        'conducteur': formData.personnel.conducteur,
+        'conductr': formData.personnel.conducteur,
         'graisseur': formData.personnel.graisseur,
         'matricules': formData.personnel.matricules,
       },
@@ -994,7 +1077,7 @@ static const Map<String, List<String>> machinesData = {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Rapport R0"),
+        title: Text(widget.isEditing ? "Modifier - Rapport R0" : "Rapport R0"),
         actions: [
           if (_isLoading)
             const Padding(
@@ -1049,6 +1132,7 @@ static const Map<String, List<String>> machinesData = {
                               child: ElevatedButton(
                                 onPressed: () async {
                                   // Show confirmation dialog before saving
+                                  final navigator = Navigator.of(context);
                                   final shouldSave = await showDialog<bool>(
                                     context: context,
                                     barrierDismissible: false,
@@ -1070,13 +1154,10 @@ static const Map<String, List<String>> machinesData = {
                                     await _saveReport();
                                     if (!mounted) return;
                                     // After saving, pop to home page
-                                    if (mounted) {
-                                      final navigator = Navigator.of(context);
-                                      navigator.popUntil((route) => route.isFirst);
-                                    }
+                                    navigator.popUntil((route) => route.isFirst);
                                   }
                                 },
-                                child: const Text('Soumettre'),
+                                child: Text(widget.isEditing ? 'Enregistrer' : 'Soumettre'),
                               ),
                             ),
                           ],
@@ -1568,10 +1649,10 @@ static const Map<String, List<String>> machinesData = {
                                         int subStep = 0;
                                         // --- Persistent controllers for all fields ---
                                         // Exploitation
-                                        final TextEditingController heuresBrutesController = TextEditingController(text: formData.exploitation['heuresBrutes']);
-                                        final TextEditingController heuresArretsController = TextEditingController(text: formData.exploitation['heuresArrets']);
-                                        final TextEditingController tonnageController = TextEditingController(text: formData.exploitation['tonnage']);
-                                        final TextEditingController rendementController = TextEditingController(text: formData.exploitation['rendement']);
+                                        final TextEditingController heuresBrutesController = TextEditingController(text: formData.exploitation['H.M']);
+                                        final TextEditingController heuresArretsController = TextEditingController(text: formData.exploitation['H.A']);
+                                        final TextEditingController tonnageController = TextEditingController(text: formData.exploitation['Tonnage']);
+                                        final TextEditingController rendementController = TextEditingController(text: formData.exploitation['Rendeme']);
                                         // Répartition
                                         final TextEditingController chantierController = TextEditingController(text: formData.repartitionTravail.isNotEmpty ? formData.repartitionTravail[0].chantier : '');
                                         final TextEditingController tempsController = TextEditingController(text: formData.repartitionTravail.isNotEmpty ? formData.repartitionTravail[0].temps : '');
@@ -1681,7 +1762,7 @@ static const Map<String, List<String>> machinesData = {
                                                     const SizedBox(height: 16),
                                                     TextFormField(
                                                       decoration: const InputDecoration(
-                                                        labelText: 'Conducteur',
+                                                        labelText: 'Conductr',
                                                         border: OutlineInputBorder(),
                                                       ),
                                                       controller: conducteurController,
@@ -1752,10 +1833,10 @@ static const Map<String, List<String>> machinesData = {
                                                     onPressed: () {
                                                       // Save data for the current sub-step before moving forward
                                                       if (subStep == 0) {
-                                                        formData.exploitation['heuresBrutes'] = heuresBrutesController.text;
-                                                        formData.exploitation['heuresArrets'] = heuresArretsController.text;
-                                                        formData.exploitation['tonnage'] = tonnageController.text;
-                                                        formData.exploitation['rendement'] = rendementController.text;
+                                                        formData.exploitation['H.M'] = heuresBrutesController.text;
+                                                        formData.exploitation['H.A'] = heuresArretsController.text;
+                                                        formData.exploitation['Tonnage'] = tonnageController.text;
+                                                        formData.exploitation['Rendeme'] = rendementController.text;
                                                       } else if (subStep == 1) {
                                                         if (formData.repartitionTravail.isEmpty) {
                                                           formData.repartitionTravail.add(RepartitionItem());
@@ -1825,10 +1906,10 @@ static const Map<String, List<String>> machinesData = {
                                               // Exploitation Section
                                               Text('Exploitation', style: Theme.of(context).textTheme.titleMedium),
                                               const Divider(height: 16),
-                                              Text('Heures marche: ${formData.exploitation['heuresMarche']}'),
-                                              Text('Heures Arrêts: ${formData.exploitation['heuresArrets']}'),
-                                              Text('Tonnage: ${formData.exploitation['tonnage']}t'),
-                                              Text('Rendement: ${formData.exploitation['rendement']}%'),
+                                              Text('Heures marche: ${formData.exploitation['H.M']}'),
+                                              Text('Heures Arrêts: ${formData.exploitation['H.A']}'),
+                                              Text('Tonnage: ${formData.exploitation['Tonnage']}t'),
+                                              Text('Rendeme: ${formData.exploitation['Rendeme']}%'),
                                               const SizedBox(height: 20),
                                               // Répartition Section
                                               Text('Répartition', style: Theme.of(context).textTheme.titleMedium),
@@ -1861,7 +1942,7 @@ static const Map<String, List<String>> machinesData = {
                                               Text('Personnel', style: Theme.of(context).textTheme.titleMedium),
                                               const Divider(height: 16),
                                               if (formData.personnel.conducteur.isNotEmpty)
-                                                Text('Conducteur: ${formData.personnel.conducteur}'),
+                                                Text('Conductr: ${formData.personnel.conducteur}'),
                                               if (formData.personnel.graisseur.isNotEmpty)
                                                 Text('Graisseur: ${formData.personnel.graisseur}'),
                                               if (formData.personnel.matricules.isNotEmpty)
@@ -2069,10 +2150,10 @@ static const Map<String, List<String>> machinesData = {
                                                         children: [
                                                           const Text('Exploitation', style: TextStyle(fontWeight: FontWeight.bold)),
                                                           const Divider(height: 16),
-                                                          _buildInfoRow('H.M', formData.exploitation['heuresBrutes'] ?? ''),
-                                                          _buildInfoRow('H.A', formData.exploitation['heuresArrets'] ?? ''),
-                                                          _buildInfoRow('Tonnage', formData.exploitation['tonnage'] ?? ''),
-                                                          _buildInfoRow('Rendeme', formData.exploitation['rendement'] ?? ''),
+                                                          _buildInfoRow('H.M', formData.exploitation['H.M'] ?? ''),
+                                                          _buildInfoRow('H.A', formData.exploitation['H.A'] ?? ''),
+                                                          _buildInfoRow('Tonnage', formData.exploitation['Tonnage'] ?? ''),
+                                                          _buildInfoRow('Rendeme', formData.exploitation['Rendeme'] ?? ''),
                                                         ],
                                                       ),
                                                     ),

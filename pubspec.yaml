@@ -1,6 +1,6 @@
 name: r0
 description: A Flutter app for recording and reporting workflow reports, truck, heavy vehicle, and factory reports.
-publish_to: 'none'
+publish_to: 'none'  # Remove this line when ready to publish
 version: 1.0.0+1
 
 environment:
