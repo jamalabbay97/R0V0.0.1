@@ -20,8 +20,9 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'R0.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // Incremented to add firestore_id column
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -29,6 +30,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE reports(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        firestore_id TEXT,
         description TEXT NOT NULL,
         date TEXT NOT NULL,
         group_name TEXT NOT NULL,
@@ -36,6 +38,13 @@ class DatabaseHelper {
         additional_data TEXT
       )
     ''');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Add firestore_id column for existing databases
+      await db.execute('ALTER TABLE reports ADD COLUMN firestore_id TEXT');
+    }
   }
 
   Future<int> insertReport(Report report) async {

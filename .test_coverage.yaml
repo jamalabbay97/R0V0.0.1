@@ -1,0 +1,21 @@
+# Test Coverage Configuration
+# This file can be used with coverage tools to configure coverage thresholds
+
+coverage:
+  # Minimum coverage percentage required
+  minimum: 70
+  
+  # Files to exclude from coverage
+  exclude:
+    - '**/*.g.dart'
+    - '**/*.freezed.dart'
+    - '**/generated/**'
+    - '**/firebase_options.dart'
+    - '**/main.dart'
+  
+  # Directories to include
+  include:
+    - 'lib/models/**'
+    - 'lib/services/**'
+    - 'lib/providers/**'
+    - 'lib/widgets/**'
