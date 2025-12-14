@@ -300,11 +300,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     final isSelected = _selectedStopIndex == index;
                                     return Card(
                                       margin: const EdgeInsets.only(bottom: 8),
-                                      color: isSelected ? Colors.green.withOpacity(0.1) : null,
+                                      color: isSelected ? Colors.green.withValues(alpha: 0.1) : null,
                                       elevation: isSelected ? 4 : 1,
                                       child: ListTile(
                                         selected: isSelected,
-                                        selectedTileColor: Colors.green.withOpacity(0.1),
+                                        selectedTileColor: Colors.green.withValues(alpha: 0.1),
                                         title: Text('Arrêt ${index + 1}'),
                                         subtitle: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -375,11 +375,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     final isSelected = _selectedCounterIndex == index;
                                     return Card(
                                       margin: const EdgeInsets.only(bottom: 8),
-                                      color: isSelected ? Colors.orange.withOpacity(0.1) : null,
+                                      color: isSelected ? Colors.orange.withValues(alpha: 0.1) : null,
                                       elevation: isSelected ? 4 : 1,
                                       child: ListTile(
                                         selected: isSelected,
-                                        selectedTileColor: Colors.orange.withOpacity(0.1),
+                                        selectedTileColor: Colors.orange.withValues(alpha: 0.1),
                                         title: Text('Compteur Vibreur ${index + 1}'),
                                         subtitle: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -516,11 +516,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     final isSelected = _selectedStockIndex == index;
                                     return Card(
                                       margin: const EdgeInsets.only(bottom: 8),
-                                      color: isSelected ? Colors.purple.withOpacity(0.1) : null,
+                                      color: isSelected ? Colors.purple.withValues(alpha: 0.1) : null,
                                       elevation: isSelected ? 4 : 1,
                                       child: ListTile(
                                         selected: isSelected,
-                                        selectedTileColor: Colors.purple.withOpacity(0.1),
+                                        selectedTileColor: Colors.purple.withValues(alpha: 0.1),
                                         title: Text('Stock ${index + 1}'),
                                         subtitle: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1895,9 +1895,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       padding: const EdgeInsets.symmetric(vertical: 2),
                                       child: Text('• ${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
                                     )),
-                                  ] else if (data['stops'] is List && (data['stops'] as List).isEmpty)
+                                  ],
+                                  if (data['stops'] is List && (data['stops'] as List).isEmpty)
                                     const Text('Stops list is empty'),
-                                  else
+                                  if (data['stops'] is! List)
                                     Text('Raw stops data: ${data['stops']}'),
                                 ],
                               ),
@@ -3978,11 +3979,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     final isSelected = _selectedStockIndex == index;
                                     return Card(
                                       margin: const EdgeInsets.only(bottom: 8),
-                                      color: isSelected ? Colors.purple.withOpacity(0.1) : null,
+                                      color: isSelected ? Colors.purple.withValues(alpha: 0.1) : null,
                                       elevation: isSelected ? 4 : 1,
                                       child: ListTile(
                                         selected: isSelected,
-                                        selectedTileColor: Colors.purple.withOpacity(0.1),
+                                        selectedTileColor: Colors.purple.withValues(alpha: 0.1),
                                         title: Text('Stock ${index + 1}'),
                                         subtitle: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -4530,11 +4531,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     final isSelected = _selectedEquipmentIndex == index;
                                     return Card(
                                       margin: const EdgeInsets.only(bottom: 8),
-                                      color: isSelected ? Colors.blue.withOpacity(0.1) : null,
+                                      color: isSelected ? Colors.blue.withValues(alpha: 0.1) : null,
                                       elevation: isSelected ? 4 : 1,
                                       child: ListTile(
                                         selected: isSelected,
-                                        selectedTileColor: Colors.blue.withOpacity(0.1),
+                                        selectedTileColor: Colors.blue.withValues(alpha: 0.1),
                                         title: Text('Équipement ${index + 1}'),
                                         subtitle: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
