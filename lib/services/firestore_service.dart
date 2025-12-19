@@ -18,16 +18,22 @@ class FirestoreService {
   bool get isAuthenticated => _auth.currentUser != null;
 
   /// Enable offline persistence (call this once at app startup)
+  /// Note: For Android/iOS, persistence is enabled by default.
+  /// This method configures persistence settings if needed.
   Future<void> enableOfflinePersistence() async {
     try {
-      await _firestore.enablePersistence(
-        const PersistenceSettings(synchronizeTabs: true),
+      // For web platforms, use enablePersistence
+      // For Android/iOS, persistence is enabled by default via Settings
+      // Configure settings if needed (persistence is enabled by default)
+      _firestore.settings = const Settings(
+        persistenceEnabled: true,
+        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
       );
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('Failed to enable Firestore offline persistence: $e');
+        debugPrint('Failed to configure Firestore offline persistence: $e');
       }
-      // Persistence might already be enabled, which is fine
+      // Persistence might already be configured, which is fine
     }
   }
 

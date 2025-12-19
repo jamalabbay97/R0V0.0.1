@@ -1712,19 +1712,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 trailing: IconButton(
                   icon: const Icon(Icons.calendar_today),
                   onPressed: () async {
-                    final currentContext = dialogContext;
+                    if (!dialogContext.mounted) return;
                     final DateTime? picked = await showDatePicker(
-                      context: currentContext,
+                      context: dialogContext,
                       initialDate: selectedDate,
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2100),
                     );
-                    if (picked != null) {
+                    if (picked != null && dialogContext.mounted) {
                       final TimeOfDay? time = await showTimePicker(
-                        context: currentContext,
+                        context: dialogContext,
                         initialTime: TimeOfDay.fromDateTime(selectedDate),
                       );
-                      if (time != null) {
+                      if (time != null && dialogContext.mounted) {
                         final newDate = DateTime(
                           picked.year,
                           picked.month,
