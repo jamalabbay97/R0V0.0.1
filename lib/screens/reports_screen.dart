@@ -5340,26 +5340,373 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         ),
                         const SizedBox(height: 16),
                         
-                        // R0 Specific Data Card
-                        if (data.isNotEmpty) ...[
-                          Card(
-                            margin: EdgeInsets.zero,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Données R0',
-                                    style: Theme.of(dialogContext).textTheme.titleMedium,
-                                  ),
-                                  const Divider(height: 16),
-                                  _buildR0ReportAdditionalData(data),
-                                ],
-                              ),
+                        // Info OIB/EE Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Info OIB/EE',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.edit),
+                                      onPressed: () => _showEditR0InfoDialog(report, data, scaffoldMessenger, l10n),
+                                      tooltip: 'Modifier les informations OIB/EE',
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                _buildSummaryItem('Mine', data['mine'] ?? ''),
+                                _buildSummaryItem('Zone', data['zone'] ?? ''),
+                                _buildSummaryItem('Sortie', data['sortie'] ?? ''),
+                                _buildSummaryItem('Catégorie', data['Category'] ?? ''),
+                                _buildSummaryItem('Type', data['Type'] ?? ''),
+                                _buildSummaryItem('Modèle', data['Model'] ?? ''),
+                                _buildSummaryItem('Poste', data['selectedPoste'] ?? data['poste'] ?? ''),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Compteurs Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Compteurs',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _showAddR0CounterDialog(report, data, scaffoldMessenger, l10n),
+                                      icon: const Icon(Icons.add),
+                                      label: const Text('Ajouter'),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                if (data['Compteurs'] is List && (data['Compteurs'] as List).isNotEmpty)
+                                  ...List.from(data['Compteurs']).asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final compteur = entry.value;
+                                    final isSelected = _selectedCounterIndex == index;
+                                    return Card(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      color: isSelected ? Colors.blue.withValues(alpha: 0.1) : null,
+                                      elevation: isSelected ? 4 : 1,
+                                      child: ListTile(
+                                        selected: isSelected,
+                                        selectedTileColor: Colors.blue.withValues(alpha: 0.1),
+                                        title: Text('Compteur ${index + 1}'),
+                                        subtitle: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Début: ${compteur['duree'] ?? '-'}'),
+                                            Text('Fin: ${compteur['note'] ?? '-'}'),
+                                          ],
+                                        ),
+                                        leading: isSelected ? const Icon(Icons.check_circle, color: Colors.blue) : null,
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedCounterIndex = isSelected ? null : index;
+                                          });
+                                        },
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.edit, size: 18),
+                                              onPressed: () => _showEditR0CounterDialog(report, data, index, scaffoldMessenger, l10n),
+                                              tooltip: 'Modifier le compteur',
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                                              onPressed: () => _showDeleteR0CounterDialog(report, data, index, scaffoldMessenger, l10n),
+                                              tooltip: 'Supprimer le compteur',
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  })
+                                else
+                                  const Text('Aucun compteur ajouté', style: TextStyle(color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Arrêts Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Arrêts',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _showAddR0StopDialog(report, data, scaffoldMessenger, l10n),
+                                      icon: const Icon(Icons.add),
+                                      label: const Text('Ajouter'),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                if (data['Arrets'] is List && (data['Arrets'] as List).isNotEmpty)
+                                  ...List.from(data['Arrets']).asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final arret = entry.value;
+                                    final isSelected = _selectedStopIndex == index;
+                                    return Card(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      color: isSelected ? Colors.blue.withValues(alpha: 0.1) : null,
+                                      elevation: isSelected ? 4 : 1,
+                                      child: ListTile(
+                                        selected: isSelected,
+                                        selectedTileColor: Colors.blue.withValues(alpha: 0.1),
+                                        title: Text('Arrêt ${index + 1}'),
+                                        subtitle: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Type: ${arret['Arret'] ?? '-'}'),
+                                            Text('Début: ${arret['Début'] ?? '-'}'),
+                                            Text('Fin: ${arret['Fin'] ?? '-'}'),
+                                          ],
+                                        ),
+                                        leading: isSelected ? const Icon(Icons.check_circle, color: Colors.blue) : null,
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedStopIndex = isSelected ? null : index;
+                                          });
+                                        },
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.edit, size: 18),
+                                              onPressed: () => _showEditR0StopDialog(report, data, index, scaffoldMessenger, l10n),
+                                              tooltip: 'Modifier l\'arrêt',
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                                              onPressed: () => _showDeleteR0StopDialog(report, data, index, scaffoldMessenger, l10n),
+                                              tooltip: 'Supprimer l\'arrêt',
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  })
+                                else
+                                  const Text('Aucun arrêt ajouté', style: TextStyle(color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Exploitation Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Exploitation',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.edit),
+                                      onPressed: () => _showEditR0ExploitationDialog(report, data, scaffoldMessenger, l10n),
+                                      tooltip: 'Modifier l\'exploitation',
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                if (data['exploitation'] is Map) ...[
+                                  _buildSummaryItem('H.M', data['exploitation']['H.M'] ?? ''),
+                                  _buildSummaryItem('H.A', data['exploitation']['H.A'] ?? ''),
+                                  _buildSummaryItem('H.N', data['exploitation']['H.N'] ?? ''),
+                                  _buildSummaryItem('Tonnage', data['exploitation']['Tonnage'] ?? ''),
+                                  _buildSummaryItem('Rendeme', data['exploitation']['Rendeme'] ?? data['exploitation']['Rendeme'] ?? ''),
+                                ] else
+                                  const Text('Aucune donnée d\'exploitation', style: TextStyle(color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Répartition Travail Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Répartition Travail',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _showAddR0WorkDialog(report, data, scaffoldMessenger, l10n),
+                                      icon: const Icon(Icons.add),
+                                      label: const Text('Ajouter'),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                if (data['Répartition Travail'] is List && (data['Répartition Travail'] as List).isNotEmpty)
+                                  ...List.from(data['Répartition Travail']).asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final repartition = entry.value;
+                                    final isSelected = _selectedStockIndex == index;
+                                    return Card(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      color: isSelected ? Colors.blue.withValues(alpha: 0.1) : null,
+                                      elevation: isSelected ? 4 : 1,
+                                      child: ListTile(
+                                        selected: isSelected,
+                                        selectedTileColor: Colors.blue.withValues(alpha: 0.1),
+                                        title: Text('Travail ${index + 1}'),
+                                        subtitle: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Chantier: ${repartition['Chantier'] ?? repartition['chantier'] ?? '-'}'),
+                                            Text('Temps: ${repartition['temps'] ?? repartition['Temps'] ?? '-'}'),
+                                            Text('Imputation: ${repartition['imputation'] ?? repartition['Imputation'] ?? '-'}'),
+                                          ],
+                                        ),
+                                        leading: isSelected ? const Icon(Icons.check_circle, color: Colors.blue) : null,
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedStockIndex = isSelected ? null : index;
+                                          });
+                                        },
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.edit, size: 18),
+                                              onPressed: () => _showEditR0WorkDialog(report, data, index, scaffoldMessenger, l10n),
+                                              tooltip: 'Modifier le travail',
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                                              onPressed: () => _showDeleteR0WorkDialog(report, data, index, scaffoldMessenger, l10n),
+                                              tooltip: 'Supprimer le travail',
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  })
+                                else
+                                  const Text('Aucune répartition de travail ajoutée', style: TextStyle(color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Personnel Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Personnel',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.edit),
+                                      onPressed: () => _showEditR0PersonnelDialog(report, data, scaffoldMessenger, l10n),
+                                      tooltip: 'Modifier le personnel',
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                if (data['personnel'] is Map) ...[
+                                  _buildSummaryItem('Conductr', data['personnel']['conductr'] ?? data['personnel']['conductr'] ?? ''),
+                                  _buildSummaryItem('Graisseur', data['personnel']['graisseur'] ?? ''),
+                                  _buildSummaryItem('Matricules', data['personnel']['matricules'] ?? ''),
+                                ] else
+                                  const Text('Aucune donnée de personnel', style: TextStyle(color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Consommation Section
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Consommation',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.edit),
+                                      onPressed: () => _showEditR0ConsumptionDialog(report, data, scaffoldMessenger, l10n),
+                                      tooltip: 'Modifier la consommation',
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                if (data['consommation'] is Map) ...[
+                                  _buildSummaryItem('Tricone', data['consommation']['tricone'] ?? ''),
+                                  _buildSummaryItem('Gasoil', data['consommation']['gasoil'] ?? ''),
+                                ] else
+                                  const Text('Aucune donnée de consommation', style: TextStyle(color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -5367,6 +5714,807 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // Edit R0 Info OIB/EE Dialog
+  Future<void> _showEditR0InfoDialog(Report report, Map<String, dynamic> data, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    String mine = data['mine'] ?? '';
+    String zone = data['zone'] ?? '';
+    String sortie = data['sortie'] ?? '';
+    String category = data['Category'] ?? '';
+    String type = data['Type'] ?? '';
+    String model = data['Model'] ?? '';
+    String poste = data['selectedPoste'] ?? data['poste'] ?? '';
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Modifier les informations OIB/EE'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Mine'),
+                  controller: TextEditingController(text: mine),
+                  onChanged: (value) => setState(() => mine = value),
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Zone'),
+                  controller: TextEditingController(text: zone),
+                  onChanged: (value) => setState(() => zone = value),
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Sortie'),
+                  controller: TextEditingController(text: sortie),
+                  onChanged: (value) => setState(() => sortie = value),
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Catégorie'),
+                  controller: TextEditingController(text: category),
+                  onChanged: (value) => setState(() => category = value),
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Type'),
+                  controller: TextEditingController(text: type),
+                  onChanged: (value) => setState(() => type = value),
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Modèle'),
+                  controller: TextEditingController(text: model),
+                  onChanged: (value) => setState(() => model = value),
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Poste'),
+                  controller: TextEditingController(text: poste),
+                  onChanged: (value) => setState(() => poste = value),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final updatedData = Map<String, dynamic>.from(data);
+                updatedData['mine'] = mine;
+                updatedData['zone'] = zone;
+                updatedData['sortie'] = sortie;
+                updatedData['Category'] = category;
+                updatedData['Type'] = type;
+                updatedData['Model'] = model;
+                updatedData['selectedPoste'] = poste;
+
+                final updatedReport = Report(
+                  id: report.id,
+                  description: report.description,
+                  type: report.type,
+                  group: report.group,
+                  date: report.date,
+                  additionalData: updatedData,
+                );
+
+                Navigator.pop(context);
+                _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+              },
+              child: const Text('Modifier'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Add R0 Counter Dialog
+  Future<void> _showAddR0CounterDialog(Report report, Map<String, dynamic> data, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    String duree = '';
+    String note = '';
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Ajouter un compteur'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: const InputDecoration(labelText: 'Début'),
+                onChanged: (value) => setState(() => duree = value),
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Fin'),
+                onChanged: (value) => setState(() => note = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (duree.isNotEmpty || note.isNotEmpty) {
+                  final updatedData = Map<String, dynamic>.from(data);
+                  if (updatedData['Compteurs'] == null) {
+                    updatedData['Compteurs'] = [];
+                  }
+                  (updatedData['Compteurs'] as List).add({
+                    'duree': duree,
+                    'note': note,
+                  });
+
+                  final updatedReport = Report(
+                    id: report.id,
+                    description: report.description,
+                    type: report.type,
+                    group: report.group,
+                    date: report.date,
+                    additionalData: updatedData,
+                  );
+
+                  Navigator.pop(context);
+                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                }
+              },
+              child: const Text('Ajouter'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Edit R0 Counter Dialog
+  Future<void> _showEditR0CounterDialog(Report report, Map<String, dynamic> data, int index, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final compteur = (data['Compteurs'] as List)[index];
+    String duree = compteur['duree'] ?? '';
+    String note = compteur['note'] ?? '';
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Modifier le compteur'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: const InputDecoration(labelText: 'Début'),
+                controller: TextEditingController(text: duree),
+                onChanged: (value) => setState(() => duree = value),
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Fin'),
+                controller: TextEditingController(text: note),
+                onChanged: (value) => setState(() => note = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final updatedData = Map<String, dynamic>.from(data);
+                (updatedData['Compteurs'] as List)[index] = {
+                  'duree': duree,
+                  'note': note,
+                };
+
+                final updatedReport = Report(
+                  id: report.id,
+                  description: report.description,
+                  type: report.type,
+                  group: report.group,
+                  date: report.date,
+                  additionalData: updatedData,
+                );
+
+                Navigator.pop(context);
+                _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+              },
+              child: const Text('Modifier'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Delete R0 Counter Dialog
+  Future<void> _showDeleteR0CounterDialog(Report report, Map<String, dynamic> data, int index, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer le compteur'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer ce compteur ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final updatedData = Map<String, dynamic>.from(data);
+              (updatedData['Compteurs'] as List).removeAt(index);
+
+              final updatedReport = Report(
+                id: report.id,
+                description: report.description,
+                type: report.type,
+                group: report.group,
+                date: report.date,
+                additionalData: updatedData,
+              );
+
+              Navigator.pop(context);
+              _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Add R0 Stop Dialog
+  Future<void> _showAddR0StopDialog(Report report, Map<String, dynamic> data, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    String arret = '';
+    String debut = '';
+    String fin = '';
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Ajouter un arrêt'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: const InputDecoration(labelText: 'Type d\'arrêt'),
+                onChanged: (value) => setState(() => arret = value),
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Début'),
+                onChanged: (value) => setState(() => debut = value),
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Fin'),
+                onChanged: (value) => setState(() => fin = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (arret.isNotEmpty || debut.isNotEmpty || fin.isNotEmpty) {
+                  final updatedData = Map<String, dynamic>.from(data);
+                  if (updatedData['Arrets'] == null) {
+                    updatedData['Arrets'] = [];
+                  }
+                  (updatedData['Arrets'] as List).add({
+                    'Arret': arret,
+                    'Début': debut,
+                    'Fin': fin,
+                  });
+
+                  final updatedReport = Report(
+                    id: report.id,
+                    description: report.description,
+                    type: report.type,
+                    group: report.group,
+                    date: report.date,
+                    additionalData: updatedData,
+                  );
+
+                  Navigator.pop(context);
+                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                }
+              },
+              child: const Text('Ajouter'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Edit R0 Stop Dialog
+  Future<void> _showEditR0StopDialog(Report report, Map<String, dynamic> data, int index, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final arret = (data['Arrets'] as List)[index];
+    String arretType = arret['Arret'] ?? '';
+    String debut = arret['Début'] ?? '';
+    String fin = arret['Fin'] ?? '';
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Modifier l\'arrêt'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: const InputDecoration(labelText: 'Type d\'arrêt'),
+                controller: TextEditingController(text: arretType),
+                onChanged: (value) => setState(() => arretType = value),
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Début'),
+                controller: TextEditingController(text: debut),
+                onChanged: (value) => setState(() => debut = value),
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Fin'),
+                controller: TextEditingController(text: fin),
+                onChanged: (value) => setState(() => fin = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final updatedData = Map<String, dynamic>.from(data);
+                (updatedData['Arrets'] as List)[index] = {
+                  'Arret': arretType,
+                  'Début': debut,
+                  'Fin': fin,
+                };
+
+                final updatedReport = Report(
+                  id: report.id,
+                  description: report.description,
+                  type: report.type,
+                  group: report.group,
+                  date: report.date,
+                  additionalData: updatedData,
+                );
+
+                Navigator.pop(context);
+                _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+              },
+              child: const Text('Modifier'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Delete R0 Stop Dialog
+  Future<void> _showDeleteR0StopDialog(Report report, Map<String, dynamic> data, int index, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer l\'arrêt'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer cet arrêt ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final updatedData = Map<String, dynamic>.from(data);
+              (updatedData['Arrets'] as List).removeAt(index);
+
+              final updatedReport = Report(
+                id: report.id,
+                description: report.description,
+                type: report.type,
+                group: report.group,
+                date: report.date,
+                additionalData: updatedData,
+              );
+
+              Navigator.pop(context);
+              _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Edit R0 Exploitation Dialog
+  Future<void> _showEditR0ExploitationDialog(Report report, Map<String, dynamic> data, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final exploitation = data['exploitation'] ?? {};
+    String hm = exploitation['H.M'] ?? '';
+    String ha = exploitation['H.A'] ?? '';
+    String hn = exploitation['H.N'] ?? '';
+    String tonnage = exploitation['Tonnage'] ?? '';
+    String rendeme = exploitation['Rendeme'] ?? '';
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Modifier l\'exploitation'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  decoration: const InputDecoration(labelText: 'H.M'),
+                  controller: TextEditingController(text: hm),
+                  onChanged: (value) => setState(() => hm = value),
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'H.A'),
+                  controller: TextEditingController(text: ha),
+                  onChanged: (value) => setState(() => ha = value),
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'H.N'),
+                  controller: TextEditingController(text: hn),
+                  onChanged: (value) => setState(() => hn = value),
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Tonnage'),
+                  controller: TextEditingController(text: tonnage),
+                  onChanged: (value) => setState(() => tonnage = value),
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Rendeme'),
+                  controller: TextEditingController(text: rendeme),
+                  onChanged: (value) => setState(() => rendeme = value),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final updatedData = Map<String, dynamic>.from(data);
+                updatedData['exploitation'] = {
+                  'H.M': hm,
+                  'H.A': ha,
+                  'H.N': hn,
+                  'Tonnage': tonnage,
+                  'Rendeme': rendeme,
+                };
+
+                final updatedReport = Report(
+                  id: report.id,
+                  description: report.description,
+                  type: report.type,
+                  group: report.group,
+                  date: report.date,
+                  additionalData: updatedData,
+                );
+
+                Navigator.pop(context);
+                _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+              },
+              child: const Text('Modifier'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Add R0 Work Dialog
+  Future<void> _showAddR0WorkDialog(Report report, Map<String, dynamic> data, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    String chantier = '';
+    String temps = '';
+    String imputation = '';
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Ajouter une répartition de travail'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: const InputDecoration(labelText: 'Chantier'),
+                onChanged: (value) => setState(() => chantier = value),
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Temps'),
+                onChanged: (value) => setState(() => temps = value),
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Imputation'),
+                onChanged: (value) => setState(() => imputation = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (chantier.isNotEmpty || temps.isNotEmpty || imputation.isNotEmpty) {
+                  final updatedData = Map<String, dynamic>.from(data);
+                  if (updatedData['Répartition Travail'] == null) {
+                    updatedData['Répartition Travail'] = [];
+                  }
+                  (updatedData['Répartition Travail'] as List).add({
+                    'Chantier': chantier,
+                    'Temps': temps,
+                    'Imputation': imputation,
+                  });
+
+                  final updatedReport = Report(
+                    id: report.id,
+                    description: report.description,
+                    type: report.type,
+                    group: report.group,
+                    date: report.date,
+                    additionalData: updatedData,
+                  );
+
+                  Navigator.pop(context);
+                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                }
+              },
+              child: const Text('Ajouter'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Edit R0 Work Dialog
+  Future<void> _showEditR0WorkDialog(Report report, Map<String, dynamic> data, int index, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final repartition = (data['Répartition Travail'] as List)[index];
+    String chantier = repartition['Chantier'] ?? repartition['chantier'] ?? '';
+    String temps = repartition['Temps'] ?? repartition['temps'] ?? '';
+    String imputation = repartition['Imputation'] ?? repartition['imputation'] ?? '';
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Modifier la répartition de travail'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: const InputDecoration(labelText: 'Chantier'),
+                controller: TextEditingController(text: chantier),
+                onChanged: (value) => setState(() => chantier = value),
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Temps'),
+                controller: TextEditingController(text: temps),
+                onChanged: (value) => setState(() => temps = value),
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Imputation'),
+                controller: TextEditingController(text: imputation),
+                onChanged: (value) => setState(() => imputation = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final updatedData = Map<String, dynamic>.from(data);
+                (updatedData['Répartition Travail'] as List)[index] = {
+                  'Chantier': chantier,
+                  'Temps': temps,
+                  'Imputation': imputation,
+                };
+
+                final updatedReport = Report(
+                  id: report.id,
+                  description: report.description,
+                  type: report.type,
+                  group: report.group,
+                  date: report.date,
+                  additionalData: updatedData,
+                );
+
+                Navigator.pop(context);
+                _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+              },
+              child: const Text('Modifier'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Delete R0 Work Dialog
+  Future<void> _showDeleteR0WorkDialog(Report report, Map<String, dynamic> data, int index, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer la répartition de travail'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer cette répartition de travail ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final updatedData = Map<String, dynamic>.from(data);
+              (updatedData['Répartition Travail'] as List).removeAt(index);
+
+              final updatedReport = Report(
+                id: report.id,
+                description: report.description,
+                type: report.type,
+                group: report.group,
+                date: report.date,
+                additionalData: updatedData,
+              );
+
+              Navigator.pop(context);
+              _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Edit R0 Personnel Dialog
+  Future<void> _showEditR0PersonnelDialog(Report report, Map<String, dynamic> data, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final personnel = data['personnel'] ?? {};
+    String conductr = personnel['conductr'] ?? '';
+    String graisseur = personnel['graisseur'] ?? '';
+    String matricules = personnel['matricules'] ?? '';
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Modifier le personnel'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Conductr'),
+                  controller: TextEditingController(text: conductr),
+                  onChanged: (value) => setState(() => conductr = value),
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Graisseur'),
+                  controller: TextEditingController(text: graisseur),
+                  onChanged: (value) => setState(() => graisseur = value),
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Matricules'),
+                  controller: TextEditingController(text: matricules),
+                  onChanged: (value) => setState(() => matricules = value),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final updatedData = Map<String, dynamic>.from(data);
+                updatedData['personnel'] = {
+                  'conductr': conductr,
+                  'graisseur': graisseur,
+                  'matricules': matricules,
+                };
+
+                final updatedReport = Report(
+                  id: report.id,
+                  description: report.description,
+                  type: report.type,
+                  group: report.group,
+                  date: report.date,
+                  additionalData: updatedData,
+                );
+
+                Navigator.pop(context);
+                _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+              },
+              child: const Text('Modifier'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Edit R0 Consumption Dialog
+  Future<void> _showEditR0ConsumptionDialog(Report report, Map<String, dynamic> data, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final consommation = data['consommation'] ?? {};
+    String tricone = consommation['tricone'] ?? '';
+    String gasoil = consommation['gasoil'] ?? '';
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Modifier la consommation'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Tricone'),
+                  controller: TextEditingController(text: tricone),
+                  onChanged: (value) => setState(() => tricone = value),
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Gasoil'),
+                  controller: TextEditingController(text: gasoil),
+                  onChanged: (value) => setState(() => gasoil = value),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final updatedData = Map<String, dynamic>.from(data);
+                updatedData['consommation'] = {
+                  'tricone': tricone,
+                  'gasoil': gasoil,
+                };
+
+                final updatedReport = Report(
+                  id: report.id,
+                  description: report.description,
+                  type: report.type,
+                  group: report.group,
+                  date: report.date,
+                  additionalData: updatedData,
+                );
+
+                Navigator.pop(context);
+                _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+              },
+              child: const Text('Modifier'),
+            ),
+          ],
         ),
       ),
     );
