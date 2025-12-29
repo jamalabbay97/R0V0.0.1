@@ -4,6 +4,7 @@ import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/models/report.dart';
 import 'package:r0/services/database_helper.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 
 /// ReportsScreen displays all saved reports with filtering capabilities.
 /// 
@@ -38,6 +39,51 @@ class _ReportsScreenState extends State<ReportsScreen> {
     '1er', 
     '2ème',
   ];
+
+  // Arrêt categories for R0 reports
+  static const Map<String, List<String>> arretCategories = {
+    'EXTERIEURS': [
+      'ARRET CARREAU INDUSTRIEL',
+      'COUPURE GENERALE DU COURANT',
+      'GREVE',
+      'INTEMPERIES',
+      'STOCKS PLEINS',
+      'J. FERIES OU HEBDOMADAIRES',
+      'ARRET PAR LA CENTRALE (M.ENERGIE)',
+      'CONTROLE',
+    ],
+    'MATERIEL': [
+      'DEFAUT ELEC. (C.CRAME, RESEAU)',
+      'PANNE MECANIQUE',
+      'PANNE ELECTRIQUE',
+      'INTERVENTION ATELIER PNEUMATIQUE',
+      'ENTRETIEN SYSTEMATIQUE',
+      'APPOINT (HUILE, GAZOL, EAU)',
+      'GRAISSAGE',
+      'ARRET ELEC. INSTALATION FIXES',
+      'MANQUE CAMIONS',
+      'MANQUE BULL',
+      'MANQUE MECANICIEN',
+      'MANQUE D\'OUTILS DE TRAVAIL',
+      'MACHINE A L\'ARRET',
+      'PANNE ENGIN DEVANT MACHINE',
+    ],
+    'EXPLOITATION': [
+      'RELEVE',
+      'EXECUTION PLATE FORME',
+      'DEPLACEMENT',
+      'TIR ET SAUTAGE',
+      'MOUV. DE CABLE',
+      'ARRET DECIDE',
+      'MANQUE CONDUCTEUR',
+      'BRIQUET',
+      'PISTES (INTEMPERIES EXCLUES)',
+      'ARRETS MECA. INSTALATIONS FIXES',
+      'TELESCOPAGE',
+      'EXCAVATION PURE',
+      'TERASSEMENT PUR',
+    ],
+  };
 
   @override
   void initState() {
@@ -201,7 +247,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Modifier - Rapport d\'activité TNB',
+                        'Modifier R TNB',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       IconButton(
@@ -227,7 +273,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Informations de base',
+                                  'Info',
                                   style: Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
@@ -282,13 +328,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      'Gestion des arrêts',
+                                      'Arrêts',
                                       style: Theme.of(context).textTheme.titleMedium,
                                     ),
                                     ElevatedButton.icon(
                                       onPressed: () => _showAddStopDialog(report, data, setDialogState, scaffoldMessenger, l10n),
                                       icon: const Icon(Icons.add),
-                                      label: const Text('Ajouter un arrêt'),
+                                      label: const Text('Aj'),
                                     ),
                                   ],
                                 ),
@@ -357,13 +403,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      'Compteurs Vibreurs',
+                                      'C Vibr',
                                       style: Theme.of(context).textTheme.titleMedium,
                                     ),
                                     ElevatedButton.icon(
                                       onPressed: () => _showAddVibratorCounterDialog(report, data, setDialogState, scaffoldMessenger, l10n),
                                       icon: const Icon(Icons.add),
-                                      label: const Text('Ajouter un compteur'),
+                                      label: const Text('Aj'),
                                     ),
                                   ],
                                 ),
@@ -380,7 +426,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       child: ListTile(
                                         selected: isSelected,
                                         selectedTileColor: Colors.orange.withValues(alpha: 0.1),
-                                        title: Text('Compteur Vibreur ${index + 1}'),
+                                        title: Text('C.Vibr ${index + 1}'),
                                         subtitle: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
@@ -433,13 +479,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      'Compteurs Liaison',
+                                      'C Liaison',
                                       style: Theme.of(context).textTheme.titleMedium,
                                     ),
                                     ElevatedButton.icon(
                                       onPressed: () => _showAddLiaisonCounterDialog(report, data, setDialogState, scaffoldMessenger, l10n),
                                       icon: const Icon(Icons.add),
-                                      label: const Text('Ajouter un compteur'),
+                                      label: const Text('Aj'),
                                     ),
                                   ],
                                 ),
@@ -451,7 +497,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     return Card(
                                       margin: const EdgeInsets.only(bottom: 8),
                                       child: ListTile(
-                                        title: Text('Compteur Liaison ${index + 1}'),
+                                        title: Text('C.Liaison ${index + 1}'),
                                         subtitle: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
@@ -498,13 +544,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      'Entrées de stock',
+                                      'stocks',
                                       style: Theme.of(context).textTheme.titleMedium,
                                     ),
                                     ElevatedButton.icon(
                                       onPressed: () => _showAddStockEntryDialog(report, data, setDialogState, scaffoldMessenger, l10n),
                                       icon: const Icon(Icons.add),
-                                      label: const Text('Ajouter une entrée'),
+                                      label: const Text('Aj'),
                                     ),
                                   ],
                                 ),
@@ -2262,7 +2308,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Détails du rapport - R0',
+                        'Rapport R0',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -2347,7 +2393,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Compteurs',
+                                    'Compteur',
                                     style: Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const Divider(height: 16),
@@ -2447,7 +2493,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       children: [
                                         _buildInfoRow('Chantier', repartition['Chantier'] ?? repartition['chantier'] ?? '-'),
                                         _buildInfoRow('Temps', repartition['Temps'] ?? repartition['temps'] ?? '-'),
-                                        _buildInfoRow('Imputation', repartition['Imputation'] ?? repartition['imputation'] ?? '-'),
+                                        _buildInfoRow('Imputat', repartition['Imputation'] ?? repartition['imputation'] ?? '-'),
                                         const Divider(height: 8),
                                       ],
                                     ),
@@ -2474,7 +2520,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   const Divider(height: 16),
                                   _buildInfoRow('Conductr', data['personnel']['conductr'] ?? '-'),
                                   _buildInfoRow('Graisseur', data['personnel']['graisseur'] ?? '-'),
-                                  _buildInfoRow('Matricules', data['personnel']['matricules'] ?? '-'),
+                                  _buildInfoRow('Matricule', data['personnel']['matricules'] ?? '-'),
                                 ],
                               ),
                             ),
@@ -2548,7 +2594,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Détails du rapport - Suivi Camion',
+                        'Rapport Camions',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -2679,7 +2725,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Camion ${truck['truckNumber']}',
+                                        'C ${truck['truckNumber']}',
                                         style: Theme.of(context).textTheme.titleSmall,
                                       ),
                                       const SizedBox(height: 8),
@@ -3477,7 +3523,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   const Divider(height: 16),
                   _buildSummaryItem('H.M', data['exploitation']['H.M'] ?? ''),
                   _buildSummaryItem('H.A', data['exploitation']['H.A'] ?? ''),
-                  _buildSummaryItem('H.N', data['exploitation']['H.N'] ?? ''),
                   _buildSummaryItem('Tonnage', data['exploitation']['Tonnage'] ?? ''),
                   _buildSummaryItem('Rendeme', data['exploitation']['Rendeme'] ?? data['exploitation']['Rendeme'] ?? ''),
                 ],
@@ -3694,21 +3739,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    // Edit button
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: IconButton(
-                                        icon: Icon(Icons.edit, size: 20, color: Theme.of(context).colorScheme.primary),
-                                        onPressed: () => _editReport(report),
-                                        tooltip: 'Modifier le rapport',
-                                        padding: const EdgeInsets.all(8),
-                                        constraints: const BoxConstraints(),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
                                     // Popup menu for additional actions
                                     PopupMenuButton<String>(
                                       icon: const Icon(Icons.more_horiz, size: 20),
@@ -3802,7 +3832,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Modifier - Rapport quotidien TSUD',
+                        'Modifier R TSUD',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       IconButton(
@@ -3828,7 +3858,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Informations de base',
+                                  'Info',
                                   style: Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
@@ -3961,13 +3991,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      'Entrées de stock',
+                                      'stock',
                                       style: Theme.of(context).textTheme.titleMedium,
                                     ),
                                     ElevatedButton.icon(
                                       onPressed: () => _showAddStockEntryDialog(report, data, setDialogState, scaffoldMessenger, l10n),
                                       icon: const Icon(Icons.add),
-                                      label: const Text('Ajouter une entrée'),
+                                      label: const Text('Aj'),
                                     ),
                                   ],
                                 ),
@@ -4432,7 +4462,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Modifier - Machines/Engins Arrêtés',
+                        'M/Eng Arrêtés',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       IconButton(
@@ -4458,7 +4488,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Informations de base',
+                                  'Info',
                                   style: Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
@@ -4513,13 +4543,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      'Équipements arrêtés',
+                                      'Équipements',
                                       style: Theme.of(context).textTheme.titleMedium,
                                     ),
                                     ElevatedButton.icon(
                                       onPressed: () => _showAddEquipmentDialog(report, data, setDialogState, scaffoldMessenger, l10n),
                                       icon: const Icon(Icons.add),
-                                      label: const Text('Ajouter un équipement'),
+                                      label: const Text('Aj'),
                                     ),
                                   ],
                                 ),
@@ -4595,7 +4625,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Ajouter un équipement arrêté'),
+          title: const Text('Aj équipement'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -4787,7 +4817,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Modifier - Suivi Camion',
+                        'Modifier - R Camion',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       IconButton(
@@ -4813,7 +4843,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Informations de base',
+                                  'Info',
                                   style: Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
@@ -4946,7 +4976,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 const Divider(height: 16),
                                 _buildEditableField(
                                   context: context,
-                                  label: 'Type d\'équipement',
+                                  label: 'équipement',
                                   value: data['equipment'] ?? data['selectedEquipment'] ?? '',
                                   onSave: (value) async {
                                     final updatedData = Map<String, dynamic>.from(data);
@@ -4966,7 +4996,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 const SizedBox(height: 8),
                                 _buildEditableField(
                                   context: context,
-                                  label: 'Type d\'opération',
+                                  label: 'Opération',
                                   value: data['operationType'] ?? '',
                                   onSave: (value) async {
                                     final updatedData = Map<String, dynamic>.from(data);
@@ -5006,7 +5036,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     ElevatedButton.icon(
                                       onPressed: () => _showAddTruckDialog(report, data, setDialogState, scaffoldMessenger, l10n),
                                       icon: const Icon(Icons.add),
-                                      label: const Text('Ajouter un camion'),
+                                      label: const Text('Aj'),
                                     ),
                                   ],
                                 ),
@@ -5018,7 +5048,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     return Card(
                                       margin: const EdgeInsets.only(bottom: 8),
                                       child: ListTile(
-                                        title: Text('Camion ${truck['truckNumber'] ?? index + 1}'),
+                                        title: Text('${truck['truckNumber'] ?? index + 1}'),
                                         subtitle: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
@@ -5078,7 +5108,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             children: [
               TextField(
                 decoration: const InputDecoration(
-                  labelText: 'Numéro du camion',
+                  labelText: 'Camion',
                   border: OutlineInputBorder(),
                 ),
                 onChanged: (value) => setState(() => truckNumber = value),
@@ -5149,7 +5179,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             children: [
               TextField(
                 decoration: const InputDecoration(
-                  labelText: 'Numéro du camion',
+                  labelText: 'Camion',
                   border: OutlineInputBorder(),
                 ),
                 controller: TextEditingController(text: truckNumber),
@@ -5263,7 +5293,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Modifier - Rapport R0',
+                        'Modifier R0',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       IconButton(
@@ -5289,7 +5319,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Informations de base',
+                                  'Info',
                                   style: Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
@@ -5391,11 +5421,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       'Compteurs',
                                       style: Theme.of(context).textTheme.titleMedium,
                                     ),
-                                    ElevatedButton.icon(
-                                      onPressed: () => _showAddR0CounterDialog(report, data, scaffoldMessenger, l10n),
-                                      icon: const Icon(Icons.add),
-                                      label: const Text('Ajouter'),
-                                    ),
+                                    if (!(data['Compteurs'] is List && (data['Compteurs'] as List).isNotEmpty))
+                                      ElevatedButton.icon(
+                                        onPressed: () => _showAddR0CounterDialog(report, data, scaffoldMessenger, l10n),
+                                        icon: const Icon(Icons.add),
+                                        label: const Text('Ajouter'),
+                                      ),
                                   ],
                                 ),
                                 const Divider(height: 16),
@@ -5469,7 +5500,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     ElevatedButton.icon(
                                       onPressed: () => _showAddR0StopDialog(report, data, scaffoldMessenger, l10n),
                                       icon: const Icon(Icons.add),
-                                      label: const Text('Ajouter'),
+                                      label: const Text('Aj'),
                                     ),
                                   ],
                                 ),
@@ -5553,7 +5584,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 if (data['exploitation'] is Map) ...[
                                   _buildSummaryItem('H.M', data['exploitation']['H.M'] ?? ''),
                                   _buildSummaryItem('H.A', data['exploitation']['H.A'] ?? ''),
-                                  _buildSummaryItem('H.N', data['exploitation']['H.N'] ?? ''),
                                   _buildSummaryItem('Tonnage', data['exploitation']['Tonnage'] ?? ''),
                                   _buildSummaryItem('Rendeme', data['exploitation']['Rendeme'] ?? data['exploitation']['Rendeme'] ?? ''),
                                 ] else
@@ -5582,7 +5612,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     ElevatedButton.icon(
                                       onPressed: () => _showAddR0WorkDialog(report, data, scaffoldMessenger, l10n),
                                       icon: const Icon(Icons.add),
-                                      label: const Text('Ajouter'),
+                                      label: const Text('Aj'),
                                     ),
                                   ],
                                 ),
@@ -5969,137 +5999,285 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  // Add R0 Stop Dialog
-  Future<void> _showAddR0StopDialog(Report report, Map<String, dynamic> data, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
-    String arret = '';
-    String debut = '';
-    String fin = '';
-
-    await showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Ajouter un arrêt'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
+  // Build Add/Edit R0 Stop Dialog (same as in R0 creation)
+  Widget _buildAddR0StopDialog(BuildContext context, {Map<String, String>? initialItem}) {
+    int step = 0;
+    String? selectedCategory = initialItem != null ? arretCategories.keys.firstWhere((cat) => arretCategories[cat]!.contains(initialItem['Arret']), orElse: () => '') : null;
+    String? selectedType = initialItem?['Arret'];
+    String startTime = initialItem?['Début'] ?? '';
+    String endTime = initialItem?['Fin'] ?? '';
+    return StatefulBuilder(
+      builder: (context, setDialogState) {
+        Widget content;
+        if (step == 0) {
+          content = Row(
             children: [
-              TextField(
-                decoration: const InputDecoration(labelText: 'Type d\'arrêt'),
-                onChanged: (value) => setState(() => arret = value),
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: 'Début'),
-                onChanged: (value) => setState(() => debut = value),
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: 'Fin'),
-                onChanged: (value) => setState(() => fin = value),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: selectedCategory,
+                  decoration: const InputDecoration(labelText: 'Catégorie', border: OutlineInputBorder()),
+                  items: arretCategories.keys
+                      .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
+                      .toList(),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      selectedCategory = value;
+                      selectedType = null;
+                    });
+                  },
+                ),
               ),
             ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (arret.isNotEmpty || debut.isNotEmpty || fin.isNotEmpty) {
-                  final updatedData = Map<String, dynamic>.from(data);
-                  if (updatedData['Arrets'] == null) {
-                    updatedData['Arrets'] = [];
-                  }
-                  (updatedData['Arrets'] as List).add({
-                    'Arret': arret,
-                    'Début': debut,
-                    'Fin': fin,
-                  });
-
-                  final updatedReport = Report(
-                    id: report.id,
-                    description: report.description,
-                    type: report.type,
-                    group: report.group,
-                    date: report.date,
-                    additionalData: updatedData,
+          );
+        } else if (step == 1 && selectedCategory != null) {
+          content = Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: selectedType,
+                  decoration: const InputDecoration(labelText: 'Type d\'arrêt', border: OutlineInputBorder()),
+                  items: arretCategories[selectedCategory]!
+                      .map((type) => DropdownMenuItem(value: type, child: Text(type)))
+                      .toList(),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      selectedType = value;
+                    });
+                  },
+                ),
+              ),
+            ],
+          );
+        } else if (step == 2 && selectedType != null) {
+          content = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Catégorie: $selectedCategory'),
+              Text('Type: $selectedType'),
+              const SizedBox(height: 16),
+              ListTile(
+                title: const Text('Heure début'),
+                subtitle: Text(startTime.isEmpty ? 'Sélectionner l\'heure' : startTime),
+                trailing: const Icon(Icons.access_time),
+                onTap: () async {
+                  final picked = await showDialog<TimeOfDay>(
+                    context: context,
+                    builder: (context) {
+                      TimeOfDay tempTime = TimeOfDay.now();
+                      return AlertDialog(
+                        title: const Text('Sélectionner l\'heure'),
+                        content: SizedBox(
+                          height: 200,
+                          child: TimePickerSpinner(
+                            key: const ValueKey('start_time_picker_spinner'),
+                            is24HourMode: true,
+                            isShowSeconds: false,
+                            minutesInterval: 1,
+                            normalTextStyle: const TextStyle(fontSize: 18, color: Colors.black54),
+                            highlightedTextStyle: const TextStyle(fontSize: 24, color: Colors.black),
+                            spacing: 50,
+                            itemHeight: 60,
+                            isForce2Digits: true,
+                            onTimeChange: (dateTime) {
+                              tempTime = TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
+                            },
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Annuler'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(tempTime),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      );
+                    },
                   );
-
-                  Navigator.pop(context);
-                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                }
-              },
-              child: const Text('Ajouter'),
+                  if (picked != null) {
+                    setDialogState(() {
+                      startTime = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                title: const Text('Heure fin'),
+                subtitle: Text(endTime.isEmpty ? 'Sélectionner l\'heure' : endTime),
+                trailing: const Icon(Icons.access_time),
+                onTap: () async {
+                  final picked = await showDialog<TimeOfDay>(
+                    context: context,
+                    builder: (context) {
+                      TimeOfDay tempTime = TimeOfDay.now();
+                      return AlertDialog(
+                        title: const Text('Sélectionner l\'heure'),
+                        content: SizedBox(
+                          height: 200,
+                          child: TimePickerSpinner(
+                            key: const ValueKey('end_time_picker_spinner'),
+                            is24HourMode: true,
+                            isShowSeconds: false,
+                            minutesInterval: 1,
+                            normalTextStyle: const TextStyle(fontSize: 18, color: Colors.black54),
+                            highlightedTextStyle: const TextStyle(fontSize: 24, color: Colors.black),
+                            spacing: 50,
+                            itemHeight: 60,
+                            isForce2Digits: true,
+                            onTimeChange: (dateTime) {
+                              tempTime = TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
+                            },
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Annuler'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(tempTime),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                  if (picked != null) {
+                    setDialogState(() {
+                      endTime = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                    });
+                  }
+                },
+              ),
+            ],
+          );
+        } else {
+          content = const SizedBox();
+        }
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (step == 0) ...[
+              const Text('Sélection de la catégorie', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              content,
+            ] else if (step == 1) ...[
+              const Text('Sélection du type d\'arrêt', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              content,
+            ] else if (step == 2) ...[
+              const Text('Saisie des détails', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              content,
+            ],
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (step > 0)
+                  OutlinedButton(
+                    onPressed: () => setDialogState(() => step--),
+                    child: const Text('Précédent'),
+                  ),
+                if ((step == 0 && selectedCategory != null) ||
+                    (step == 1 && selectedType != null))
+                  ElevatedButton(
+                    onPressed: () {
+                      setDialogState(() => step++);
+                    },
+                    child: const Text('Suivant'),
+                  ),
+                if (step == 2 && selectedType != null)
+                  ElevatedButton(
+                    onPressed: startTime.isNotEmpty && endTime.isNotEmpty
+                        ? () {
+                            Navigator.of(context).pop({
+                              'Arret': selectedType!,
+                              'Début': startTime,
+                              'Fin': endTime,
+                            });
+                          }
+                        : null,
+                    child: const Text('Terminer'),
+                  ),
+              ],
             ),
           ],
+        );
+      },
+    );
+  }
+
+  // Add R0 Stop Dialog
+  Future<void> _showAddR0StopDialog(Report report, Map<String, dynamic> data, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Ajouter un arrêt'),
+        content: SingleChildScrollView(
+          child: _buildAddR0StopDialog(context),
         ),
       ),
     );
+
+    if (result != null) {
+      final updatedData = Map<String, dynamic>.from(data);
+      if (updatedData['Arrets'] == null) {
+        updatedData['Arrets'] = [];
+      }
+      (updatedData['Arrets'] as List).add(result);
+
+      final updatedReport = Report(
+        id: report.id,
+        description: report.description,
+        type: report.type,
+        group: report.group,
+        date: report.date,
+        additionalData: updatedData,
+      );
+
+      _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+    }
   }
 
   // Edit R0 Stop Dialog
   Future<void> _showEditR0StopDialog(Report report, Map<String, dynamic> data, int index, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
-    final arret = (data['Arrets'] as List)[index];
-    String arretType = arret['Arret'] ?? '';
-    String debut = arret['Début'] ?? '';
-    String fin = arret['Fin'] ?? '';
+    final arret = (data['Arrets'] as List)[index] as Map<String, dynamic>;
+    final initialItem = {
+      'Arret': (arret['Arret'] ?? '').toString(),
+      'Début': (arret['Début'] ?? '').toString(),
+      'Fin': (arret['Fin'] ?? '').toString(),
+    };
 
-    await showDialog(
+    final result = await showDialog<Map<String, String>>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Modifier l\'arrêt'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: const InputDecoration(labelText: 'Type d\'arrêt'),
-                controller: TextEditingController(text: arretType),
-                onChanged: (value) => setState(() => arretType = value),
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: 'Début'),
-                controller: TextEditingController(text: debut),
-                onChanged: (value) => setState(() => debut = value),
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: 'Fin'),
-                controller: TextEditingController(text: fin),
-                onChanged: (value) => setState(() => fin = value),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final updatedData = Map<String, dynamic>.from(data);
-                (updatedData['Arrets'] as List)[index] = {
-                  'Arret': arretType,
-                  'Début': debut,
-                  'Fin': fin,
-                };
-
-                final updatedReport = Report(
-                  id: report.id,
-                  description: report.description,
-                  type: report.type,
-                  group: report.group,
-                  date: report.date,
-                  additionalData: updatedData,
-                );
-
-                Navigator.pop(context);
-                _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-              },
-              child: const Text('Modifier'),
-            ),
-          ],
+      builder: (context) => AlertDialog(
+        title: const Text('Modifier l\'arrêt'),
+        content: SingleChildScrollView(
+          child: _buildAddR0StopDialog(context, initialItem: initialItem),
         ),
       ),
     );
+
+    if (result != null) {
+      final updatedData = Map<String, dynamic>.from(data);
+      (updatedData['Arrets'] as List)[index] = result;
+
+      final updatedReport = Report(
+        id: report.id,
+        description: report.description,
+        type: report.type,
+        group: report.group,
+        date: report.date,
+        additionalData: updatedData,
+      );
+
+      _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+    }
   }
 
   // Delete R0 Stop Dialog
@@ -6144,7 +6322,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final exploitation = data['exploitation'] ?? {};
     String hm = exploitation['H.M'] ?? '';
     String ha = exploitation['H.A'] ?? '';
-    String hn = exploitation['H.N'] ?? '';
     String tonnage = exploitation['Tonnage'] ?? '';
     String rendeme = exploitation['Rendeme'] ?? '';
 
@@ -6166,11 +6343,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   decoration: const InputDecoration(labelText: 'H.A'),
                   controller: TextEditingController(text: ha),
                   onChanged: (value) => setState(() => ha = value),
-                ),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'H.N'),
-                  controller: TextEditingController(text: hn),
-                  onChanged: (value) => setState(() => hn = value),
                 ),
                 TextField(
                   decoration: const InputDecoration(labelText: 'Tonnage'),
@@ -6196,7 +6368,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 updatedData['exploitation'] = {
                   'H.M': hm,
                   'H.A': ha,
-                  'H.N': hn,
                   'Tonnage': tonnage,
                   'Rendeme': rendeme,
                 };
@@ -6569,7 +6740,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Informations de base',
+                                  'Info',
                                   style: Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
