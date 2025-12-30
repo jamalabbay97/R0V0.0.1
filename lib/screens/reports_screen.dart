@@ -205,21 +205,38 @@ class _ReportsScreenState extends State<ReportsScreen> {
     
     if (typeLower == 'activity tnb') {
       await _showActivityReportEditor(report, scaffoldMessenger, l10n);
+      // After editing, show the updated details
+      final updated = _reports.firstWhere((r) => r.id == report.id, orElse: () => report);
+      _showReportDetails(updated);
     } else if (typeLower == 'daily tsud') {
       await _showDailyReportEditor(report, scaffoldMessenger, l10n);
+      // After editing, show the updated details
+      final updated = _reports.firstWhere((r) => r.id == report.id, orElse: () => report);
+      _showReportDetails(updated);
     } else if (typeLower == 'machine/engin arrêtés') {
       await _showMachinesEquipmentStoppedEditor(report, scaffoldMessenger, l10n);
+      // After editing, show the updated details
+      final updated = _reports.firstWhere((r) => r.id == report.id, orElse: () => report);
+      _showReportDetails(updated);
     } else if (typeLower == 'suivi camion' || 
                typeLower.contains('chargeuse') || 
                typeLower.contains('pelle') ||
                (report.additionalData != null && report.additionalData!.containsKey('truckData'))) {
       await _showTruckTrackingEditor(report, scaffoldMessenger, l10n);
+      // After editing, show the updated details
+      final updated = _reports.firstWhere((r) => r.id == report.id, orElse: () => report);
+      _showReportDetails(updated);
     } else if (typeLower == 'r0' || 
                (report.additionalData != null && report.additionalData!.containsKey('mine') && report.additionalData!.containsKey('selectedPoste'))) {
       await _showR0ReportEditor(report, scaffoldMessenger, l10n);
+      // After editing, show the updated details
+      final updated = _reports.firstWhere((r) => r.id == report.id, orElse: () => report);
+      _showReportDetails(updated);
     } else {
-      // Fallback to generic editor
       await _showGenericEditor(report, scaffoldMessenger, l10n);
+      // After editing, show the updated details
+      final updated = _reports.firstWhere((r) => r.id == report.id, orElse: () => report);
+      _showReportDetails(updated);
     }
   }
 
@@ -1366,7 +1383,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     int? selectedPark;
     int? selectedType;
     String quantity = '';
-    String startTime = '';
     
     await showDialog(
       context: context,
@@ -1425,14 +1441,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ),
                 onChanged: (value) => setState(() => quantity = value),
               ),
-              const SizedBox(height: 16),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Heure de début',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (value) => setState(() => startTime = value),
-              ),
             ],
           ),
           actions: [
@@ -1442,7 +1450,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                if (selectedPoste != null && selectedPark != null && selectedType != null && quantity.isNotEmpty && startTime.isNotEmpty) {
+                if (selectedPoste != null && selectedPark != null && selectedType != null) {
                   final updatedData = Map<String, dynamic>.from(data);
                   if (updatedData['stock'] == null) {
                     updatedData['stock'] = [];
@@ -1453,7 +1461,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     'park': selectedPark,
                     'type': selectedType,
                     'quantity': quantity,
-                    'startTime': startTime,
                   });
                   
                   final updatedReport = Report(
@@ -1484,7 +1491,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     int? selectedPark = stock['park'];
     int? selectedType = stock['type'];
     String quantity = stock['quantity'] ?? '';
-    String startTime = stock['startTime'] ?? '';
     
     await showDialog(
       context: context,
@@ -1544,15 +1550,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 controller: TextEditingController(text: quantity),
                 onChanged: (value) => setState(() => quantity = value),
               ),
-              const SizedBox(height: 16),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Heure de début',
-                  border: OutlineInputBorder(),
-                ),
-                controller: TextEditingController(text: startTime),
-                onChanged: (value) => setState(() => startTime = value),
-              ),
             ],
           ),
           actions: [
@@ -1562,7 +1559,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                if (selectedPoste != null && selectedPark != null && selectedType != null && quantity.isNotEmpty && startTime.isNotEmpty) {
+                if (selectedPoste != null && selectedPark != null && selectedType != null) {
                   final updatedData = Map<String, dynamic>.from(data);
                   (updatedData['stock'] as List)[index] = {
                     'id': stock['id'],
@@ -1570,7 +1567,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     'park': selectedPark,
                     'type': selectedType,
                     'quantity': quantity,
-                    'startTime': startTime,
                   };
                   
                   final updatedReport = Report(
@@ -1823,7 +1819,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       await showDialog(
         context: context,
         builder: (dialogContext) => StatefulBuilder(
-          builder: (dialogContext, setState) => Dialog(
+          builder: (dialogContext, setState) {
+            Report currentReport = report;
+            return Dialog(
             insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
             child: ConstrainedBox(
               constraints: BoxConstraints(
@@ -1849,7 +1847,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           children: [
                             IconButton(
                               icon: const Icon(Icons.edit),
-                              onPressed: () => _editReport(report),
+                              onPressed: () async {
+                                await _editReport(currentReport);
+                              },
                               tooltip: 'Modifier le rapport',
                             ),
                             IconButton(
@@ -1915,7 +1915,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          // Stops Card - Debug version
+                          // Stops Card
                           Card(
                             margin: EdgeInsets.zero,
                             child: Padding(
@@ -1924,28 +1924,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Arrêts (Debug)',
+                                    'Arrêts',
                                     style: Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const Divider(height: 16),
-                                  // Debug information
-                                  Text('Data type: ${data['stops'].runtimeType}'),
-                                  Text('Is List: ${data['stops'] is List}'),
-                                  Text('Is not null: ${data['stops'] != null}'),
-                                  if (data['stops'] is List)
-                                    Text('List length: ${(data['stops'] as List).length}'),
-                                  if (data['stops'] is List && (data['stops'] as List).isNotEmpty) ...[
-                                    const SizedBox(height: 8),
-                                    const Text('Stops details:'),
+                                  if (data['stops'] is List && (data['stops'] as List).isNotEmpty)
                                     ...List.from(data['stops']).map((stop) => Padding(
                                       padding: const EdgeInsets.symmetric(vertical: 2),
-                                      child: Text('• ${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
-                                    )),
-                                  ],
-                                  if (data['stops'] is List && (data['stops'] as List).isEmpty)
-                                    const Text('Stops list is empty'),
-                                  if (data['stops'] is! List)
-                                    Text('Raw stops data: ${data['stops']}'),
+                                      child: Text('${_formatMinutesToHoursMinutes(int.tryParse(stop['duration']) ?? 0)} - ${stop['nature'] ?? '-'}'),
+                                    ))
+                                  else if (data['stops'] is List && (data['stops'] as List).isEmpty)
+                                    const Text('Aucun arrêt enregistré', style: TextStyle(color: Colors.grey))
+                                  else
+                                    const Text('Données des arrêts non disponibles', style: TextStyle(color: Colors.grey)),
                                 ],
                               ),
                             ),
@@ -2034,10 +2025,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     ...List.from(data['stock']).map((entry) => Padding(
                                       padding: const EdgeInsets.symmetric(vertical: 2),
                                       child: Text(
-                                        'Poste: ${_getPosteString(entry['poste'])} | '
-                                        'Park: ${_getParkString(entry['park'])} | '
-                                        'Type: ${_getStockTypeString(entry['type'])} | '
-                                        'Qte: ${entry['quantity'] ?? '-'} |',
+                                        'Poste: ${_getPosteString(entry['poste'])} | Park: ${_getParkString(entry['park'])} | Type: ${_getStockTypeString(entry['type'])} | Qte: ${entry['quantity'] ?? '-'} |',
                                       ),
                                     )),
                                   ],
@@ -2051,7 +2039,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ],
               ),
             ),
-          ),
+          );
+        },
         ),
       );
       return;
@@ -2099,7 +2088,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   builder: (context) {
                     final module1Stops = (data['module1Stops'] is List) ? List.from(data['module1Stops']) : [];
                     final module1Downtime = _calculateDowntimeFromStops(module1Stops);
-                    final totalPeriod = (data['T H.M'] ?? 0) + (data['T H.A'] ?? 0);
+                    const int totalPeriod = 24 * 60; // 24 hours in minutes
                     final module1OperatingTime = (totalPeriod - module1Downtime).clamp(0, totalPeriod);
                     
                     return Card(
@@ -2132,7 +2121,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   builder: (context) {
                     final module2Stops = (data['module2Stops'] is List) ? List.from(data['module2Stops']) : [];
                     final module2Downtime = _calculateDowntimeFromStops(module2Stops);
-                    final totalPeriod = (data['T H.M'] ?? 0) + (data['T H.A'] ?? 0);
+                    const int totalPeriod = 24 * 60; // 24 hours in minutes
                     final module2OperatingTime = (totalPeriod - module2Downtime).clamp(0, totalPeriod);
                     
                     return Card(
@@ -2174,10 +2163,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           ...List.from(data['stock']).map((entry) => Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 2),
                                 child: Text(
-                                  'Poste: ${_getPosteString(entry['poste'])} | '
-                                  'Park: ${_getParkString(entry['park'])} | '
-                                  'Type: ${_getStockTypeString(entry['type'])} | '
-                                  'Qte: ${entry['quantity'] ?? '-'} |',
+                                  'Poste: ${_getPosteString(entry['poste'])} | Park: ${_getParkString(entry['park'])} | Type: ${_getStockTypeString(entry['type'])} | Qte: ${entry['quantity'] ?? '-'} |',
                                 ),
                               )),
                         ],
@@ -3613,7 +3599,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
       scaffoldMessenger.showSnackBar(
         SnackBar(content: Text(l10n.reportUpdated)),
       );
-      await _showReportDetails(updatedReport);
     } catch (e) {
       if (!mounted) return;
       scaffoldMessenger.showSnackBar(
@@ -4068,9 +4053,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   // Edit Module Dialog for Daily Report
   Future<void> _showEditModuleDialog(Report report, Map<String, dynamic> data, String modulePrefix, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
-    int operatingTime = data['${modulePrefix}OperatingTime'] ?? 0;
-    int totalDowntime = data['${modulePrefix}TotalDowntime'] ?? 0;
     List stops = List.from(data['${modulePrefix}Stops'] ?? []);
+    
+    // Ensure totals are calculated
+    int totalDowntime = data['${modulePrefix}TotalDowntime'] ?? _calculateDowntimeFromStops(stops);
+    int operatingTime = data['${modulePrefix}OperatingTime'] ?? ((24 * 60) - totalDowntime).clamp(0, 24 * 60);
+    
+    // Update data with calculated values
+    data['${modulePrefix}TotalDowntime'] = totalDowntime;
+    data['${modulePrefix}OperatingTime'] = operatingTime;
     
     await showDialog(
       context: context,
@@ -4105,7 +4096,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 children: [
                   Text('Arrêts (${stops.length})'),
                   ElevatedButton.icon(
-                    onPressed: () => _showAddStopDialogForModule(report, data, modulePrefix, stops, setState, setDialogState, scaffoldMessenger, l10n),
+                    onPressed: () async {
+                      await _showAddStopDialogForModule(report, data, modulePrefix, stops, setState, setDialogState, scaffoldMessenger, l10n, (int newTotal) {
+                        setState(() {
+                          totalDowntime = newTotal;
+                          operatingTime = (24 * 60 - newTotal).clamp(0, 24 * 60);
+                        });
+                      });
+                    },
                     icon: const Icon(Icons.add),
                     label: const Text('Ajouter'),
                   ),
@@ -4124,12 +4122,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.edit, size: 18),
-                          onPressed: () => _showEditStopDialogForModule(report, data, modulePrefix, stops, index, setState, setDialogState, scaffoldMessenger, l10n),
+                          onPressed: () async {
+                            await _showEditStopDialogForModule(report, data, modulePrefix, stops, index, setState, setDialogState, scaffoldMessenger, l10n, (int newTotal) {
+                              setState(() {
+                                totalDowntime = newTotal;
+                                operatingTime = (24 * 60 - newTotal).clamp(0, 24 * 60);
+                              });
+                            });
+                          },
                         ),
                         IconButton(
                           icon: const Icon(Icons.delete, size: 18, color: Colors.red),
                           onPressed: () {
-                            setState(() => stops.removeAt(index));
+                            setState(() {
+                              stops.removeAt(index);
+                              totalDowntime = _calculateDowntimeFromStops(stops);
+                              operatingTime = (24 * 60 - totalDowntime).clamp(0, 24 * 60);
+                            });
+                            // Update data
+                            data['${modulePrefix}TotalDowntime'] = totalDowntime;
+                            data['${modulePrefix}OperatingTime'] = operatingTime;
+                            data['${modulePrefix}Stops'] = stops;
                           },
                         ),
                       ],
@@ -4172,7 +4185,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   // Add Stop Dialog for Module
-  Future<void> _showAddStopDialogForModule(Report report, Map<String, dynamic> data, String modulePrefix, List stops, StateSetter setState, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+  Future<void> _showAddStopDialogForModule(Report report, Map<String, dynamic> data, String modulePrefix, List stops, StateSetter setState, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n, Function(int) onTotalDowntimeChanged) async {
     const List<String> predefinedNatures = [
       'Manque Produit',
       'Attente Saturation Silo',
@@ -4285,8 +4298,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       'duration': tempStopDuration,
                       'nature': finalNature,
                     });
+                    final totalDowntime = _calculateDowntimeFromStops(stops);
+                    data['${modulePrefix}TotalDowntime'] = totalDowntime;
+                    data['${modulePrefix}OperatingTime'] = (24 * 60 - totalDowntime).clamp(0, 24 * 60);
+                    data['${modulePrefix}Stops'] = stops;
+                    setDialogState(() {});
+                    onTotalDowntimeChanged(totalDowntime);
+                    Navigator.pop(context);
                   });
-                  Navigator.pop(context);
                 }
               },
               child: const Text('Ajouter'),
@@ -4298,7 +4317,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   // Edit Stop Dialog for Module
-  Future<void> _showEditStopDialogForModule(Report report, Map<String, dynamic> data, String modulePrefix, List stops, int index, StateSetter setState, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+  Future<void> _showEditStopDialogForModule(Report report, Map<String, dynamic> data, String modulePrefix, List stops, int index, StateSetter setState, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n, Function(int) onTotalDowntimeChanged) async {
     final stop = stops[index];
     const List<String> predefinedNatures = [
       'Manque Produit',
@@ -4426,6 +4445,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       'duration': tempStopDuration,
                       'nature': finalNature,
                     };
+                    final totalDowntime = _calculateDowntimeFromStops(stops);
+                    data['${modulePrefix}TotalDowntime'] = totalDowntime;
+                    data['${modulePrefix}OperatingTime'] = (24 * 60 - totalDowntime).clamp(0, 24 * 60);
+                    data['${modulePrefix}Stops'] = stops;
+                    setDialogState(() {});
+                    onTotalDowntimeChanged(totalDowntime);
                   });
                   Navigator.pop(context);
                 }
