@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/models/report.dart';
+import 'package:r0/models/mine_data.dart';
 import 'package:r0/services/database_helper.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
@@ -84,6 +85,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
       'TERASSEMENT PUR',
     ],
   };
+
+  // Add ENGINS and MACHINES data maps
+  static const Map<String, List<String>> enginsData = {
+    'BULLDOZERS': [
+      'BULL D9R 76', 'BULL D9R 79', 'BULL D9R 80', 'BULL D9R 81', 'BULL D9R 82', 'BULL D9R 83', 'BULL LIB 84', 'BULL LIB 85', 'BULL D9R 86', 'BULL D9R 87',
+    ],
+    'CAMIONS': [
+      'CAMION T24', 'CAMION T25', 'CAMION T26', 'CAMION T27', 'CAMION T28', 'CAMION T29', 'CAMION T30', 'CAMION T31', 'CAMION T32', 'CAMION T33', 'WABCO 13', 'WABCO 19',
+    ],
+    'CHARGEUSES': ['CHRG 992C', 'CHRG 992K', 'CHRG 994H'],
+    'NIVELEUSES': ['NIV 14G', 'NIV 16H', 'NIV KOM01', 'NIV KOM02'],
+    'PAYDOZERS': ['PAY CAT03', 'PAY KOM04', 'PAY KOM05'],
+    'PELLE HYDRAULIQUE': ['PH365-C', 'PH5130'],
+  };
+  static const Map<String, List<String>> machinesData = {
+    'DRAGLINES': ['1370 W1', '1370 W2'],
+    'PELLE ELECTRIQUE': ['195 P1', '195 P2'],
+    'SONDEUSES': ['PV275-1', 'PV275-2', 'PV275-3'],
+  };
+
+  final posteOrder = const ["3ème", "1er", "2ème"];
 
   @override
   void initState() {
@@ -169,6 +191,48 @@ class _ReportsScreenState extends State<ReportsScreen> {
       _selectedPosteFilter = newValue;
       _filterReports();
     });
+  }
+
+  // Helper function to recalculate H.A from Arrets for R0 reports
+  void _recalculateR0Hours(Map<String, dynamic> data) {
+    if (data['Arrets'] is List) {
+      double totalStoppageHours = 0;
+      for (var arret in data['Arrets'] as List) {
+        if (arret is Map && arret['Début'] != null && arret['Fin'] != null) {
+          final debut = arret['Début'].toString();
+          final fin = arret['Fin'].toString();
+          if (debut.isNotEmpty && fin.isNotEmpty) {
+            // Parse time format HH:MM
+            final startParts = debut.split(':');
+            final endParts = fin.split(':');
+            if (startParts.length == 2 && endParts.length == 2) {
+              final startHour = int.tryParse(startParts[0]) ?? 0;
+              final startMin = int.tryParse(startParts[1]) ?? 0;
+              final endHour = int.tryParse(endParts[0]) ?? 0;
+              final endMin = int.tryParse(endParts[1]) ?? 0;
+              
+              final startTotal = startHour * 60 + startMin;
+              final endTotal = endHour * 60 + endMin;
+              int diff = endTotal - startTotal;
+              if (diff <= 0) diff += 24 * 60; // Handle overnight periods
+              
+              totalStoppageHours += diff / 60.0;
+            }
+          }
+        }
+      }
+      
+      // Update H.A
+      if (data['exploitation'] is Map) {
+        data['exploitation']['H.A'] = totalStoppageHours.toStringAsFixed(2);
+        
+        // Recalculate H.M as net hours
+        final hm = double.tryParse(data['exploitation']['H.M']?.toString() ?? '') ?? 0.0;
+        final ha = totalStoppageHours;
+        final hn = (hm - ha).clamp(0, double.infinity);
+        data['exploitation']['H.M'] = hn.toStringAsFixed(2);
+      }
+    }
   }
 
   Future<void> _deleteReport(Report report) async {
@@ -754,13 +818,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     'nature': finalNature,
                   });
                   
+                  // Recalculate totals for Activity TNB reports
+                  final recalculatedData = _recalculateActivityTotals(updatedData);
+                  
                   final updatedReport = Report(
                     id: report.id,
                     description: report.description,
                     type: report.type,
                     group: report.group,
                     date: report.date,
-                    additionalData: updatedData,
+                    additionalData: recalculatedData,
                   );
                   
                   Navigator.pop(context);
@@ -905,13 +972,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     'nature': finalNature,
                   };
                   
+                  // Recalculate totals for Activity TNB reports
+                  final recalculatedData = _recalculateActivityTotals(updatedData);
+                  
                   final updatedReport = Report(
                     id: report.id,
                     description: report.description,
                     type: report.type,
                     group: report.group,
                     date: report.date,
-                    additionalData: updatedData,
+                    additionalData: recalculatedData,
                   );
                   
                   Navigator.pop(context);
@@ -943,13 +1013,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
               final updatedData = Map<String, dynamic>.from(data);
               (updatedData['stops'] as List).removeAt(index);
               
+              // Recalculate totals for Activity TNB reports
+              final recalculatedData = _recalculateActivityTotals(updatedData);
+              
               final updatedReport = Report(
                 id: report.id,
                 description: report.description,
                 type: report.type,
                 group: report.group,
                 date: report.date,
-                additionalData: updatedData,
+                additionalData: recalculatedData,
               );
               
               Navigator.pop(context);
@@ -1027,13 +1100,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     'end': endIndex,
                   });
                   
+                  // Recalculate totals for Activity TNB reports
+                  final recalculatedData = _recalculateActivityTotals(updatedData);
+                  
                   final updatedReport = Report(
                     id: report.id,
                     description: report.description,
                     type: report.type,
                     group: report.group,
                     date: report.date,
-                    additionalData: updatedData,
+                    additionalData: recalculatedData,
                   );
                   
                   Navigator.pop(context);
@@ -1112,13 +1188,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     'end': endIndex,
                   };
                   
+                  // Recalculate totals for Activity TNB reports
+                  final recalculatedData = _recalculateActivityTotals(updatedData);
+                  
                   final updatedReport = Report(
                     id: report.id,
                     description: report.description,
                     type: report.type,
                     group: report.group,
                     date: report.date,
-                    additionalData: updatedData,
+                    additionalData: recalculatedData,
                   );
                   
                   Navigator.pop(context);
@@ -1150,13 +1229,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
               final updatedData = Map<String, dynamic>.from(data);
               (updatedData['vibrator Counters'] as List).removeAt(index);
               
+              // Recalculate totals for Activity TNB reports
+              final recalculatedData = _recalculateActivityTotals(updatedData);
+              
               final updatedReport = Report(
                 id: report.id,
                 description: report.description,
                 type: report.type,
                 group: report.group,
                 date: report.date,
-                additionalData: updatedData,
+                additionalData: recalculatedData,
               );
               
               Navigator.pop(context);
@@ -1234,13 +1316,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     'end': endIndex,
                   });
                   
+                  // Recalculate totals for Activity TNB reports
+                  final recalculatedData = _recalculateActivityTotals(updatedData);
+                  
                   final updatedReport = Report(
                     id: report.id,
                     description: report.description,
                     type: report.type,
                     group: report.group,
                     date: report.date,
-                    additionalData: updatedData,
+                    additionalData: recalculatedData,
                   );
                   
                   Navigator.pop(context);
@@ -1319,13 +1404,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     'end': endIndex,
                   };
                   
+                  // Recalculate totals for Activity TNB reports
+                  final recalculatedData = _recalculateActivityTotals(updatedData);
+                  
                   final updatedReport = Report(
                     id: report.id,
                     description: report.description,
                     type: report.type,
                     group: report.group,
                     date: report.date,
-                    additionalData: updatedData,
+                    additionalData: recalculatedData,
                   );
                   
                   Navigator.pop(context);
@@ -1357,13 +1445,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
               final updatedData = Map<String, dynamic>.from(data);
               (updatedData['liaison Counters'] as List).removeAt(index);
               
+              // Recalculate totals for Activity TNB reports
+              final recalculatedData = _recalculateActivityTotals(updatedData);
+              
               final updatedReport = Report(
                 id: report.id,
                 description: report.description,
                 type: report.type,
                 group: report.group,
                 date: report.date,
-                additionalData: updatedData,
+                additionalData: recalculatedData,
               );
               
               Navigator.pop(context);
@@ -3034,6 +3125,49 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return 0;
   }
 
+  // Validate and parse counter value
+  double? _validateAndParseCounterValue(String value) {
+    if (value.isEmpty) return 0;
+    final cleaned = value.replaceAll(RegExp(r'[^0-9.,]'), '').replaceAll(',', '.');
+    if (cleaned == '' || cleaned == '.' || cleaned == ',') return null;
+    return double.tryParse(cleaned);
+  }
+
+  // Calculate total counter minutes
+  int _calculateTotalCounterMinutes(List counters) {
+    double totalHours = 0;
+    for (var counter in counters) {
+      var startVal = _validateAndParseCounterValue(counter['start'] ?? '');
+      var endVal = _validateAndParseCounterValue(counter['end'] ?? '');
+      if (startVal != null && endVal != null && endVal >= startVal) {
+        totalHours += (endVal - startVal);
+      }
+    }
+    return (totalHours * 60).round();
+  }
+
+  // Recalculate totals for Activity TNB reports
+  Map<String, dynamic> _recalculateActivityTotals(Map<String, dynamic> data) {
+    final updatedData = Map<String, dynamic>.from(data);
+    
+    final stops = (updatedData['stops'] is List) ? List.from(updatedData['stops']) : [];
+    final vibratorCounters = (updatedData['vibrator Counters'] is List) ? List.from(updatedData['vibrator Counters']) : [];
+    final liaisonCounters = (updatedData['liaison Counters'] is List) ? List.from(updatedData['liaison Counters']) : [];
+    
+    final totalDowntime = _calculateDowntimeFromStops(stops);
+    const int totalPeriodMinutes = 24 * 60; // 24 hours in minutes
+    final operatingTime = (totalPeriodMinutes - totalDowntime).clamp(0, totalPeriodMinutes);
+    final totalVibratorMinutes = _calculateTotalCounterMinutes(vibratorCounters);
+    final totalLiaisonMinutes = _calculateTotalCounterMinutes(liaisonCounters);
+    
+    updatedData['T H.A'] = totalDowntime;
+    updatedData['T H.M'] = operatingTime;
+    updatedData['T H.V'] = totalVibratorMinutes;
+    updatedData['T H.L'] = totalLiaisonMinutes;
+    
+    return updatedData;
+  }
+
   String _getPosteString(dynamic posteIndex) {
     if (posteIndex == null) return '-';
     switch (posteIndex) {
@@ -3909,8 +4043,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   ],
                                 ),
                                 const Divider(height: 16),
-                                _buildInfoRow('Temps de fonctionnement', _formatMinutesToHoursMinutes(data['Temps de fonctionnement'] ?? 0)),
-                                _buildInfoRow('Temps d\'arrêt', _formatMinutesToHoursMinutes(data['Temps d\'arrêt'] ?? 0)),
                                 if (data['module1Stops'] is List && (data['module1Stops'] as List).isNotEmpty) ...[
                                   const SizedBox(height: 8),
                                   const Text('Arrêts:', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -3948,8 +4080,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   ],
                                 ),
                                 const Divider(height: 16),
-                                _buildInfoRow('Temps de fonctionnement', _formatMinutesToHoursMinutes(data['Temps de fonctionnement'] ?? 0)),
-                                _buildInfoRow('Temps d\'arrêt', _formatMinutesToHoursMinutes(data['Temps d\'arrêt'] ?? 0)),
                                 if (data['module2Stops'] is List && (data['module2Stops'] as List).isNotEmpty) ...[
                                   const SizedBox(height: 8),
                                   const Text('Arrêts:', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -4071,26 +4201,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Temps de fonctionnement (minutes)',
-                  border: OutlineInputBorder(),
-                ),
-                controller: TextEditingController(text: operatingTime.toString()),
-                keyboardType: TextInputType.number,
-                onChanged: (value) => setState(() => operatingTime = int.tryParse(value) ?? 0),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Temps d\'arrêt (minutes)',
-                  border: OutlineInputBorder(),
-                ),
-                controller: TextEditingController(text: totalDowntime.toString()),
-                keyboardType: TextInputType.number,
-                onChanged: (value) => setState(() => totalDowntime = int.tryParse(value) ?? 0),
-              ),
-              const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -5296,7 +5406,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   // R0 Report Editor
   Future<void> _showR0ReportEditor(Report report, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
-    final data = report.additionalData ?? {};
+    Map<String, dynamic> data = Map.from(report.additionalData ?? {});
     final maxHeight = MediaQuery.of(context).size.height * 0.9;
     
     await showDialog(
@@ -5523,7 +5633,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       style: Theme.of(context).textTheme.titleMedium,
                                     ),
                                     ElevatedButton.icon(
-                                      onPressed: () => _showAddR0StopDialog(report, data, scaffoldMessenger, l10n),
+                                      onPressed: () => _showAddR0StopDialog(report, data, setDialogState, scaffoldMessenger, l10n),
                                       icon: const Icon(Icons.add),
                                       label: const Text('Aj'),
                                     ),
@@ -5562,12 +5672,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           children: [
                                             IconButton(
                                               icon: const Icon(Icons.edit, size: 18),
-                                              onPressed: () => _showEditR0StopDialog(report, data, index, scaffoldMessenger, l10n),
+                                              onPressed: () => _showEditR0StopDialog(report, data, index, setDialogState, scaffoldMessenger, l10n),
                                               tooltip: 'Modifier l\'arrêt',
                                             ),
                                             IconButton(
                                               icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                                              onPressed: () => _showDeleteR0StopDialog(report, data, index, scaffoldMessenger, l10n),
+                                              onPressed: () => _showDeleteR0StopDialog(report, data, index, setDialogState, scaffoldMessenger, l10n),
                                               tooltip: 'Supprimer l\'arrêt',
                                             ),
                                           ],
@@ -5776,93 +5886,292 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   // Edit R0 Info OIB/EE Dialog
   Future<void> _showEditR0InfoDialog(Report report, Map<String, dynamic> data, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
-    String mine = data['mine'] ?? '';
-    String zone = data['zone'] ?? '';
-    String sortie = data['sortie'] ?? '';
-    String category = data['Category'] ?? '';
-    String type = data['Type'] ?? '';
-    String model = data['Model'] ?? '';
-    String poste = data['selectedPoste'] ?? data['poste'] ?? '';
+    // Initialize with current values
+    String selectedMine = data['mine'] ?? '';
+    String selectedZone = data['zone'] ?? '';
+    String selectedSortie = data['sortie'] ?? '';
+    String selectedCategory = data['Category'] ?? '';
+    String selectedType = data['Type'] ?? '';
+    String selectedModel = data['Model'] ?? '';
+    String selectedPoste = data['selectedPoste'] ?? data['poste'] ?? '';
+
+    int step = 0;
 
     await showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Modifier les informations OIB/EE'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+        builder: (context, setDialogState) {
+          MineData? mineData = selectedMine.isNotEmpty
+              ? minesData.where((m) => m.name == selectedMine).isNotEmpty
+                  ? minesData.firstWhere((m) => m.name == selectedMine)
+                  : null
+              : null;
+          ZoneData? zoneData = (mineData != null && selectedZone.isNotEmpty)
+              ? mineData.zones.where((z) => z.name == selectedZone).isNotEmpty
+                  ? mineData.zones.firstWhere((z) => z.name == selectedZone)
+                  : null
+              : null;
+
+          void goNext() => setDialogState(() => step++);
+          void goBack() => setDialogState(() => step--);
+
+          Widget content;
+          if (step == 0) {
+            content = Row(
               children: [
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Mine'),
-                  controller: TextEditingController(text: mine),
-                  onChanged: (value) => setState(() => mine = value),
-                ),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Zone'),
-                  controller: TextEditingController(text: zone),
-                  onChanged: (value) => setState(() => zone = value),
-                ),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Sortie'),
-                  controller: TextEditingController(text: sortie),
-                  onChanged: (value) => setState(() => sortie = value),
-                ),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Catégorie'),
-                  controller: TextEditingController(text: category),
-                  onChanged: (value) => setState(() => category = value),
-                ),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Type'),
-                  controller: TextEditingController(text: type),
-                  onChanged: (value) => setState(() => type = value),
-                ),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Modèle'),
-                  controller: TextEditingController(text: model),
-                  onChanged: (value) => setState(() => model = value),
-                ),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Poste'),
-                  controller: TextEditingController(text: poste),
-                  onChanged: (value) => setState(() => poste = value),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: selectedMine.isNotEmpty ? selectedMine : null,
+                    decoration: const InputDecoration(labelText: 'Mine', border: OutlineInputBorder()),
+                    items: minesData.map((mine) => DropdownMenuItem(value: mine.name, child: Text(mine.name))).toList(),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedMine = value ?? '';
+                        selectedZone = '';
+                        selectedSortie = '';
+                        selectedPoste = '';
+                        selectedCategory = '';
+                        selectedType = '';
+                        selectedModel = '';
+                      });
+                    },
+                  ),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final updatedData = Map<String, dynamic>.from(data);
-                updatedData['mine'] = mine;
-                updatedData['zone'] = zone;
-                updatedData['sortie'] = sortie;
-                updatedData['Category'] = category;
-                updatedData['Type'] = type;
-                updatedData['Model'] = model;
-                updatedData['selectedPoste'] = poste;
+            );
+          } else if (step == 1 && mineData != null) {
+            content = Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: selectedZone.isNotEmpty ? selectedZone : null,
+                    decoration: const InputDecoration(labelText: 'Zone', border: OutlineInputBorder()),
+                    items: mineData.zones.map((zone) => DropdownMenuItem(value: zone.name, child: Text(zone.name))).toList(),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedZone = value ?? '';
+                        selectedSortie = '';
+                        selectedPoste = '';
+                        selectedCategory = '';
+                        selectedType = '';
+                        selectedModel = '';
+                      });
+                    },
+                  ),
+                ),
+              ],
+            );
+          } else if (step == 2) {
+            content = Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: selectedCategory.isNotEmpty ? selectedCategory : null,
+                    decoration: const InputDecoration(labelText: 'Catégorie', border: OutlineInputBorder()),
+                    items: const [
+                      DropdownMenuItem(value: 'ENGINS', child: Text('ENGINS')),
+                      DropdownMenuItem(value: 'MACHINES', child: Text('MACHINES')),
+                    ],
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedCategory = value ?? '';
+                        selectedType = '';
+                        selectedModel = '';
+                      });
+                    },
+                  ),
+                ),
+              ],
+            );
+          } else if (step == 3 && selectedCategory.isNotEmpty) {
+            final types = selectedCategory == 'ENGINS'
+                ? enginsData.keys.toList()
+                : machinesData.keys.toList();
+            content = Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: selectedType.isNotEmpty ? selectedType : null,
+                    decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
+                    items: types.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedType = value ?? '';
+                        selectedModel = '';
+                      });
+                    },
+                  ),
+                ),
+              ],
+            );
+          } else if (step == 4 && selectedType.isNotEmpty) {
+            final models = selectedCategory == 'ENGINS'
+                ? enginsData[selectedType] ?? []
+                : machinesData[selectedType] ?? [];
+            content = Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: selectedModel.isNotEmpty ? selectedModel : null,
+                    decoration: const InputDecoration(labelText: 'Modèle', border: OutlineInputBorder()),
+                    items: models.map((model) => DropdownMenuItem(value: model, child: Text(model))).toList(),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedModel = value ?? '';
+                      });
+                    },
+                  ),
+                ),
+              ],
+            );
+          } else if (step == 5 && zoneData != null && zoneData.sorties.isNotEmpty) {
+            content = Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: selectedSortie.isNotEmpty ? selectedSortie : null,
+                    decoration: const InputDecoration(labelText: 'Sortie', border: OutlineInputBorder()),
+                    items: zoneData.sorties.map((sortie) => DropdownMenuItem(value: sortie, child: Text(sortie))).toList(),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedSortie = value ?? '';
+                        selectedPoste = '';
+                      });
+                    },
+                  ),
+                ),
+              ],
+            );
+          } else if ((step == 5 && zoneData != null && zoneData.sorties.isEmpty) || step == 6) {
+            content = Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: selectedPoste.isNotEmpty ? selectedPoste : null,
+                    decoration: const InputDecoration(labelText: 'Poste', border: OutlineInputBorder()),
+                    items: posteOrder.map((poste) => DropdownMenuItem(value: poste, child: Text('$poste Poste'))).toList(),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedPoste = value ?? posteOrder.first;
+                      });
+                    },
+                  ),
+                ),
+              ],
+            );
+          } else {
+            content = const SizedBox();
+          }
 
-                final updatedReport = Report(
-                  id: report.id,
-                  description: report.description,
-                  type: report.type,
-                  group: report.group,
-                  date: report.date,
-                  additionalData: updatedData,
-                );
+          // Determine if all steps are filled for 'Terminer'
+          bool canFinish = selectedMine.isNotEmpty &&
+              selectedZone.isNotEmpty &&
+              selectedCategory.isNotEmpty &&
+              selectedType.isNotEmpty &&
+              selectedModel.isNotEmpty &&
+              (zoneData == null || zoneData.sorties.isEmpty || selectedSortie.isNotEmpty) &&
+              selectedPoste.isNotEmpty;
 
-                Navigator.pop(context);
-                _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-              },
-              child: const Text('Modifier'),
+          return AlertDialog(
+            title: const Text('Modifier les informations OIB/EE'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (step == 0) ...[
+                    const Text('Sélection de la Mine', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    content,
+                  ] else if (step == 1) ...[
+                    const Text('Sélection de la Zone', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    content,
+                  ] else if (step == 2) ...[
+                    const Text('Sélection Catégorie', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    content,
+                  ] else if (step == 3) ...[
+                    const Text('Sélection Type', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    content,
+                  ] else if (step == 4) ...[
+                    const Text('Sélection Modèle', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    content,
+                  ] else if (step == 5 && zoneData != null && zoneData.sorties.isNotEmpty) ...[
+                    const Text('Sélection Sortie', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    content,
+                  ] else if ((step == 5 && zoneData != null && zoneData.sorties.isEmpty) || step == 6) ...[
+                    const Text('Sélection Poste', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    content,
+                  ],
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      if (step > 0)
+                        TextButton(
+                          onPressed: goBack,
+                          child: const Text('Précédent'),
+                        )
+                      else
+                        const SizedBox(),
+                      if (step < 6 && (step != 5 || (zoneData != null && zoneData.sorties.isNotEmpty)))
+                        ElevatedButton(
+                          onPressed: () {
+                            if ((step == 0 && selectedMine.isNotEmpty) ||
+                                (step == 1 && selectedZone.isNotEmpty) ||
+                                (step == 2 && selectedCategory.isNotEmpty) ||
+                                (step == 3 && selectedType.isNotEmpty) ||
+                                (step == 4 && selectedModel.isNotEmpty) ||
+                                (step == 5 && ((zoneData != null && zoneData.sorties.isEmpty) || selectedSortie.isNotEmpty))) {
+                              goNext();
+                            }
+                          },
+                          child: const Text('Suivant'),
+                        )
+                      else if (canFinish)
+                        ElevatedButton(
+                          onPressed: () {
+                            final updatedData = Map<String, dynamic>.from(data);
+                            updatedData['mine'] = selectedMine;
+                            updatedData['zone'] = selectedZone;
+                            updatedData['sortie'] = selectedSortie;
+                            updatedData['Category'] = selectedCategory;
+                            updatedData['Type'] = selectedType;
+                            updatedData['Model'] = selectedModel;
+                            updatedData['selectedPoste'] = selectedPoste;
+
+                            final updatedReport = Report(
+                              id: report.id,
+                              description: 'Rapport R0 - $selectedPoste',
+                              type: selectedModel,
+                              group: report.group,
+                              date: report.date,
+                              additionalData: updatedData,
+                            );
+
+                            Navigator.pop(context);
+                            _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                          },
+                          child: const Text('Modifier'),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Annuler'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -6238,7 +6547,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   // Add R0 Stop Dialog
-  Future<void> _showAddR0StopDialog(Report report, Map<String, dynamic> data, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+  Future<void> _showAddR0StopDialog(Report report, Map<String, dynamic> data, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) => AlertDialog(
@@ -6250,11 +6559,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
 
     if (result != null) {
-      final updatedData = Map<String, dynamic>.from(data);
-      if (updatedData['Arrets'] == null) {
-        updatedData['Arrets'] = [];
+      if (data['Arrets'] == null) {
+        data['Arrets'] = [];
       }
-      (updatedData['Arrets'] as List).add(result);
+      (data['Arrets'] as List).add(result);
+
+      // Recalculate hours
+      _recalculateR0Hours(data);
+
+      setDialogState(() {});
 
       final updatedReport = Report(
         id: report.id,
@@ -6262,7 +6575,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         type: report.type,
         group: report.group,
         date: report.date,
-        additionalData: updatedData,
+        additionalData: data,
       );
 
       _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
@@ -6270,7 +6583,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   // Edit R0 Stop Dialog
-  Future<void> _showEditR0StopDialog(Report report, Map<String, dynamic> data, int index, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+  Future<void> _showEditR0StopDialog(Report report, Map<String, dynamic> data, int index, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
     final arret = (data['Arrets'] as List)[index] as Map<String, dynamic>;
     final initialItem = {
       'Arret': (arret['Arret'] ?? '').toString(),
@@ -6289,8 +6602,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
 
     if (result != null) {
-      final updatedData = Map<String, dynamic>.from(data);
-      (updatedData['Arrets'] as List)[index] = result;
+      (data['Arrets'] as List)[index] = result;
+
+      // Recalculate hours
+      _recalculateR0Hours(data);
+
+      setDialogState(() {});
 
       final updatedReport = Report(
         id: report.id,
@@ -6298,7 +6615,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         type: report.type,
         group: report.group,
         date: report.date,
-        additionalData: updatedData,
+        additionalData: data,
       );
 
       _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
@@ -6306,7 +6623,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   // Delete R0 Stop Dialog
-  Future<void> _showDeleteR0StopDialog(Report report, Map<String, dynamic> data, int index, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+  Future<void> _showDeleteR0StopDialog(Report report, Map<String, dynamic> data, int index, StateSetter setDialogState, ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -6319,8 +6636,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              final updatedData = Map<String, dynamic>.from(data);
-              (updatedData['Arrets'] as List).removeAt(index);
+              (data['Arrets'] as List).removeAt(index);
+
+              // Recalculate hours
+              _recalculateR0Hours(data);
+
+              setDialogState(() {});
 
               final updatedReport = Report(
                 id: report.id,
@@ -6328,7 +6649,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 type: report.type,
                 group: report.group,
                 date: report.date,
-                additionalData: updatedData,
+                additionalData: data,
               );
 
               Navigator.pop(context);
@@ -6496,25 +6817,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: const Text('Modifier la répartition de travail'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: const InputDecoration(labelText: 'Chantier'),
-                controller: TextEditingController(text: chantier),
-                onChanged: (value) => setState(() => chantier = value),
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: 'Temps'),
-                controller: TextEditingController(text: temps),
-                onChanged: (value) => setState(() => temps = value),
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: 'Imputation'),
-                controller: TextEditingController(text: imputation),
-                onChanged: (value) => setState(() => imputation = value),
-              ),
-            ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Chantier'),
+                  controller: TextEditingController(text: chantier),
+                  onChanged: (value) => setState(() => chantier = value),
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Temps'),
+                  controller: TextEditingController(text: temps),
+                  onChanged: (value) => setState(() => temps = value),
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Imputation'),
+                  controller: TextEditingController(text: imputation),
+                  onChanged: (value) => setState(() => imputation = value),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(

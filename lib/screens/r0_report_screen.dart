@@ -59,11 +59,10 @@ class R0ReportFormData {
   List<IndexCompteurPoste> indexCompteurs = List.generate(3, (_) => IndexCompteurPoste());
   String selectedPoste = '';
   List<VentilationItem> ventilation = [];
-  // Use consistent keys across app: H.M, H.A, H.N, Tonnage, Rendement
+  // Use consistent keys across app: H.M, H.A, Tonnage, Rendement
   Map<String, String> exploitation = {
     'H.M': '',
     'H.A': '',
-    'H.N': '',
     'Tonnage': '',
     'Rendeme': '',
   };
@@ -230,7 +229,6 @@ static const Map<String, List<String>> machinesData = {
       final exploitation = data['exploitation'] as Map;
       formData.exploitation['H.M'] = exploitation['H.M'] ?? '';
       formData.exploitation['H.A'] = exploitation['H.A'] ?? '';
-      formData.exploitation['H.N'] = exploitation['H.N'] ?? '';
       formData.exploitation['Tonnage'] = exploitation['Tonnage'] ?? '';
       formData.exploitation['Rendeme'] = exploitation['Rendeme'] ?? '';
     }
@@ -299,7 +297,7 @@ static const Map<String, List<String>> machinesData = {
     final gross = _parseNumeric(formData.exploitation['H.M'] ?? '');
     final stops = _parseNumeric(formData.exploitation['H.A'] ?? '');
     final net = (gross - stops).clamp(0, double.infinity);
-    formData.exploitation['H.N'] = net.toStringAsFixed(2);
+    formData.exploitation['H.M'] = net.toStringAsFixed(2);
   }
 
   // UI Building methods

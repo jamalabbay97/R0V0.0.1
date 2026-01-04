@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/services/database_helper.dart';
 import 'package:r0/models/report.dart';
+import 'package:r0/models/mine_data.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 import 'package:r0/theme.dart';
 
@@ -43,72 +44,6 @@ String posteToString(Poste? p) {
       return "";
   }
 }
-
-// Mine and Sortie data structure
-class MineData {
-  final String name;
-  final List<ZoneData> zones;
-
-  MineData({required this.name, required this.zones});
-}
-
-class ZoneData {
-  final String name;
-  final List<String> sorties;
-
-  ZoneData({required this.name, required this.sorties});
-}
-
-final List<MineData> minesData = [
-  MineData(
-    name: 'Mine G',
-    zones: [
-      ZoneData(
-        name: 'Mine G Zone Dragline',
-        sorties: ['Sortie 1', 'Sortie 2'],
-      ),
-    ],
-  ),
-  MineData(
-    name: 'Mine E',
-    zones: [
-      ZoneData(
-        name: 'Mine E1 Zone Dragline',
-        sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3', 'Sortie 4'],
-      ),
-      ZoneData(
-        name: 'Mine E1 Zone Bulls',
-        sorties: ['Sortie 2', 'Sortie 3'],
-      ),
-      ZoneData(
-        name: 'Mine E3 Zone Dragline',
-        sorties: ['Sortie -1', 'Sortie 0', 'Sortie 1', 'Sortie 2'],
-      ),
-      ZoneData(
-        name: 'Mine E2 Zone Bulls',
-        sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3'],
-      ),
-    ],
-  ),
-  MineData(
-    name: 'Mine C',
-    zones: [
-      ZoneData(
-        name: 'Mine C Zone Dragline',
-        sorties: [],
-      ),
-    ],
-  ),
-  MineData(
-    name: 'Mine A',
-    zones: [
-      ZoneData(
-        name: 'Mine A',
-        sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3', 'Sortie 4', 'Sortie 5', 'Sortie 6', 'Sortie 7'],
-      ),
-    ],
-  ),
-];
 
 class TruckTrackingScreen extends StatefulWidget {
   final GlobalKey<FormState> formKey;
