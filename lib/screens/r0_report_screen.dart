@@ -17,7 +17,11 @@ class VentilationItem {
   String label;
   String duree;
   String note;
-  VentilationItem({required this.code, required this.label, this.duree = '', this.note = ''});
+  VentilationItem(
+      {required this.code,
+      required this.label,
+      this.duree = '',
+      this.note = ''});
 }
 
 class RepartitionItem {
@@ -31,7 +35,8 @@ class PersonnelItem {
   String conducteur;
   String graisseur;
   String matricules;
-  PersonnelItem({this.conducteur = '', this.graisseur = '', this.matricules = ''});
+  PersonnelItem(
+      {this.conducteur = '', this.graisseur = '', this.matricules = ''});
 }
 
 class ConsommationItem {
@@ -56,7 +61,8 @@ class R0ReportFormData {
   String selectedMine = '';
   String selectedZone = '';
   String selectedSortie = '';
-  List<IndexCompteurPoste> indexCompteurs = List.generate(3, (_) => IndexCompteurPoste());
+  List<IndexCompteurPoste> indexCompteurs =
+      List.generate(3, (_) => IndexCompteurPoste());
   String selectedPoste = '';
   List<VentilationItem> ventilation = [];
   // Use consistent keys across app: H.M, H.A, Tonnage, Rendement
@@ -66,7 +72,8 @@ class R0ReportFormData {
     'Tonnage': '',
     'Rendeme': '',
   };
-  List<RepartitionItem> repartitionTravail = List.generate(3, (_) => RepartitionItem());
+  List<RepartitionItem> repartitionTravail =
+      List.generate(3, (_) => RepartitionItem());
   PersonnelItem personnel = PersonnelItem();
   ConsommationItem consommation = ConsommationItem();
   String selectedCategory = '';
@@ -82,8 +89,8 @@ class R0Report extends StatefulWidget {
   final bool isEditing;
 
   const R0Report({
-    super.key, 
-    this.selectedDate, 
+    super.key,
+    this.selectedDate,
     this.previousDayThirdShiftEnd,
     this.initialReport,
     this.onSave,
@@ -116,79 +123,107 @@ class R0ReportState extends State<R0Report> {
 
   // Static mine/zone/sortie data
   final List<MineData> minesData = [
-  MineData(
-    name: 'Mine G',
-    zones: [
-      ZoneData(
-        name: 'Mine G Zone Dragline',
-        sorties: ['Sortie 1', 'Sortie 2'],
-      ),
-    ],
-  ),
-  MineData(
-    name: 'Mine E',
-    zones: [
-      ZoneData(
-        name: 'Mine E1 Zone Dragline',
-        sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3', 'Sortie 4'],
-      ),
-      ZoneData(
-        name: 'Mine E1 Zone Bulls',
-        sorties: ['Sortie 2', 'Sortie 3'],
-      ),
-      ZoneData(
-        name: 'Mine E3 Zone Dragline',
-        sorties: ['Sortie -1', 'Sortie 0', 'Sortie 1', 'Sortie 2'],
-      ),
-      ZoneData(
-        name: 'Mine E2 Zone Bulls',
-        sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3'],
-      ),
-    ],
-  ),
-  MineData(
-    name: 'Mine C',
-    zones: [
-      ZoneData(
-        name: 'Mine C Zone Dragline',
-        sorties: [],
-      ),
-    ],
-  ),
-  MineData(
-    name: 'Mine A',
-    zones: [
-      ZoneData(
-        name: 'Mine A',
-        sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3', 'Sortie 4', 'Sortie 5', 'Sortie 6', 'Sortie 7'],
-      ),
-    ],
-  ),
-];
+    MineData(
+      name: 'Mine G',
+      zones: [
+        ZoneData(
+          name: 'Mine G Zone Dragline',
+          sorties: ['Sortie 1', 'Sortie 2'],
+        ),
+      ],
+    ),
+    MineData(
+      name: 'Mine E',
+      zones: [
+        ZoneData(
+          name: 'Mine E1 Zone Dragline',
+          sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3', 'Sortie 4'],
+        ),
+        ZoneData(
+          name: 'Mine E1 Zone Bulls',
+          sorties: ['Sortie 2', 'Sortie 3'],
+        ),
+        ZoneData(
+          name: 'Mine E3 Zone Dragline',
+          sorties: ['Sortie -1', 'Sortie 0', 'Sortie 1', 'Sortie 2'],
+        ),
+        ZoneData(
+          name: 'Mine E2 Zone Bulls',
+          sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3'],
+        ),
+      ],
+    ),
+    MineData(
+      name: 'Mine C',
+      zones: [
+        ZoneData(
+          name: 'Mine C Zone Dragline',
+          sorties: [],
+        ),
+      ],
+    ),
+    MineData(
+      name: 'Mine A',
+      zones: [
+        ZoneData(
+          name: 'Mine A',
+          sorties: [
+            'Sortie 1',
+            'Sortie 2',
+            'Sortie 3',
+            'Sortie 4',
+            'Sortie 5',
+            'Sortie 6',
+            'Sortie 7'
+          ],
+        ),
+      ],
+    ),
+  ];
 
 // Add ENGINS and MACHINES data maps
-static const Map<String, List<String>> enginsData = {
-  'BULLDOZERS': [
-    'BULL D9R 76', 'BULL D9R 79', 'BULL D9R 80', 'BULL D9R 81', 'BULL D9R 82', 'BULL D9R 83', 'BULL LIB 84', 'BULL LIB 85', 'BULL D9R 86', 'BULL D9R 87',
-  ],
-  'CAMIONS': [
-    'CAMION T24', 'CAMION T25', 'CAMION T26', 'CAMION T27', 'CAMION T28', 'CAMION T29', 'CAMION T30', 'CAMION T31', 'CAMION T32', 'CAMION T33', 'WABCO 13', 'WABCO 19',
-  ],
-  'CHARGEUSES': ['CHRG 992C', 'CHRG 992K', 'CHRG 994H'],
-  'NIVELEUSES': ['NIV 14G', 'NIV 16H', 'NIV KOM01', 'NIV KOM02'],
-  'PAYDOZERS': ['PAY CAT03', 'PAY KOM04', 'PAY KOM05'],
-  'PELLE HYDRAULIQUE': ['PH365-C', 'PH5130'],
-};
-static const Map<String, List<String>> machinesData = {
-  'DRAGLINES': ['1370 W1', '1370 W2'],
-  'PELLE ELECTRIQUE': ['195 P1', '195 P2'],
-  'SONDEUSES': ['PV275-1', 'PV275-2', 'PV275-3'],
-};
+  static const Map<String, List<String>> enginsData = {
+    'BULLDOZERS': [
+      'BULL D9R 76',
+      'BULL D9R 79',
+      'BULL D9R 80',
+      'BULL D9R 81',
+      'BULL D9R 82',
+      'BULL D9R 83',
+      'BULL LIB 84',
+      'BULL LIB 85',
+      'BULL D9R 86',
+      'BULL D9R 87',
+    ],
+    'CAMIONS': [
+      'CAMION T24',
+      'CAMION T25',
+      'CAMION T26',
+      'CAMION T27',
+      'CAMION T28',
+      'CAMION T29',
+      'CAMION T30',
+      'CAMION T31',
+      'CAMION T32',
+      'CAMION T33',
+      'WABCO 13',
+      'WABCO 19',
+    ],
+    'CHARGEUSES': ['CHRG 992C', 'CHRG 992K', 'CHRG 994H'],
+    'NIVELEUSES': ['NIV 14G', 'NIV 16H', 'NIV KOM01', 'NIV KOM02'],
+    'PAYDOZERS': ['PAY CAT03', 'PAY KOM04', 'PAY KOM05'],
+    'PELLE HYDRAULIQUE': ['PH365-C', 'PH5130'],
+  };
+  static const Map<String, List<String>> machinesData = {
+    'DRAGLINES': ['1370 W1', '1370 W2'],
+    'PELLE ELECTRIQUE': ['195 P1', '195 P2'],
+    'SONDEUSES': ['PV275-1', 'PV275-2', 'PV275-3'],
+  };
 
   @override
   void initState() {
     super.initState();
-    
+
     if (widget.isEditing && widget.initialReport != null) {
       // Editing mode - load existing data
       _selectedDate = widget.initialReport!.date;
@@ -197,15 +232,15 @@ static const Map<String, List<String>> machinesData = {
       // Creation mode
       _selectedDate = widget.selectedDate ?? DateTime.now();
     }
-    
+
     _calculateHours();
   }
 
   void _loadExistingData() {
     if (widget.initialReport?.additionalData == null) return;
-    
+
     final data = widget.initialReport!.additionalData!;
-    
+
     // Load basic fields
     formData.selectedMine = data['mine'] ?? '';
     formData.selectedZone = data['zone'] ?? '';
@@ -214,16 +249,18 @@ static const Map<String, List<String>> machinesData = {
     formData.selectedCategory = data['Category'] ?? '';
     formData.selectedType = data['Type'] ?? '';
     formData.selectedModel = data['Model'] ?? '';
-    
+
     // Load compteurs
     if (data['Compteurs'] is List) {
       final compteurs = data['Compteurs'] as List;
-      for (int i = 0; i < compteurs.length && i < formData.indexCompteurs.length; i++) {
+      for (int i = 0;
+          i < compteurs.length && i < formData.indexCompteurs.length;
+          i++) {
         formData.indexCompteurs[i].duree = compteurs[i]['duree'] ?? '';
         formData.indexCompteurs[i].note = compteurs[i]['note'] ?? '';
       }
     }
-    
+
     // Load exploitation data
     if (data['exploitation'] is Map) {
       final exploitation = data['exploitation'] as Map;
@@ -232,7 +269,7 @@ static const Map<String, List<String>> machinesData = {
       formData.exploitation['Tonnage'] = exploitation['Tonnage'] ?? '';
       formData.exploitation['Rendeme'] = exploitation['Rendeme'] ?? '';
     }
-    
+
     // Load personnel data
     if (data['personnel'] is Map) {
       final personnel = data['personnel'] as Map;
@@ -240,7 +277,7 @@ static const Map<String, List<String>> machinesData = {
       formData.personnel.graisseur = personnel['graisseur'] ?? '';
       formData.personnel.matricules = personnel['matricules'] ?? '';
     }
-    
+
     // Load consommation data
     if (data['consommation'] is Map) {
       final consommation = data['consommation'] as Map;
@@ -262,13 +299,14 @@ static const Map<String, List<String>> machinesData = {
       final start = _parseNumeric(formData.indexCompteurs[i].duree);
       final end = _parseNumeric(formData.indexCompteurs[i].note);
       if (end > start) {
-        final shiftHours = (end - start) / 1; // Assuming compteur is in 1.0 hour units
+        final shiftHours =
+            (end - start) / 1; // Assuming compteur is in 1.0 hour units
         totalGrossHours += shiftHours;
       }
     }
-    
+
     formData.exploitation['H.M'] = totalGrossHours.toStringAsFixed(2);
-    
+
     // Calculate total stoppage time from ventilation data
     double totalStoppageHours = 0;
     for (var item in formData.ventilation) {
@@ -281,23 +319,23 @@ static const Map<String, List<String>> machinesData = {
           final startMin = int.parse(startParts[1]);
           final endHour = int.parse(endParts[0]);
           final endMin = int.parse(endParts[1]);
-          
+
           final startTotal = startHour * 60 + startMin;
           final endTotal = endHour * 60 + endMin;
           int diff = endTotal - startTotal;
           if (diff <= 0) diff += 24 * 60; // Handle overnight periods
-          
+
           totalStoppageHours += diff / 60.0;
         }
       }
     }
-    
+
     formData.exploitation['H.A'] = totalStoppageHours.toStringAsFixed(2);
-    // Calculate net hours
-    final gross = _parseNumeric(formData.exploitation['H.M'] ?? '');
-    final stops = _parseNumeric(formData.exploitation['H.A'] ?? '');
-    final net = (gross - stops).clamp(0, double.infinity);
-    formData.exploitation['H.M'] = net.toStringAsFixed(2);
+    // Calculate net hours - REMOVED: H.M should correspond to actual hour meter difference
+    // final gross = _parseNumeric(formData.exploitation['H.M'] ?? '');
+    // final stops = _parseNumeric(formData.exploitation['H.A'] ?? '');
+    // final net = (gross - stops).clamp(0, double.infinity);
+    // formData.exploitation['H.M'] = net.toStringAsFixed(2);
   }
 
   // UI Building methods
@@ -310,18 +348,28 @@ static const Map<String, List<String>> machinesData = {
                 ? minesData.firstWhere((m) => m.name == formData.selectedMine)
                 : null
             : null;
-        ZoneData? selectedZone = (selectedMine != null && formData.selectedZone.isNotEmpty)
-            ? selectedMine.zones.where((z) => z.name == formData.selectedZone).isNotEmpty
-                ? selectedMine.zones.firstWhere((z) => z.name == formData.selectedZone)
-                : null
+        ZoneData? selectedZone =
+            (selectedMine != null && formData.selectedZone.isNotEmpty)
+                ? selectedMine.zones
+                        .where((z) => z.name == formData.selectedZone)
+                        .isNotEmpty
+                    ? selectedMine.zones
+                        .firstWhere((z) => z.name == formData.selectedZone)
+                    : null
+                : null;
+        String? selectedSortie =
+            (selectedZone != null && formData.selectedSortie.isNotEmpty)
+                ? formData.selectedSortie
+                : null;
+        String? selectedPoste =
+            formData.selectedPoste.isNotEmpty ? formData.selectedPoste : null;
+        String? selectedCategory = formData.selectedCategory.isNotEmpty
+            ? formData.selectedCategory
             : null;
-        String? selectedSortie = (selectedZone != null && formData.selectedSortie.isNotEmpty)
-            ? formData.selectedSortie
-            : null;
-        String? selectedPoste = formData.selectedPoste.isNotEmpty ? formData.selectedPoste : null;
-        String? selectedCategory = formData.selectedCategory.isNotEmpty ? formData.selectedCategory : null;
-        String? selectedType = formData.selectedType.isNotEmpty ? formData.selectedType : null;
-        String? selectedModel = formData.selectedModel.isNotEmpty ? formData.selectedModel : null;
+        String? selectedType =
+            formData.selectedType.isNotEmpty ? formData.selectedType : null;
+        String? selectedModel =
+            formData.selectedModel.isNotEmpty ? formData.selectedModel : null;
 
         void goNext() => setDialogState(() => step++);
         void goBack() => setDialogState(() => step--);
@@ -333,8 +381,12 @@ static const Map<String, List<String>> machinesData = {
               Expanded(
                 child: DropdownButtonFormField<MineData>(
                   value: selectedMine,
-                  decoration: const InputDecoration(labelText: 'Mine', border: OutlineInputBorder()),
-                  items: minesData.map((mine) => DropdownMenuItem(value: mine, child: Text(mine.name))).toList(),
+                  decoration: const InputDecoration(
+                      labelText: 'Mine', border: OutlineInputBorder()),
+                  items: minesData
+                      .map((mine) =>
+                          DropdownMenuItem(value: mine, child: Text(mine.name)))
+                      .toList(),
                   onChanged: (value) {
                     setDialogState(() {
                       formData.selectedMine = value?.name ?? '';
@@ -356,8 +408,12 @@ static const Map<String, List<String>> machinesData = {
               Expanded(
                 child: DropdownButtonFormField<ZoneData>(
                   value: selectedZone,
-                  decoration: const InputDecoration(labelText: 'Zone', border: OutlineInputBorder()),
-                  items: selectedMine.zones.map((zone) => DropdownMenuItem(value: zone, child: Text(zone.name))).toList(),
+                  decoration: const InputDecoration(
+                      labelText: 'Zone', border: OutlineInputBorder()),
+                  items: selectedMine.zones
+                      .map((zone) =>
+                          DropdownMenuItem(value: zone, child: Text(zone.name)))
+                      .toList(),
                   onChanged: (value) {
                     setDialogState(() {
                       formData.selectedZone = value?.name ?? '';
@@ -378,10 +434,12 @@ static const Map<String, List<String>> machinesData = {
               Expanded(
                 child: DropdownButtonFormField<String>(
                   value: selectedCategory,
-                  decoration: const InputDecoration(labelText: 'Catégorie', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(
+                      labelText: 'Catégorie', border: OutlineInputBorder()),
                   items: const [
                     DropdownMenuItem(value: 'ENGINS', child: Text('ENGINS')),
-                    DropdownMenuItem(value: 'MACHINES', child: Text('MACHINES')),
+                    DropdownMenuItem(
+                        value: 'MACHINES', child: Text('MACHINES')),
                   ],
                   onChanged: (value) {
                     setDialogState(() {
@@ -403,8 +461,12 @@ static const Map<String, List<String>> machinesData = {
               Expanded(
                 child: DropdownButtonFormField<String>(
                   value: selectedType,
-                  decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
-                  items: types.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
+                  decoration: const InputDecoration(
+                      labelText: 'Type', border: OutlineInputBorder()),
+                  items: types
+                      .map((type) =>
+                          DropdownMenuItem(value: type, child: Text(type)))
+                      .toList(),
                   onChanged: (value) {
                     setDialogState(() {
                       formData.selectedType = value ?? '';
@@ -424,8 +486,12 @@ static const Map<String, List<String>> machinesData = {
               Expanded(
                 child: DropdownButtonFormField<String>(
                   value: selectedModel,
-                  decoration: const InputDecoration(labelText: 'Modèle', border: OutlineInputBorder()),
-                  items: models.map((model) => DropdownMenuItem(value: model, child: Text(model))).toList(),
+                  decoration: const InputDecoration(
+                      labelText: 'Modèle', border: OutlineInputBorder()),
+                  items: models
+                      .map((model) =>
+                          DropdownMenuItem(value: model, child: Text(model)))
+                      .toList(),
                   onChanged: (value) {
                     setDialogState(() {
                       formData.selectedModel = value ?? '';
@@ -435,14 +501,20 @@ static const Map<String, List<String>> machinesData = {
               ),
             ],
           );
-        } else if (step == 5 && selectedZone != null && selectedZone.sorties.isNotEmpty) {
+        } else if (step == 5 &&
+            selectedZone != null &&
+            selectedZone.sorties.isNotEmpty) {
           content = Row(
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
                   value: selectedSortie,
-                  decoration: const InputDecoration(labelText: 'Sortie', border: OutlineInputBorder()),
-                  items: selectedZone.sorties.map((sortie) => DropdownMenuItem(value: sortie, child: Text(sortie))).toList(),
+                  decoration: const InputDecoration(
+                      labelText: 'Sortie', border: OutlineInputBorder()),
+                  items: selectedZone.sorties
+                      .map((sortie) =>
+                          DropdownMenuItem(value: sortie, child: Text(sortie)))
+                      .toList(),
                   onChanged: (value) {
                     setDialogState(() {
                       formData.selectedSortie = value ?? '';
@@ -453,14 +525,22 @@ static const Map<String, List<String>> machinesData = {
               ),
             ],
           );
-        } else if ((step == 5 && selectedZone != null && selectedZone.sorties.isEmpty) || step == 6) {
+        } else if ((step == 5 &&
+                selectedZone != null &&
+                selectedZone.sorties.isEmpty) ||
+            step == 6) {
           content = Row(
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
                   value: selectedPoste,
-                  decoration: const InputDecoration(labelText: 'Poste', border: OutlineInputBorder()),
-                  items: posteOrder.map((poste) => DropdownMenuItem(value: poste, child: Text('$poste Poste (${posteTimes[poste]})'))).toList(),
+                  decoration: const InputDecoration(
+                      labelText: 'Poste', border: OutlineInputBorder()),
+                  items: posteOrder
+                      .map((poste) => DropdownMenuItem(
+                          value: poste,
+                          child: Text('$poste Poste (${posteTimes[poste]})')))
+                      .toList(),
                   onChanged: (value) {
                     setDialogState(() {
                       formData.selectedPoste = value ?? posteOrder.first;
@@ -480,7 +560,9 @@ static const Map<String, List<String>> machinesData = {
             formData.selectedCategory.isNotEmpty &&
             formData.selectedType.isNotEmpty &&
             formData.selectedModel.isNotEmpty &&
-            (selectedZone == null || selectedZone.sorties.isEmpty || formData.selectedSortie.isNotEmpty) &&
+            (selectedZone == null ||
+                selectedZone.sorties.isEmpty ||
+                formData.selectedSortie.isNotEmpty) &&
             formData.selectedPoste.isNotEmpty;
 
         return Column(
@@ -488,31 +570,43 @@ static const Map<String, List<String>> machinesData = {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (step == 0) ...[
-              const Text('Sélection de la Mine', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Sélection de la Mine',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               content,
             ] else if (step == 1) ...[
-              const Text('Sélection de la Zone', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Sélection de la Zone',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               content,
             ] else if (step == 2) ...[
-              const Text('Sélection Catégorie', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Sélection Catégorie',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               content,
             ] else if (step == 3) ...[
-              const Text('Sélection Type', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Sélection Type',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               content,
             ] else if (step == 4) ...[
-              const Text('Sélection Modèle', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Sélection Modèle',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               content,
-            ] else if (step == 5 && selectedZone != null && selectedZone.sorties.isNotEmpty) ...[
-              const Text('Sélection de la Sortie', style: TextStyle(fontWeight: FontWeight.bold)),
+            ] else if (step == 5 &&
+                selectedZone != null &&
+                selectedZone.sorties.isNotEmpty) ...[
+              const Text('Sélection de la Sortie',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               content,
-            ] else if ((step == 5 && selectedZone != null && selectedZone.sorties.isEmpty) || step == 6) ...[
-              const Text('Sélection du Poste', style: TextStyle(fontWeight: FontWeight.bold)),
+            ] else if ((step == 5 &&
+                    selectedZone != null &&
+                    selectedZone.sorties.isEmpty) ||
+                step == 6) ...[
+              const Text('Sélection du Poste',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               content,
             ],
@@ -530,9 +624,11 @@ static const Map<String, List<String>> machinesData = {
                     (step == 2 && selectedCategory != null) ||
                     (step == 3 && selectedType != null) ||
                     (step == 4 && selectedModel != null) ||
-                    (step == 5 && selectedZone != null && (selectedZone.sorties.isEmpty || selectedSortie != null)) ||
-                    (step == 6 && selectedPoste != null)
-                )
+                    (step == 5 &&
+                        selectedZone != null &&
+                        (selectedZone.sorties.isEmpty ||
+                            selectedSortie != null)) ||
+                    (step == 6 && selectedPoste != null))
                   ElevatedButton(
                     onPressed: () {
                       if (step == 0 && selectedMine != null) {
@@ -545,13 +641,23 @@ static const Map<String, List<String>> machinesData = {
                         goNext();
                       } else if (step == 4 && selectedModel != null) {
                         goNext();
-                      } else if (step == 5 && selectedZone != null && (selectedZone.sorties.isEmpty || selectedSortie != null)) {
+                      } else if (step == 5 &&
+                          selectedZone != null &&
+                          (selectedZone.sorties.isEmpty ||
+                              selectedSortie != null)) {
                         goNext();
-                      } else if ((step == 6 && selectedPoste != null) && canFinish) {
+                      } else if ((step == 6 && selectedPoste != null) &&
+                          canFinish) {
                         Navigator.of(context).pop();
                       }
                     },
-                    child: Text((step == 6 || (step == 5 && selectedZone != null && selectedZone.sorties.isEmpty)) && canFinish ? 'Terminer' : 'Suivant'),
+                    child: Text((step == 6 ||
+                                (step == 5 &&
+                                    selectedZone != null &&
+                                    selectedZone.sorties.isEmpty)) &&
+                            canFinish
+                        ? 'Terminer'
+                        : 'Suivant'),
                   ),
               ],
             ),
@@ -646,7 +752,8 @@ static const Map<String, List<String>> machinesData = {
           const SizedBox(height: 12),
           Text(
             errorText,
-            style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                color: AppColors.error, fontWeight: FontWeight.bold),
           ),
         ],
       ],
@@ -695,8 +802,6 @@ static const Map<String, List<String>> machinesData = {
     );
   }
 
-
-
   Future<void> _saveReport() async {
     setState(() {
       _isLoading = true;
@@ -718,9 +823,9 @@ static const Map<String, List<String>> machinesData = {
       } else {
         // Creation mode - save to database
         await _databaseHelper.insertReport(report);
-        
+
         if (!mounted) return;
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Rapport soumis avec succès'),
@@ -759,36 +864,37 @@ static const Map<String, List<String>> machinesData = {
       'Type': formData.selectedType,
       'Model': formData.selectedModel,
       'selectedPoste': formData.selectedPoste,
-      'Compteurs': formData.indexCompteurs
-          .asMap()
-          .entries
-          .where((entry) {
-            final compteur = entry.value;
-            return compteur.duree.isNotEmpty || compteur.note.isNotEmpty;
-          })
-          .map((entry) {
-            final compteur = entry.value;
-            final posteOrder = ['3ème', '1er', '2ème'];
-            return {
-              'duree': compteur.duree,
-              'note': compteur.note,
-              'poste': posteOrder[entry.key],
-            };
-          })
-          .toList(),
-      'Arrets': formData.ventilation.map((v) => {
-        'Arret': v.label,
-        'Début': v.duree,
-        'Fin': v.note,
+      'Compteurs': formData.indexCompteurs.asMap().entries.where((entry) {
+        final compteur = entry.value;
+        return compteur.duree.isNotEmpty || compteur.note.isNotEmpty;
+      }).map((entry) {
+        final compteur = entry.value;
+        final posteOrder = ['3ème', '1er', '2ème'];
+        return {
+          'duree': compteur.duree,
+          'note': compteur.note,
+          'poste': posteOrder[entry.key],
+        };
       }).toList(),
+      'Arrets': formData.ventilation
+          .map((v) => {
+                'Arret': v.label,
+                'Début': v.duree,
+                'Fin': v.note,
+              })
+          .toList(),
       'exploitation': formData.exploitation,
       'Répartition Travail': formData.repartitionTravail
-          .where((r) => r.chantier.isNotEmpty || r.temps.isNotEmpty || r.imputation.isNotEmpty)
+          .where((r) =>
+              r.chantier.isNotEmpty ||
+              r.temps.isNotEmpty ||
+              r.imputation.isNotEmpty)
           .map((r) => {
-        'Chantier': r.chantier,
-        'temps': r.temps,
-        'imputation': r.imputation,
-      }).toList(),
+                'Chantier': r.chantier,
+                'temps': r.temps,
+                'imputation': r.imputation,
+              })
+          .toList(),
       'personnel': {
         'conductr': formData.personnel.conducteur,
         'graisseur': formData.personnel.graisseur,
@@ -845,9 +951,14 @@ static const Map<String, List<String>> machinesData = {
     ],
   };
 
-  Widget _buildAddVentilationDialog(BuildContext context, {int? editIndex, VentilationItem? initialItem}) {
+  Widget _buildAddVentilationDialog(BuildContext context,
+      {int? editIndex, VentilationItem? initialItem}) {
     int step = 0;
-    String? selectedCategory = initialItem != null ? arretCategories.keys.firstWhere((cat) => arretCategories[cat]!.contains(initialItem.label), orElse: () => '') : null;
+    String? selectedCategory = initialItem != null
+        ? arretCategories.keys.firstWhere(
+            (cat) => arretCategories[cat]!.contains(initialItem.label),
+            orElse: () => '')
+        : null;
     String? selectedType = initialItem?.label;
     String startTime = initialItem?.duree ?? '';
     String endTime = initialItem?.note ?? '';
@@ -860,9 +971,11 @@ static const Map<String, List<String>> machinesData = {
               Expanded(
                 child: DropdownButtonFormField<String>(
                   value: selectedCategory,
-                  decoration: const InputDecoration(labelText: 'Catégorie', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(
+                      labelText: 'Catégorie', border: OutlineInputBorder()),
                   items: arretCategories.keys
-                      .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
+                      .map((cat) =>
+                          DropdownMenuItem(value: cat, child: Text(cat)))
                       .toList(),
                   onChanged: (value) {
                     setDialogState(() {
@@ -880,9 +993,11 @@ static const Map<String, List<String>> machinesData = {
               Expanded(
                 child: DropdownButtonFormField<String>(
                   value: selectedType,
-                  decoration: const InputDecoration(labelText: 'Type d\'arrêt', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(
+                      labelText: 'Type d\'arrêt', border: OutlineInputBorder()),
                   items: arretCategories[selectedCategory]!
-                      .map((type) => DropdownMenuItem(value: type, child: Text(type)))
+                      .map((type) =>
+                          DropdownMenuItem(value: type, child: Text(type)))
                       .toList(),
                   onChanged: (value) {
                     setDialogState(() {
@@ -902,7 +1017,8 @@ static const Map<String, List<String>> machinesData = {
               const SizedBox(height: 16),
               ListTile(
                 title: const Text('Heure début'),
-                subtitle: Text(startTime.isEmpty ? 'Sélectionner l\'heure' : startTime),
+                subtitle: Text(
+                    startTime.isEmpty ? 'Sélectionner l\'heure' : startTime),
                 trailing: const Icon(Icons.access_time),
                 onTap: () async {
                   final picked = await showDialog<TimeOfDay>(
@@ -918,13 +1034,16 @@ static const Map<String, List<String>> machinesData = {
                             is24HourMode: true,
                             isShowSeconds: false,
                             minutesInterval: 1,
-                            normalTextStyle: const TextStyle(fontSize: 18, color: Colors.black54),
-                            highlightedTextStyle: const TextStyle(fontSize: 24, color: Colors.black),
+                            normalTextStyle: const TextStyle(
+                                fontSize: 18, color: Colors.black54),
+                            highlightedTextStyle: const TextStyle(
+                                fontSize: 24, color: Colors.black),
                             spacing: 50,
                             itemHeight: 60,
                             isForce2Digits: true,
                             onTimeChange: (dateTime) {
-                              tempTime = TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
+                              tempTime = TimeOfDay(
+                                  hour: dateTime.hour, minute: dateTime.minute);
                             },
                           ),
                         ),
@@ -934,7 +1053,8 @@ static const Map<String, List<String>> machinesData = {
                             child: const Text('Annuler'),
                           ),
                           ElevatedButton(
-                            onPressed: () => Navigator.of(context).pop(tempTime),
+                            onPressed: () =>
+                                Navigator.of(context).pop(tempTime),
                             child: const Text('OK'),
                           ),
                         ],
@@ -943,7 +1063,8 @@ static const Map<String, List<String>> machinesData = {
                   );
                   if (picked != null) {
                     setDialogState(() {
-                      startTime = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                      startTime =
+                          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
                     });
                   }
                 },
@@ -951,7 +1072,8 @@ static const Map<String, List<String>> machinesData = {
               const SizedBox(height: 16),
               ListTile(
                 title: const Text('Heure fin'),
-                subtitle: Text(endTime.isEmpty ? 'Sélectionner l\'heure' : endTime),
+                subtitle:
+                    Text(endTime.isEmpty ? 'Sélectionner l\'heure' : endTime),
                 trailing: const Icon(Icons.access_time),
                 onTap: () async {
                   final picked = await showDialog<TimeOfDay>(
@@ -967,13 +1089,16 @@ static const Map<String, List<String>> machinesData = {
                             is24HourMode: true,
                             isShowSeconds: false,
                             minutesInterval: 1,
-                            normalTextStyle: const TextStyle(fontSize: 18, color: Colors.black54),
-                            highlightedTextStyle: const TextStyle(fontSize: 24, color: Colors.black),
+                            normalTextStyle: const TextStyle(
+                                fontSize: 18, color: Colors.black54),
+                            highlightedTextStyle: const TextStyle(
+                                fontSize: 24, color: Colors.black),
                             spacing: 50,
                             itemHeight: 60,
                             isForce2Digits: true,
                             onTimeChange: (dateTime) {
-                              tempTime = TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
+                              tempTime = TimeOfDay(
+                                  hour: dateTime.hour, minute: dateTime.minute);
                             },
                           ),
                         ),
@@ -983,7 +1108,8 @@ static const Map<String, List<String>> machinesData = {
                             child: const Text('Annuler'),
                           ),
                           ElevatedButton(
-                            onPressed: () => Navigator.of(context).pop(tempTime),
+                            onPressed: () =>
+                                Navigator.of(context).pop(tempTime),
                             child: const Text('OK'),
                           ),
                         ],
@@ -992,7 +1118,8 @@ static const Map<String, List<String>> machinesData = {
                   );
                   if (picked != null) {
                     setDialogState(() {
-                      endTime = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                      endTime =
+                          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
                     });
                   }
                 },
@@ -1007,15 +1134,18 @@ static const Map<String, List<String>> machinesData = {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (step == 0) ...[
-              const Text('Sélection de la catégorie', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Sélection de la catégorie',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               content,
             ] else if (step == 1) ...[
-              const Text('Sélection du type d\'arrêt', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Sélection du type d\'arrêt',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               content,
             ] else if (step == 2) ...[
-              const Text('Saisie des détails', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Saisie des détails',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               content,
             ],
@@ -1042,7 +1172,8 @@ static const Map<String, List<String>> machinesData = {
                         ? () {
                             setState(() {
                               if (editIndex != null) {
-                                formData.ventilation[editIndex] = VentilationItem(
+                                formData.ventilation[editIndex] =
+                                    VentilationItem(
                                   code: 0,
                                   label: selectedType!,
                                   duree: startTime,
@@ -1100,7 +1231,8 @@ static const Map<String, List<String>> machinesData = {
                 Stepper(
                   currentStep: _currentStep,
                   onStepContinue: () {
-                    if (_currentStep < 4) { // 5 steps: 0 to 4
+                    if (_currentStep < 4) {
+                      // 5 steps: 0 to 4
                       setState(() {
                         _currentStep += 1;
                       });
@@ -1114,7 +1246,8 @@ static const Map<String, List<String>> machinesData = {
                     }
                   },
                   controlsBuilder: (context, details) {
-                    if (_currentStep == 4) { // Last step
+                    if (_currentStep == 4) {
+                      // Last step
                       return Padding(
                         padding: const EdgeInsets.only(top: 16.0),
                         child: Row(
@@ -1137,11 +1270,11 @@ static const Map<String, List<String>> machinesData = {
                                     builder: (context) => AlertDialog(
                                       title: const Text('Confirmation'),
                                       content: const Text(
-                                        "When you click Done, the report will be saved on the reports page. If you want to send this report to the company, go to the reports page and send it from there."
-                                      ),
+                                          "When you click Done, the report will be saved on the reports page. If you want to send this report to the company, go to the reports page and send it from there."),
                                       actions: [
                                         ElevatedButton(
-                                          onPressed: () => Navigator.of(context).pop(true),
+                                          onPressed: () =>
+                                              Navigator.of(context).pop(true),
                                           child: const Text('Done'),
                                         ),
                                       ],
@@ -1152,10 +1285,13 @@ static const Map<String, List<String>> machinesData = {
                                     await _saveReport();
                                     if (!mounted) return;
                                     // After saving, pop to home page
-                                    navigator.popUntil((route) => route.isFirst);
+                                    navigator
+                                        .popUntil((route) => route.isFirst);
                                   }
                                 },
-                                child: Text(widget.isEditing ? 'Enregistrer' : 'Soumettre'),
+                                child: Text(widget.isEditing
+                                    ? 'Enregistrer'
+                                    : 'Soumettre'),
                               ),
                             ),
                           ],
@@ -1173,12 +1309,12 @@ static const Map<String, List<String>> machinesData = {
                                 child: const Text('Précédent'),
                               ),
                             ),
-                          if (_currentStep > 0)
-                            const SizedBox(width: 8),
+                          if (_currentStep > 0) const SizedBox(width: 8),
                           Expanded(
                             child: ElevatedButton(
                               onPressed: details.onStepContinue,
-                              child: Text(_currentStep == 3 ? 'Suivant' : 'Suivant'),
+                              child: Text(
+                                  _currentStep == 3 ? 'Suivant' : 'Suivant'),
                             ),
                           ),
                         ],
@@ -1192,7 +1328,8 @@ static const Map<String, List<String>> machinesData = {
                         children: [
                           const Text(
                             'ÉTAPE 1: DATE',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 16),
                           Card(
@@ -1231,7 +1368,9 @@ static const Map<String, List<String>> machinesData = {
                         ],
                       ),
                       isActive: _currentStep >= 0,
-                      state: _currentStep > 0 ? StepState.complete : StepState.indexed,
+                      state: _currentStep > 0
+                          ? StepState.complete
+                          : StepState.indexed,
                     ),
                     Step(
                       title: const Text('Info OIB/EE'),
@@ -1255,13 +1394,17 @@ static const Map<String, List<String>> machinesData = {
                                     showDialog(
                                       context: context,
                                       builder: (context) => AlertDialog(
-                                        title: const Text('Ajouter Info OIB/EE'),
+                                        title:
+                                            const Text('Ajouter Info OIB/EE'),
                                         content: SingleChildScrollView(
-                                          child: _buildHierarchicalSelectionDialog(context),
+                                          child:
+                                              _buildHierarchicalSelectionDialog(
+                                                  context),
                                         ),
                                         actions: [
                                           TextButton(
-                                            onPressed: () => Navigator.of(context).pop(),
+                                            onPressed: () =>
+                                                Navigator.of(context).pop(),
                                             child: const Text('Terminer'),
                                           ),
                                         ],
@@ -1271,9 +1414,12 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.add),
                                   label: const Text('Ajouter Info OIB/EE'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Theme.of(context).colorScheme.primary,
-                                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    backgroundColor:
+                                        Theme.of(context).colorScheme.primary,
+                                    foregroundColor:
+                                        Theme.of(context).colorScheme.onPrimary,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
                                   ),
                                 ),
                               ),
@@ -1289,7 +1435,8 @@ static const Map<String, List<String>> machinesData = {
                                       context: context,
                                       builder: (context) => AlertDialog(
                                         title: const Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text('Liste Info OIB/EE'),
                                           ],
@@ -1297,21 +1444,30 @@ static const Map<String, List<String>> machinesData = {
                                         content: SingleChildScrollView(
                                           child: Column(
                                             mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
-                                              _buildSummaryItem('Mine', formData.selectedMine),
-                                              _buildSummaryItem('Zone', formData.selectedZone),
-                                              _buildSummaryItem('Sortie', formData.selectedSortie),
-                                              _buildSummaryItem('Catégorie', formData.selectedCategory),
-                                              _buildSummaryItem('Type', formData.selectedType),
-                                              _buildSummaryItem('Modèle', formData.selectedModel),
-                                              _buildSummaryItem('Poste', formData.selectedPoste),
+                                              _buildSummaryItem('Mine',
+                                                  formData.selectedMine),
+                                              _buildSummaryItem('Zone',
+                                                  formData.selectedZone),
+                                              _buildSummaryItem('Sortie',
+                                                  formData.selectedSortie),
+                                              _buildSummaryItem('Catégorie',
+                                                  formData.selectedCategory),
+                                              _buildSummaryItem('Type',
+                                                  formData.selectedType),
+                                              _buildSummaryItem('Modèle',
+                                                  formData.selectedModel),
+                                              _buildSummaryItem('Poste',
+                                                  formData.selectedPoste),
                                             ],
                                           ),
                                         ),
                                         actions: [
                                           TextButton(
-                                            onPressed: () => Navigator.of(context).pop(),
+                                            onPressed: () =>
+                                                Navigator.of(context).pop(),
                                             child: const Text('Terminer'),
                                           ),
                                         ],
@@ -1321,9 +1477,14 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.list),
                                   label: const Text('Voir Info OIB/EE'),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Theme.of(context).colorScheme.primary,
-                                    side: BorderSide(color: Theme.of(context).colorScheme.primary),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    foregroundColor:
+                                        Theme.of(context).colorScheme.primary,
+                                    side: BorderSide(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
                                   ),
                                 ),
                               ),
@@ -1352,15 +1513,17 @@ static const Map<String, List<String>> machinesData = {
                                         content: SingleChildScrollView(
                                           child: Column(
                                             mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               _buildCompteurSection(),
                                             ],
-                                        ),
+                                          ),
                                         ),
                                         actions: [
                                           TextButton(
-                                            onPressed: () => Navigator.of(context).pop(),
+                                            onPressed: () =>
+                                                Navigator.of(context).pop(),
                                             child: const Text('Terminer'),
                                           ),
                                         ],
@@ -1370,9 +1533,12 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.add),
                                   label: const Text('Ajouter'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Theme.of(context).colorScheme.primary,
-                                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    backgroundColor:
+                                        Theme.of(context).colorScheme.primary,
+                                    foregroundColor:
+                                        Theme.of(context).colorScheme.onPrimary,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
                                   ),
                                 ),
                               ),
@@ -1385,43 +1551,63 @@ static const Map<String, List<String>> machinesData = {
                                 child: OutlinedButton.icon(
                                   onPressed: () {
                                     // Get the index of the selected poste
-                                    final selectedPosteIndex = posteOrder.indexOf(formData.selectedPoste);
+                                    final selectedPosteIndex = posteOrder
+                                        .indexOf(formData.selectedPoste);
                                     if (selectedPosteIndex == -1) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
                                         const SnackBar(
-                                          content: Text('Veuillez d\'abord sélectionner un poste'),
+                                          content: Text(
+                                              'Veuillez d\'abord sélectionner un poste'),
                                           backgroundColor: AppColors.warning,
                                         ),
                                       );
                                       return;
                                     }
-                                    final compteur = formData.indexCompteurs[selectedPosteIndex];
+                                    final compteur = formData
+                                        .indexCompteurs[selectedPosteIndex];
                                     final debut = _parseNumeric(compteur.duree);
                                     final fin = _parseNumeric(compteur.note);
-                                    final heureMarche = fin > debut ? (fin - debut) / 1 : 0.0; // Assuming compteur is in 1.0 hour units
+                                    final heureMarche = fin > debut
+                                        ? (fin - debut) / 1
+                                        : 0.0; // Assuming compteur is in 1.0 hour units
                                     showDialog(
                                       context: context,
                                       builder: (context) => AlertDialog(
                                         title: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
-                                            Text('Compteur - ${formData.selectedPoste} Poste'),
+                                            Text(
+                                                'Compteur - ${formData.selectedPoste} Poste'),
                                           ],
                                         ),
                                         content: SingleChildScrollView(
                                           child: Column(
                                             mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
-                                              _buildSummaryItem('Début', compteur.duree.isEmpty ? 'Non renseigné' : compteur.duree),
-                                              _buildSummaryItem('Fin', compteur.note.isEmpty ? 'Non renseigné' : compteur.note),
-                                              _buildSummaryItem('Heure de marche', '${heureMarche.toStringAsFixed(2)}h'),
+                                              _buildSummaryItem(
+                                                  'Début',
+                                                  compteur.duree.isEmpty
+                                                      ? 'Non renseigné'
+                                                      : compteur.duree),
+                                              _buildSummaryItem(
+                                                  'Fin',
+                                                  compteur.note.isEmpty
+                                                      ? 'Non renseigné'
+                                                      : compteur.note),
+                                              _buildSummaryItem(
+                                                  'Heure de marche',
+                                                  '${heureMarche.toStringAsFixed(2)}h'),
                                             ],
                                           ),
                                         ),
                                         actions: [
                                           TextButton(
-                                            onPressed: () => Navigator.of(context).pop(),
+                                            onPressed: () =>
+                                                Navigator.of(context).pop(),
                                             child: const Text('Terminer'),
                                           ),
                                         ],
@@ -1431,9 +1617,14 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.list),
                                   label: const Text('Voir'),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Theme.of(context).colorScheme.primary,
-                                    side: BorderSide(color: Theme.of(context).colorScheme.primary),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    foregroundColor:
+                                        Theme.of(context).colorScheme.primary,
+                                    side: BorderSide(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
                                   ),
                                 ),
                               ),
@@ -1442,7 +1633,9 @@ static const Map<String, List<String>> machinesData = {
                         ],
                       ),
                       isActive: _currentStep >= 1,
-                      state: _currentStep > 1 ? StepState.complete : StepState.indexed,
+                      state: _currentStep > 1
+                          ? StepState.complete
+                          : StepState.indexed,
                     ),
                     Step(
                       title: const Text('Arrêts'),
@@ -1468,7 +1661,8 @@ static const Map<String, List<String>> machinesData = {
                                       builder: (context) => AlertDialog(
                                         title: const Text('Ajouter'),
                                         content: SingleChildScrollView(
-                                          child: _buildAddVentilationDialog(context),
+                                          child: _buildAddVentilationDialog(
+                                              context),
                                         ),
                                       ),
                                     );
@@ -1476,9 +1670,12 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.add),
                                   label: const Text('Ajouter'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Theme.of(context).colorScheme.primary,
-                                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    backgroundColor:
+                                        Theme.of(context).colorScheme.primary,
+                                    foregroundColor:
+                                        Theme.of(context).colorScheme.onPrimary,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
                                   ),
                                 ),
                               ),
@@ -1493,9 +1690,11 @@ static const Map<String, List<String>> machinesData = {
                                     showDialog(
                                       context: context,
                                       builder: (context) => StatefulBuilder(
-                                        builder: (context, setDialogState) => AlertDialog(
+                                        builder: (context, setDialogState) =>
+                                            AlertDialog(
                                           title: const Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
                                             children: [
                                               Text('Liste Arrêts'),
                                             ],
@@ -1503,91 +1702,177 @@ static const Map<String, List<String>> machinesData = {
                                           content: SingleChildScrollView(
                                             child: Column(
                                               mainAxisSize: MainAxisSize.min,
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: formData.ventilation.isEmpty ||
-                                                      formData.ventilation.every((v) => v.label.isEmpty && v.duree.isEmpty && v.note.isEmpty)
-                                                  ? [const Text('Aucun arrêt ajouté.')]
-                                                  : List.generate(formData.ventilation.length, (index) {
-                                                      final v = formData.ventilation[index];
-                                                      if ((v.label.isEmpty && v.duree.isEmpty && v.note.isEmpty)) {
-                                                        return const SizedBox.shrink();
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: formData.ventilation
+                                                          .isEmpty ||
+                                                      formData.ventilation
+                                                          .every((v) =>
+                                                              v.label.isEmpty &&
+                                                              v.duree.isEmpty &&
+                                                              v.note.isEmpty)
+                                                  ? [
+                                                      const Text(
+                                                          'Aucun arrêt ajouté.')
+                                                    ]
+                                                  : List.generate(
+                                                      formData.ventilation
+                                                          .length, (index) {
+                                                      final v = formData
+                                                          .ventilation[index];
+                                                      if ((v.label.isEmpty &&
+                                                          v.duree.isEmpty &&
+                                                          v.note.isEmpty)) {
+                                                        return const SizedBox
+                                                            .shrink();
                                                       }
                                                       return Row(
-                                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .spaceBetween,
                                                         children: [
                                                           Expanded(
                                                             child: Column(
-                                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                                              crossAxisAlignment:
+                                                                  CrossAxisAlignment
+                                                                      .start,
                                                               children: [
-                                                                Text('Type: ${v.label}'),
-                                                                Text('Début: ${v.duree}'),
-                                                                Text('Fin: ${v.note}'),
+                                                                Text(
+                                                                    'Type: ${v.label}'),
+                                                                Text(
+                                                                    'Début: ${v.duree}'),
+                                                                Text(
+                                                                    'Fin: ${v.note}'),
                                                               ],
                                                             ),
                                                           ),
-                                                          PopupMenuButton<String>(
-                                                            icon: const Icon(Icons.more_horiz, size: 20),
-                                                            padding: EdgeInsets.zero,
-                                                            shape: RoundedRectangleBorder(
-                                                              borderRadius: BorderRadius.circular(8),
+                                                          PopupMenuButton<
+                                                              String>(
+                                                            icon: const Icon(
+                                                                Icons
+                                                                    .more_horiz,
+                                                                size: 20),
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                            shape:
+                                                                RoundedRectangleBorder(
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          8),
                                                             ),
-                                                            position: PopupMenuPosition.under,
-                                                            itemBuilder: (BuildContext context) => [
-                                                              PopupMenuItem<String>(
+                                                            position:
+                                                                PopupMenuPosition
+                                                                    .under,
+                                                            itemBuilder:
+                                                                (BuildContext
+                                                                        context) =>
+                                                                    [
+                                                              PopupMenuItem<
+                                                                  String>(
                                                                 value: 'edit',
                                                                 height: 36,
                                                                 child: Row(
-                                                                  mainAxisSize: MainAxisSize.min,
+                                                                  mainAxisSize:
+                                                                      MainAxisSize
+                                                                          .min,
                                                                   children: [
-                                                                    Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
-                                                                    const SizedBox(width: 8),
+                                                                    Icon(
+                                                                        Icons
+                                                                            .edit,
+                                                                        size:
+                                                                            18,
+                                                                        color: Theme.of(context)
+                                                                            .colorScheme
+                                                                            .primary),
+                                                                    const SizedBox(
+                                                                        width:
+                                                                            8),
                                                                     Text(
                                                                       'Modifier',
-                                                                      style: TextStyle(
-                                                                        color: Theme.of(context).colorScheme.primary,
-                                                                        fontSize: 14,
+                                                                      style:
+                                                                          TextStyle(
+                                                                        color: Theme.of(context)
+                                                                            .colorScheme
+                                                                            .primary,
+                                                                        fontSize:
+                                                                            14,
                                                                       ),
                                                                     ),
                                                                   ],
                                                                 ),
                                                               ),
-                                                              PopupMenuItem<String>(
+                                                              PopupMenuItem<
+                                                                  String>(
                                                                 value: 'delete',
                                                                 height: 36,
                                                                 child: Row(
-                                                                  mainAxisSize: MainAxisSize.min,
+                                                                  mainAxisSize:
+                                                                      MainAxisSize
+                                                                          .min,
                                                                   children: [
-                                                                    Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
-                                                                    const SizedBox(width: 8),
+                                                                    Icon(
+                                                                        Icons
+                                                                            .delete_outline,
+                                                                        size:
+                                                                            18,
+                                                                        color: Theme.of(context)
+                                                                            .colorScheme
+                                                                            .error),
+                                                                    const SizedBox(
+                                                                        width:
+                                                                            8),
                                                                     Text(
                                                                       'Supprimer',
-                                                                      style: TextStyle(
-                                                                        color: Theme.of(context).colorScheme.error,
-                                                                        fontSize: 14,
+                                                                      style:
+                                                                          TextStyle(
+                                                                        color: Theme.of(context)
+                                                                            .colorScheme
+                                                                            .error,
+                                                                        fontSize:
+                                                                            14,
                                                                       ),
                                                                     ),
                                                                   ],
                                                                 ),
                                                               ),
                                                             ],
-                                                            onSelected: (value) async {
-                                                              if (value == 'edit') {
+                                                            onSelected:
+                                                                (value) async {
+                                                              if (value ==
+                                                                  'edit') {
                                                                 // Open the add/edit dialog pre-filled with v's data
                                                                 await showDialog(
-                                                                  context: context,
-                                                                  builder: (context) => AlertDialog(
-                                                                    title: const Text('Modifier Arrêt'),
-                                                                    content: SingleChildScrollView(
-                                                                      child: _buildAddVentilationDialog(context, editIndex: index, initialItem: v),
+                                                                  context:
+                                                                      context,
+                                                                  builder:
+                                                                      (context) =>
+                                                                          AlertDialog(
+                                                                    title: const Text(
+                                                                        'Modifier Arrêt'),
+                                                                    content:
+                                                                        SingleChildScrollView(
+                                                                      child: _buildAddVentilationDialog(
+                                                                          context,
+                                                                          editIndex:
+                                                                              index,
+                                                                          initialItem:
+                                                                              v),
                                                                     ),
                                                                   ),
                                                                 );
-                                                                setDialogState(() {}); // Refresh
-                                                              } else if (value == 'delete') {
+                                                                setDialogState(
+                                                                    () {}); // Refresh
+                                                              } else if (value ==
+                                                                  'delete') {
                                                                 setState(() {
-                                                                  formData.ventilation.removeAt(index);
+                                                                  formData
+                                                                      .ventilation
+                                                                      .removeAt(
+                                                                          index);
                                                                 });
-                                                                setDialogState(() {}); // Refresh
+                                                                setDialogState(
+                                                                    () {}); // Refresh
                                                               }
                                                             },
                                                           ),
@@ -1598,7 +1883,8 @@ static const Map<String, List<String>> machinesData = {
                                           ),
                                           actions: [
                                             TextButton(
-                                              onPressed: () => Navigator.of(context).pop(),
+                                              onPressed: () =>
+                                                  Navigator.of(context).pop(),
                                               child: const Text('Terminer'),
                                             ),
                                           ],
@@ -1609,9 +1895,14 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.list),
                                   label: const Text('Voir'),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Theme.of(context).colorScheme.primary,
-                                    side: BorderSide(color: Theme.of(context).colorScheme.primary),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    foregroundColor:
+                                        Theme.of(context).colorScheme.primary,
+                                    side: BorderSide(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
                                   ),
                                 ),
                               ),
@@ -1620,7 +1911,9 @@ static const Map<String, List<String>> machinesData = {
                         ],
                       ),
                       isActive: _currentStep >= 2,
-                      state: _currentStep > 2 ? StepState.complete : StepState.indexed,
+                      state: _currentStep > 2
+                          ? StepState.complete
+                          : StepState.indexed,
                     ),
                     Step(
                       title: const Text('Exploitation'),
@@ -1647,21 +1940,84 @@ static const Map<String, List<String>> machinesData = {
                                         int subStep = 0;
                                         // --- Persistent controllers for all fields ---
                                         // Exploitation
-                                        final TextEditingController heuresBrutesController = TextEditingController(text: formData.exploitation['H.M']);
-                                        final TextEditingController heuresArretsController = TextEditingController(text: formData.exploitation['H.A']);
-                                        final TextEditingController tonnageController = TextEditingController(text: formData.exploitation['Tonnage']);
-                                        final TextEditingController rendementController = TextEditingController(text: formData.exploitation['Rendeme']);
+                                        final TextEditingController
+                                            heuresBrutesController =
+                                            TextEditingController(
+                                                text: formData
+                                                    .exploitation['H.M']);
+                                        final TextEditingController
+                                            heuresArretsController =
+                                            TextEditingController(
+                                                text: formData
+                                                    .exploitation['H.A']);
+                                        final TextEditingController
+                                            tonnageController =
+                                            TextEditingController(
+                                                text: formData
+                                                    .exploitation['Tonnage']);
+                                        final TextEditingController
+                                            rendementController =
+                                            TextEditingController(
+                                                text: formData
+                                                    .exploitation['Rendeme']);
                                         // Répartition
-                                        final TextEditingController chantierController = TextEditingController(text: formData.repartitionTravail.isNotEmpty ? formData.repartitionTravail[0].chantier : '');
-                                        final TextEditingController tempsController = TextEditingController(text: formData.repartitionTravail.isNotEmpty ? formData.repartitionTravail[0].temps : '');
-                                        final TextEditingController imputationController = TextEditingController(text: formData.repartitionTravail.isNotEmpty ? formData.repartitionTravail[0].imputation : '');
+                                        final TextEditingController
+                                            chantierController =
+                                            TextEditingController(
+                                                text: formData
+                                                        .repartitionTravail
+                                                        .isNotEmpty
+                                                    ? formData
+                                                        .repartitionTravail[0]
+                                                        .chantier
+                                                    : '');
+                                        final TextEditingController
+                                            tempsController =
+                                            TextEditingController(
+                                                text: formData
+                                                        .repartitionTravail
+                                                        .isNotEmpty
+                                                    ? formData
+                                                        .repartitionTravail[0]
+                                                        .temps
+                                                    : '');
+                                        final TextEditingController
+                                            imputationController =
+                                            TextEditingController(
+                                                text: formData
+                                                        .repartitionTravail
+                                                        .isNotEmpty
+                                                    ? formData
+                                                        .repartitionTravail[0]
+                                                        .imputation
+                                                    : '');
                                         // Personnel
-                                        final TextEditingController conducteurController = TextEditingController(text: formData.personnel.conducteur);
-                                        final TextEditingController graisseurController = TextEditingController(text: formData.personnel.graisseur);
-                                        final TextEditingController matriculesController = TextEditingController(text: formData.personnel.matricules);
+                                        final TextEditingController
+                                            conducteurController =
+                                            TextEditingController(
+                                                text: formData
+                                                    .personnel.conducteur);
+                                        final TextEditingController
+                                            graisseurController =
+                                            TextEditingController(
+                                                text: formData
+                                                    .personnel.graisseur);
+                                        final TextEditingController
+                                            matriculesController =
+                                            TextEditingController(
+                                                text: formData
+                                                    .personnel.matricules);
                                         // Consommation
-                                        final TextEditingController triconeController = TextEditingController(text: formData.consommation.tricone);
-                                        final TextEditingController gasoilController = TextEditingController(text: formData.consommation.gasoil);
+                                        final TextEditingController
+                                            triconeController =
+                                            TextEditingController(
+                                                text: formData
+                                                    .consommation.tricone);
+                                        final TextEditingController
+                                            gasoilController =
+                                            TextEditingController(
+                                                text: formData
+                                                    .consommation.gasoil);
                                         return StatefulBuilder(
                                           builder: (context, setDialogState) {
                                             Widget content;
@@ -1670,50 +2026,72 @@ static const Map<String, List<String>> machinesData = {
                                               case 0:
                                                 title = 'Exploitation';
                                                 content = Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
-                                                    Text('Exploitation', style: Theme.of(context).textTheme.titleLarge),
+                                                    Text('Exploitation',
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .titleLarge),
                                                     const SizedBox(height: 16),
                                                     TextFormField(
-                                                      decoration: InputDecoration(
-                                                        labelText: 'Heures marche',
-                                                        border: const OutlineInputBorder(),
+                                                      decoration:
+                                                          InputDecoration(
+                                                        labelText:
+                                                            'Heures marche',
+                                                        border:
+                                                            const OutlineInputBorder(),
                                                         suffixText: 'h',
                                                         filled: true,
-                                                        fillColor: Colors.grey[100],
+                                                        fillColor:
+                                                            Colors.grey[100],
                                                       ),
                                                       readOnly: true,
-                                                      controller: heuresBrutesController,
+                                                      controller:
+                                                          heuresBrutesController,
                                                     ),
                                                     const SizedBox(height: 16),
                                                     TextFormField(
-                                                      decoration: InputDecoration(
-                                                        labelText: 'Heures Arrêts',
-                                                        border: const OutlineInputBorder(),
+                                                      decoration:
+                                                          InputDecoration(
+                                                        labelText:
+                                                            'Heures Arrêts',
+                                                        border:
+                                                            const OutlineInputBorder(),
                                                         suffixText: 'h',
                                                         filled: true,
-                                                        fillColor: Colors.grey[100],
+                                                        fillColor:
+                                                            Colors.grey[100],
                                                       ),
                                                       readOnly: true,
-                                                      controller: heuresArretsController,
+                                                      controller:
+                                                          heuresArretsController,
                                                     ),
                                                     const SizedBox(height: 16),
                                                     TextFormField(
-                                                      decoration: const InputDecoration(
+                                                      decoration:
+                                                          const InputDecoration(
                                                         labelText: 'Tonnage',
-                                                        border: OutlineInputBorder(),
+                                                        border:
+                                                            OutlineInputBorder(),
                                                       ),
-                                                      keyboardType: TextInputType.number,
-                                                      controller: tonnageController,
+                                                      keyboardType:
+                                                          TextInputType.number,
+                                                      controller:
+                                                          tonnageController,
                                                     ),
                                                     const SizedBox(height: 16),
                                                     TextFormField(
-                                                      decoration: const InputDecoration(
+                                                      decoration:
+                                                          const InputDecoration(
                                                         labelText: 'Rendement',
-                                                        border: OutlineInputBorder(),
+                                                        border:
+                                                            OutlineInputBorder(),
                                                       ),
-                                                      keyboardType: TextInputType.number,
-                                                      controller: rendementController,
+                                                      keyboardType:
+                                                          TextInputType.number,
+                                                      controller:
+                                                          rendementController,
                                                     ),
                                                   ],
                                                 );
@@ -1721,31 +2099,44 @@ static const Map<String, List<String>> machinesData = {
                                               case 1:
                                                 title = 'Répartition';
                                                 content = Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
-                                                    Text('Répartition', style: Theme.of(context).textTheme.titleMedium),
+                                                    Text('Répartition',
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .titleMedium),
                                                     const SizedBox(height: 16),
                                                     TextFormField(
-                                                      controller: chantierController,
-                                                      decoration: const InputDecoration(
+                                                      controller:
+                                                          chantierController,
+                                                      decoration:
+                                                          const InputDecoration(
                                                         labelText: 'Chantier',
-                                                        border: OutlineInputBorder(),
+                                                        border:
+                                                            OutlineInputBorder(),
                                                       ),
                                                     ),
                                                     const SizedBox(height: 16),
                                                     TextFormField(
-                                                      controller: tempsController,
-                                                      decoration: const InputDecoration(
+                                                      controller:
+                                                          tempsController,
+                                                      decoration:
+                                                          const InputDecoration(
                                                         labelText: 'Temps',
-                                                        border: OutlineInputBorder(),
+                                                        border:
+                                                            OutlineInputBorder(),
                                                       ),
                                                     ),
                                                     const SizedBox(height: 16),
                                                     TextFormField(
-                                                      controller: imputationController,
-                                                      decoration: const InputDecoration(
+                                                      controller:
+                                                          imputationController,
+                                                      decoration:
+                                                          const InputDecoration(
                                                         labelText: 'Imputation',
-                                                        border: OutlineInputBorder(),
+                                                        border:
+                                                            OutlineInputBorder(),
                                                       ),
                                                     ),
                                                   ],
@@ -1754,32 +2145,45 @@ static const Map<String, List<String>> machinesData = {
                                               case 2:
                                                 title = 'Personnel';
                                                 content = Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
-                                                    Text('Personnel', style: Theme.of(context).textTheme.titleLarge),
+                                                    Text('Personnel',
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .titleLarge),
                                                     const SizedBox(height: 16),
                                                     TextFormField(
-                                                      decoration: const InputDecoration(
+                                                      decoration:
+                                                          const InputDecoration(
                                                         labelText: 'Conductr',
-                                                        border: OutlineInputBorder(),
+                                                        border:
+                                                            OutlineInputBorder(),
                                                       ),
-                                                      controller: conducteurController,
+                                                      controller:
+                                                          conducteurController,
                                                     ),
                                                     const SizedBox(height: 16),
                                                     TextFormField(
-                                                      decoration: const InputDecoration(
+                                                      decoration:
+                                                          const InputDecoration(
                                                         labelText: 'Graisseur',
-                                                        border: OutlineInputBorder(),
+                                                        border:
+                                                            OutlineInputBorder(),
                                                       ),
-                                                      controller: graisseurController,
+                                                      controller:
+                                                          graisseurController,
                                                     ),
                                                     const SizedBox(height: 16),
                                                     TextFormField(
-                                                      decoration: const InputDecoration(
+                                                      decoration:
+                                                          const InputDecoration(
                                                         labelText: 'Matricules',
-                                                        border: OutlineInputBorder(),
+                                                        border:
+                                                            OutlineInputBorder(),
                                                       ),
-                                                      controller: matriculesController,
+                                                      controller:
+                                                          matriculesController,
                                                     ),
                                                   ],
                                                 );
@@ -1787,26 +2191,38 @@ static const Map<String, List<String>> machinesData = {
                                               case 3:
                                                 title = 'Consommation';
                                                 content = Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
-                                                    Text('Suivi Consommation', style: Theme.of(context).textTheme.titleLarge),
+                                                    Text('Suivi Consommation',
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .titleLarge),
                                                     const SizedBox(height: 16),
                                                     TextFormField(
-                                                      decoration: const InputDecoration(
+                                                      decoration:
+                                                          const InputDecoration(
                                                         labelText: 'Tricone',
-                                                        border: OutlineInputBorder(),
+                                                        border:
+                                                            OutlineInputBorder(),
                                                       ),
-                                                      keyboardType: TextInputType.number,
-                                                      controller: triconeController,
+                                                      keyboardType:
+                                                          TextInputType.number,
+                                                      controller:
+                                                          triconeController,
                                                     ),
                                                     const SizedBox(height: 16),
                                                     TextFormField(
-                                                      decoration: const InputDecoration(
+                                                      decoration:
+                                                          const InputDecoration(
                                                         labelText: 'Gasoil',
-                                                        border: OutlineInputBorder(),
+                                                        border:
+                                                            OutlineInputBorder(),
                                                       ),
-                                                      keyboardType: TextInputType.number,
-                                                      controller: gasoilController,
+                                                      keyboardType:
+                                                          TextInputType.number,
+                                                      controller:
+                                                          gasoilController,
                                                     ),
                                                   ],
                                                 );
@@ -1823,45 +2239,90 @@ static const Map<String, List<String>> machinesData = {
                                               actions: [
                                                 if (subStep > 0)
                                                   TextButton(
-                                                    onPressed: () => setDialogState(() => subStep--),
-                                                    child: const Text('Précédent'),
+                                                    onPressed: () =>
+                                                        setDialogState(
+                                                            () => subStep--),
+                                                    child:
+                                                        const Text('Précédent'),
                                                   ),
                                                 if (subStep < 3)
                                                   ElevatedButton(
                                                     onPressed: () {
                                                       // Save data for the current sub-step before moving forward
                                                       if (subStep == 0) {
-                                                        formData.exploitation['H.M'] = heuresBrutesController.text;
-                                                        formData.exploitation['H.A'] = heuresArretsController.text;
-                                                        formData.exploitation['Tonnage'] = tonnageController.text;
-                                                        formData.exploitation['Rendeme'] = rendementController.text;
+                                                        formData.exploitation[
+                                                                'H.M'] =
+                                                            heuresBrutesController
+                                                                .text;
+                                                        formData.exploitation[
+                                                                'H.A'] =
+                                                            heuresArretsController
+                                                                .text;
+                                                        formData.exploitation[
+                                                                'Tonnage'] =
+                                                            tonnageController
+                                                                .text;
+                                                        formData.exploitation[
+                                                                'Rendeme'] =
+                                                            rendementController
+                                                                .text;
                                                       } else if (subStep == 1) {
-                                                        if (formData.repartitionTravail.isEmpty) {
-                                                          formData.repartitionTravail.add(RepartitionItem());
+                                                        if (formData
+                                                            .repartitionTravail
+                                                            .isEmpty) {
+                                                          formData
+                                                              .repartitionTravail
+                                                              .add(
+                                                                  RepartitionItem());
                                                         }
-                                                        formData.repartitionTravail[0] = RepartitionItem(
-                                                          chantier: chantierController.text,
-                                                          temps: tempsController.text,
-                                                          imputation: imputationController.text,
+                                                        formData.repartitionTravail[
+                                                                0] =
+                                                            RepartitionItem(
+                                                          chantier:
+                                                              chantierController
+                                                                  .text,
+                                                          temps: tempsController
+                                                              .text,
+                                                          imputation:
+                                                              imputationController
+                                                                  .text,
                                                         );
                                                       } else if (subStep == 2) {
-                                                        formData.personnel.conducteur = conducteurController.text;
-                                                        formData.personnel.graisseur = graisseurController.text;
-                                                        formData.personnel.matricules = matriculesController.text;
+                                                        formData.personnel
+                                                                .conducteur =
+                                                            conducteurController
+                                                                .text;
+                                                        formData.personnel
+                                                                .graisseur =
+                                                            graisseurController
+                                                                .text;
+                                                        formData.personnel
+                                                                .matricules =
+                                                            matriculesController
+                                                                .text;
                                                       }
-                                                      setDialogState(() => subStep++);
+                                                      setDialogState(
+                                                          () => subStep++);
                                                     },
-                                                    child: const Text('Suivant'),
+                                                    child:
+                                                        const Text('Suivant'),
                                                   ),
                                                 if (subStep == 3)
                                                   ElevatedButton(
                                                     onPressed: () {
                                                       // Save data for the last sub-step
-                                                      formData.consommation.tricone = triconeController.text;
-                                                      formData.consommation.gasoil = gasoilController.text;
-                                                      Navigator.of(context).pop();
+                                                      formData.consommation
+                                                              .tricone =
+                                                          triconeController
+                                                              .text;
+                                                      formData.consommation
+                                                              .gasoil =
+                                                          gasoilController.text;
+                                                      Navigator.of(context)
+                                                          .pop();
                                                     },
-                                                    child: const Text('Terminer'),
+                                                    child:
+                                                        const Text('Terminer'),
                                                   ),
                                               ],
                                             );
@@ -1873,9 +2334,12 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.add),
                                   label: const Text('Ajouter'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Theme.of(context).colorScheme.primary,
-                                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    backgroundColor:
+                                        Theme.of(context).colorScheme.primary,
+                                    foregroundColor:
+                                        Theme.of(context).colorScheme.onPrimary,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
                                   ),
                                 ),
                               ),
@@ -1891,7 +2355,8 @@ static const Map<String, List<String>> machinesData = {
                                       context: context,
                                       builder: (context) => AlertDialog(
                                         title: const Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text('Liste'),
                                           ],
@@ -1899,37 +2364,76 @@ static const Map<String, List<String>> machinesData = {
                                         content: SingleChildScrollView(
                                           child: Column(
                                             mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               // Exploitation Section
-                                              Text('Exploitation', style: Theme.of(context).textTheme.titleMedium),
+                                              Text('Exploitation',
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .titleMedium),
                                               const Divider(height: 16),
-                                              Text('Heures marche: ${formData.exploitation['H.M']}'),
-                                              Text('Heures Arrêts: ${formData.exploitation['H.A']}'),
-                                              Text('Tonnage: ${formData.exploitation['Tonnage']}t'),
-                                              Text('Rendeme: ${formData.exploitation['Rendeme']}%'),
+                                              Text(
+                                                  'Heures marche: ${formData.exploitation['H.M']}'),
+                                              Text(
+                                                  'Heures Arrêts: ${formData.exploitation['H.A']}'),
+                                              Text(
+                                                  'Tonnage: ${formData.exploitation['Tonnage']}t'),
+                                              Text(
+                                                  'Rendeme: ${formData.exploitation['Rendeme']}%'),
                                               const SizedBox(height: 20),
                                               // Répartition Section
-                                              Text('Répartition', style: Theme.of(context).textTheme.titleMedium),
+                                              Text('Répartition',
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .titleMedium),
                                               const Divider(height: 16),
                                               ...(() {
-                                                final List<RepartitionItem> nonEmptyRepartitions = formData.repartitionTravail
-                                                    .where((r) => r.chantier.isNotEmpty || r.temps.isNotEmpty || r.imputation.isNotEmpty)
-                                                    .toList();
-                                                if (nonEmptyRepartitions.isEmpty) {
-                                                  return [const Text('Aucune répartition ajoutée.')];
+                                                final List<RepartitionItem>
+                                                    nonEmptyRepartitions =
+                                                    formData.repartitionTravail
+                                                        .where((r) =>
+                                                            r.chantier
+                                                                .isNotEmpty ||
+                                                            r.temps
+                                                                .isNotEmpty ||
+                                                            r.imputation
+                                                                .isNotEmpty)
+                                                        .toList();
+                                                if (nonEmptyRepartitions
+                                                    .isEmpty) {
+                                                  return [
+                                                    const Text(
+                                                        'Aucune répartition ajoutée.')
+                                                  ];
                                                 }
-                                                return List.generate(nonEmptyRepartitions.length, (index) {
-                                                  final r = nonEmptyRepartitions[index];
+                                                return List.generate(
+                                                    nonEmptyRepartitions.length,
+                                                    (index) {
+                                                  final r =
+                                                      nonEmptyRepartitions[
+                                                          index];
                                                   return Padding(
-                                                    padding: const EdgeInsets.only(bottom: 8.0),
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                            bottom: 8.0),
                                                     child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
                                                       children: [
-                                                        Text('Chantier: ${r.chantier}'),
-                                                        Text('Temps: ${r.temps}'),
-                                                        Text('Imputation: ${r.imputation}'),
-                                                        if (index < nonEmptyRepartitions.length - 1) const Divider(height: 12),
+                                                        Text(
+                                                            'Chantier: ${r.chantier}'),
+                                                        Text(
+                                                            'Temps: ${r.temps}'),
+                                                        Text(
+                                                            'Imputation: ${r.imputation}'),
+                                                        if (index <
+                                                            nonEmptyRepartitions
+                                                                    .length -
+                                                                1)
+                                                          const Divider(
+                                                              height: 12),
                                                       ],
                                                     ),
                                                   );
@@ -1937,32 +2441,59 @@ static const Map<String, List<String>> machinesData = {
                                               })(),
                                               const SizedBox(height: 20),
                                               // Personnel Section
-                                              Text('Personnel', style: Theme.of(context).textTheme.titleMedium),
+                                              Text('Personnel',
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .titleMedium),
                                               const Divider(height: 16),
-                                              if (formData.personnel.conducteur.isNotEmpty)
-                                                Text('Conductr: ${formData.personnel.conducteur}'),
-                                              if (formData.personnel.graisseur.isNotEmpty)
-                                                Text('Graisseur: ${formData.personnel.graisseur}'),
-                                              if (formData.personnel.matricules.isNotEmpty)
-                                                Text('Matricules: ${formData.personnel.matricules}'),
-                                              if (formData.personnel.conducteur.isEmpty && formData.personnel.graisseur.isEmpty && formData.personnel.matricules.isEmpty)
-                                                const Text('Aucun personnel renseigné.'),
+                                              if (formData.personnel.conducteur
+                                                  .isNotEmpty)
+                                                Text(
+                                                    'Conductr: ${formData.personnel.conducteur}'),
+                                              if (formData.personnel.graisseur
+                                                  .isNotEmpty)
+                                                Text(
+                                                    'Graisseur: ${formData.personnel.graisseur}'),
+                                              if (formData.personnel.matricules
+                                                  .isNotEmpty)
+                                                Text(
+                                                    'Matricules: ${formData.personnel.matricules}'),
+                                              if (formData.personnel.conducteur
+                                                      .isEmpty &&
+                                                  formData.personnel.graisseur
+                                                      .isEmpty &&
+                                                  formData.personnel.matricules
+                                                      .isEmpty)
+                                                const Text(
+                                                    'Aucun personnel renseigné.'),
                                               const SizedBox(height: 20),
                                               // Consommation Section
-                                              Text('Consommation', style: Theme.of(context).textTheme.titleMedium),
+                                              Text('Consommation',
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .titleMedium),
                                               const Divider(height: 16),
-                                              if (formData.consommation.tricone.isNotEmpty)
-                                                Text('Tricone: ${formData.consommation.tricone}'),
-                                              if (formData.consommation.gasoil.isNotEmpty)
-                                                Text('Gasoil: ${formData.consommation.gasoil}'),
-                                              if (formData.consommation.tricone.isEmpty && formData.consommation.gasoil.isEmpty)
-                                                const Text('Aucune consommation renseignée.'),
+                                              if (formData.consommation.tricone
+                                                  .isNotEmpty)
+                                                Text(
+                                                    'Tricone: ${formData.consommation.tricone}'),
+                                              if (formData.consommation.gasoil
+                                                  .isNotEmpty)
+                                                Text(
+                                                    'Gasoil: ${formData.consommation.gasoil}'),
+                                              if (formData.consommation.tricone
+                                                      .isEmpty &&
+                                                  formData.consommation.gasoil
+                                                      .isEmpty)
+                                                const Text(
+                                                    'Aucune consommation renseignée.'),
                                             ],
                                           ),
                                         ),
                                         actions: [
                                           TextButton(
-                                            onPressed: () => Navigator.of(context).pop(),
+                                            onPressed: () =>
+                                                Navigator.of(context).pop(),
                                             child: const Text('Terminer'),
                                           ),
                                         ],
@@ -1972,9 +2503,14 @@ static const Map<String, List<String>> machinesData = {
                                   icon: const Icon(Icons.list),
                                   label: const Text('Voir'),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Theme.of(context).colorScheme.primary,
-                                    side: BorderSide(color: Theme.of(context).colorScheme.primary),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    foregroundColor:
+                                        Theme.of(context).colorScheme.primary,
+                                    side: BorderSide(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
                                   ),
                                 ),
                               ),
@@ -1983,7 +2519,9 @@ static const Map<String, List<String>> machinesData = {
                         ],
                       ),
                       isActive: _currentStep >= 3,
-                      state: _currentStep > 3 ? StepState.complete : StepState.indexed,
+                      state: _currentStep > 3
+                          ? StepState.complete
+                          : StepState.indexed,
                     ),
                     Step(
                       title: const Text('Vérification'),
@@ -2005,19 +2543,25 @@ static const Map<String, List<String>> machinesData = {
                                 context: context,
                                 builder: (BuildContext context) {
                                   return Dialog(
-                                    insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                                    insetPadding: const EdgeInsets.symmetric(
+                                        horizontal: 20, vertical: 20),
                                     child: ConstrainedBox(
                                       constraints: BoxConstraints(
                                         maxWidth: 600,
-                                        maxHeight: MediaQuery.of(context).size.height * 0.6,
+                                        maxHeight:
+                                            MediaQuery.of(context).size.height *
+                                                0.6,
                                       ),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
                                           const Padding(
-                                            padding: EdgeInsets.fromLTRB(14, 10, 6, 10),
+                                            padding: EdgeInsets.fromLTRB(
+                                                14, 10, 6, 10),
                                             child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
                                               children: [
                                                 Text(
                                                   'Vérification du Rapport R0',
@@ -2034,13 +2578,16 @@ static const Map<String, List<String>> machinesData = {
                                             child: SingleChildScrollView(
                                               padding: const EdgeInsets.all(16),
                                               child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
                                                   // Date Section
                                                   Card(
                                                     margin: EdgeInsets.zero,
                                                     child: Padding(
-                                                      padding: const EdgeInsets.all(16),
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              16),
                                                       child: _buildSummaryItem(
                                                         'Date',
                                                         '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
@@ -2052,54 +2599,118 @@ static const Map<String, List<String>> machinesData = {
                                                   Card(
                                                     margin: EdgeInsets.zero,
                                                     child: Padding(
-                                                      padding: const EdgeInsets.all(16),
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              16),
                                                       child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
                                                         children: [
-                                                          const Text('Info OIB/EE', style: TextStyle(fontWeight: FontWeight.bold)),
-                                                          const Divider(height: 16),
-                                                          _buildSummaryItem('Mine', formData.selectedMine),
-                                                          _buildSummaryItem('Zone', formData.selectedZone),
-                                                          _buildSummaryItem('Sortie', formData.selectedSortie),
-                                                          _buildSummaryItem('Catégorie', formData.selectedCategory),
-                                                          _buildSummaryItem('Type', formData.selectedType),
-                                                          _buildSummaryItem('Modèle', formData.selectedModel),
-                                                          _buildSummaryItem('Poste', formData.selectedPoste),
+                                                          const Text(
+                                                              'Info OIB/EE',
+                                                              style: TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold)),
+                                                          const Divider(
+                                                              height: 16),
+                                                          _buildSummaryItem(
+                                                              'Mine',
+                                                              formData
+                                                                  .selectedMine),
+                                                          _buildSummaryItem(
+                                                              'Zone',
+                                                              formData
+                                                                  .selectedZone),
+                                                          _buildSummaryItem(
+                                                              'Sortie',
+                                                              formData
+                                                                  .selectedSortie),
+                                                          _buildSummaryItem(
+                                                              'Catégorie',
+                                                              formData
+                                                                  .selectedCategory),
+                                                          _buildSummaryItem(
+                                                              'Type',
+                                                              formData
+                                                                  .selectedType),
+                                                          _buildSummaryItem(
+                                                              'Modèle',
+                                                              formData
+                                                                  .selectedModel),
+                                                          _buildSummaryItem(
+                                                              'Poste',
+                                                              formData
+                                                                  .selectedPoste),
                                                         ],
                                                       ),
                                                     ),
                                                   ),
                                                   const SizedBox(height: 16),
                                                   // Compteurs Section
-                                                   Card(
+                                                  Card(
                                                     margin: EdgeInsets.zero,
                                                     child: Padding(
-                                                      padding: const EdgeInsets.all(16),
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              16),
                                                       child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
                                                         children: [
                                                           Text(
                                                             'Compteurs',
-                                                            style: Theme.of(context).textTheme.titleMedium,
+                                                            style: Theme.of(
+                                                                    context)
+                                                                .textTheme
+                                                                .titleMedium,
                                                           ),
-                                                          const Divider(height: 16),
-                                                          ...List.generate(formData.indexCompteurs.length, (index) {
-                                                             final compteur = formData.indexCompteurs[index];
-                                                             if (compteur.duree.isEmpty && compteur.note.isEmpty) return const SizedBox.shrink();
-                                                             return Column(
-                                                               crossAxisAlignment: CrossAxisAlignment.start,
-                                                               children: [
-                                                                 Text(
-                                                                   '${posteOrder[index]} Poste',
-                                                                   style: Theme.of(context).textTheme.titleSmall,
-                                                                 ),
-                                                                 const SizedBox(height: 8),
-                                                                 _buildInfoRow('Début', compteur.duree),
-                                                                 _buildInfoRow('Fin', compteur.note),
-                                                                 const Divider(height: 16),
-                                                               ],
-                                                             );
-                                                           }),
+                                                          const Divider(
+                                                              height: 16),
+                                                          ...List.generate(
+                                                              formData
+                                                                  .indexCompteurs
+                                                                  .length,
+                                                              (index) {
+                                                            final compteur =
+                                                                formData.indexCompteurs[
+                                                                    index];
+                                                            if (compteur.duree
+                                                                    .isEmpty &&
+                                                                compteur.note
+                                                                    .isEmpty) {
+                                                              return const SizedBox
+                                                                  .shrink();
+                                                            }
+                                                            return Column(
+                                                              crossAxisAlignment:
+                                                                  CrossAxisAlignment
+                                                                      .start,
+                                                              children: [
+                                                                Text(
+                                                                  '${posteOrder[index]} Poste',
+                                                                  style: Theme.of(
+                                                                          context)
+                                                                      .textTheme
+                                                                      .titleSmall,
+                                                                ),
+                                                                const SizedBox(
+                                                                    height: 8),
+                                                                _buildInfoRow(
+                                                                    'Début',
+                                                                    compteur
+                                                                        .duree),
+                                                                _buildInfoRow(
+                                                                    'Fin',
+                                                                    compteur
+                                                                        .note),
+                                                                const Divider(
+                                                                    height: 16),
+                                                              ],
+                                                            );
+                                                          }),
                                                         ],
                                                       ),
                                                     ),
@@ -2109,26 +2720,67 @@ static const Map<String, List<String>> machinesData = {
                                                   Card(
                                                     margin: EdgeInsets.zero,
                                                     child: Padding(
-                                                      padding: const EdgeInsets.all(16),
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              16),
                                                       child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
                                                         children: [
-                                                          const Text('Arrêts', style: TextStyle(fontWeight: FontWeight.bold)),
-                                                          const Divider(height: 16),
-                                                          if (formData.ventilation.isEmpty)
-                                                            const Text('Aucun arrêt ajouté.'),
-                                                          ...formData.ventilation.asMap().entries.map((entry) {
-                                                            final v = entry.value;
-                                                            if (v.label.isEmpty && v.duree.isEmpty && v.note.isEmpty) return const SizedBox.shrink();
+                                                          const Text('Arrêts',
+                                                              style: TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold)),
+                                                          const Divider(
+                                                              height: 16),
+                                                          if (formData
+                                                              .ventilation
+                                                              .isEmpty)
+                                                            const Text(
+                                                                'Aucun arrêt ajouté.'),
+                                                          ...formData
+                                                              .ventilation
+                                                              .asMap()
+                                                              .entries
+                                                              .map((entry) {
+                                                            final v =
+                                                                entry.value;
+                                                            if (v.label.isEmpty &&
+                                                                v.duree
+                                                                    .isEmpty &&
+                                                                v.note
+                                                                    .isEmpty) {
+                                                              return const SizedBox
+                                                                  .shrink();
+                                                            }
                                                             return Padding(
-                                                              padding: const EdgeInsets.only(bottom: 12.0),
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .only(
+                                                                      bottom:
+                                                                          12.0),
                                                               child: Column(
-                                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                                crossAxisAlignment:
+                                                                    CrossAxisAlignment
+                                                                        .start,
                                                                 children: [
-                                                                  Text('Type: ${v.label}', style: Theme.of(context).textTheme.titleSmall),
-                                                                  _buildInfoRow('Début', v.duree),
-                                                                  _buildInfoRow('Fin', v.note),
-                                                                  const Divider(height: 12),
+                                                                  Text(
+                                                                      'Type: ${v.label}',
+                                                                      style: Theme.of(
+                                                                              context)
+                                                                          .textTheme
+                                                                          .titleSmall),
+                                                                  _buildInfoRow(
+                                                                      'Début',
+                                                                      v.duree),
+                                                                  _buildInfoRow(
+                                                                      'Fin',
+                                                                      v.note),
+                                                                  const Divider(
+                                                                      height:
+                                                                          12),
                                                                 ],
                                                               ),
                                                             );
@@ -2142,16 +2794,42 @@ static const Map<String, List<String>> machinesData = {
                                                   Card(
                                                     margin: EdgeInsets.zero,
                                                     child: Padding(
-                                                      padding: const EdgeInsets.all(16),
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              16),
                                                       child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
                                                         children: [
-                                                          const Text('Exploitation', style: TextStyle(fontWeight: FontWeight.bold)),
-                                                          const Divider(height: 16),
-                                                          _buildInfoRow('H.M', formData.exploitation['H.M'] ?? ''),
-                                                          _buildInfoRow('H.A', formData.exploitation['H.A'] ?? ''),
-                                                          _buildInfoRow('Tonnage', formData.exploitation['Tonnage'] ?? ''),
-                                                          _buildInfoRow('Rendeme', formData.exploitation['Rendeme'] ?? ''),
+                                                          const Text(
+                                                              'Exploitation',
+                                                              style: TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold)),
+                                                          const Divider(
+                                                              height: 16),
+                                                          _buildInfoRow(
+                                                              'H.M',
+                                                              formData.exploitation[
+                                                                      'H.M'] ??
+                                                                  ''),
+                                                          _buildInfoRow(
+                                                              'H.A',
+                                                              formData.exploitation[
+                                                                      'H.A'] ??
+                                                                  ''),
+                                                          _buildInfoRow(
+                                                              'Tonnage',
+                                                              formData.exploitation[
+                                                                      'Tonnage'] ??
+                                                                  ''),
+                                                          _buildInfoRow(
+                                                              'Rendeme',
+                                                              formData.exploitation[
+                                                                      'Rendeme'] ??
+                                                                  ''),
                                                         ],
                                                       ),
                                                     ),
@@ -2161,30 +2839,73 @@ static const Map<String, List<String>> machinesData = {
                                                   Card(
                                                     margin: EdgeInsets.zero,
                                                     child: Padding(
-                                                      padding: const EdgeInsets.all(16),
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              16),
                                                       child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
                                                         children: [
-                                                          const Text('Répartition', style: TextStyle(fontWeight: FontWeight.bold)),
-                                                          const Divider(height: 16),
+                                                          const Text(
+                                                              'Répartition',
+                                                              style: TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold)),
+                                                          const Divider(
+                                                              height: 16),
                                                           ...(() {
-                                                            final List<RepartitionItem> nonEmptyRepartitions = formData.repartitionTravail
-                                                                .where((r) => r.chantier.isNotEmpty || r.temps.isNotEmpty || r.imputation.isNotEmpty)
-                                                                .toList();
-                                                            if (nonEmptyRepartitions.isEmpty) {
-                                                              return [const Text('Aucune répartition ajoutée.')];
+                                                            final List<
+                                                                    RepartitionItem>
+                                                                nonEmptyRepartitions =
+                                                                formData
+                                                                    .repartitionTravail
+                                                                    .where((r) =>
+                                                                        r.chantier
+                                                                            .isNotEmpty ||
+                                                                        r.temps
+                                                                            .isNotEmpty ||
+                                                                        r.imputation
+                                                                            .isNotEmpty)
+                                                                    .toList();
+                                                            if (nonEmptyRepartitions
+                                                                .isEmpty) {
+                                                              return [
+                                                                const Text(
+                                                                    'Aucune répartition ajoutée.')
+                                                              ];
                                                             }
-                                                            return List.generate(nonEmptyRepartitions.length, (index) {
-                                                              final r = nonEmptyRepartitions[index];
+                                                            return List.generate(
+                                                                nonEmptyRepartitions
+                                                                    .length,
+                                                                (index) {
+                                                              final r =
+                                                                  nonEmptyRepartitions[
+                                                                      index];
                                                               return Padding(
-                                                                padding: const EdgeInsets.only(bottom: 8.0),
+                                                                padding:
+                                                                    const EdgeInsets
+                                                                        .only(
+                                                                        bottom:
+                                                                            8.0),
                                                                 child: Column(
-                                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                                  crossAxisAlignment:
+                                                                      CrossAxisAlignment
+                                                                          .start,
                                                                   children: [
-                                                                    Text('Chantier: ${r.chantier}'),
-                                                                    Text('Temps: ${r.temps}'),
-                                                                    Text('Imputation: ${r.imputation}'),
-                                                                    if (index < nonEmptyRepartitions.length - 1) const Divider(height: 12),
+                                                                    Text(
+                                                                        'Chantier: ${r.chantier}'),
+                                                                    Text(
+                                                                        'Temps: ${r.temps}'),
+                                                                    Text(
+                                                                        'Imputation: ${r.imputation}'),
+                                                                    if (index <
+                                                                        nonEmptyRepartitions.length -
+                                                                            1)
+                                                                      const Divider(
+                                                                          height:
+                                                                              12),
                                                                   ],
                                                                 ),
                                                               );
@@ -2199,15 +2920,34 @@ static const Map<String, List<String>> machinesData = {
                                                   Card(
                                                     margin: EdgeInsets.zero,
                                                     child: Padding(
-                                                      padding: const EdgeInsets.all(16),
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              16),
                                                       child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
                                                         children: [
-                                                          const Text('Personnel', style: TextStyle(fontWeight: FontWeight.bold)),
-                                                          const Divider(height: 16),
-                                                          _buildInfoRow('Conductr', formData.personnel.conducteur),
-                                                          _buildInfoRow('Graisseur', formData.personnel.graisseur),
-                                                          _buildInfoRow('Matricules', formData.personnel.matricules),
+                                                          const Text(
+                                                              'Personnel',
+                                                              style: TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold)),
+                                                          const Divider(
+                                                              height: 16),
+                                                          _buildInfoRow(
+                                                              'Conductr',
+                                                              formData.personnel
+                                                                  .conducteur),
+                                                          _buildInfoRow(
+                                                              'Graisseur',
+                                                              formData.personnel
+                                                                  .graisseur),
+                                                          _buildInfoRow(
+                                                              'Matricules',
+                                                              formData.personnel
+                                                                  .matricules),
                                                         ],
                                                       ),
                                                     ),
@@ -2217,17 +2957,33 @@ static const Map<String, List<String>> machinesData = {
                                                   Card(
                                                     margin: EdgeInsets.zero,
                                                     child: Padding(
-                                                      padding: const EdgeInsets.all(16),
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              16),
                                                       child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
                                                         children: [
                                                           Text(
                                                             'Consommation',
-                                                            style: Theme.of(context).textTheme.titleMedium,
+                                                            style: Theme.of(
+                                                                    context)
+                                                                .textTheme
+                                                                .titleMedium,
                                                           ),
-                                                          const Divider(height: 16),
-                                                          _buildInfoRow('Tricone', formData.consommation.tricone),
-                                                          _buildInfoRow('Gasoil', formData.consommation.gasoil),
+                                                          const Divider(
+                                                              height: 16),
+                                                          _buildInfoRow(
+                                                              'Tricone',
+                                                              formData
+                                                                  .consommation
+                                                                  .tricone),
+                                                          _buildInfoRow(
+                                                              'Gasoil',
+                                                              formData
+                                                                  .consommation
+                                                                  .gasoil),
                                                         ],
                                                       ),
                                                     ),
@@ -2246,13 +3002,16 @@ static const Map<String, List<String>> machinesData = {
                             icon: const Icon(Icons.visibility),
                             label: const Text("Voir tous les détails"),
                             style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 12, horizontal: 24),
                             ),
                           ),
                         ],
                       ),
                       isActive: _currentStep >= 4,
-                      state: _currentStep > 4 ? StepState.complete : StepState.indexed,
+                      state: _currentStep > 4
+                          ? StepState.complete
+                          : StepState.indexed,
                     ),
                   ],
                 ),
@@ -2263,4 +3022,4 @@ static const Map<String, List<String>> machinesData = {
       ),
     );
   }
-} 
+}
