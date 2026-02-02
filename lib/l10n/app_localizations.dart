@@ -374,12 +374,6 @@ abstract class AppLocalizations {
   /// **'Quality'**
   String get quality;
 
-  /// No description provided for @machinesEquipment.
-  ///
-  /// In en, this message translates to:
-  /// **'Machines/Equipment'**
-  String get machinesEquipment;
-
   /// No description provided for @stopsExplanation.
   ///
   /// In en, this message translates to:
@@ -470,29 +464,11 @@ abstract class AppLocalizations {
   /// **'Counter'**
   String get counter;
 
-  /// No description provided for @poste.
-  ///
-  /// In en, this message translates to:
-  /// **'Poste'**
-  String get poste;
-
-  /// No description provided for @start.
-  ///
-  /// In en, this message translates to:
-  /// **'Start'**
-  String get start;
-
-  /// No description provided for @end.
-  ///
-  /// In en, this message translates to:
-  /// **'End'**
-  String get end;
-
   /// No description provided for @operatingHoursExceeded.
   ///
   /// In en, this message translates to:
   /// **'Operating hours ({hours}h) exceed the maximum allowed duration for this poste ({maxHours}h).'**
-  String operatingHoursExceeded(Object hours, Object maxHours);
+  String operatingHoursExceeded(int hours, int maxHours);
 
   /// No description provided for @errorsDetected.
   ///
@@ -720,7 +696,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{count} equipment ready to be submitted'**
-  String equipmentReadyMessage(Object count);
+  String equipmentReadyMessage(int count);
 
   /// No description provided for @equipmentAddedMessage.
   ///
@@ -822,7 +798,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{count} equipment ready to be submitted'**
-  String equipmentReadyToSubmit(Object count);
+  String equipmentReadyToSubmit(int count);
 
   /// No description provided for @editEquipment.
   ///
@@ -839,7 +815,7 @@ abstract class AppLocalizations {
   /// No description provided for @viewAllDetails.
   ///
   /// In en, this message translates to:
-  /// **'View All Details'**
+  /// **'View all details'**
   String get viewAllDetails;
 
   /// No description provided for @dataVerification.
@@ -930,7 +906,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Add Stop - Module {module}'**
-  String addStopForModule(Object module);
+  String addStopForModule(String module);
 
   /// No description provided for @addInformation.
   ///
@@ -979,6 +955,2052 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Category'**
   String get category;
+
+  /// No description provided for @darkMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark Mode'**
+  String get darkMode;
+
+  /// No description provided for @availableReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Available Reports'**
+  String get availableReports;
+
+  /// No description provided for @ocpReports.
+  ///
+  /// In en, this message translates to:
+  /// **'OCP Reports'**
+  String get ocpReports;
+
+  /// No description provided for @settingsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settingsTooltip;
+
+  /// No description provided for @r0Description.
+  ///
+  /// In en, this message translates to:
+  /// **'Equipment operation'**
+  String get r0Description;
+
+  /// No description provided for @activityReportDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily activities (TNB)'**
+  String get activityReportDescription;
+
+  /// No description provided for @dailyReportDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Shift summary (TSUD)'**
+  String get dailyReportDescription;
+
+  /// No description provided for @truckTrackingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Movement monitoring'**
+  String get truckTrackingDescription;
+
+  /// No description provided for @machinesStoppedTitleShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Machines Stopped'**
+  String get machinesStoppedTitleShort;
+
+  /// No description provided for @machinesStoppedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Downtime log'**
+  String get machinesStoppedDescription;
+
+  /// No description provided for @reportsArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports Archive'**
+  String get reportsArchive;
+
+  /// No description provided for @reportsArchiveDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'History & Logs'**
+  String get reportsArchiveDescription;
+
+  /// No description provided for @editTruckTracking.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Truck Tracking'**
+  String get editTruckTracking;
+
+  /// No description provided for @newTruckTracking.
+  ///
+  /// In en, this message translates to:
+  /// **'New Truck Tracking'**
+  String get newTruckTracking;
+
+  /// No description provided for @stepInfos.
+  ///
+  /// In en, this message translates to:
+  /// **'Infos'**
+  String get stepInfos;
+
+  /// No description provided for @stepCamions.
+  ///
+  /// In en, this message translates to:
+  /// **'Trucks'**
+  String get stepCamions;
+
+  /// No description provided for @stepVoyages.
+  ///
+  /// In en, this message translates to:
+  /// **'Trips'**
+  String get stepVoyages;
+
+  /// No description provided for @stepVerif.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification'**
+  String get stepVerif;
+
+  /// No description provided for @previous.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous'**
+  String get previous;
+
+  /// No description provided for @submit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit'**
+  String get submit;
+
+  /// No description provided for @next.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get next;
+
+  /// No description provided for @newTruckLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'New Truck'**
+  String get newTruckLabel;
+
+  /// No description provided for @driverLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver'**
+  String get driverLabel;
+
+  /// No description provided for @addTruckTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Truck'**
+  String get addTruckTitle;
+
+  /// No description provided for @truckNumberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Truck Number'**
+  String get truckNumberLabel;
+
+  /// No description provided for @locationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get locationLabel;
+
+  /// No description provided for @addTrip.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Trip'**
+  String get addTrip;
+
+  /// No description provided for @editTrip.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Trip'**
+  String get editTrip;
+
+  /// No description provided for @tripLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Trip'**
+  String get tripLabel;
+
+  /// No description provided for @viewDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'View Details'**
+  String get viewDetails;
+
+  /// No description provided for @tripsCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} trips'**
+  String tripsCountLabel(int count);
+
+  /// No description provided for @summaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get summaryTitle;
+
+  /// No description provided for @mineZoneLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Mine / Zone'**
+  String get mineZoneLabel;
+
+  /// No description provided for @tripsByEquipment.
+  ///
+  /// In en, this message translates to:
+  /// **'Trips per Equipment'**
+  String get tripsByEquipment;
+
+  /// No description provided for @tripsByTruck.
+  ///
+  /// In en, this message translates to:
+  /// **'Trips per Truck'**
+  String get tripsByTruck;
+
+  /// No description provided for @tripDetailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trip Details'**
+  String get tripDetailsTitle;
+
+  /// No description provided for @success.
+  ///
+  /// In en, this message translates to:
+  /// **'Success'**
+  String get success;
+
+  /// No description provided for @unknownLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get unknownLabel;
+
+  /// No description provided for @modifierR0.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit R0 Report'**
+  String get modifierR0;
+
+  /// No description provided for @nouveauRapportR0.
+  ///
+  /// In en, this message translates to:
+  /// **'New R0 Report'**
+  String get nouveauRapportR0;
+
+  /// No description provided for @stepCompteur.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter'**
+  String get stepCompteur;
+
+  /// No description provided for @stepArrets.
+  ///
+  /// In en, this message translates to:
+  /// **'Stops'**
+  String get stepArrets;
+
+  /// No description provided for @stepExploit.
+  ///
+  /// In en, this message translates to:
+  /// **'Exploitation'**
+  String get stepExploit;
+
+  /// No description provided for @stepRepartition.
+  ///
+  /// In en, this message translates to:
+  /// **'Repartition'**
+  String get stepRepartition;
+
+  /// No description provided for @stepPersonnel.
+  ///
+  /// In en, this message translates to:
+  /// **'Personnel'**
+  String get stepPersonnel;
+
+  /// No description provided for @stepConsom.
+  ///
+  /// In en, this message translates to:
+  /// **'Consumption'**
+  String get stepConsom;
+
+  /// No description provided for @categoryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get categoryLabel;
+
+  /// No description provided for @modelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get modelLabel;
+
+  /// No description provided for @selectPosteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Please choose a poste.'**
+  String get selectPosteMessage;
+
+  /// No description provided for @counterEntryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter Entry - {poste} Poste'**
+  String counterEntryTitle(String poste);
+
+  /// No description provided for @startCounterLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Start (Index)'**
+  String get startCounterLabel;
+
+  /// No description provided for @endCounterLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'End (Index)'**
+  String get endCounterLabel;
+
+  /// No description provided for @noStopsRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'No stops recorded.'**
+  String get noStopsRecorded;
+
+  /// No description provided for @addArretTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Stop'**
+  String get addArretTitle;
+
+  /// No description provided for @heuresMarche.
+  ///
+  /// In en, this message translates to:
+  /// **'Operating Hours (H.M)'**
+  String get heuresMarche;
+
+  /// No description provided for @heuresArret.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop Hours (H.A)'**
+  String get heuresArret;
+
+  /// No description provided for @tonnageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Tonnage'**
+  String get tonnageLabel;
+
+  /// No description provided for @rendementLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Efficiency %'**
+  String get rendementLabel;
+
+  /// No description provided for @chantierLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Worksite'**
+  String get chantierLabel;
+
+  /// No description provided for @gasoilLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Diesel'**
+  String get gasoilLabel;
+
+  /// No description provided for @modifierRTNB.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit TNB Report'**
+  String get modifierRTNB;
+
+  /// No description provided for @infoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Info'**
+  String get infoLabel;
+
+  /// No description provided for @arretCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop {index}'**
+  String arretCount(int index);
+
+  /// No description provided for @dureeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get dureeLabel;
+
+  /// No description provided for @natureLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Nature'**
+  String get natureLabel;
+
+  /// No description provided for @ajButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get ajButton;
+
+  /// No description provided for @cvibrLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibrator Counter'**
+  String get cvibrLabel;
+
+  /// No description provided for @cliaisonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Liaison Counter'**
+  String get cliaisonLabel;
+
+  /// No description provided for @stockLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Stock'**
+  String get stockLabel;
+
+  /// No description provided for @aucunArret.
+  ///
+  /// In en, this message translates to:
+  /// **'No stops added'**
+  String get aucunArret;
+
+  /// No description provided for @aucunCompteurVibr.
+  ///
+  /// In en, this message translates to:
+  /// **'No vibrator counter added'**
+  String get aucunCompteurVibr;
+
+  /// No description provided for @aucunCompteurLiaison.
+  ///
+  /// In en, this message translates to:
+  /// **'No liaison counter added'**
+  String get aucunCompteurLiaison;
+
+  /// No description provided for @aucuneEntreeStock.
+  ///
+  /// In en, this message translates to:
+  /// **'No stock entry added'**
+  String get aucuneEntreeStock;
+
+  /// No description provided for @zone.
+  ///
+  /// In en, this message translates to:
+  /// **'Zone'**
+  String get zone;
+
+  /// No description provided for @operation.
+  ///
+  /// In en, this message translates to:
+  /// **'Operation'**
+  String get operation;
+
+  /// No description provided for @details.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get details;
+
+  /// No description provided for @summary.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get summary;
+
+  /// No description provided for @synthesis.
+  ///
+  /// In en, this message translates to:
+  /// **'Synthesis'**
+  String get synthesis;
+
+  /// No description provided for @synthesisModule.
+  ///
+  /// In en, this message translates to:
+  /// **'Synthesis Module {module}'**
+  String synthesisModule(int module);
+
+  /// No description provided for @functioning.
+  ///
+  /// In en, this message translates to:
+  /// **'Functioning'**
+  String get functioning;
+
+  /// No description provided for @stops.
+  ///
+  /// In en, this message translates to:
+  /// **'Stops'**
+  String get stops;
+
+  /// No description provided for @complement.
+  ///
+  /// In en, this message translates to:
+  /// **'Nature (complement)'**
+  String get complement;
+
+  /// No description provided for @maxCharactersMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum 20 characters per line'**
+  String get maxCharactersMessage;
+
+  /// No description provided for @engines.
+  ///
+  /// In en, this message translates to:
+  /// **'ENGINS'**
+  String get engines;
+
+  /// No description provided for @machines.
+  ///
+  /// In en, this message translates to:
+  /// **'MACHINES'**
+  String get machines;
+
+  /// No description provided for @normal.
+  ///
+  /// In en, this message translates to:
+  /// **'NORMAL'**
+  String get normal;
+
+  /// No description provided for @oceane.
+  ///
+  /// In en, this message translates to:
+  /// **'OCEANE'**
+  String get oceane;
+
+  /// No description provided for @pb30.
+  ///
+  /// In en, this message translates to:
+  /// **'PB30'**
+  String get pb30;
+
+  /// No description provided for @premierPosteShort.
+  ///
+  /// In en, this message translates to:
+  /// **'1st'**
+  String get premierPosteShort;
+
+  /// No description provided for @deuxiemePosteShort.
+  ///
+  /// In en, this message translates to:
+  /// **'2nd'**
+  String get deuxiemePosteShort;
+
+  /// No description provided for @troisiemePosteShort.
+  ///
+  /// In en, this message translates to:
+  /// **'3rd'**
+  String get troisiemePosteShort;
+
+  /// No description provided for @park1.
+  ///
+  /// In en, this message translates to:
+  /// **'PARK 1'**
+  String get park1;
+
+  /// No description provided for @park2.
+  ///
+  /// In en, this message translates to:
+  /// **'PARK 2'**
+  String get park2;
+
+  /// No description provided for @park3.
+  ///
+  /// In en, this message translates to:
+  /// **'PARK 3'**
+  String get park3;
+
+  /// No description provided for @activityTnb.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity TNB'**
+  String get activityTnb;
+
+  /// No description provided for @editActivityTnb.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Activity TNB'**
+  String get editActivityTnb;
+
+  /// No description provided for @dailyTsud.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Report TSUD'**
+  String get dailyTsud;
+
+  /// No description provided for @editDailyTsud.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Daily Report TSUD'**
+  String get editDailyTsud;
+
+  /// No description provided for @repartitionTravail.
+  ///
+  /// In en, this message translates to:
+  /// **'Work Repartition'**
+  String get repartitionTravail;
+
+  /// No description provided for @mineSortie.
+  ///
+  /// In en, this message translates to:
+  /// **'Mine/Exit'**
+  String get mineSortie;
+
+  /// No description provided for @engin.
+  ///
+  /// In en, this message translates to:
+  /// **'Engine'**
+  String get engin;
+
+  /// No description provided for @detailsArrets.
+  ///
+  /// In en, this message translates to:
+  /// **'Stops Details'**
+  String get detailsArrets;
+
+  /// No description provided for @addCounterShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Count'**
+  String get addCounterShort;
+
+  /// No description provided for @vibratorCounterShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibr. Counter'**
+  String get vibratorCounterShort;
+
+  /// No description provided for @liaisonCounterShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Liais. Counter'**
+  String get liaisonCounterShort;
+
+  /// No description provided for @defeuitage.
+  ///
+  /// In en, this message translates to:
+  /// **'Defeuilltage'**
+  String get defeuitage;
+
+  /// No description provided for @reprise.
+  ///
+  /// In en, this message translates to:
+  /// **'Reprise'**
+  String get reprise;
+
+  /// No description provided for @sterile.
+  ///
+  /// In en, this message translates to:
+  /// **'Sterile'**
+  String get sterile;
+
+  /// No description provided for @chargeuse992k.
+  ///
+  /// In en, this message translates to:
+  /// **'Loader 992K'**
+  String get chargeuse992k;
+
+  /// No description provided for @chargeuse994h.
+  ///
+  /// In en, this message translates to:
+  /// **'Loader 994H'**
+  String get chargeuse994h;
+
+  /// No description provided for @pelleHydraulique.
+  ///
+  /// In en, this message translates to:
+  /// **'Hydraulic Shovel'**
+  String get pelleHydraulique;
+
+  /// No description provided for @pelleElectriqueB1.
+  ///
+  /// In en, this message translates to:
+  /// **'Electric Shovel B1'**
+  String get pelleElectriqueB1;
+
+  /// No description provided for @arretTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop {index}'**
+  String arretTitle(int index);
+
+  /// No description provided for @cvibrTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibr. Counter {index}'**
+  String cvibrTitle(int index);
+
+  /// No description provided for @cliaisonTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Liais. Counter {index}'**
+  String cliaisonTitle(int index);
+
+  /// No description provided for @stockEntryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Stock Entry {index}'**
+  String stockEntryTitle(int index);
+
+  /// No description provided for @poste1er.
+  ///
+  /// In en, this message translates to:
+  /// **'1st Shift'**
+  String get poste1er;
+
+  /// No description provided for @poste2eme.
+  ///
+  /// In en, this message translates to:
+  /// **'2nd Shift'**
+  String get poste2eme;
+
+  /// No description provided for @poste3eme.
+  ///
+  /// In en, this message translates to:
+  /// **'3rd Shift'**
+  String get poste3eme;
+
+  /// No description provided for @stockTypeNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'NORMAL'**
+  String get stockTypeNormal;
+
+  /// No description provided for @stockTypeOceane.
+  ///
+  /// In en, this message translates to:
+  /// **'OCEANE'**
+  String get stockTypeOceane;
+
+  /// No description provided for @stockTypePb30.
+  ///
+  /// In en, this message translates to:
+  /// **'PB30'**
+  String get stockTypePb30;
+
+  /// No description provided for @sector.
+  ///
+  /// In en, this message translates to:
+  /// **'Sector'**
+  String get sector;
+
+  /// No description provided for @reportNo.
+  ///
+  /// In en, this message translates to:
+  /// **'Report N°'**
+  String get reportNo;
+
+  /// No description provided for @machinesEquipment.
+  ///
+  /// In en, this message translates to:
+  /// **'Machines/Equipment'**
+  String get machinesEquipment;
+
+  /// No description provided for @poste.
+  ///
+  /// In en, this message translates to:
+  /// **'Shift'**
+  String get poste;
+
+  /// No description provided for @start.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get start;
+
+  /// No description provided for @end.
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get end;
+
+  /// No description provided for @editArret.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Stop'**
+  String get editArret;
+
+  /// No description provided for @deleteArret.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Stop'**
+  String get deleteArret;
+
+  /// No description provided for @editCounter.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Counter'**
+  String get editCounter;
+
+  /// No description provided for @deleteCounter.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Counter'**
+  String get deleteCounter;
+
+  /// No description provided for @editStock.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Stock'**
+  String get editStock;
+
+  /// No description provided for @deleteStock.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Stock'**
+  String get deleteStock;
+
+  /// No description provided for @allPostes.
+  ///
+  /// In en, this message translates to:
+  /// **'All Shifts'**
+  String get allPostes;
+
+  /// No description provided for @clearFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear Filter'**
+  String get clearFilter;
+
+  /// No description provided for @refresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get refresh;
+
+  /// No description provided for @noReportsFoundForPoste.
+  ///
+  /// In en, this message translates to:
+  /// **'No reports found for shift {poste}'**
+  String noReportsFoundForPoste(String poste);
+
+  /// No description provided for @seeAllReports.
+  ///
+  /// In en, this message translates to:
+  /// **'See all reports'**
+  String get seeAllReports;
+
+  /// No description provided for @reportsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No reports} =1{1 report} other{{count} reports}} found for shift {poste}'**
+  String reportsFound(int count, String poste);
+
+  /// No description provided for @totalVoyages.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Trips'**
+  String get totalVoyages;
+
+  /// No description provided for @dataSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Data Summary'**
+  String get dataSummary;
+
+  /// No description provided for @stopDataNotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Stoppage data not available'**
+  String get stopDataNotAvailable;
+
+  /// No description provided for @vibratorCountersLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibrator Counters'**
+  String get vibratorCountersLabel;
+
+  /// No description provided for @liaisonCountersLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Liaison Counters'**
+  String get liaisonCountersLabel;
+
+  /// No description provided for @parkLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Park'**
+  String get parkLabel;
+
+  /// No description provided for @quantityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Qty'**
+  String get quantityLabel;
+
+  /// No description provided for @operatingTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Operating Time'**
+  String get operatingTime;
+
+  /// No description provided for @stopTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop Time'**
+  String get stopTime;
+
+  /// No description provided for @machinesStoppedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped Machines/Equipment'**
+  String get machinesStoppedLabel;
+
+  /// No description provided for @noEquipmentStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'No equipment stopped'**
+  String get noEquipmentStopped;
+
+  /// No description provided for @equipmentIndex.
+  ///
+  /// In en, this message translates to:
+  /// **'{index, plural, =1{Equipment 1} other{Equipment {index}}}'**
+  String equipmentIndex(int index);
+
+  /// No description provided for @module1Label.
+  ///
+  /// In en, this message translates to:
+  /// **'Module 1'**
+  String get module1Label;
+
+  /// No description provided for @module2Label.
+  ///
+  /// In en, this message translates to:
+  /// **'Module 2'**
+  String get module2Label;
+
+  /// No description provided for @stopsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Stops'**
+  String get stopsLabel;
+
+  /// No description provided for @dateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get dateLabel;
+
+  /// No description provided for @repartitionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Repartition'**
+  String get repartitionLabel;
+
+  /// No description provided for @timeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get timeLabel;
+
+  /// No description provided for @imputationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Imputation'**
+  String get imputationLabel;
+
+  /// No description provided for @personnelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Personnel'**
+  String get personnelLabel;
+
+  /// No description provided for @conductorLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver'**
+  String get conductorLabel;
+
+  /// No description provided for @graisseurLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Greaser'**
+  String get graisseurLabel;
+
+  /// No description provided for @matriculeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Serial Number'**
+  String get matriculeLabel;
+
+  /// No description provided for @consommationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Consumption'**
+  String get consommationLabel;
+
+  /// No description provided for @triconeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Tricone'**
+  String get triconeLabel;
+
+  /// No description provided for @operationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Operation'**
+  String get operationLabel;
+
+  /// No description provided for @equipmentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Equipment'**
+  String get equipmentLabel;
+
+  /// No description provided for @qualityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quality'**
+  String get qualityLabel;
+
+  /// No description provided for @camionsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Trucks'**
+  String get camionsLabel;
+
+  /// No description provided for @noteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get noteLabel;
+
+  /// No description provided for @deleteStopConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this stop?'**
+  String get deleteStopConfirm;
+
+  /// No description provided for @calculatedAutoHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculated automatically (Stops, Counter)'**
+  String get calculatedAutoHint;
+
+  /// No description provided for @addWorkDistributionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a work distribution'**
+  String get addWorkDistributionTitle;
+
+  /// No description provided for @editWorkDistributionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit work distribution'**
+  String get editWorkDistributionTitle;
+
+  /// No description provided for @deleteWorkDistributionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete work distribution'**
+  String get deleteWorkDistributionTitle;
+
+  /// No description provided for @deleteWorkDistributionConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this work distribution?'**
+  String get deleteWorkDistributionConfirm;
+
+  /// No description provided for @editPersonnelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit personnel'**
+  String get editPersonnelTitle;
+
+  /// No description provided for @editConsumptionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit consumption'**
+  String get editConsumptionTitle;
+
+  /// No description provided for @deleteCounterConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this counter?'**
+  String get deleteCounterConfirm;
+
+  /// No description provided for @startTimeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Start time'**
+  String get startTimeLabel;
+
+  /// No description provided for @endTimeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'End time'**
+  String get endTimeLabel;
+
+  /// No description provided for @selectTimeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select time'**
+  String get selectTimeTitle;
+
+  /// No description provided for @selectCategoryStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Select category'**
+  String get selectCategoryStep;
+
+  /// No description provided for @selectStopTypeStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Select stop type'**
+  String get selectStopTypeStep;
+
+  /// No description provided for @enterDetailsStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter details'**
+  String get enterDetailsStep;
+
+  /// No description provided for @okButton.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get okButton;
+
+  /// No description provided for @deleteTruckTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the truck'**
+  String get deleteTruckTitle;
+
+  /// No description provided for @deleteTruckConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this truck?'**
+  String get deleteTruckConfirm;
+
+  /// No description provided for @noCountersAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'No counters added'**
+  String get noCountersAdded;
+
+  /// No description provided for @noStopsAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'No stops added'**
+  String get noStopsAdded;
+
+  /// No description provided for @noExploitationData.
+  ///
+  /// In en, this message translates to:
+  /// **'No exploitation data'**
+  String get noExploitationData;
+
+  /// No description provided for @noPersonnelData.
+  ///
+  /// In en, this message translates to:
+  /// **'No personnel data'**
+  String get noPersonnelData;
+
+  /// No description provided for @noConsumptionData.
+  ///
+  /// In en, this message translates to:
+  /// **'No consumption data'**
+  String get noConsumptionData;
+
+  /// No description provided for @editReportType.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit - {type}'**
+  String editReportType(String type);
+
+  /// No description provided for @equipmentLabelWithIndex.
+  ///
+  /// In en, this message translates to:
+  /// **'Equipment {index}:'**
+  String equipmentLabelWithIndex(int index);
+
+  /// No description provided for @totalFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Total for {key}: {value}'**
+  String totalFor(String key, String value);
+
+  /// No description provided for @tripLabelWithIndex.
+  ///
+  /// In en, this message translates to:
+  /// **'v{index}: '**
+  String tripLabelWithIndex(int index);
+
+  /// No description provided for @workLabelWithIndex.
+  ///
+  /// In en, this message translates to:
+  /// **'Work {index}'**
+  String workLabelWithIndex(int index);
+
+  /// No description provided for @voyagesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Voyages'**
+  String get voyagesLabel;
+
+  /// No description provided for @additionalDataLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Additional data'**
+  String get additionalDataLabel;
+
+  /// No description provided for @addStopTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Stop'**
+  String get addStopTitle;
+
+  /// No description provided for @editStopTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Stop'**
+  String get editStopTitle;
+
+  /// No description provided for @deleteStopTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Stop'**
+  String get deleteStopTitle;
+
+  /// No description provided for @addVibratorCounterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Vibrator Counter'**
+  String get addVibratorCounterTitle;
+
+  /// No description provided for @editVibratorCounterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Vibrator Counter'**
+  String get editVibratorCounterTitle;
+
+  /// No description provided for @deleteVibratorCounterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Vibrator Counter'**
+  String get deleteVibratorCounterTitle;
+
+  /// No description provided for @addLiaisonCounterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Liaison Counter'**
+  String get addLiaisonCounterTitle;
+
+  /// No description provided for @editLiaisonCounterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Liaison Counter'**
+  String get editLiaisonCounterTitle;
+
+  /// No description provided for @deleteLiaisonCounterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Liaison Counter'**
+  String get deleteLiaisonCounterTitle;
+
+  /// No description provided for @addStockEntryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Stock Entry'**
+  String get addStockEntryTitle;
+
+  /// No description provided for @editStockEntryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Stock Entry'**
+  String get editStockEntryTitle;
+
+  /// No description provided for @deleteStockEntryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Stock Entry'**
+  String get deleteStockEntryTitle;
+
+  /// No description provided for @addCounterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Counter'**
+  String get addCounterTitle;
+
+  /// No description provided for @editCounterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Counter'**
+  String get editCounterTitle;
+
+  /// No description provided for @deleteCounterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Counter'**
+  String get deleteCounterTitle;
+
+  /// No description provided for @editExploitationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Exploitation'**
+  String get editExploitationTitle;
+
+  /// No description provided for @predefinedNatureLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Predefined nature'**
+  String get predefinedNatureLabel;
+
+  /// No description provided for @durationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration (e.g., 1h 30)'**
+  String get durationLabel;
+
+  /// No description provided for @complementLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Nature (complement)'**
+  String get complementLabel;
+
+  /// No description provided for @maxCharactersHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum 20 characters per line'**
+  String get maxCharactersHint;
+
+  /// No description provided for @moduleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Module'**
+  String get moduleLabel;
+
+  /// No description provided for @parkTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Park Type'**
+  String get parkTypeLabel;
+
+  /// No description provided for @hmLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'H.M'**
+  String get hmLabel;
+
+  /// No description provided for @haLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'H.A'**
+  String get haLabel;
+
+  /// No description provided for @rendemeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Efficiency'**
+  String get rendemeLabel;
+
+  /// No description provided for @conductrLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver'**
+  String get conductrLabel;
+
+  /// No description provided for @matriculesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Serial Numbers'**
+  String get matriculesLabel;
+
+  /// No description provided for @noLiaisonCountersAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'No liaison counter added'**
+  String get noLiaisonCountersAdded;
+
+  /// No description provided for @noStockEntriesAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'No stock entry added'**
+  String get noStockEntriesAdded;
+
+  /// No description provided for @calculatedAutomatically.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculated automatically (Stops, Counter)'**
+  String get calculatedAutomatically;
+
+  /// No description provided for @stocksLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Stocks'**
+  String get stocksLabel;
+
+  /// No description provided for @exploitationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Exploitation'**
+  String get exploitationLabel;
+
+  /// No description provided for @tempsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get tempsLabel;
+
+  /// No description provided for @finishLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish'**
+  String get finishLabel;
+
+  /// No description provided for @infoOibEeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Info OIB/EE'**
+  String get infoOibEeLabel;
+
+  /// No description provided for @modifyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Modify'**
+  String get modifyLabel;
+
+  /// No description provided for @arretsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Stops'**
+  String get arretsLabel;
+
+  /// No description provided for @deleteStockConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this stock entry?'**
+  String get deleteStockConfirm;
+
+  /// No description provided for @editLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit {label}'**
+  String editLabel(String label);
+
+  /// No description provided for @noMachinesStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'No machines stopped'**
+  String get noMachinesStopped;
+
+  /// No description provided for @reportDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Report Date'**
+  String get reportDateLabel;
+
+  /// No description provided for @mainCategoryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Main Category'**
+  String get mainCategoryLabel;
+
+  /// No description provided for @subCategoryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sub Category'**
+  String get subCategoryLabel;
+
+  /// No description provided for @stopReasonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop Reason'**
+  String get stopReasonLabel;
+
+  /// No description provided for @enterStopReasonHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter stop reason...'**
+  String get enterStopReasonHint;
+
+  /// No description provided for @groupLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Group'**
+  String get groupLabel;
+
+  /// No description provided for @deleteEquipment.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Equipment'**
+  String get deleteEquipment;
+
+  /// No description provided for @deleteEquipmentConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this equipment?'**
+  String get deleteEquipmentConfirm;
+
+  /// No description provided for @vibrTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibrator Counters'**
+  String get vibrTitle;
+
+  /// No description provided for @liaisonTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Liaison Counters'**
+  String get liaisonTitle;
+
+  /// No description provided for @workDistributionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Work Distribution'**
+  String get workDistributionLabel;
+
+  /// No description provided for @addButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get addButton;
+
+  /// No description provided for @noTrucksAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'No trucks added'**
+  String get noTrucksAdded;
+
+  /// No description provided for @summaryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get summaryLabel;
+
+  /// No description provided for @noStockAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'No stock added'**
+  String get noStockAdded;
+
+  /// No description provided for @stopsWithColon.
+  ///
+  /// In en, this message translates to:
+  /// **'Stops:'**
+  String get stopsWithColon;
+
+  /// No description provided for @tripsWithColon.
+  ///
+  /// In en, this message translates to:
+  /// **'Trips:'**
+  String get tripsWithColon;
+
+  /// No description provided for @tripsSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Trips Summary'**
+  String get tripsSummary;
+
+  /// No description provided for @noActivityData.
+  ///
+  /// In en, this message translates to:
+  /// **'No activity data available.'**
+  String get noActivityData;
+
+  /// No description provided for @noDailyData.
+  ///
+  /// In en, this message translates to:
+  /// **'No daily data available.'**
+  String get noDailyData;
+
+  /// No description provided for @noTruckTrackingData.
+  ///
+  /// In en, this message translates to:
+  /// **'No truck tracking data available.'**
+  String get noTruckTrackingData;
+
+  /// No description provided for @noR0Data.
+  ///
+  /// In en, this message translates to:
+  /// **'No R0 data available.'**
+  String get noR0Data;
+
+  /// No description provided for @noAdditionalData.
+  ///
+  /// In en, this message translates to:
+  /// **'No additional data'**
+  String get noAdditionalData;
+
+  /// No description provided for @noTripsAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'No trips added.'**
+  String get noTripsAdded;
+
+  /// No description provided for @updateError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error updating: {error}'**
+  String updateError(String error);
+
+  /// No description provided for @saveChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Changes'**
+  String get saveChanges;
+
+  /// No description provided for @stockTitleIndex.
+  ///
+  /// In en, this message translates to:
+  /// **'Stock {index}'**
+  String stockTitleIndex(int index);
+
+  /// No description provided for @tripTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Trip Time'**
+  String get tripTime;
+
+  /// No description provided for @genericCounterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter {index}'**
+  String genericCounterTitle(int index);
+
+  /// No description provided for @workTitleIndex.
+  ///
+  /// In en, this message translates to:
+  /// **'Work {index}'**
+  String workTitleIndex(int index);
+
+  /// No description provided for @driverParam.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver: {driver}'**
+  String driverParam(String driver);
+
+  /// No description provided for @truckParam.
+  ///
+  /// In en, this message translates to:
+  /// **'Truck: {truck}'**
+  String truckParam(String truck);
+
+  /// No description provided for @typeParam.
+  ///
+  /// In en, this message translates to:
+  /// **'Type: {type}'**
+  String typeParam(String type);
+
+  /// No description provided for @reasonParam.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason: {reason}'**
+  String reasonParam(String reason);
+
+  /// No description provided for @endParam.
+  ///
+  /// In en, this message translates to:
+  /// **'End: {end}'**
+  String endParam(String end);
+
+  /// No description provided for @trackingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking - {date} - {poste}'**
+  String trackingDescription(String date, String poste);
+
+  /// No description provided for @catBulldozers.
+  ///
+  /// In en, this message translates to:
+  /// **'BULLDOZERS'**
+  String get catBulldozers;
+
+  /// No description provided for @catTrucks.
+  ///
+  /// In en, this message translates to:
+  /// **'TRUCKS'**
+  String get catTrucks;
+
+  /// No description provided for @catLoaders.
+  ///
+  /// In en, this message translates to:
+  /// **'LOADERS'**
+  String get catLoaders;
+
+  /// No description provided for @catGraders.
+  ///
+  /// In en, this message translates to:
+  /// **'GRADERS'**
+  String get catGraders;
+
+  /// No description provided for @catPaydozers.
+  ///
+  /// In en, this message translates to:
+  /// **'PAYDOZERS'**
+  String get catPaydozers;
+
+  /// No description provided for @catHydraulicShovels.
+  ///
+  /// In en, this message translates to:
+  /// **'HYDRAULIC SHOVELS'**
+  String get catHydraulicShovels;
+
+  /// No description provided for @catDraglines.
+  ///
+  /// In en, this message translates to:
+  /// **'DRAGLINES'**
+  String get catDraglines;
+
+  /// No description provided for @catElectricShovels.
+  ///
+  /// In en, this message translates to:
+  /// **'ELECTRIC SHOVELS'**
+  String get catElectricShovels;
+
+  /// No description provided for @catDrills.
+  ///
+  /// In en, this message translates to:
+  /// **'DRILLS'**
+  String get catDrills;
+
+  /// No description provided for @catExterior.
+  ///
+  /// In en, this message translates to:
+  /// **'EXTERNAL'**
+  String get catExterior;
+
+  /// No description provided for @catMaterial.
+  ///
+  /// In en, this message translates to:
+  /// **'MATERIAL'**
+  String get catMaterial;
+
+  /// No description provided for @catExploitation.
+  ///
+  /// In en, this message translates to:
+  /// **'EXPLOITATION'**
+  String get catExploitation;
+
+  /// No description provided for @stopIndustrialArea.
+  ///
+  /// In en, this message translates to:
+  /// **'INDUSTRIAL AREA STOP'**
+  String get stopIndustrialArea;
+
+  /// No description provided for @stopPowerCut.
+  ///
+  /// In en, this message translates to:
+  /// **'GENERAL POWER CUT'**
+  String get stopPowerCut;
+
+  /// No description provided for @stopStrike.
+  ///
+  /// In en, this message translates to:
+  /// **'STRIKE'**
+  String get stopStrike;
+
+  /// No description provided for @stopWeather.
+  ///
+  /// In en, this message translates to:
+  /// **'BAD WEATHER'**
+  String get stopWeather;
+
+  /// No description provided for @stopFullStocks.
+  ///
+  /// In en, this message translates to:
+  /// **'FULL STOCKS'**
+  String get stopFullStocks;
+
+  /// No description provided for @stopHolidays.
+  ///
+  /// In en, this message translates to:
+  /// **'HOLIDAYS OR WEEKLY'**
+  String get stopHolidays;
+
+  /// No description provided for @stopPowerPlant.
+  ///
+  /// In en, this message translates to:
+  /// **'POWER PLANT STOP'**
+  String get stopPowerPlant;
+
+  /// No description provided for @stopControl.
+  ///
+  /// In en, this message translates to:
+  /// **'CONTROL'**
+  String get stopControl;
+
+  /// No description provided for @stopElecFault.
+  ///
+  /// In en, this message translates to:
+  /// **'ELEC FAULT (CABLE, NETWORK)'**
+  String get stopElecFault;
+
+  /// No description provided for @stopMechBreakdown.
+  ///
+  /// In en, this message translates to:
+  /// **'MECHANICAL BREAKDOWN'**
+  String get stopMechBreakdown;
+
+  /// No description provided for @stopElecBreakdown.
+  ///
+  /// In en, this message translates to:
+  /// **'ELECTRICAL BREAKDOWN'**
+  String get stopElecBreakdown;
+
+  /// No description provided for @stopTireWorkshop.
+  ///
+  /// In en, this message translates to:
+  /// **'TIRE WORKSHOP INTERVENTION'**
+  String get stopTireWorkshop;
+
+  /// No description provided for @stopMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'SYSTEMATIC MAINTENANCE'**
+  String get stopMaintenance;
+
+  /// No description provided for @stopRefill.
+  ///
+  /// In en, this message translates to:
+  /// **'REFILL (OIL, DIESEL, WATER)'**
+  String get stopRefill;
+
+  /// No description provided for @stopGreasing.
+  ///
+  /// In en, this message translates to:
+  /// **'GREASING'**
+  String get stopGreasing;
+
+  /// No description provided for @stopFixedInstallElec.
+  ///
+  /// In en, this message translates to:
+  /// **'FIXED INSTALLATION ELEC STOP'**
+  String get stopFixedInstallElec;
+
+  /// No description provided for @stopNoTrucks.
+  ///
+  /// In en, this message translates to:
+  /// **'NO TRUCKS'**
+  String get stopNoTrucks;
+
+  /// No description provided for @stopNoBull.
+  ///
+  /// In en, this message translates to:
+  /// **'NO BULLDOZER'**
+  String get stopNoBull;
+
+  /// No description provided for @stopNoMechanic.
+  ///
+  /// In en, this message translates to:
+  /// **'NO MECHANIC'**
+  String get stopNoMechanic;
+
+  /// No description provided for @stopNoTools.
+  ///
+  /// In en, this message translates to:
+  /// **'NO WORK TOOLS'**
+  String get stopNoTools;
+
+  /// No description provided for @stopMachineStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'MACHINE STOPPED'**
+  String get stopMachineStopped;
+
+  /// No description provided for @stopBreakdownFront.
+  ///
+  /// In en, this message translates to:
+  /// **'EQUIPMENT BREAKDOWN IN FRONT'**
+  String get stopBreakdownFront;
+
+  /// No description provided for @stopShiftChange.
+  ///
+  /// In en, this message translates to:
+  /// **'SHIFT CHANGE'**
+  String get stopShiftChange;
+
+  /// No description provided for @stopPlatformExec.
+  ///
+  /// In en, this message translates to:
+  /// **'PLATFORM EXECUTION'**
+  String get stopPlatformExec;
+
+  /// No description provided for @stopMove.
+  ///
+  /// In en, this message translates to:
+  /// **'MOVE'**
+  String get stopMove;
+
+  /// No description provided for @stopBlasting.
+  ///
+  /// In en, this message translates to:
+  /// **'BLASTING'**
+  String get stopBlasting;
+
+  /// No description provided for @stopCableMove.
+  ///
+  /// In en, this message translates to:
+  /// **'CABLE MOVE'**
+  String get stopCableMove;
+
+  /// No description provided for @stopDecidedStop.
+  ///
+  /// In en, this message translates to:
+  /// **'DECIDED STOP'**
+  String get stopDecidedStop;
+
+  /// No description provided for @stopNoDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'NO DRIVER'**
+  String get stopNoDriver;
+
+  /// No description provided for @stopBreak.
+  ///
+  /// In en, this message translates to:
+  /// **'BREAK'**
+  String get stopBreak;
+
+  /// No description provided for @stopTracks.
+  ///
+  /// In en, this message translates to:
+  /// **'TRACKS (EXCL. WEATHER)'**
+  String get stopTracks;
+
+  /// No description provided for @stopFixedInstallMech.
+  ///
+  /// In en, this message translates to:
+  /// **'FIXED INSTALLATION MECH STOP'**
+  String get stopFixedInstallMech;
+
+  /// No description provided for @stopTelescoping.
+  ///
+  /// In en, this message translates to:
+  /// **'TELESCOPING'**
+  String get stopTelescoping;
+
+  /// No description provided for @stopPureExcavation.
+  ///
+  /// In en, this message translates to:
+  /// **'PURE EXCAVATION'**
+  String get stopPureExcavation;
+
+  /// No description provided for @stopPureEarthworks.
+  ///
+  /// In en, this message translates to:
+  /// **'PURE EARTHWORKS'**
+  String get stopPureEarthworks;
+
+  /// No description provided for @trackingType.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking'**
+  String get trackingType;
+
+  /// No description provided for @reportDescriptionPattern.
+  ///
+  /// In en, this message translates to:
+  /// **'{type} - {date} - {poste}'**
+  String reportDescriptionPattern(String type, String date, String poste);
+
+  /// No description provided for @deleteCounterTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete counter'**
+  String get deleteCounterTooltip;
+
+  /// No description provided for @editCounterTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit counter'**
+  String get editCounterTooltip;
+
+  /// No description provided for @stopIndex.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop {index}'**
+  String stopIndex(int index);
+
+  /// No description provided for @loader992k.
+  ///
+  /// In en, this message translates to:
+  /// **'Loader 992K'**
+  String get loader992k;
+
+  /// No description provided for @loader994h.
+  ///
+  /// In en, this message translates to:
+  /// **'Loader 994H'**
+  String get loader994h;
+
+  /// No description provided for @hydraulicShovel.
+  ///
+  /// In en, this message translates to:
+  /// **'Hydraulic Shovel'**
+  String get hydraulicShovel;
+
+  /// No description provided for @electricShovelB1.
+  ///
+  /// In en, this message translates to:
+  /// **'Electric Shovel B1'**
+  String get electricShovelB1;
+
+  /// No description provided for @selectTruckLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Select truck'**
+  String get selectTruckLabel;
+
+  /// No description provided for @truckLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Truck'**
+  String get truckLabel;
+
+  /// No description provided for @driverInfoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver information'**
+  String get driverInfoLabel;
+
+  /// No description provided for @editR0Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit R0 Report'**
+  String get editR0Title;
+
+  /// No description provided for @editTruckTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Truck'**
+  String get editTruckTitle;
+
+  /// No description provided for @newTruckTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New Truck'**
+  String get newTruckTitle;
+
+  /// No description provided for @machinesEquipmentStoppedTitleShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Machines/Equipment Stopped'**
+  String get machinesEquipmentStoppedTitleShort;
+
+  /// No description provided for @conducteurLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Conductor'**
+  String get conducteurLabel;
+
+  /// No description provided for @reasonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get reasonLabel;
 }
 
 class _AppLocalizationsDelegate

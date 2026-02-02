@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/models/report.dart';
-import 'package:r0/models/mine_data.dart';
 import 'package:r0/services/database_helper.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
@@ -30,7 +29,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   String? _selectedPosteFilter;
 
   // Selection state management
-  int? _selectedEquipmentIndex;
+
   int? _selectedStopIndex;
   int? _selectedCounterIndex;
   int? _selectedStockIndex;
@@ -100,45 +99,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
       'EXCAVATION PURE',
       'TERASSEMENT PUR',
     ],
-  };
-
-  // Add ENGINS and MACHINES data maps
-  static const Map<String, List<String>> enginsData = {
-    'BULLDOZERS': [
-      'BULL D9R 76',
-      'BULL D9R 79',
-      'BULL D9R 80',
-      'BULL D9R 81',
-      'BULL D9R 82',
-      'BULL D9R 83',
-      'BULL LIB 84',
-      'BULL LIB 85',
-      'BULL D9R 86',
-      'BULL D9R 87',
-    ],
-    'CAMIONS': [
-      'CAMION T24',
-      'CAMION T25',
-      'CAMION T26',
-      'CAMION T27',
-      'CAMION T28',
-      'CAMION T29',
-      'CAMION T30',
-      'CAMION T31',
-      'CAMION T32',
-      'CAMION T33',
-      'WABCO 13',
-      'WABCO 19',
-    ],
-    'CHARGEUSES': ['CHRG 992C', 'CHRG 992K', 'CHRG 994H'],
-    'NIVELEUSES': ['NIV 14G', 'NIV 16H', 'NIV KOM01', 'NIV KOM02'],
-    'PAYDOZERS': ['PAY CAT03', 'PAY KOM04', 'PAY KOM05'],
-    'PELLE HYDRAULIQUE': ['PH365-C', 'PH5130'],
-  };
-  static const Map<String, List<String>> machinesData = {
-    'DRAGLINES': ['1370 W1', '1370 W2'],
-    'PELLE ELECTRIQUE': ['195 P1', '195 P2'],
-    'SONDEUSES': ['PV275-1', 'PV275-2', 'PV275-3'],
   };
 
   final posteOrder = const ["3ème", "1er", "2ème"];
@@ -232,6 +192,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   // Helper function to recalculate H.A from Arrets for R0 reports
+  double _parseNumeric(String value) {
+    if (value.isEmpty) return 0.0;
+    return double.tryParse(value.replaceAll(',', '.')) ?? 0.0;
+  }
+
   void _recalculateR0Hours(Map<String, dynamic> data) {
     // 1. Calculate H.A (Total Stoppage Hours)
     double totalStoppageHours = 0;
@@ -262,45 +227,30 @@ class _ReportsScreenState extends State<ReportsScreen> {
       }
     }
 
-    // 2. Calculate H.M (Working Hours)
-    double totalCounterHours = 0;
-    bool hasCounters = false;
-
-    if (data['Compteurs'] is List && (data['Compteurs'] as List).isNotEmpty) {
-      hasCounters = true;
-      for (var compteur in data['Compteurs'] as List) {
+    // 2. Calculate H.M (Working Hours) - Gross
+    double totalGrossHours = 0;
+    final compteursData = data['Compteurs'];
+    if (compteursData is List && compteursData.isNotEmpty) {
+      for (var compteur in compteursData) {
         if (compteur is Map &&
             compteur['duree'] != null &&
             compteur['note'] != null) {
-          // Note: In code 'duree' is Start and 'note' is End based on dialog usage
-          final debut = compteur['duree'].toString();
-          final fin = compteur['note'].toString();
-
-          if (debut.isNotEmpty && fin.isNotEmpty) {
-            // Parse time format HH:MM or similar simple format if needed
-            // Assuming standard HH:MM for calculation
-            final startParts = debut.split(':');
-            final endParts = fin.split(':');
-            if (startParts.length >= 2 && endParts.length >= 2) {
-              final startHour = int.tryParse(startParts[0]) ?? 0;
-              final startMin = int.tryParse(startParts[1]) ?? 0;
-              final endHour = int.tryParse(endParts[0]) ?? 0;
-              final endMin = int.tryParse(endParts[1]) ?? 0;
-
-              final startTotal = startHour * 60 + startMin;
-              final endTotal = endHour * 60 + endMin;
-              int diff = endTotal - startTotal;
-              if (diff <= 0) diff += 24 * 60; // Handle overnight periods
-
-              totalCounterHours += diff / 60.0;
-            }
+          final start = _parseNumeric(compteur['duree'].toString());
+          final end = _parseNumeric(compteur['note'].toString());
+          if (end > start) {
+            totalGrossHours += (end - start);
           }
         }
+      }
+    } else if (compteursData is Map) {
+      final start = _parseNumeric(compteursData['duree']?.toString() ?? '');
+      final end = _parseNumeric(compteursData['note']?.toString() ?? '');
+      if (end > start) {
+        totalGrossHours += (end - start);
       }
     }
 
     // 3. Apply Rules
-    // Update H.A
     if (data['exploitation'] == null) {
       data['exploitation'] = {};
     }
@@ -308,16 +258,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     if (data['exploitation'] is Map) {
       data['exploitation']['H.A'] = totalStoppageHours.toStringAsFixed(2);
 
-      double hm = 0.0;
-      if (hasCounters) {
-        // If counters exist, use counter hours capped at 8h
-        hm = totalCounterHours > 8.0 ? 8.0 : totalCounterHours;
-      } else {
-        // If no counters, default to 8h minus stoppages
-        hm = (8.0 - totalStoppageHours).clamp(0.0, 8.0);
-      }
-
-      data['exploitation']['H.M'] = hm.toStringAsFixed(2);
+      // H.M = Gross Hours only (not subtracting stops)
+      data['exploitation']['H.M'] = totalGrossHours.toStringAsFixed(2);
     }
   }
 
@@ -426,12 +368,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Modifier R TNB',
-                        style: Theme.of(context).textTheme.titleLarge,
+                      Expanded(
+                        child: Text(
+                          l10n.editActivityTnb,
+                          style: Theme.of(context).textTheme.titleLarge,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close),
+                        icon: const Icon(Icons.save),
                         onPressed: () => Navigator.pop(dialogContext),
                       ),
                     ],
@@ -453,16 +398,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Info',
+                                  l10n.infoLabel,
                                   style:
                                       Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
                                 _buildEditableField(
                                   context: context,
-                                  label: 'Description',
-                                  value: report.description,
+                                  label: l10n.description,
                                   isEditable: false,
+                                  value: report.description,
                                   onSave: (value) async {
                                     final updatedReport = Report(
                                       id: report.id,
@@ -479,7 +424,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 const SizedBox(height: 8),
                                 _buildEditableDateField(
                                   context: context,
-                                  label: 'Date',
+                                  label: l10n.date,
                                   value: report.date,
                                   onSave: (value) async {
                                     final updatedReport = Report(
@@ -512,11 +457,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      'Arrêts',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium,
+                                    Expanded(
+                                      child: Text(
+                                        l10n.stopsLabel,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                     ElevatedButton.icon(
                                       onPressed: () => _showAddStopDialog(
@@ -526,14 +474,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           scaffoldMessenger,
                                           l10n),
                                       icon: const Icon(Icons.add),
-                                      label: const Text('Aj'),
+                                      label: Text(l10n.ajButton),
                                     ),
                                   ],
                                 ),
                                 const Divider(height: 16),
-                                if (data['stops'] is List &&
-                                    (data['stops'] as List).isNotEmpty)
-                                  ...List.from(data['stops'])
+                                if (data['Arrets'] is List &&
+                                    (data['Arrets'] as List).isNotEmpty)
+                                  ...List.from(data['Arrets'])
                                       .asMap()
                                       .entries
                                       .map((entry) {
@@ -551,15 +499,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         selected: isSelected,
                                         selectedTileColor:
                                             Colors.green.withValues(alpha: 0.1),
-                                        title: Text('Arrêt ${index + 1}'),
+                                        title: Text(l10n.arretTitle(index + 1)),
                                         subtitle: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                                'Durée: ${stop['duration'] ?? '-'}'),
+                                                '${l10n.dureeLabel}: ${_formatMinutesToHoursMinutes(_parseDurationToMinutes(stop['duration'] ?? ''))}'),
                                             Text(
-                                                'Nature: ${stop['nature'] ?? '-'}'),
+                                                '${l10n.natureLabel}: ${stop['nature'] ?? '-'}'),
                                           ],
                                         ),
                                         leading: isSelected
@@ -586,7 +534,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                       setDialogState,
                                                       scaffoldMessenger,
                                                       l10n),
-                                              tooltip: 'Modifier l\'arrêt',
+                                              tooltip: l10n.editArret,
                                             ),
                                             IconButton(
                                               icon: const Icon(Icons.delete,
@@ -599,7 +547,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                       setDialogState,
                                                       scaffoldMessenger,
                                                       l10n),
-                                              tooltip: 'Supprimer l\'arrêt',
+                                              tooltip: l10n.deleteArret,
                                             ),
                                           ],
                                         ),
@@ -607,8 +555,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     );
                                   })
                                 else
-                                  const Text('Aucun arrêt ajouté',
-                                      style: TextStyle(color: Colors.grey)),
+                                  Text(l10n.aucunArret,
+                                      style:
+                                          const TextStyle(color: Colors.grey)),
                               ],
                             ),
                           ),
@@ -627,11 +576,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      'C Vibr',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium,
+                                    Expanded(
+                                      child: Text(
+                                        l10n.cvibrLabel,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                     ElevatedButton.icon(
                                       onPressed: () =>
@@ -642,7 +594,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                               scaffoldMessenger,
                                               l10n),
                                       icon: const Icon(Icons.add),
-                                      label: const Text('Aj'),
+                                      label: Text(l10n.ajButton),
                                     ),
                                   ],
                                 ),
@@ -668,17 +620,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         selected: isSelected,
                                         selectedTileColor: Colors.orange
                                             .withValues(alpha: 0.1),
-                                        title: Text('C.Vibr ${index + 1}'),
+                                        title: Text(l10n.cvibrTitle(index + 1)),
                                         subtitle: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                                'Poste: ${_getPosteString(counter['poste'])}'),
+                                                '${l10n.poste}: ${_getPosteString(counter['poste'], l10n)}'),
                                             Text(
-                                                'Début: ${counter['start'] ?? '-'}'),
+                                                '${l10n.start}: ${counter['start'] ?? '-'}'),
                                             Text(
-                                                'Fin: ${counter['end'] ?? '-'}'),
+                                                '${l10n.end}: ${counter['end'] ?? '-'}'),
                                           ],
                                         ),
                                         leading: isSelected
@@ -705,7 +657,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                       setDialogState,
                                                       scaffoldMessenger,
                                                       l10n),
-                                              tooltip: 'Modifier le compteur',
+                                              tooltip: l10n.editCounter,
                                             ),
                                             IconButton(
                                               icon: const Icon(Icons.delete,
@@ -718,7 +670,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                       setDialogState,
                                                       scaffoldMessenger,
                                                       l10n),
-                                              tooltip: 'Supprimer le compteur',
+                                              tooltip: l10n.deleteCounter,
                                             ),
                                           ],
                                         ),
@@ -726,8 +678,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     );
                                   })
                                 else
-                                  const Text('Aucun compteur vibreur ajouté',
-                                      style: TextStyle(color: Colors.grey)),
+                                  Text(l10n.aucunCompteurVibr,
+                                      style:
+                                          const TextStyle(color: Colors.grey)),
                               ],
                             ),
                           ),
@@ -746,11 +699,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      'C Liaison',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium,
+                                    Expanded(
+                                      child: Text(
+                                        l10n.cliaisonLabel,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                     ElevatedButton.icon(
                                       onPressed: () =>
@@ -761,7 +717,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                               scaffoldMessenger,
                                               l10n),
                                       icon: const Icon(Icons.add),
-                                      label: const Text('Aj'),
+                                      label: Text(l10n.ajButton),
                                     ),
                                   ],
                                 ),
@@ -778,17 +734,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     return Card(
                                       margin: const EdgeInsets.only(bottom: 8),
                                       child: ListTile(
-                                        title: Text('C.Liaison ${index + 1}'),
+                                        title:
+                                            Text(l10n.cliaisonTitle(index + 1)),
                                         subtitle: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                                'Poste: ${_getPosteString(counter['poste'])}'),
+                                                '${l10n.poste}: ${_getPosteString(counter['poste'], l10n)}'),
                                             Text(
-                                                'Début: ${counter['start'] ?? '-'}'),
+                                                '${l10n.start}: ${counter['start'] ?? '-'}'),
                                             Text(
-                                                'Fin: ${counter['end'] ?? '-'}'),
+                                                '${l10n.end}: ${counter['end'] ?? '-'}'),
                                           ],
                                         ),
                                         trailing: Row(
@@ -805,7 +762,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                       setDialogState,
                                                       scaffoldMessenger,
                                                       l10n),
-                                              tooltip: 'Modifier le compteur',
+                                              tooltip: l10n.editCounter,
                                             ),
                                             IconButton(
                                               icon: const Icon(Icons.delete,
@@ -818,7 +775,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                       setDialogState,
                                                       scaffoldMessenger,
                                                       l10n),
-                                              tooltip: 'Supprimer le compteur',
+                                              tooltip: l10n.deleteCounter,
                                             ),
                                           ],
                                         ),
@@ -826,8 +783,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     );
                                   })
                                 else
-                                  const Text('Aucun compteur liaison ajouté',
-                                      style: TextStyle(color: Colors.grey)),
+                                  Text(l10n.noLiaisonCountersAdded,
+                                      style:
+                                          const TextStyle(color: Colors.grey)),
                               ],
                             ),
                           ),
@@ -846,11 +804,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      'stocks',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium,
+                                    Expanded(
+                                      child: Text(
+                                        l10n.stocksLabel,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                     ElevatedButton.icon(
                                       onPressed: () => _showAddStockEntryDialog(
@@ -860,7 +821,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           scaffoldMessenger,
                                           l10n),
                                       icon: const Icon(Icons.add),
-                                      label: const Text('Aj'),
+                                      label: Text(l10n.ajButton),
                                     ),
                                   ],
                                 ),
@@ -885,17 +846,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         selected: isSelected,
                                         selectedTileColor: Colors.purple
                                             .withValues(alpha: 0.1),
-                                        title: Text('Stock ${index + 1}'),
+                                        title: Text(
+                                            l10n.stockTitleIndex(index + 1)),
                                         subtitle: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                                'Poste: ${_getPosteString(stock['poste'])}'),
+                                                'Poste: ${_getPosteString(stock['poste'], l10n)}'),
                                             Text(
-                                                'Parc: ${_getParkString(stock['park'])}'),
+                                                'Parc: ${_getParkString(stock['park'], l10n)}'),
                                             Text(
-                                                'Type: ${_getStockTypeString(stock['type'])}'),
+                                                'Type: ${_getStockTypeString(stock['type'], l10n)}'),
                                             Text(
                                                 'Quantité: ${stock['quantity'] ?? '-'}'),
                                           ],
@@ -924,8 +886,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                       setDialogState,
                                                       scaffoldMessenger,
                                                       l10n),
-                                              tooltip:
-                                                  'Modifier l\'entrée de stock',
+                                              tooltip: l10n.editStockEntryTitle,
                                             ),
                                             IconButton(
                                               icon: const Icon(Icons.delete,
@@ -939,7 +900,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                       scaffoldMessenger,
                                                       l10n),
                                               tooltip:
-                                                  'Supprimer l\'entrée de stock',
+                                                  l10n.deleteStockEntryTitle,
                                             ),
                                           ],
                                         ),
@@ -947,8 +908,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     );
                                   })
                                 else
-                                  const Text('Aucune entrée de stock ajoutée',
-                                      style: TextStyle(color: Colors.grey)),
+                                  Text(l10n.noStockEntriesAdded,
+                                      style:
+                                          const TextStyle(color: Colors.grey)),
                               ],
                             ),
                           ),
@@ -972,18 +934,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
       StateSetter setDialogState,
       ScaffoldMessengerState scaffoldMessenger,
       AppLocalizations l10n) async {
-    const List<String> predefinedNatures = [
-      'Manque Produit',
-      'Attente Saturation Silo',
-      'Vidange Extraction 2',
-      'Arret Mécanique sur:',
-      'Dèfout Élèctrique sur:',
-      'Arret d\'instalation sur:',
-      'Travoux Mècanique sur:',
-      'Travoux Elèctrique sur:',
-      'Travoux dans l\'instalation sur:',
-      'Autre:',
-    ];
+    final natureDisplayMap = {
+      'Manque Produit': l10n.missingProduct,
+      'Attente Saturation Silo': l10n.waitingSaturationSilo,
+      'Vidange Extraction 2': l10n.extraction2Drainage,
+      'Arret Mécanique sur:': l10n.mechanicalStop,
+      'Dèfout Élèctrique sur:': l10n.electricalFault,
+      'Arret d\'instalation sur:': l10n.installationStop,
+      'Travoux Mècanique sur:': l10n.mechanicalWork,
+      'Travoux Elèctrique sur:': l10n.electricalWork,
+      'Travoux dans l\'instalation sur:': l10n.installationWork,
+      'Autre:': l10n.other,
+    };
+    final predefinedNatures = natureDisplayMap.keys.toList();
 
     String? selectedNature;
     String customNature = '';
@@ -994,21 +957,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Ajouter un arrêt'),
+          title: Text(l10n.addStopTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<String>(
-                value: selectedNature,
-                decoration: const InputDecoration(
-                  labelText: 'Nature prédéfinie',
-                  border: OutlineInputBorder(),
+                initialValue: selectedNature,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: l10n.predefinedNatureLabel,
+                  border: const OutlineInputBorder(),
                 ),
                 items: predefinedNatures
-                    .map((nature) => DropdownMenuItem(
-                          value: nature,
-                          child: Text(nature),
-                        ))
+                    .map(
+                      (nature) => DropdownMenuItem(
+                        value: nature,
+                        child: Text(
+                          natureDisplayMap[nature] ?? nature,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    )
                     .toList(),
                 onChanged: (value) {
                   setState(() {
@@ -1017,14 +986,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     customNatureController.clear();
                   });
                 },
-                hint: const Text('Sélectionner une nature'),
-                isExpanded: true,
               ),
               const SizedBox(height: 16),
               TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Durée (ex: 1h 30)',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.durationLabel,
+                  border: const OutlineInputBorder(),
                 ),
                 onChanged: (value) => setState(() => tempStopDuration = value),
               ),
@@ -1032,10 +999,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: customNatureController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nature (complément)',
-                    border: OutlineInputBorder(),
-                    hintText: 'Maximum 20 caractères par ligne',
+                  decoration: InputDecoration(
+                    labelText: l10n.complementLabel,
+                    border: const OutlineInputBorder(),
+                    hintText: l10n.maxCharactersHint,
                   ),
                   maxLines: 5,
                   onChanged: (value) {
@@ -1068,7 +1035,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler'),
+              child: Text(l10n.cancel),
             ),
             ElevatedButton(
               onPressed: () {
@@ -1085,10 +1052,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 }
                 if (tempStopDuration.isNotEmpty && finalNature.isNotEmpty) {
                   final updatedData = Map<String, dynamic>.from(data);
-                  if (updatedData['stops'] == null) {
-                    updatedData['stops'] = [];
+                  if (updatedData['Arrets'] == null) {
+                    updatedData['Arrets'] = [];
                   }
-                  (updatedData['stops'] as List).add({
+                  (updatedData['Arrets'] as List).add({
                     'id': DateTime.now().millisecondsSinceEpoch.toString(),
                     'duration': tempStopDuration,
                     'nature': finalNature,
@@ -1109,9 +1076,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                   Navigator.pop(context);
                   _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                  setDialogState(() {});
                 }
               },
-              child: const Text('Ajouter'),
+              child: Text(l10n.add),
             ),
           ],
         ),
@@ -1127,27 +1095,29 @@ class _ReportsScreenState extends State<ReportsScreen> {
       StateSetter setDialogState,
       ScaffoldMessengerState scaffoldMessenger,
       AppLocalizations l10n) async {
-    final stop = (data['stops'] as List)[index];
-    const List<String> predefinedNatures = [
-      'Manque Produit',
-      'Attente Saturation Silo',
-      'Vidange Extraction 2',
-      'Arret Mécanique sur:',
-      'Dèfout Élèctrique sur:',
-      'Arret d\'instalation sur:',
-      'Travoux Mècanique sur:',
-      'Travoux Elèctrique sur:',
-      'Travoux dans l\'instalation sur:',
-      'Autre:',
-    ];
+    final stop = (data['Arrets'] as List)[index];
+    final natureDisplayMap = {
+      'Manque Produit': l10n.missingProduct,
+      'Attente Saturation Silo': l10n.waitingSaturationSilo,
+      'Vidange Extraction 2': l10n.extraction2Drainage,
+      'Arret Mécanique sur:': l10n.mechanicalStop,
+      'Dèfout Élèctrique sur:': l10n.electricalFault,
+      'Arret d\'instalation sur:': l10n.installationStop,
+      'Travoux Mècanique sur:': l10n.mechanicalWork,
+      'Travoux Elèctrique sur:': l10n.electricalWork,
+      'Travoux dans l\'instalation sur:': l10n.installationWork,
+      'Autre:': l10n.other,
+    };
+    final predefinedNatures = natureDisplayMap.keys.toList();
 
     String? selectedNature;
     String customNature = '';
-    String tempStopDuration = stop['duration'] ?? '';
+    String tempStopDuration = stop['duration']?.toString() ?? '';
     final customNatureController = TextEditingController();
+    final durationController = TextEditingController(text: tempStopDuration);
 
     // Parse the nature to determine selected nature and custom part
-    String currentNature = stop['nature'] ?? '';
+    String currentNature = stop['nature']?.toString() ?? '';
     for (String nature in predefinedNatures) {
       if (currentNature.startsWith(nature)) {
         selectedNature = nature;
@@ -1163,21 +1133,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Modifier l\'arrêt'),
+          title: Text(l10n.editStopTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<String>(
-                value: selectedNature,
-                decoration: const InputDecoration(
-                  labelText: 'Nature prédéfinie',
-                  border: OutlineInputBorder(),
+                initialValue: selectedNature,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: l10n.predefinedNatureLabel,
+                  border: const OutlineInputBorder(),
                 ),
                 items: predefinedNatures
-                    .map((nature) => DropdownMenuItem(
-                          value: nature,
-                          child: Text(nature),
-                        ))
+                    .map(
+                      (nature) => DropdownMenuItem(
+                        value: nature,
+                        child: Text(
+                          natureDisplayMap[nature] ?? nature,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    )
                     .toList(),
                 onChanged: (value) {
                   setState(() {
@@ -1186,26 +1162,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     customNatureController.clear();
                   });
                 },
-                hint: const Text('Sélectionner une nature'),
-                isExpanded: true,
+                hint: Text(l10n.selectNature),
               ),
               const SizedBox(height: 16),
               TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Durée (ex: 1h 30)',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.durationLabel,
+                  border: const OutlineInputBorder(),
                 ),
-                controller: TextEditingController(text: tempStopDuration),
+                controller: durationController,
                 onChanged: (value) => setState(() => tempStopDuration = value),
               ),
               if (selectedNature?.endsWith(':') == true) ...[
                 const SizedBox(height: 16),
                 TextField(
                   controller: customNatureController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nature (complément)',
-                    border: OutlineInputBorder(),
-                    hintText: 'Maximum 20 caractères par ligne',
+                  decoration: InputDecoration(
+                    labelText: l10n.complementLabel,
+                    border: const OutlineInputBorder(),
+                    hintText: l10n.maxCharactersHint,
                   ),
                   maxLines: 5,
                   onChanged: (value) {
@@ -1238,7 +1213,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler'),
+              child: Text(l10n.cancel),
             ),
             ElevatedButton(
               onPressed: () {
@@ -1255,7 +1230,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 }
                 if (tempStopDuration.isNotEmpty && finalNature.isNotEmpty) {
                   final updatedData = Map<String, dynamic>.from(data);
-                  (updatedData['stops'] as List)[index] = {
+                  (updatedData['Arrets'] as List)[index] = {
                     'id': stop['id'],
                     'duration': tempStopDuration,
                     'nature': finalNature,
@@ -1276,9 +1251,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                   Navigator.pop(context);
                   _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                  setDialogState(() {});
                 }
               },
-              child: const Text('Modifier'),
+              child: Text(l10n.modifyLabel),
             ),
           ],
         ),
@@ -1297,17 +1273,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Supprimer l\'arrêt'),
-        content: const Text('Êtes-vous sûr de vouloir supprimer cet arrêt ?'),
+        title: Text(l10n.deleteStopTitle),
+        content: Text(l10n.deleteStopConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () {
               final updatedData = Map<String, dynamic>.from(data);
-              (updatedData['stops'] as List).removeAt(index);
+              (updatedData['Arrets'] as List).removeAt(index);
 
               // Recalculate totals for Activity TNB reports
               final recalculatedData = _recalculateActivityTotals(updatedData);
@@ -1323,9 +1299,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
               Navigator.pop(context);
               _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+              setDialogState(() {});
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Supprimer'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -1347,36 +1324,36 @@ class _ReportsScreenState extends State<ReportsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Ajouter un compteur vibreur'),
+          title: Text(l10n.addVibratorCounterTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<int>(
-                value: selectedPoste,
-                decoration: const InputDecoration(
-                  labelText: 'Poste',
-                  border: OutlineInputBorder(),
+                initialValue: selectedPoste,
+                decoration: InputDecoration(
+                  labelText: l10n.poste,
+                  border: const OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 0, child: Text('3ème Poste')),
-                  DropdownMenuItem(value: 1, child: Text('1er Poste')),
-                  DropdownMenuItem(value: 2, child: Text('2ème Poste')),
+                items: [
+                  DropdownMenuItem(value: 0, child: Text(l10n.poste3eme)),
+                  DropdownMenuItem(value: 1, child: Text(l10n.poste1er)),
+                  DropdownMenuItem(value: 2, child: Text(l10n.poste2eme)),
                 ],
                 onChanged: (value) => setState(() => selectedPoste = value),
               ),
               const SizedBox(height: 16),
               TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Index début',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.startCounterLabel,
+                  border: const OutlineInputBorder(),
                 ),
                 onChanged: (value) => setState(() => startIndex = value),
               ),
               const SizedBox(height: 16),
               TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Index fin',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.endCounterLabel,
+                  border: const OutlineInputBorder(),
                 ),
                 onChanged: (value) => setState(() => endIndex = value),
               ),
@@ -1385,7 +1362,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler'),
+              child: Text(l10n.cancel),
             ),
             ElevatedButton(
               onPressed: () {
@@ -1418,9 +1395,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                   Navigator.pop(context);
                   _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                  setDialogState(() {});
                 }
               },
-              child: const Text('Ajouter'),
+              child: Text(l10n.add),
             ),
           ],
         ),
@@ -1437,95 +1415,104 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ScaffoldMessengerState scaffoldMessenger,
       AppLocalizations l10n) async {
     final counter = (data['vibrator Counters'] as List)[index];
-    int? selectedPoste = counter['poste'];
+    int? selectedPoste;
+    final rawPoste = counter['poste'];
+    if (rawPoste is int) {
+      selectedPoste = rawPoste;
+    } else if (rawPoste is String) {
+      if (rawPoste == '3ème Poste') {
+        selectedPoste = 0;
+      } else if (rawPoste == '1er Poste') {
+        selectedPoste = 1;
+      } else if (rawPoste == '2ème Poste') {
+        selectedPoste = 2;
+      }
+    }
     final startController = TextEditingController(text: counter['start'] ?? '');
     final endController = TextEditingController(text: counter['end'] ?? '');
 
-    try {
-      await showDialog(
-        context: context,
-        builder: (context) => StatefulBuilder(
-          builder: (context, setState) => AlertDialog(
-            title: const Text('Modifier le compteur vibreur'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<int>(
-                  value: selectedPoste,
-                  decoration: const InputDecoration(
-                    labelText: 'Poste',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 0, child: Text('3ème Poste')),
-                    DropdownMenuItem(value: 1, child: Text('1er Poste')),
-                    DropdownMenuItem(value: 2, child: Text('2ème Poste')),
-                  ],
-                  onChanged: (value) => setState(() => selectedPoste = value),
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(l10n.editVibratorCounterTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<int>(
+                initialValue: selectedPoste,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: l10n.poste,
+                  border: const OutlineInputBorder(),
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Index début',
-                    border: OutlineInputBorder(),
-                  ),
-                  controller: startController,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Index fin',
-                    border: OutlineInputBorder(),
-                  ),
-                  controller: endController,
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
+                items: [
+                  DropdownMenuItem(value: 0, child: Text(l10n.poste3eme)),
+                  DropdownMenuItem(value: 1, child: Text(l10n.poste1er)),
+                  DropdownMenuItem(value: 2, child: Text(l10n.poste2eme)),
+                ],
+                onChanged: (value) => setState(() => selectedPoste = value),
               ),
-              ElevatedButton(
-                onPressed: () {
-                  if (selectedPoste != null &&
-                      startController.text.isNotEmpty &&
-                      endController.text.isNotEmpty) {
-                    final updatedData = Map<String, dynamic>.from(data);
-                    (updatedData['vibrator Counters'] as List)[index] = {
-                      'id': counter['id'],
-                      'poste': selectedPoste,
-                      'start': startController.text,
-                      'end': endController.text,
-                    };
-
-                    // Recalculate totals for Activity TNB reports
-                    final recalculatedData =
-                        _recalculateActivityTotals(updatedData);
-
-                    final updatedReport = Report(
-                      id: report.id,
-                      description: report.description,
-                      type: report.type,
-                      group: report.group,
-                      date: report.date,
-                      additionalData: recalculatedData,
-                    );
-
-                    Navigator.pop(context);
-                    _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                  }
-                },
-                child: const Text('Modifier'),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: InputDecoration(
+                  labelText: l10n.startCounterLabel,
+                  border: const OutlineInputBorder(),
+                ),
+                controller: startController,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: InputDecoration(
+                  labelText: l10n.endCounterLabel,
+                  border: const OutlineInputBorder(),
+                ),
+                controller: endController,
               ),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (selectedPoste != null &&
+                    startController.text.isNotEmpty &&
+                    endController.text.isNotEmpty) {
+                  final updatedData = Map<String, dynamic>.from(data);
+                  (updatedData['vibrator Counters'] as List)[index] = {
+                    'id': counter['id'],
+                    'poste': selectedPoste,
+                    'start': startController.text,
+                    'end': endController.text,
+                  };
+
+                  // Recalculate totals for Activity TNB reports
+                  final recalculatedData =
+                      _recalculateActivityTotals(updatedData);
+
+                  final updatedReport = Report(
+                    id: report.id,
+                    description: report.description,
+                    type: report.type,
+                    group: report.group,
+                    date: report.date,
+                    additionalData: recalculatedData,
+                  );
+
+                  Navigator.pop(context);
+                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                  setDialogState(() {});
+                }
+              },
+              child: Text(l10n.modifyLabel),
+            ),
+          ],
         ),
-      );
-    } finally {
-      startController.dispose();
-      endController.dispose();
-    }
+      ),
+    );
   }
 
   // Delete Vibreur Counter Dialog for Activity Report
@@ -1539,13 +1526,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Supprimer le compteur vibreur'),
-        content: const Text(
-            'Êtes-vous sûr de vouloir supprimer ce compteur vibreur ?'),
+        title: Text(l10n.deleteVibratorCounterTitle),
+        content: Text(l10n.deleteCounterConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1566,9 +1552,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
               Navigator.pop(context);
               _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+              setDialogState(() {});
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Supprimer'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -1590,36 +1577,36 @@ class _ReportsScreenState extends State<ReportsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Ajouter un compteur liaison'),
+          title: Text(l10n.addLiaisonCounterTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<int>(
-                value: selectedPoste,
-                decoration: const InputDecoration(
-                  labelText: 'Poste',
-                  border: OutlineInputBorder(),
+                initialValue: selectedPoste,
+                decoration: InputDecoration(
+                  labelText: l10n.poste,
+                  border: const OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 0, child: Text('3ème Poste')),
-                  DropdownMenuItem(value: 1, child: Text('1er Poste')),
-                  DropdownMenuItem(value: 2, child: Text('2ème Poste')),
+                items: [
+                  DropdownMenuItem(value: 0, child: Text(l10n.poste3eme)),
+                  DropdownMenuItem(value: 1, child: Text(l10n.poste1er)),
+                  DropdownMenuItem(value: 2, child: Text(l10n.poste2eme)),
                 ],
                 onChanged: (value) => setState(() => selectedPoste = value),
               ),
               const SizedBox(height: 16),
               TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Index début',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.startCounterLabel,
+                  border: const OutlineInputBorder(),
                 ),
                 onChanged: (value) => setState(() => startIndex = value),
               ),
               const SizedBox(height: 16),
               TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Index fin',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.endCounterLabel,
+                  border: const OutlineInputBorder(),
                 ),
                 onChanged: (value) => setState(() => endIndex = value),
               ),
@@ -1628,7 +1615,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler'),
+              child: Text(l10n.cancel),
             ),
             ElevatedButton(
               onPressed: () {
@@ -1661,9 +1648,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                   Navigator.pop(context);
                   _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                  setDialogState(() {});
                 }
               },
-              child: const Text('Ajouter'),
+              child: Text(l10n.add),
             ),
           ],
         ),
@@ -1680,95 +1668,104 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ScaffoldMessengerState scaffoldMessenger,
       AppLocalizations l10n) async {
     final counter = (data['liaison Counters'] as List)[index];
-    int? selectedPoste = counter['poste'];
+    int? selectedPoste;
+    final rawPoste = counter['poste'];
+    if (rawPoste is int) {
+      selectedPoste = rawPoste;
+    } else if (rawPoste is String) {
+      if (rawPoste == '3ème Poste') {
+        selectedPoste = 0;
+      } else if (rawPoste == '1er Poste') {
+        selectedPoste = 1;
+      } else if (rawPoste == '2ème Poste') {
+        selectedPoste = 2;
+      }
+    }
     final startController = TextEditingController(text: counter['start'] ?? '');
     final endController = TextEditingController(text: counter['end'] ?? '');
 
-    try {
-      await showDialog(
-        context: context,
-        builder: (context) => StatefulBuilder(
-          builder: (context, setState) => AlertDialog(
-            title: const Text('Modifier le compteur liaison'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<int>(
-                  value: selectedPoste,
-                  decoration: const InputDecoration(
-                    labelText: 'Poste',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 0, child: Text('3ème Poste')),
-                    DropdownMenuItem(value: 1, child: Text('1er Poste')),
-                    DropdownMenuItem(value: 2, child: Text('2ème Poste')),
-                  ],
-                  onChanged: (value) => setState(() => selectedPoste = value),
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(l10n.editLiaisonCounterTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<int>(
+                initialValue: selectedPoste,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: l10n.poste,
+                  border: const OutlineInputBorder(),
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Index début',
-                    border: OutlineInputBorder(),
-                  ),
-                  controller: startController,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Index fin',
-                    border: OutlineInputBorder(),
-                  ),
-                  controller: endController,
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
+                items: [
+                  DropdownMenuItem(value: 0, child: Text(l10n.poste3eme)),
+                  DropdownMenuItem(value: 1, child: Text(l10n.poste1er)),
+                  DropdownMenuItem(value: 2, child: Text(l10n.poste2eme)),
+                ],
+                onChanged: (value) => setState(() => selectedPoste = value),
               ),
-              ElevatedButton(
-                onPressed: () {
-                  if (selectedPoste != null &&
-                      startController.text.isNotEmpty &&
-                      endController.text.isNotEmpty) {
-                    final updatedData = Map<String, dynamic>.from(data);
-                    (updatedData['liaison Counters'] as List)[index] = {
-                      'id': counter['id'],
-                      'poste': selectedPoste,
-                      'start': startController.text,
-                      'end': endController.text,
-                    };
-
-                    // Recalculate totals for Activity TNB reports
-                    final recalculatedData =
-                        _recalculateActivityTotals(updatedData);
-
-                    final updatedReport = Report(
-                      id: report.id,
-                      description: report.description,
-                      type: report.type,
-                      group: report.group,
-                      date: report.date,
-                      additionalData: recalculatedData,
-                    );
-
-                    Navigator.pop(context);
-                    _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                  }
-                },
-                child: const Text('Modifier'),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: InputDecoration(
+                  labelText: l10n.startCounterLabel,
+                  border: const OutlineInputBorder(),
+                ),
+                controller: startController,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: InputDecoration(
+                  labelText: l10n.endCounterLabel,
+                  border: const OutlineInputBorder(),
+                ),
+                controller: endController,
               ),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (selectedPoste != null &&
+                    startController.text.isNotEmpty &&
+                    endController.text.isNotEmpty) {
+                  final updatedData = Map<String, dynamic>.from(data);
+                  (updatedData['liaison Counters'] as List)[index] = {
+                    'id': counter['id'],
+                    'poste': selectedPoste,
+                    'start': startController.text,
+                    'end': endController.text,
+                  };
+
+                  // Recalculate totals for Activity TNB reports
+                  final recalculatedData =
+                      _recalculateActivityTotals(updatedData);
+
+                  final updatedReport = Report(
+                    id: report.id,
+                    description: report.description,
+                    type: report.type,
+                    group: report.group,
+                    date: report.date,
+                    additionalData: recalculatedData,
+                  );
+
+                  Navigator.pop(context);
+                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                  setDialogState(() {});
+                }
+              },
+              child: Text(l10n.modifyLabel),
+            ),
+          ],
         ),
-      );
-    } finally {
-      startController.dispose();
-      endController.dispose();
-    }
+      ),
+    );
   }
 
   // Delete Liaison Counter Dialog for Activity Report
@@ -1782,13 +1779,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Supprimer le compteur liaison'),
-        content: const Text(
-            'Êtes-vous sûr de vouloir supprimer ce compteur liaison ?'),
+        title: Text(l10n.deleteLiaisonCounterTitle),
+        content: Text(l10n.deleteCounterConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1809,9 +1805,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
               Navigator.pop(context);
               _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+              setDialogState(() {});
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Supprimer'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -1834,56 +1831,56 @@ class _ReportsScreenState extends State<ReportsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Ajouter une entrée de stock'),
+          title: Text(l10n.addStockEntryTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<int>(
-                value: selectedPoste,
-                decoration: const InputDecoration(
-                  labelText: 'Poste',
-                  border: OutlineInputBorder(),
+                initialValue: selectedPoste,
+                decoration: InputDecoration(
+                  labelText: l10n.poste,
+                  border: const OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 0, child: Text('3ème Poste')),
-                  DropdownMenuItem(value: 1, child: Text('1er Poste')),
-                  DropdownMenuItem(value: 2, child: Text('2ème Poste')),
+                items: [
+                  DropdownMenuItem(value: 0, child: Text(l10n.poste3eme)),
+                  DropdownMenuItem(value: 1, child: Text(l10n.poste1er)),
+                  DropdownMenuItem(value: 2, child: Text(l10n.poste2eme)),
                 ],
                 onChanged: (value) => setState(() => selectedPoste = value),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
-                value: selectedPark,
-                decoration: const InputDecoration(
-                  labelText: 'Parc',
-                  border: OutlineInputBorder(),
+                initialValue: selectedPark,
+                decoration: InputDecoration(
+                  labelText: l10n.parkLabel,
+                  border: const OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 0, child: Text('PARK 1')),
-                  DropdownMenuItem(value: 1, child: Text('PARK 2')),
-                  DropdownMenuItem(value: 2, child: Text('PARK 3')),
+                items: [
+                  DropdownMenuItem(value: 0, child: Text(l10n.park1)),
+                  DropdownMenuItem(value: 1, child: Text(l10n.park2)),
+                  DropdownMenuItem(value: 2, child: Text(l10n.park3)),
                 ],
                 onChanged: (value) => setState(() => selectedPark = value),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
-                value: selectedType,
-                decoration: const InputDecoration(
-                  labelText: 'Type',
-                  border: OutlineInputBorder(),
+                initialValue: selectedType,
+                decoration: InputDecoration(
+                  labelText: l10n.type,
+                  border: const OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 0, child: Text('NORMAL')),
-                  DropdownMenuItem(value: 1, child: Text('OCEANE')),
-                  DropdownMenuItem(value: 2, child: Text('PB30')),
+                items: [
+                  DropdownMenuItem(value: 0, child: Text(l10n.stockTypeNormal)),
+                  DropdownMenuItem(value: 1, child: Text(l10n.stockTypeOceane)),
+                  DropdownMenuItem(value: 2, child: Text(l10n.stockTypePb30)),
                 ],
                 onChanged: (value) => setState(() => selectedType = value),
               ),
               const SizedBox(height: 16),
               TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Quantité',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.quantityLabel,
+                  border: const OutlineInputBorder(),
                 ),
                 onChanged: (value) => setState(() => quantity = value),
               ),
@@ -1892,7 +1889,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler'),
+              child: Text(l10n.cancel),
             ),
             ElevatedButton(
               onPressed: () {
@@ -1922,9 +1919,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                   Navigator.pop(context);
                   _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                  setDialogState(() {});
                 }
               },
-              child: const Text('Ajouter'),
+              child: Text(l10n.add),
             ),
           ],
         ),
@@ -1950,56 +1948,56 @@ class _ReportsScreenState extends State<ReportsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Modifier l\'entrée de stock'),
+          title: Text(l10n.editStockEntryTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<int>(
-                value: selectedPoste,
-                decoration: const InputDecoration(
-                  labelText: 'Poste',
-                  border: OutlineInputBorder(),
+                initialValue: selectedPoste,
+                decoration: InputDecoration(
+                  labelText: l10n.poste,
+                  border: const OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 0, child: Text('3ème Poste')),
-                  DropdownMenuItem(value: 1, child: Text('1er Poste')),
-                  DropdownMenuItem(value: 2, child: Text('2ème Poste')),
+                items: [
+                  DropdownMenuItem(value: 0, child: Text(l10n.poste3eme)),
+                  DropdownMenuItem(value: 1, child: Text(l10n.poste1er)),
+                  DropdownMenuItem(value: 2, child: Text(l10n.poste2eme)),
                 ],
                 onChanged: (value) => setState(() => selectedPoste = value),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
-                value: selectedPark,
-                decoration: const InputDecoration(
-                  labelText: 'Parc',
-                  border: OutlineInputBorder(),
+                initialValue: selectedPark,
+                decoration: InputDecoration(
+                  labelText: l10n.parkLabel,
+                  border: const OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 0, child: Text('PARK 1')),
-                  DropdownMenuItem(value: 1, child: Text('PARK 2')),
-                  DropdownMenuItem(value: 2, child: Text('PARK 3')),
+                items: [
+                  DropdownMenuItem(value: 0, child: Text(l10n.park1)),
+                  DropdownMenuItem(value: 1, child: Text(l10n.park2)),
+                  DropdownMenuItem(value: 2, child: Text(l10n.park3)),
                 ],
                 onChanged: (value) => setState(() => selectedPark = value),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
-                value: selectedType,
-                decoration: const InputDecoration(
-                  labelText: 'Type',
-                  border: OutlineInputBorder(),
+                initialValue: selectedType,
+                decoration: InputDecoration(
+                  labelText: l10n.type,
+                  border: const OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 0, child: Text('NORMAL')),
-                  DropdownMenuItem(value: 1, child: Text('OCEANE')),
-                  DropdownMenuItem(value: 2, child: Text('PB30')),
+                items: [
+                  DropdownMenuItem(value: 0, child: Text(l10n.stockTypeNormal)),
+                  DropdownMenuItem(value: 1, child: Text(l10n.stockTypeOceane)),
+                  DropdownMenuItem(value: 2, child: Text(l10n.stockTypePb30)),
                 ],
                 onChanged: (value) => setState(() => selectedType = value),
               ),
               const SizedBox(height: 16),
               TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Quantité',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.quantityLabel,
+                  border: const OutlineInputBorder(),
                 ),
                 controller: TextEditingController(text: quantity),
                 onChanged: (value) => setState(() => quantity = value),
@@ -2009,7 +2007,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler'),
+              child: Text(l10n.cancel),
             ),
             ElevatedButton(
               onPressed: () {
@@ -2036,9 +2034,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                   Navigator.pop(context);
                   _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                  setDialogState(() {});
                 }
               },
-              child: const Text('Modifier'),
+              child: Text(l10n.modifyLabel),
             ),
           ],
         ),
@@ -2057,13 +2056,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Supprimer l\'entrée de stock'),
-        content: const Text(
-            'Êtes-vous sûr de vouloir supprimer cette entrée de stock ?'),
+        title: Text(l10n.deleteStockEntryTitle),
+        content: Text(l10n.deleteStockConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -2081,9 +2079,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
               Navigator.pop(context);
               _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+              setDialogState(() {});
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Supprimer'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -2097,6 +2096,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     required Future<void> Function(String) onSave,
     bool isEditable = true,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2122,7 +2122,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     await showDialog(
                       context: context,
                       builder: (editContext) => AlertDialog(
-                        title: Text('Modifier $label'),
+                        title: Text(l10n.editLabel(label)),
                         content: TextField(
                           controller: controller,
                           decoration: InputDecoration(
@@ -2134,20 +2134,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(editContext),
-                            child: const Text('Annuler'),
+                            child: Text(l10n.cancel),
                           ),
                           TextButton(
                             onPressed: () async {
                               Navigator.pop(editContext);
                               await onSave(controller.text);
                             },
-                            child: const Text('Enregistrer'),
+                            child: Text(l10n.save),
                           ),
                         ],
                       ),
                     );
                   },
-                  tooltip: 'Modifier $label',
+                  tooltip: l10n.editLabel(label),
                 ),
             ],
           ),
@@ -2161,7 +2161,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     required String label,
     required DateTime value,
     required Future<void> Function(DateTime) onSave,
+    bool isEditable = true,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2178,19 +2180,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
               Expanded(
                 child: Text(DateFormat('yyyy-MM-dd HH:mm').format(value)),
               ),
-              IconButton(
-                icon: const Icon(Icons.edit, size: 18),
-                onPressed: () async {
-                  await _editDate(
-                    context: context,
-                    initialDate: value,
-                    onSave: onSave,
-                  );
-                },
-                tooltip: 'Modifier $label',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
+              if (isEditable)
+                IconButton(
+                  icon: const Icon(Icons.edit, size: 18),
+                  onPressed: () async {
+                    await _editDate(
+                      context: context,
+                      initialDate: value,
+                      onSave: onSave,
+                    );
+                  },
+                  tooltip: l10n.editLabel(label),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
             ],
           ),
         ),
@@ -2225,7 +2228,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       context: dialogContext,
                       initialDate: selectedDate,
                       firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
+                      lastDate: DateTime.now(),
                     );
                     if (picked != null && dialogContext.mounted) {
                       final TimeOfDay? time = await showTimePicker(
@@ -2268,6 +2271,693 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
+  // Machines Equipment Stopped Editor
+  Future<void> _showMachinesEquipmentStoppedEditor(Report report,
+      ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+    final data = report.additionalData ?? {};
+    final maxHeight = MediaQuery.of(context).size.height * 0.9;
+
+    // Equipment data structure matching machines_equipment_stopped_screen.dart
+    final Map<String, Map<String, List<String>>> equipmentData = {
+      'Camions Servitude': {
+        'Camion Citerne': ['16979-A-68', '17492-A-68', 'TEXAS'],
+        'Camion DCI': ['19164-A-68', '5636-A-68'],
+        'Camion de Ravitaillmenet': ['1462443', '93292-D-8'],
+        'Camion Grue': ['12097-A-68'],
+        'Camion Nacelle': ['17080-A-68'],
+        'Camion Ridelle': ['11053-A-68', '15836-A-68', '34866-A-54'],
+        'Vehicule DC': ['513714'],
+      },
+      'Engins': {
+        'Bulldozers': [
+          'BULL D9R 76',
+          'BULL D9R 79',
+          'BULL D9R 80',
+          'BULL D9R 81',
+          'BULL D9R 82',
+          'BULL D9R 83',
+          'BULL LIB 84',
+          'BULL LIB 85',
+          'BULL D9R 86',
+          'BULL D9R 87'
+        ],
+        'Camions': [
+          'CAMION T24',
+          'CAMION T25',
+          'CAMION T26',
+          'CAMION T27',
+          'CAMION T28',
+          'CAMION T29',
+          'CAMION T30',
+          'CAMION T31',
+          'CAMION T32',
+          'CAMION T33',
+          'WABCO 13',
+          'WABCO 19'
+        ],
+        'Chargeuses': ['CHRG 992C', 'CHRG 992K', 'CHRG 994H'],
+        'Niveleuses': ['NIV 14G', 'NIV 16H', 'NIV KOM01', 'NIV KOM02'],
+        'Paydozers': ['PAY CAT03', 'PAY KOM04', 'PAY KOM05'],
+        'Pelle Hydraulique': ['PH365-C', 'PH5130'],
+      },
+      'Machines': {
+        'Draglines': ['1370 W1', '1370 W2'],
+        'Pelle Electrique': ['195 P1', '195 P2'],
+        'Sondeuses': ['PV275-1', 'PV275-2', 'PV275-3'],
+      },
+    };
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => Dialog(
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 800,
+              maxHeight: maxHeight,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Modifier - Machines et Engins Arrêtés',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.save),
+                        onPressed: () => Navigator.pop(dialogContext),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Date Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l10n.reportDateLabel,
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const Divider(height: 16),
+                                Text(
+                                  '${report.date.day.toString().padLeft(2, '0')}/${report.date.month.toString().padLeft(2, '0')}/${report.date.year}',
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Equipment List Card
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        l10n.machinesStoppedLabel,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.add),
+                                      onPressed: () =>
+                                          _showAddMachineEquipmentDialog(
+                                              report,
+                                              data,
+                                              equipmentData,
+                                              setDialogState,
+                                              scaffoldMessenger,
+                                              l10n),
+                                      tooltip: l10n.addEquipment,
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                if (data['equipmentList'] is List &&
+                                    (data['equipmentList'] as List).isNotEmpty)
+                                  ...List.from(data['equipmentList'])
+                                      .asMap()
+                                      .entries
+                                      .map((entry) {
+                                    final index = entry.key;
+                                    final equipment = entry.value;
+                                    return Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 8.0),
+                                      child: Card(
+                                        elevation: 1,
+                                        child: ListTile(
+                                          title: Text(
+                                              '${l10n.equipmentLabelWithIndex(index + 1)} ${equipment['equipmentType'] ?? '-'}'),
+                                          subtitle: Text(
+                                              '${l10n.reason}: ${equipment['Reason'] ?? '-'}'),
+                                          trailing: PopupMenuButton<String>(
+                                            icon: const Icon(Icons.more_horiz,
+                                                size: 20),
+                                            padding: EdgeInsets.zero,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            position: PopupMenuPosition.under,
+                                            itemBuilder:
+                                                (BuildContext context) => [
+                                              PopupMenuItem<String>(
+                                                value: 'edit',
+                                                height: 36,
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(Icons.edit,
+                                                        size: 18,
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .primary),
+                                                    const SizedBox(width: 8),
+                                                    Text(
+                                                      'Modifier',
+                                                      style: TextStyle(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .primary,
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              PopupMenuItem<String>(
+                                                value: 'delete',
+                                                height: 36,
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(Icons.delete_outline,
+                                                        size: 18,
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .error),
+                                                    const SizedBox(width: 8),
+                                                    Text(
+                                                      'Supprimer',
+                                                      style: TextStyle(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .error,
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                            onSelected: (value) {
+                                              if (value == 'edit') {
+                                                _showEditMachineEquipmentDialog(
+                                                    report,
+                                                    data,
+                                                    index,
+                                                    equipmentData,
+                                                    setDialogState,
+                                                    scaffoldMessenger,
+                                                    l10n);
+                                              } else if (value == 'delete') {
+                                                _showDeleteMachineEquipmentDialog(
+                                                    report,
+                                                    data,
+                                                    index,
+                                                    setDialogState,
+                                                    scaffoldMessenger,
+                                                    l10n);
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  })
+                                else
+                                  Text(
+                                    l10n.noMachinesStopped,
+                                    style: const TextStyle(color: Colors.grey),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Add Machine Equipment Dialog
+  Future<void> _showAddMachineEquipmentDialog(
+      Report report,
+      Map<String, dynamic> data,
+      Map<String, Map<String, List<String>>> equipmentData,
+      StateSetter setDialogState,
+      ScaffoldMessengerState scaffoldMessenger,
+      AppLocalizations l10n) async {
+    String selectedMainCategory = '';
+    String selectedSubCategory = '';
+    String selectedEquipment = '';
+    String selectedEquipmentType = '';
+    String stopReason = '';
+
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: Material(
+          type: MaterialType.card,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SingleChildScrollView(
+              child: StatefulBuilder(
+                builder: (context, setInnerDialogState) {
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.addEquipment,
+                          style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedMainCategory.isEmpty
+                            ? null
+                            : selectedMainCategory,
+                        decoration: InputDecoration(
+                            labelText: l10n.mainCategoryLabel,
+                            border: const OutlineInputBorder()),
+                        items: equipmentData.keys.map((String category) {
+                          return DropdownMenuItem<String>(
+                            value: category,
+                            child: Text(category),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          setInnerDialogState(() {
+                            selectedMainCategory = newValue ?? '';
+                            selectedSubCategory = '';
+                            selectedEquipment = '';
+                            selectedEquipmentType = '';
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedSubCategory.isEmpty
+                            ? null
+                            : selectedSubCategory,
+                        decoration: InputDecoration(
+                            labelText: l10n.subCategoryLabel,
+                            border: const OutlineInputBorder()),
+                        items: (selectedMainCategory.isNotEmpty
+                                ? equipmentData[selectedMainCategory]!.keys
+                                : <String>[])
+                            .map((String subCategory) {
+                          return DropdownMenuItem<String>(
+                            value: subCategory,
+                            child: Text(subCategory),
+                          );
+                        }).toList(),
+                        onChanged: selectedMainCategory.isNotEmpty
+                            ? (String? newValue) {
+                                setInnerDialogState(() {
+                                  selectedSubCategory = newValue ?? '';
+                                  selectedEquipment = '';
+                                  selectedEquipmentType = '';
+                                });
+                              }
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedEquipment.isEmpty
+                            ? null
+                            : selectedEquipment,
+                        decoration: InputDecoration(
+                            labelText: l10n.equipmentLabel,
+                            border: const OutlineInputBorder()),
+                        items: (selectedSubCategory.isNotEmpty
+                                ? equipmentData[selectedMainCategory]![
+                                    selectedSubCategory]!
+                                : <String>[])
+                            .map((String equipment) {
+                          return DropdownMenuItem<String>(
+                            value: equipment,
+                            child: Text(equipment),
+                          );
+                        }).toList(),
+                        onChanged: selectedSubCategory.isNotEmpty
+                            ? (String? newValue) {
+                                setInnerDialogState(() {
+                                  selectedEquipment = newValue ?? '';
+                                  selectedEquipmentType =
+                                      '$selectedMainCategory - $selectedSubCategory - $selectedEquipment';
+                                });
+                              }
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        decoration: InputDecoration(
+                          labelText: l10n.stopReasonLabel,
+                          border: const OutlineInputBorder(),
+                          hintText: l10n.enterStopReasonHint,
+                        ),
+                        maxLines: 3,
+                        onChanged: (value) {
+                          setInnerDialogState(() {
+                            stopReason = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: Text(l10n.cancel),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: selectedEquipment.isNotEmpty &&
+                                    stopReason.isNotEmpty
+                                ? () {
+                                    Navigator.pop(context, {
+                                      'equipmentType': selectedEquipmentType,
+                                      'Reason': stopReason,
+                                    });
+                                  }
+                                : null,
+                            child: Text(l10n.finishButton),
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (result != null) {
+      if (data['equipmentList'] == null) {
+        data['equipmentList'] = [];
+      }
+      (data['equipmentList'] as List).add(result);
+
+      setDialogState(() {});
+
+      final updatedReport = Report(
+        id: report.id,
+        description: report.description,
+        type: report.type,
+        group: report.group,
+        date: report.date,
+        additionalData: data,
+      );
+
+      _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+    }
+  }
+
+  // Edit Machine Equipment Dialog
+  Future<void> _showEditMachineEquipmentDialog(
+      Report report,
+      Map<String, dynamic> data,
+      int index,
+      Map<String, Map<String, List<String>>> equipmentData,
+      StateSetter setDialogState,
+      ScaffoldMessengerState scaffoldMessenger,
+      AppLocalizations l10n) async {
+    final equipment = (data['equipmentList'] as List)[index];
+    final equipmentType = equipment['equipmentType'] ?? '';
+    final parts = equipmentType.split(' - ');
+
+    String selectedMainCategory = parts.length >= 1 ? parts[0] : '';
+    String selectedSubCategory = parts.length >= 2 ? parts[1] : '';
+    String selectedEquipment = parts.length >= 3 ? parts[2] : '';
+    String selectedEquipmentType = equipmentType;
+    String stopReason = equipment['Reason'] ?? '';
+
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: Material(
+          type: MaterialType.card,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SingleChildScrollView(
+              child: StatefulBuilder(
+                builder: (context, setInnerDialogState) {
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Modifier l\'équipement',
+                          style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedMainCategory.isEmpty
+                            ? null
+                            : selectedMainCategory,
+                        decoration: const InputDecoration(
+                            labelText: 'Catégorie principale',
+                            border: OutlineInputBorder()),
+                        items: equipmentData.keys.map((String category) {
+                          return DropdownMenuItem<String>(
+                            value: category,
+                            child: Text(category),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          setInnerDialogState(() {
+                            selectedMainCategory = newValue ?? '';
+                            selectedSubCategory = '';
+                            selectedEquipment = '';
+                            selectedEquipmentType = '';
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedSubCategory.isEmpty
+                            ? null
+                            : selectedSubCategory,
+                        decoration: const InputDecoration(
+                            labelText: 'Sous-catégorie',
+                            border: OutlineInputBorder()),
+                        items: (selectedMainCategory.isNotEmpty
+                                ? equipmentData[selectedMainCategory]!.keys
+                                : <String>[])
+                            .map((String subCategory) {
+                          return DropdownMenuItem<String>(
+                            value: subCategory,
+                            child: Text(subCategory),
+                          );
+                        }).toList(),
+                        onChanged: selectedMainCategory.isNotEmpty
+                            ? (String? newValue) {
+                                setInnerDialogState(() {
+                                  selectedSubCategory = newValue ?? '';
+                                  selectedEquipment = '';
+                                  selectedEquipmentType = '';
+                                });
+                              }
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedEquipment.isEmpty
+                            ? null
+                            : selectedEquipment,
+                        decoration: const InputDecoration(
+                            labelText: 'Équipement',
+                            border: OutlineInputBorder()),
+                        items: (selectedSubCategory.isNotEmpty
+                                ? equipmentData[selectedMainCategory]![
+                                    selectedSubCategory]!
+                                : <String>[])
+                            .map((String equipment) {
+                          return DropdownMenuItem<String>(
+                            value: equipment,
+                            child: Text(equipment),
+                          );
+                        }).toList(),
+                        onChanged: selectedSubCategory.isNotEmpty
+                            ? (String? newValue) {
+                                setInnerDialogState(() {
+                                  selectedEquipment = newValue ?? '';
+                                  selectedEquipmentType =
+                                      '$selectedMainCategory - $selectedSubCategory - $selectedEquipment';
+                                });
+                              }
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        initialValue: stopReason,
+                        decoration: const InputDecoration(
+                          labelText: 'Raison de l\'arrêt',
+                          border: OutlineInputBorder(),
+                          hintText: 'Entrez la raison de l\'arrêt...',
+                        ),
+                        maxLines: 3,
+                        onChanged: (value) {
+                          setInnerDialogState(() {
+                            stopReason = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: Text(l10n.cancel),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: selectedEquipment.isNotEmpty &&
+                                    stopReason.isNotEmpty
+                                ? () {
+                                    Navigator.pop(context, {
+                                      'equipmentType': selectedEquipmentType,
+                                      'Reason': stopReason,
+                                    });
+                                  }
+                                : null,
+                            child: Text(l10n.finishButton),
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (result != null) {
+      (data['equipmentList'] as List)[index] = result;
+
+      setDialogState(() {});
+
+      final updatedReport = Report(
+        id: report.id,
+        description: report.description,
+        type: report.type,
+        group: report.group,
+        date: report.date,
+        additionalData: data,
+      );
+
+      _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+    }
+  }
+
+  // Delete Machine Equipment Dialog
+  Future<void> _showDeleteMachineEquipmentDialog(
+      Report report,
+      Map<String, dynamic> data,
+      int index,
+      StateSetter setDialogState,
+      ScaffoldMessengerState scaffoldMessenger,
+      AppLocalizations l10n) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.deleteEquipment),
+        content: Text(l10n.deleteEquipmentConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              (data['equipmentList'] as List).removeAt(index);
+
+              setDialogState(() {});
+
+              final updatedReport = Report(
+                id: report.id,
+                description: report.description,
+                type: report.type,
+                group: report.group,
+                date: report.date,
+                additionalData: data,
+              );
+
+              Navigator.pop(context);
+              _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _showReportDetails(Report report) async {
     // Debug: print the report type and additionalData
     // ignore: avoid_print
@@ -2303,11 +2993,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Vérification des données',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                          Expanded(
+                            child: Text(
+                              l10n.dataVerification,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           Row(
@@ -2317,7 +3009,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 onPressed: () async {
                                   await _editReport(currentReport);
                                 },
-                                tooltip: 'Modifier le rapport',
+                                tooltip: l10n.editReport,
                               ),
                               IconButton(
                                 icon: const Icon(Icons.close),
@@ -2346,7 +3038,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Date',
+                                      l10n.date,
                                       style: Theme.of(context)
                                           .textTheme
                                           .titleMedium,
@@ -2368,7 +3060,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Résumé des données',
+                                      l10n.dataSummary,
                                       style: Theme.of(context)
                                           .textTheme
                                           .titleMedium,
@@ -2393,8 +3085,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     const SizedBox(height: 8),
                                     _buildSummaryRow(
                                         'T Nr.A:',
-                                        (data['stops'] is List
-                                                ? (data['stops'] as List).length
+                                        (data['Arrets'] is List
+                                                ? (data['Arrets'] as List)
+                                                    .length
                                                 : 0)
                                             .toString()),
                                     _buildSummaryRow(
@@ -2433,24 +3126,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           .titleMedium,
                                     ),
                                     const Divider(height: 16),
-                                    if (data['stops'] is List &&
-                                        (data['stops'] as List).isNotEmpty)
-                                      ...List.from(data['stops'])
+                                    if (data['Arrets'] is List &&
+                                        (data['Arrets'] as List).isNotEmpty)
+                                      ...List.from(data['Arrets'])
                                           .map((stop) => Padding(
                                                 padding:
                                                     const EdgeInsets.symmetric(
                                                         vertical: 2),
                                                 child: Text(
-                                                    '${_formatMinutesToHoursMinutes(int.tryParse(stop['duration']) ?? 0)} - ${stop['nature'] ?? '-'}'),
+                                                    '${_formatMinutesToHoursMinutes(_parseDurationToMinutes(stop['duration'] ?? ''))} - ${stop['nature'] ?? '-'}'),
                                               ))
-                                    else if (data['stops'] is List &&
-                                        (data['stops'] as List).isEmpty)
-                                      const Text('Aucun arrêt enregistré',
-                                          style: TextStyle(color: Colors.grey))
+                                    else if (data['Arrets'] is List &&
+                                        (data['Arrets'] as List).isEmpty)
+                                      Text(l10n.aucunArret,
+                                          style: const TextStyle(
+                                              color: Colors.grey))
                                     else
-                                      const Text(
-                                          'Données des arrêts non disponibles',
-                                          style: TextStyle(color: Colors.grey)),
+                                      Text(l10n.stopDataNotAvailable,
+                                          style: const TextStyle(
+                                              color: Colors.grey)),
                                   ],
                                 ),
                               ),
@@ -2468,7 +3162,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Compteurs Vibreurs',
+                                        l10n.vibratorCountersLabel,
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleMedium,
@@ -2484,21 +3178,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                       CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
-                                                        '• Poste: ${_getPosteString(counter['poste'])}'),
+                                                        '• ${l10n.poste}: ${_getPosteString(counter['poste'], l10n)}'),
                                                     if (counter['start'] !=
                                                             null &&
                                                         counter['start']
                                                             .toString()
                                                             .isNotEmpty)
                                                       Text(
-                                                          '  Début: ${counter['start']}'),
+                                                          '  ${l10n.start}: ${counter['start']}'),
                                                     if (counter['end'] !=
                                                             null &&
                                                         counter['end']
                                                             .toString()
                                                             .isNotEmpty)
                                                       Text(
-                                                          '  Fin: ${counter['end']}'),
+                                                          '  ${l10n.end}: ${counter['end']}'),
                                                   ],
                                                 ),
                                               )),
@@ -2521,7 +3215,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Compteurs Liaison',
+                                        l10n.liaisonCountersLabel,
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleMedium,
@@ -2537,21 +3231,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                       CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
-                                                        '• Poste: ${_getPosteString(counter['poste'])}'),
+                                                        '• ${l10n.poste}: ${_getPosteString(counter['poste'], l10n)}'),
                                                     if (counter['start'] !=
                                                             null &&
                                                         counter['start']
                                                             .toString()
                                                             .isNotEmpty)
                                                       Text(
-                                                          '  Début: ${counter['start']}'),
+                                                          '  ${l10n.start}: ${counter['start']}'),
                                                     if (counter['end'] !=
                                                             null &&
                                                         counter['end']
                                                             .toString()
                                                             .isNotEmpty)
                                                       Text(
-                                                          '  Fin: ${counter['end']}'),
+                                                          '  ${l10n.end}: ${counter['end']}'),
                                                   ],
                                                 ),
                                               )),
@@ -2574,7 +3268,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Stocks',
+                                        l10n.stockLabel,
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleMedium,
@@ -2586,7 +3280,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                     const EdgeInsets.symmetric(
                                                         vertical: 2),
                                                 child: Text(
-                                                  'Poste: ${_getPosteString(entry['poste'])} | Park: ${_getParkString(entry['park'])} | Type: ${_getStockTypeString(entry['type'])} | Qte: ${entry['quantity'] ?? '-'} |',
+                                                  '${l10n.poste}: ${_getPosteString(entry['poste'], l10n)} | ${l10n.parkLabel}: ${_getParkString(entry['park'], l10n)} | ${l10n.type}: ${_getStockTypeString(entry['type'], l10n)} | ${l10n.quantityLabel}: ${entry['quantity'] ?? '-'} |',
                                                 ),
                                               )),
                                     ],
@@ -2616,7 +3310,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(l10n.reportDetails),
+              Expanded(child: Text(l10n.dataVerification)),
               IconButton(
                 icon: const Icon(Icons.edit),
                 onPressed: () => _editReport(report),
@@ -2637,7 +3331,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Date',
+                        Text(l10n.date,
                             style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 4),
                         Text(DateFormat('yyyy-MM-dd').format(report.date)),
@@ -2664,23 +3358,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Module 1',
+                            Text(l10n.module1Label,
                                 style: Theme.of(context).textTheme.titleMedium),
                             const SizedBox(height: 4),
                             Text(
-                                'Temps de fonctionnement: ${_formatMinutesToHoursMinutes(module1OperatingTime)}'),
+                                '${l10n.operatingTime}: ${_formatMinutesToHoursMinutes(module1OperatingTime)}'),
                             Text(
-                                'Temps d\'arrêt: ${_formatMinutesToHoursMinutes(module1Downtime)}'),
+                                '${l10n.stopTime}: ${_formatMinutesToHoursMinutes(module1Downtime)}'),
                             if (module1Stops.isNotEmpty) ...[
                               const SizedBox(height: 8),
-                              const Text('Arrêts:',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
+                              Text('${l10n.stopsLabel}:',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold)),
                               ...module1Stops.map((stop) => Padding(
                                     padding:
                                         const EdgeInsets.only(left: 16, top: 4),
                                     child: Text(
-                                        '${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
+                                        '${_formatMinutesToHoursMinutes(_parseDurationToMinutes(stop['duration'] ?? ''))} - ${stop['nature'] ?? '-'}'),
                                   )),
                             ],
                           ],
@@ -2708,23 +3402,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Module 2',
+                            Text(l10n.module2Label,
                                 style: Theme.of(context).textTheme.titleMedium),
                             const SizedBox(height: 4),
                             Text(
-                                'Temps de fonctionnement: ${_formatMinutesToHoursMinutes(module2OperatingTime)}'),
+                                '${l10n.operatingTime}: ${_formatMinutesToHoursMinutes(module2OperatingTime)}'),
                             Text(
-                                'Temps d\'arrêt: ${_formatMinutesToHoursMinutes(module2Downtime)}'),
+                                '${l10n.stopTime}: ${_formatMinutesToHoursMinutes(module2Downtime)}'),
                             if (module2Stops.isNotEmpty) ...[
                               const SizedBox(height: 8),
-                              const Text('Arrêts:',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
+                              Text(l10n.stopsLabel,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold)),
                               ...module2Stops.map((stop) => Padding(
                                     padding:
                                         const EdgeInsets.only(left: 16, top: 4),
                                     child: Text(
-                                        '${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
+                                        '${_formatMinutesToHoursMinutes(_parseDurationToMinutes(stop['duration'] ?? ''))} - ${stop['nature'] ?? '-'}'),
                                   )),
                             ],
                           ],
@@ -2742,14 +3436,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Stocks',
+                          Text(l10n.stockLabel,
                               style: Theme.of(context).textTheme.titleMedium),
                           const SizedBox(height: 4),
                           ...List.from(data['stock']).map((entry) => Padding(
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 2),
                                 child: Text(
-                                  'Poste: ${_getPosteString(entry['poste'])} | Park: ${_getParkString(entry['park'])} | Type: ${_getStockTypeString(entry['type'])} | Qte: ${entry['quantity'] ?? '-'} |',
+                                  '${l10n.poste}: ${_getPosteString(entry['poste'], l10n)} | ${l10n.parkLabel}: ${_getParkString(entry['park'], l10n)} | ${l10n.type}: ${_getStockTypeString(entry['type'], l10n)} | ${l10n.quantityLabel}: ${entry['quantity'] ?? '-'} |',
                                 ),
                               )),
                         ],
@@ -2779,7 +3473,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(l10n.reportDetails),
+              Expanded(child: Text(l10n.dataVerification)),
               IconButton(
                 icon: const Icon(Icons.edit),
                 onPressed: () => _editReport(report),
@@ -2800,7 +3494,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Date',
+                        Text(l10n.dateLabel,
                             style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 4),
                         Text(DateFormat('yyyy-MM-dd').format(report.date)),
@@ -2816,7 +3510,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Équipements arrêtés',
+                        Text(l10n.machinesStoppedLabel,
                             style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 4),
                         if (data['equipmentList'] is List &&
@@ -2832,13 +3526,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Équipement ${index + 1}:',
+                                  Text('${l10n.equipmentIndex(index + 1)}:',
                                       style: const TextStyle(
                                           fontWeight: FontWeight.bold)),
                                   const SizedBox(height: 4),
                                   Text(
-                                      'Type: ${equipment['equipmentType'] ?? '-'}'),
-                                  Text('Raison: ${equipment['Reason'] ?? '-'}'),
+                                      '${l10n.type}: ${equipment['equipmentType'] ?? '-'}'),
+                                  Text(
+                                      '${l10n.reasonLabel}: ${equipment['Reason'] ?? '-'}'),
                                   if (index <
                                       (data['equipmentList'] as List).length -
                                           1)
@@ -2848,8 +3543,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             );
                           }),
                         ] else ...[
-                          const Text('Aucun équipement arrêté',
-                              style: TextStyle(color: Colors.grey)),
+                          Text(l10n.noEquipmentStopped,
+                              style: const TextStyle(color: Colors.grey)),
                         ],
                       ],
                     ),
@@ -2873,7 +3568,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     if (typeLower == 'r0' ||
         (report.additionalData != null &&
             report.additionalData!.containsKey('mine') &&
-            report.additionalData!.containsKey('selectedPoste'))) {
+            report.additionalData!.containsKey('selectedPoste') &&
+            !report.additionalData!.containsKey('truckData'))) {
       final data = report.additionalData ?? {};
       final maxHeight = MediaQuery.of(context).size.height * 0.8;
 
@@ -2895,11 +3591,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Rapport R0',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Text(
+                          l10n.dataVerification,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       Row(
@@ -2936,7 +3634,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Date',
+                                  l10n.dateLabel,
                                   style:
                                       Theme.of(context).textTheme.titleMedium,
                                 ),
@@ -2957,20 +3655,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Info OIB/EE',
+                                  l10n.infoOibEeLabel,
                                   style:
                                       Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
-                                _buildInfoRow('Mine', data['mine'] ?? '-'),
-                                _buildInfoRow('Zone', data['zone'] ?? '-'),
-                                _buildInfoRow('Sortie', data['sortie'] ?? '-'),
+                                _buildInfoRow(l10n.mine, data['mine'] ?? '-'),
+                                _buildInfoRow(l10n.zone, data['zone'] ?? '-'),
+                                _buildInfoRow(l10n.exit, data['sortie'] ?? '-'),
+                                _buildInfoRow(l10n.categoryLabel,
+                                    data['Category'] ?? '-'),
+                                _buildInfoRow(l10n.type, data['Type'] ?? '-'),
                                 _buildInfoRow(
-                                    'Catégorie', data['Category'] ?? '-'),
-                                _buildInfoRow('Type', data['Type'] ?? '-'),
-                                _buildInfoRow('Modèle', data['Model'] ?? '-'),
+                                    l10n.modelLabel, data['Model'] ?? '-'),
                                 _buildInfoRow(
-                                    'Poste',
+                                    l10n.poste,
                                     data['selectedPoste'] ??
                                         data['poste'] ??
                                         data['Poste'] ??
@@ -2981,8 +3680,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         ),
                         const SizedBox(height: 16),
                         // Compteurs Card
-                        if (data['Compteurs'] is List &&
-                            (data['Compteurs'] as List).isNotEmpty)
+                        if ((data['Compteurs'] is List &&
+                                (data['Compteurs'] as List).isNotEmpty) ||
+                            (data['Compteurs'] is Map))
                           Card(
                             margin: EdgeInsets.zero,
                             child: Padding(
@@ -2991,42 +3691,56 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Compteur',
+                                    l10n.counter,
                                     style:
                                         Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const Divider(height: 16),
-                                  ...List.generate(
-                                      (data['Compteurs'] as List).length,
-                                      (index) {
-                                    final compteur =
-                                        (data['Compteurs'] as List)[index];
-                                    if (compteur['duree'] == null &&
-                                        compteur['note'] == null) {
-                                      return const SizedBox.shrink();
-                                    }
-                                    return Column(
+                                  if (data['Compteurs'] is List)
+                                    ...List.generate(
+                                        (data['Compteurs'] as List).length,
+                                        (index) {
+                                      final compteur =
+                                          (data['Compteurs'] as List)[index];
+                                      if (compteur['duree'] == null &&
+                                          compteur['note'] == null) {
+                                        return const SizedBox.shrink();
+                                      }
+                                      return Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const SizedBox(height: 8),
+                                          _buildInfoRow(l10n.start,
+                                              compteur['duree'] ?? '-'),
+                                          _buildInfoRow(l10n.end,
+                                              compteur['note'] ?? '-'),
+                                          if (index <
+                                              (data['Compteurs'] as List)
+                                                      .length -
+                                                  1)
+                                            const Divider(height: 16),
+                                        ],
+                                      );
+                                    })
+                                  else if (data['Compteurs'] is Map)
+                                    Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        const SizedBox(height: 8),
-                                        _buildInfoRow(
-                                            'Début', compteur['duree'] ?? '-'),
-                                        _buildInfoRow(
-                                            'Fin', compteur['note'] ?? '-'),
-                                        if (index <
-                                            (data['Compteurs'] as List).length -
-                                                1)
-                                          const Divider(height: 16),
+                                        _buildInfoRow(l10n.start,
+                                            data['Compteurs']['duree'] ?? '-'),
+                                        _buildInfoRow(l10n.end,
+                                            data['Compteurs']['note'] ?? '-'),
                                       ],
-                                    );
-                                  }),
+                                    ),
                                 ],
                               ),
                             ),
                           ),
-                        if (data['Compteurs'] is List &&
-                            (data['Compteurs'] as List).isNotEmpty)
+                        if ((data['Compteurs'] is List &&
+                                (data['Compteurs'] as List).isNotEmpty) ||
+                            (data['Compteurs'] is Map))
                           const SizedBox(height: 16),
                         // Arrêts Card
                         if (data['Arrets'] is List &&
@@ -3039,7 +3753,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Arrêts',
+                                    l10n.stopsLabel,
                                     style:
                                         Theme.of(context).textTheme.titleMedium,
                                   ),
@@ -3053,11 +3767,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                   CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                    'Type: ${arret['Arret'] ?? '-'}'),
-                                                _buildInfoRow('Début',
+                                                    '${l10n.type}: ${arret['Arret'] ?? '-'}'),
+                                                _buildInfoRow(l10n.start,
                                                     arret['Début'] ?? '-'),
-                                                _buildInfoRow(
-                                                    'Fin', arret['Fin'] ?? '-'),
+                                                _buildInfoRow(l10n.end,
+                                                    arret['Fin'] ?? '-'),
                                                 const Divider(height: 8),
                                               ],
                                             ),
@@ -3079,18 +3793,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Exploitation',
+                                    l10n.stepExploit,
                                     style:
                                         Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const Divider(height: 16),
-                                  _buildInfoRow('H.M',
+                                  _buildInfoRow(l10n.heuresMarche,
                                       data['exploitation']['H.M'] ?? '-'),
-                                  _buildInfoRow('H.A',
+                                  _buildInfoRow(l10n.heuresArret,
                                       data['exploitation']['H.A'] ?? '-'),
-                                  _buildInfoRow('Tonnage',
+                                  _buildInfoRow(l10n.tonnageLabel,
                                       data['exploitation']['Tonnage'] ?? '-'),
-                                  _buildInfoRow('Rendeme',
+                                  _buildInfoRow(l10n.rendementLabel,
                                       data['exploitation']['Rendeme'] ?? '-'),
                                 ],
                               ),
@@ -3099,8 +3813,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         if (data['exploitation'] is Map)
                           const SizedBox(height: 16),
                         // Répartition Card
-                        if (data['Répartition Travail'] is List &&
-                            (data['Répartition Travail'] as List).isNotEmpty)
+                        if ((data['Répartition Travail'] is List &&
+                                (data['Répartition Travail'] as List)
+                                    .isNotEmpty) ||
+                            (data['repartition'] is Map))
                           Card(
                             margin: EdgeInsets.zero,
                             child: Padding(
@@ -3109,46 +3825,82 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Répartition',
+                                    l10n.repartitionLabel,
                                     style:
                                         Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const Divider(height: 16),
-                                  ...List.from(data['Répartition Travail'])
-                                      .map((repartition) => Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 2),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                _buildInfoRow(
-                                                    'Chantier',
-                                                    repartition['Chantier'] ??
-                                                        repartition[
-                                                            'chantier'] ??
-                                                        '-'),
-                                                _buildInfoRow(
-                                                    'Temps',
-                                                    repartition['Temps'] ??
-                                                        repartition['temps'] ??
-                                                        '-'),
-                                                _buildInfoRow(
-                                                    'Imputat',
-                                                    repartition['Imputation'] ??
-                                                        repartition[
-                                                            'imputation'] ??
-                                                        '-'),
-                                                const Divider(height: 8),
-                                              ],
-                                            ),
-                                          )),
+                                  if (data['Répartition Travail'] is List)
+                                    ...List.from(data['Répartition Travail'])
+                                        .map((repartition) => Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 2),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  _buildInfoRow(
+                                                      l10n.chantierLabel,
+                                                      repartition['Chantier'] ??
+                                                          repartition[
+                                                              'chantier'] ??
+                                                          '-'),
+                                                  _buildInfoRow(
+                                                      l10n.timeLabel,
+                                                      repartition['Temps'] ??
+                                                          repartition[
+                                                              'temps'] ??
+                                                          '-'),
+                                                  _buildInfoRow(
+                                                      l10n.imputationLabel,
+                                                      repartition[
+                                                              'Imputation'] ??
+                                                          repartition[
+                                                              'imputation'] ??
+                                                          '-'),
+                                                  const Divider(height: 8),
+                                                ],
+                                              ),
+                                            ))
+                                  else if (data['repartition'] is Map)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 2),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          _buildInfoRow(
+                                              'Chantier',
+                                              data['repartition']['Chantier'] ??
+                                                  data['repartition']
+                                                      ['chantier'] ??
+                                                  '-'),
+                                          _buildInfoRow(
+                                              'Temps',
+                                              data['repartition']['Temps'] ??
+                                                  data['repartition']
+                                                      ['temps'] ??
+                                                  '-'),
+                                          _buildInfoRow(
+                                              'Imputat',
+                                              data['repartition']
+                                                      ['Imputation'] ??
+                                                  data['repartition']
+                                                      ['imputation'] ??
+                                                  '-'),
+                                        ],
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
                           ),
-                        if (data['Répartition Travail'] is List &&
-                            (data['Répartition Travail'] as List).isNotEmpty)
+                        if ((data['Répartition Travail'] is List &&
+                                (data['Répartition Travail'] as List)
+                                    .isNotEmpty) ||
+                            (data['repartition'] is Map))
                           const SizedBox(height: 16),
                         // Personnel Card
                         if (data['personnel'] is Map)
@@ -3160,16 +3912,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Personnel',
+                                    l10n.personnelLabel,
                                     style:
                                         Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const Divider(height: 16),
-                                  _buildInfoRow('Conductr',
+                                  _buildInfoRow(l10n.conductorLabel,
                                       data['personnel']['conductr'] ?? '-'),
-                                  _buildInfoRow('Graisseur',
+                                  _buildInfoRow(l10n.graisseurLabel,
                                       data['personnel']['graisseur'] ?? '-'),
-                                  _buildInfoRow('Matricule',
+                                  _buildInfoRow(l10n.matriculeLabel,
                                       data['personnel']['matricules'] ?? '-'),
                                 ],
                               ),
@@ -3187,14 +3939,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Consommation',
+                                    l10n.consommationLabel,
                                     style:
                                         Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const Divider(height: 16),
-                                  _buildInfoRow('Tricone',
+                                  _buildInfoRow(l10n.triconeLabel,
                                       data['consommation']['tricone'] ?? '-'),
-                                  _buildInfoRow('Gasoil',
+                                  _buildInfoRow(l10n.gasoilLabel,
                                       data['consommation']['gasoil'] ?? '-'),
                                 ],
                               ),
@@ -3227,9 +3979,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
           .expand((truck) => (truck['counts'] is List) ? truck['counts'] : [])
           .toList();
       final Map<String, int> equipmentCounts = {};
-      for (var trip in allTrips) {
-        final eq = trip['equipment'] ?? '-';
-        equipmentCounts[eq] = (equipmentCounts[eq] ?? 0) + 1;
+
+      if (data['equipmentTrips'] != null && data['equipmentTrips'] is Map) {
+        (data['equipmentTrips'] as Map).forEach((key, value) {
+          equipmentCounts[key.toString()] = int.tryParse(value.toString()) ?? 0;
+        });
+      } else {
+        for (var trip in allTrips) {
+          final eq = trip['equipment'] ?? '-';
+          equipmentCounts[eq] = (equipmentCounts[eq] ?? 0) + 1;
+        }
       }
       final maxHeight = MediaQuery.of(context).size.height * 0.8;
 
@@ -3251,11 +4010,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Rapport Camions',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Text(
+                          l10n.dataVerification,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       Row(
@@ -3292,7 +4053,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Date',
+                                  l10n.date,
                                   style:
                                       Theme.of(context).textTheme.titleMedium,
                                 ),
@@ -3304,7 +4065,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        // Poste Card
+                        // Info Card
                         Card(
                           margin: EdgeInsets.zero,
                           child: Padding(
@@ -3313,61 +4074,29 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Poste',
+                                  l10n.infoLabel,
                                   style:
                                       Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
-                                Text(data['poste'] ??
-                                    data['selectedPoste'] ??
-                                    '-'),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        // Equipement Card
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Equipement',
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const Divider(height: 16),
-                                Text(
-                                    'Opération: ${data['operationType'] ?? '-'}'),
-                                if (data['equipment'] != null)
-                                  Text('Type: ${data['equipment']}'),
-                                if (data['selectedEquipment'] != null)
-                                  Text('Type: ${data['selectedEquipment']}'),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        // Mine et Sortie Card
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Mine et Sortie',
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const Divider(height: 16),
-                                Text('Mine: ${data['mine'] ?? '-'}'),
-                                Text('Zone: ${data['zone'] ?? '-'}'),
-                                Text('Sortie: ${data['sortie'] ?? '-'}'),
+                                _buildInfoRow(l10n.mine, data['mine'] ?? '-'),
+                                _buildInfoRow(l10n.zone, data['zone'] ?? '-'),
+                                _buildInfoRow(l10n.exit, data['sortie'] ?? '-'),
+                                _buildInfoRow(
+                                    l10n.poste,
+                                    data['poste'] ??
+                                        data['selectedPoste'] ??
+                                        '-'),
+                                _buildInfoRow(l10n.operationLabel,
+                                    data['operationType'] ?? '-'),
+                                _buildInfoRow(
+                                    l10n.equipmentLabel,
+                                    data['equipment'] ??
+                                        data['selectedEquipment'] ??
+                                        '-'),
+                                if (data['selectedQualiteType'] != null)
+                                  _buildInfoRow(l10n.qualityLabel,
+                                      data['selectedQualiteType']),
                               ],
                             ),
                           ),
@@ -3388,8 +4117,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 ),
                                 const Divider(height: 16),
                                 if (truckData.isEmpty)
-                                  const Text('Aucun camion ajouté.',
-                                      style: TextStyle(color: Colors.grey)),
+                                  Text(l10n.noTrucksAdded,
+                                      style:
+                                          const TextStyle(color: Colors.grey)),
                                 if (truckData.isNotEmpty)
                                   ...truckData.map((truck) => Column(
                                         crossAxisAlignment:
@@ -3477,12 +4207,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const Text('Résumé',
-                                          style: TextStyle(
+                                      Text(l10n.summaryLabel,
+                                          style: const TextStyle(
                                               fontWeight: FontWeight.bold)),
                                       const SizedBox(height: 8),
                                       Text(
-                                          'Total de voyages: ${allTrips.length}'),
+                                          'Total de voyages: ${data['totalTrips'] ?? allTrips.length}'),
                                       const SizedBox(height: 8),
                                       ...equipmentCounts.entries.map((e) => Text(
                                           'Total pour ${e.key}: ${e.value}')),
@@ -3511,7 +4241,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(l10n.reportDetails),
+            Expanded(
+              child: Text(
+                l10n.dataVerification,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             IconButton(
               icon: const Icon(Icons.edit),
               onPressed: () => _editReport(report),
@@ -3561,28 +4296,31 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _buildAdditionalDataView(Report report) {
     final data = report.additionalData ?? {};
+    final l10n = AppLocalizations.of(context)!;
     switch (report.type) {
       case 'Activity TNB':
-        return _buildActivityReportAdditionalData(data);
+        return _buildActivityReportAdditionalData(data, l10n);
       case 'daily TSUD':
-        return _buildDailyReportAdditionalData(data);
+        return _buildDailyReportAdditionalData(data, l10n);
       case 'Machine/Engin Arrêtés':
-        return _buildMachinesEquipmentStoppedAdditionalData(data);
+        return _buildMachinesEquipmentStoppedAdditionalData(data, l10n);
       case 'Suivi Camion':
-        return _buildTruckTrackingAdditionalData(data);
+        return _buildTruckTrackingAdditionalData(data, l10n);
       case 'R0':
-        return _buildR0ReportAdditionalData(data);
+        return _buildR0ReportAdditionalData(data, l10n);
       default:
         // Check if this is an R0 report by looking for mine and selectedPoste
-        if (data.containsKey('mine') && data.containsKey('selectedPoste')) {
-          return _buildR0ReportAdditionalData(data);
+        if (data.containsKey('mine') &&
+            data.containsKey('selectedPoste') &&
+            !data.containsKey('truckData')) {
+          return _buildR0ReportAdditionalData(data, l10n);
         }
         // Check if this is a truck tracking report by looking for truckData
         if (data.containsKey('truckData')) {
-          return _buildTruckTrackingAdditionalData(data);
+          return _buildTruckTrackingAdditionalData(data, l10n);
         }
         // Fallback: show all additionalData key-value pairs
-        if (data.isEmpty) return const Text('No additional data');
+        if (data.isEmpty) return Text(l10n.noAdditionalData);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: data.entries
@@ -3593,6 +4331,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         Text('${entry.key}: ',
                             style:
                                 const TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 8),
                         Expanded(child: Text(entry.value.toString())),
                       ],
                     ),
@@ -3602,16 +4341,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
-  Widget _buildActivityReportAdditionalData(Map<String, dynamic> data) {
+  Widget _buildActivityReportAdditionalData(
+      Map<String, dynamic> data, AppLocalizations l10n) {
     if (data.isEmpty) {
-      return const Text('Aucune donnée d\'activité disponible.');
-    }
-
-    String formatMinutesToHoursMinutes(int? totalMinutes) {
-      if (totalMinutes == null || totalMinutes <= 0) return "0h 0m";
-      int hours = totalMinutes ~/ 60;
-      int minutes = totalMinutes % 60;
-      return "${hours}h ${minutes}m";
+      return Text(l10n.noActivityData);
     }
 
     final stops = (data['stops'] is List) ? List.from(data['stops']) : [];
@@ -3644,19 +4377,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 const SizedBox(height: 16),
                 _buildSummaryRow(
                     'T H.A:',
-                    formatMinutesToHoursMinutes(
+                    _formatMinutesToHoursMinutes(
                         data['T H.A'] is int ? data['T H.A'] : 0)),
                 _buildSummaryRow(
                     'T H.M:',
-                    formatMinutesToHoursMinutes(
+                    _formatMinutesToHoursMinutes(
                         data['T H.M'] is int ? data['T H.M'] : 0)),
                 _buildSummaryRow(
                     'T H.V:',
-                    formatMinutesToHoursMinutes(
+                    _formatMinutesToHoursMinutes(
                         data['T H.V'] is int ? data['T H.V'] : 0)),
                 _buildSummaryRow(
                     'T H.L:',
-                    formatMinutesToHoursMinutes(
+                    _formatMinutesToHoursMinutes(
                         data['T H.L'] is int ? data['T H.L'] : 0)),
                 const SizedBox(height: 8),
                 _buildSummaryRow('T Nr.A:', stops.length.toString()),
@@ -3674,12 +4407,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Arrêts',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(l10n.arretsLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   ...stops.map((stop) => Padding(
                         padding: const EdgeInsets.only(left: 16, top: 4),
                         child: Text(
-                            '${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
+                            '${_formatMinutesToHoursMinutes(_parseDurationToMinutes(stop['duration'] ?? ''))} - ${stop['nature'] ?? '-'}'),
                       )),
                 ],
               ),
@@ -3692,12 +4425,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Compteurs Vibreurs',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(l10n.vibrTitle,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   ...vibratorCounters.map((counter) => Padding(
                         padding: const EdgeInsets.only(left: 16, top: 4),
                         child: Text(
-                            'Poste: 9${counter['poste'] ?? '-'}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
+                            'Poste: ${_getPosteString(counter['poste'], l10n)}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
                       )),
                 ],
               ),
@@ -3710,12 +4443,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Compteurs Liaison',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(l10n.liaisonTitle,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   ...liaisonCounters.map((counter) => Padding(
                         padding: const EdgeInsets.only(left: 16, top: 4),
                         child: Text(
-                            'Poste: \t${counter['poste'] ?? '-'}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
+                            'Poste: \t${_getPosteString(counter['poste'], l10n)}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
                       )),
                 ],
               ),
@@ -3728,12 +4461,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Stocks',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(l10n.stocksLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   ...stockEntries.map((entry) => Padding(
                         padding: const EdgeInsets.only(left: 16, top: 4),
                         child: Text(
-                            'Poste: ${entry['poste'] ?? '-'}, Parc: ${entry['park'] ?? '-'}, Type: ${entry['type'] ?? '-'}, Qté: ${entry['quantity'] ?? '-'}'),
+                            'Poste: ${_getPosteString(entry['poste'], l10n)}, Parc: ${_getParkString(entry['park'], l10n)}, Type: ${_getStockTypeString(entry['type'], l10n)}, Qté: ${entry['quantity'] ?? '-'}'),
                       )),
                 ],
               ),
@@ -3744,10 +4477,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   String _formatMinutesToHoursMinutes(int totalMinutes) {
-    if (totalMinutes <= 0) return "0h 0m";
+    if (totalMinutes <= 0) return "0h 00m";
     int hours = totalMinutes ~/ 60;
     int minutes = totalMinutes % 60;
-    return "${hours}h ${minutes}m";
+    return "${hours}h ${minutes.toString().padLeft(2, '0')}m";
   }
 
   // Calculate downtime from stops list
@@ -3810,7 +4543,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final updatedData = Map<String, dynamic>.from(data);
 
     final stops =
-        (updatedData['stops'] is List) ? List.from(updatedData['stops']) : [];
+        (updatedData['Arrets'] is List) ? List.from(updatedData['Arrets']) : [];
     final vibratorCounters = (updatedData['vibrator Counters'] is List)
         ? List.from(updatedData['vibrator Counters'])
         : [];
@@ -3834,43 +4567,43 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return updatedData;
   }
 
-  String _getPosteString(dynamic posteIndex) {
+  String _getPosteString(dynamic posteIndex, AppLocalizations l10n) {
     if (posteIndex == null) return '-';
     switch (posteIndex) {
       case 0:
-        return '3ème';
+        return l10n.poste3eme;
       case 1:
-        return '1er';
+        return l10n.poste1er;
       case 2:
-        return '2ème';
+        return l10n.poste2eme;
       default:
         return '-';
     }
   }
 
-  String _getParkString(dynamic parkIndex) {
+  String _getParkString(dynamic parkIndex, AppLocalizations l10n) {
     if (parkIndex == null) return '-';
     switch (parkIndex) {
       case 0:
-        return 'PARK 1';
+        return l10n.park1;
       case 1:
-        return 'PARK 2';
+        return l10n.park2;
       case 2:
-        return 'PARK 3';
+        return l10n.park3;
       default:
         return '-';
     }
   }
 
-  String _getStockTypeString(dynamic typeIndex) {
+  String _getStockTypeString(dynamic typeIndex, AppLocalizations l10n) {
     if (typeIndex == null) return '-';
     switch (typeIndex) {
       case 0:
-        return 'NORMAL';
+        return l10n.stockTypeNormal;
       case 1:
-        return 'OCEANE';
+        return l10n.stockTypeOceane;
       case 2:
-        return 'PB30';
+        return l10n.stockTypePb30;
       default:
         return '-';
     }
@@ -3883,7 +4616,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
         ],
       ),
     );
@@ -3901,6 +4641,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
               '$label:',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
+          ),
+          Expanded(
+            child: Text(value.isEmpty ? '-' : value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRowSimple(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$label: ',
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           Expanded(
             child: Text(value.isEmpty ? '-' : value),
@@ -3931,16 +4689,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _buildDailyReportAdditionalData(Map<String, dynamic> data) {
+  Widget _buildDailyReportAdditionalData(
+      Map<String, dynamic> data, AppLocalizations l10n) {
     if (data.isEmpty) {
-      return const Text('Aucune donnée quotidienne disponible.');
-    }
-
-    String formatMinutesToHoursMinutes(int? totalMinutes) {
-      if (totalMinutes == null || totalMinutes <= 0) return "0h 0m";
-      int hours = totalMinutes ~/ 60;
-      int minutes = totalMinutes % 60;
-      return "${hours}h ${minutes}m";
+      return Text(l10n.noDailyData);
     }
 
     final module1Stops =
@@ -3951,10 +4703,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (data['secteur'] != null) Text('Secteur: ${data['secteur']}'),
-        if (data['rapportNo'] != null) Text('Rapport N°: ${data['rapportNo']}'),
+        if (data['secteur'] != null) Text('${l10n.sector}: ${data['secteur']}'),
+        if (data['rapportNo'] != null)
+          Text('${l10n.reportNo}: ${data['rapportNo']}'),
         if (data['machineEngins'] != null)
-          Text('Machines/Engins: ${data['machineEngins']}'),
+          Text('${l10n.machinesEquipment}: ${data['machineEngins']}'),
         const SizedBox(height: 16),
         // Module 1 Section
         Card(
@@ -3964,22 +4717,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Module 1',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(l10n.module1Label,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
                 const Divider(height: 16),
                 Text(
-                    'Temps de fonctionnement: ${formatMinutesToHoursMinutes(data['Temps de fonctionnement'] is int ? data['Temps de fonctionnement'] : 0)}'),
+                    '${l10n.operatingTime}: ${_formatMinutesToHoursMinutes(data['Temps de fonctionnement'] is int ? data['Temps de fonctionnement'] : 0)}'),
                 Text(
-                    'Temps d\'arrêt: ${formatMinutesToHoursMinutes(data['Temps d\'arrêt'] is int ? data['Temps d\'arrêt'] : 0)}'),
+                    '${l10n.stopTime}: ${_formatMinutesToHoursMinutes(data['Temps d\'arrêt'] is int ? data['Temps d\'arrêt'] : 0)}'),
                 if (module1Stops.isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  const Text('Arrêts:',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(l10n.stopsLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   ...module1Stops.map((stop) => Padding(
                         padding: const EdgeInsets.only(left: 16, top: 4),
                         child: Text(
-                            '${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
+                            '${_formatMinutesToHoursMinutes(_parseDurationToMinutes(stop['duration'] ?? ''))} - ${stop['nature'] ?? '-'}'),
                       )),
                 ],
               ],
@@ -3995,22 +4748,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Module 2',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(l10n.module2Label,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
                 const Divider(height: 16),
                 Text(
-                    'Temps de fonctionnement: ${formatMinutesToHoursMinutes(data['Temps de fonctionnement'] is int ? data['Temps de fonctionnement'] : 0)}'),
+                    '${l10n.operatingTime}: ${_formatMinutesToHoursMinutes(data['Temps de fonctionnement'] is int ? data['Temps de fonctionnement'] : 0)}'),
                 Text(
-                    'Temps d\'arrêt: ${formatMinutesToHoursMinutes(data['Temps d\'arrêt'] is int ? data['Temps d\'arrêt'] : 0)}'),
+                    '${l10n.stopTime}: ${_formatMinutesToHoursMinutes(data['Temps d\'arrêt'] is int ? data['Temps d\'arrêt'] : 0)}'),
                 if (module2Stops.isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  const Text('Arrêts:',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(l10n.stopsLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   ...module2Stops.map((stop) => Padding(
                         padding: const EdgeInsets.only(left: 16, top: 4),
                         child: Text(
-                            '${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
+                            '${_formatMinutesToHoursMinutes(_parseDurationToMinutes(stop['duration'] ?? ''))} - ${stop['nature'] ?? '-'}'),
                       )),
                 ],
               ],
@@ -4022,9 +4775,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildMachinesEquipmentStoppedAdditionalData(
-      Map<String, dynamic> data) {
+      Map<String, dynamic> data, AppLocalizations l10n) {
     if (data.isEmpty) {
-      return const Text('Aucune donnée d\'équipement arrêtée disponible.');
+      return Text(l10n.noEquipmentStopped);
     }
     final equipmentList =
         (data['equipmentList'] is List) ? List.from(data['equipmentList']) : [];
@@ -4038,8 +4791,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Date du rapport',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(l10n.reportDateLabel,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 const Divider(height: 16),
                 if (data['date'] != null) Text(data['date'].toString()),
               ],
@@ -4054,12 +4807,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Équipements arrêtés',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(l10n.stoppedEquipment,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 const Divider(height: 16),
                 if (equipmentList.isEmpty)
-                  const Text('Aucun équipement ajouté',
-                      style: TextStyle(color: Colors.grey)),
+                  Text(l10n.noEquipmentAdded,
+                      style: const TextStyle(color: Colors.grey)),
                 if (equipmentList.isNotEmpty)
                   ...equipmentList.asMap().entries.map((entry) {
                     final index = entry.key;
@@ -4069,12 +4822,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Équipement ${index + 1}:',
+                          Text(l10n.equipmentLabelWithIndex(index + 1),
                               style:
                                   const TextStyle(fontWeight: FontWeight.bold)),
                           const SizedBox(height: 4),
-                          Text('Type: ${equipment['equipmentType'] ?? '-'}'),
-                          Text('Raison: ${equipment['Reason'] ?? '-'}'),
+                          Text(l10n
+                              .typeParam(equipment['equipmentType'] ?? '-')),
+                          Text(l10n.reasonParam(equipment['Reason'] ?? '-')),
                           if (index < equipmentList.length - 1) const Divider(),
                         ],
                       ),
@@ -4123,9 +4877,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _buildTruckTrackingAdditionalData(Map<String, dynamic> data) {
+  Widget _buildTruckTrackingAdditionalData(
+      Map<String, dynamic> data, AppLocalizations l10n) {
     if (data.isEmpty) {
-      return const Text('Aucune donnée de suivi camion disponible.');
+      return Text(l10n.noTruckTrackingData);
     }
     final truckData =
         (data['truckData'] is List) ? List.from(data['truckData']) : [];
@@ -4139,12 +4894,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Mine et Sortie',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(l10n.infoLabel,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 const Divider(height: 16),
-                Text('Mine: ${data['mine'] ?? '-'}'),
-                Text('Zone: ${data['zone'] ?? '-'}'),
-                Text('Sortie: ${data['sortie'] ?? '-'}'),
+                _buildInfoRowSimple('Mine', data['mine'] ?? '-'),
+                _buildInfoRowSimple('Zone', data['zone'] ?? '-'),
+                _buildInfoRowSimple('Sortie', data['sortie'] ?? '-'),
+                _buildInfoRowSimple(
+                    'Poste', data['poste'] ?? data['selectedPoste'] ?? '-'),
+                _buildInfoRowSimple('Opération', data['operationType'] ?? '-'),
+                _buildInfoRowSimple('Equip',
+                    data['equipment'] ?? data['selectedEquipment'] ?? '-'),
+                if (data['selectedQualiteType'] != null)
+                  _buildInfoRowSimple('Qualité', data['selectedQualiteType']),
               ],
             ),
           ),
@@ -4157,40 +4919,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Equipement',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(l10n.camionsLabel,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 const Divider(height: 16),
-                Text('Opération: ${data['operationType'] ?? '-'}'),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          margin: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Camions',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const Divider(height: 16),
-                if (truckData.isEmpty) const Text('Aucun camion ajouté.'),
+                if (truckData.isEmpty) Text(l10n.noTrucksAdded),
                 if (truckData.isNotEmpty)
                   ...truckData.map((truck) => Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Camion: ${truck['truckNumber'] ?? '-'}',
+                          Text(l10n.truckParam(truck['truckNumber'] ?? '-'),
                               style:
                                   const TextStyle(fontWeight: FontWeight.bold)),
-                          Text('Chauffeur: ${truck['driver1'] ?? '-'}'),
+                          Text(l10n.driverParam(truck['driver1'] ?? '-')),
                           if (truck['counts'] != null &&
                               (truck['counts'] is List) &&
                               (truck['counts'] as List).isNotEmpty) ...[
                             const SizedBox(height: 8),
-                            const Text('Voyages:',
-                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text(l10n.tripsWithColon,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold)),
                             ...List.generate((truck['counts'] as List).length,
                                 (index) {
                               final count = (truck['counts'] as List)[index];
@@ -4199,7 +4946,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     const EdgeInsets.only(left: 16, top: 4),
                                 child: Row(
                                   children: [
-                                    Text('v${index + 1}: '),
+                                    Text(l10n.tripLabelWithIndex(index + 1)),
                                     Text(count['time'] ?? '-'),
                                     const SizedBox(width: 12),
                                     const Text('|'),
@@ -4227,13 +4974,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Résumé des voyages',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(l10n.tripsSummary,
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     Text(
-                        'Total de voyages: ${truckData.expand((truck) => (truck['counts'] is List) ? truck['counts'] : []).length}'),
+                        'Total de voyages: ${data['totalTrips'] ?? truckData.expand((truck) => (truck['counts'] is List) ? truck['counts'] : []).length}'),
                     const SizedBox(height: 8),
-                    ..._buildEquipmentCounts(truckData),
+                    ...(data['equipmentTrips'] != null &&
+                            data['equipmentTrips'] is Map)
+                        ? (data['equipmentTrips'] as Map).entries.map((e) =>
+                            Text(l10n.totalFor(
+                                e.key.toString(), e.value.toString())))
+                        : _buildEquipmentCounts(truckData, l10n),
                   ],
                 ),
               ),
@@ -4243,7 +4995,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  List<Widget> _buildEquipmentCounts(List truckData) {
+  List<Widget> _buildEquipmentCounts(List truckData, AppLocalizations l10n) {
     final allTrips = truckData
         .expand((truck) => (truck['counts'] is List) ? truck['counts'] : [])
         .toList();
@@ -4253,12 +5005,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
       equipmentCounts[eq] = (equipmentCounts[eq] ?? 0) + 1;
     }
     return equipmentCounts.entries
-        .map((e) => Text('Total pour ${e.key}: ${e.value}'))
+        .map((e) => Text(l10n.totalFor(e.key.toString(), e.value.toString())))
         .toList();
   }
 
-  Widget _buildR0ReportAdditionalData(Map<String, dynamic> data) {
-    if (data.isEmpty) return const Text('Aucune donnée R0 disponible.');
+  Widget _buildR0ReportAdditionalData(
+      Map<String, dynamic> data, AppLocalizations l10n) {
+    if (data.isEmpty) return Text(l10n.noR0Data);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -4271,8 +5024,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Info OIB/EE',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(l10n.infoOibEeLabel,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 const Divider(height: 16),
                 _buildSummaryItem('Mine', data['mine'] ?? ''),
                 _buildSummaryItem('Zone', data['zone'] ?? ''),
@@ -4286,9 +5039,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 16),
         // Compteurs Section
-        if (data['Compteurs'] is List && (data['Compteurs'] as List).isNotEmpty)
+        if (data['Compteurs'] != null)
           Card(
             margin: EdgeInsets.zero,
             child: Padding(
@@ -4296,30 +5048,44 @@ class _ReportsScreenState extends State<ReportsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Compteurs',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(l10n.counter,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   const Divider(height: 16),
-                  ...List.generate((data['Compteurs'] as List).length, (index) {
-                    final compteur = (data['Compteurs'] as List)[index];
-                    if (compteur['duree'] == null && compteur['note'] == null) {
-                      return const SizedBox.shrink();
-                    }
-                    return Column(
+                  if (data['Compteurs'] is List)
+                    ...List.generate((data['Compteurs'] as List).length,
+                        (index) {
+                      final compteur = (data['Compteurs'] as List)[index];
+                      if (compteur['duree'] == null &&
+                          compteur['note'] == null) {
+                        return const SizedBox.shrink();
+                      }
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSummaryItem(
+                              'Début', compteur['duree']?.toString() ?? ''),
+                          _buildSummaryItem(
+                              'Fin', compteur['note']?.toString() ?? ''),
+                          if (index < (data['Compteurs'] as List).length - 1)
+                            const Divider(height: 12),
+                        ],
+                      );
+                    })
+                  else if (data['Compteurs'] is Map)
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildSummaryItem('Début', compteur['duree'] ?? ''),
-                        _buildSummaryItem('Fin', compteur['note'] ?? ''),
-                        if (index < (data['Compteurs'] as List).length - 1)
-                          const Divider(height: 12),
+                        _buildSummaryItem('Début',
+                            data['Compteurs']['duree']?.toString() ?? ''),
+                        _buildSummaryItem(
+                            'Fin', data['Compteurs']['note']?.toString() ?? ''),
                       ],
-                    );
-                  }),
+                    ),
                 ],
               ),
             ),
           ),
-        if (data['Compteurs'] is List && (data['Compteurs'] as List).isNotEmpty)
-          const SizedBox(height: 16),
+        if (data['Compteurs'] != null) const SizedBox(height: 16),
         // Arrêts Section
         if (data['Arrets'] is List && (data['Arrets'] as List).isNotEmpty)
           Card(
@@ -4329,15 +5095,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Arrêts',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(l10n.arretsLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   const Divider(height: 16),
                   ...List.from(data['Arrets']).map((arret) => Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Type: ${arret['Arret'] ?? '-'}'),
+                            Text(l10n.typeParam(arret['Arret'] ?? '-')),
                             _buildSummaryItem('Début', arret['Début'] ?? ''),
                             _buildSummaryItem('Fin', arret['Fin'] ?? ''),
                             const Divider(height: 8),
@@ -4359,17 +5125,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Exploitation',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(l10n.exploitationLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   const Divider(height: 16),
                   _buildSummaryItem('H.M', data['exploitation']['H.M'] ?? ''),
                   _buildSummaryItem('H.A', data['exploitation']['H.A'] ?? ''),
                   _buildSummaryItem(
                       'Tonnage', data['exploitation']['Tonnage'] ?? ''),
                   _buildSummaryItem(
-                      'Rendeme',
-                      data['exploitation']['Rendeme'] ??
-                          data['exploitation']['Rendeme'] ??
+                      'Rendement %',
+                      data['exploitation']['Rendement %']?.toString() ??
+                          data['exploitation']['Rendeme']?.toString() ??
+                          data['exploitation']['Rendement']?.toString() ??
                           ''),
                 ],
               ),
@@ -4377,8 +5144,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
         if (data['exploitation'] is Map) const SizedBox(height: 16),
         // Répartition Section
-        if (data['Répartition Travail'] is List &&
-            (data['Répartition Travail'] as List).isNotEmpty)
+        if ((data['Répartition Travail'] != null &&
+                data['Répartition Travail'] is List &&
+                (data['Répartition Travail'] as List).isNotEmpty) ||
+            (data['repartition'] != null && data['repartition'] is Map))
           Card(
             margin: EdgeInsets.zero,
             child: Padding(
@@ -4386,40 +5155,67 @@ class _ReportsScreenState extends State<ReportsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Répartition Travail',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(l10n.workDistributionLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   const Divider(height: 16),
-                  ...List.from(data['Répartition Travail'])
-                      .map((repartition) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 2),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildSummaryItem(
-                                    'Chantier',
-                                    repartition['Chantier'] ??
-                                        repartition['chantier'] ??
-                                        ''),
-                                _buildSummaryItem(
-                                    'Temps',
-                                    repartition['temps'] ??
-                                        repartition['Temps'] ??
-                                        ''),
-                                _buildSummaryItem(
-                                    'Imputation',
-                                    repartition['imputation'] ??
-                                        repartition['Imputation'] ??
-                                        ''),
-                                const Divider(height: 8),
-                              ],
-                            ),
-                          )),
+                  if (data['Répartition Travail'] is List)
+                    ...List.from(data['Répartition Travail'])
+                        .map((repartition) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildSummaryItem(
+                                      'Chantier',
+                                      repartition['Chantier'] ??
+                                          repartition['chantier'] ??
+                                          ''),
+                                  _buildSummaryItem(
+                                      'Temps',
+                                      repartition['temps'] ??
+                                          repartition['Temps'] ??
+                                          ''),
+                                  _buildSummaryItem(
+                                      'Imputation',
+                                      repartition['imputation'] ??
+                                          repartition['Imputation'] ??
+                                          ''),
+                                  const Divider(height: 8),
+                                ],
+                              ),
+                            ))
+                  else if (data['repartition'] is Map)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSummaryItem(
+                              'Chantier',
+                              data['repartition']['Chantier'] ??
+                                  data['repartition']['chantier'] ??
+                                  ''),
+                          _buildSummaryItem(
+                              'Temps',
+                              data['repartition']['Temps'] ??
+                                  data['repartition']['temps'] ??
+                                  ''),
+                          _buildSummaryItem(
+                              'Imputation',
+                              data['repartition']['Imputation'] ??
+                                  data['repartition']['imputation'] ??
+                                  ''),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
           ),
-        if (data['Répartition Travail'] is List &&
-            (data['Répartition Travail'] as List).isNotEmpty)
+        if ((data['Répartition Travail'] != null &&
+                data['Répartition Travail'] is List &&
+                (data['Répartition Travail'] as List).isNotEmpty) ||
+            (data['repartition'] != null && data['repartition'] is Map))
           const SizedBox(height: 16),
         // Personnel Section
         if (data['personnel'] is Map)
@@ -4430,8 +5226,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Personnel',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(l10n.personnelLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   const Divider(height: 16),
                   _buildSummaryItem(
                       'Conductr',
@@ -4456,8 +5252,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Consommation',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(l10n.consommationLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   const Divider(height: 16),
                   _buildSummaryItem(
                       'Tricone', data['consommation']['tricone'] ?? ''),
@@ -4506,7 +5302,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             margin: const EdgeInsets.only(right: 8),
             child: DropdownButton<String>(
               value: _selectedPosteFilter,
-              hint: Text('Tous les postes',
+              hint: Text(l10n.allPostes,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onPrimary)),
               dropdownColor: Theme.of(context).colorScheme.surface,
@@ -4514,9 +5310,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
               icon: Icon(Icons.filter_list,
                   color: Theme.of(context).colorScheme.onPrimary),
               items: [
-                const DropdownMenuItem<String>(
+                DropdownMenuItem<String>(
                   value: null,
-                  child: Text('Tous les postes'),
+                  child: Text(l10n.allPostes),
                 ),
                 ..._availablePostes.map((poste) => DropdownMenuItem<String>(
                       value: poste,
@@ -4531,12 +5327,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
             IconButton(
               icon: const Icon(Icons.clear),
               onPressed: () => _onPosteFilterChanged(null),
-              tooltip: 'Effacer le filtre',
+              tooltip: l10n.clearFilter,
             ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadReports,
-            tooltip: 'Refresh',
+            tooltip: l10n.refresh,
           ),
         ],
       ),
@@ -4552,7 +5348,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       const SizedBox(height: 16),
                       Text(
                         _selectedPosteFilter != null
-                            ? 'Aucun rapport trouvé pour le poste $_selectedPosteFilter'
+                            ? l10n.noReportsFoundForPoste(_selectedPosteFilter!)
                             : l10n.noDataMessage,
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
@@ -4560,7 +5356,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         const SizedBox(height: 16),
                         TextButton(
                           onPressed: () => _onPosteFilterChanged(null),
-                          child: const Text('Voir tous les rapports'),
+                          child: Text(l10n.seeAllReports),
                         ),
                       ],
                     ],
@@ -4584,7 +5380,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 size: 20),
                             const SizedBox(width: 8),
                             Text(
-                              '${_filteredReports.length} rapport${_filteredReports.length > 1 ? 's' : ''} trouvé${_filteredReports.length > 1 ? 's' : ''} pour le poste $_selectedPosteFilter',
+                              l10n.reportsFound(_filteredReports.length,
+                                  _selectedPosteFilter!),
                               style: TextStyle(
                                 color: Theme.of(context).colorScheme.primary,
                                 fontWeight: FontWeight.w500,
@@ -4606,9 +5403,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             String title = report.description;
                             final typeLower = report.type.toLowerCase();
                             if (typeLower == 'activity tnb') {
-                              title = 'Activity TNB';
+                              title = l10n.activityReport;
                             } else if (typeLower == 'daily tsud') {
-                              title = 'daily TSUD';
+                              title = l10n.dailyReport;
+                            } else if (typeLower == 'suivi camion') {
+                              title = l10n.truckTracking;
+                            } else if (typeLower == 'machine/engin arrêtés') {
+                              title = l10n.machinesEquipmentStoppedTitleShort;
+                            } else if (typeLower == 'r0') {
+                              title = l10n.r0Report;
                             }
 
                             return Card(
@@ -4619,10 +5422,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 subtitle: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Type: ${report.type}'),
+                                    Text('${l10n.type}: ${report.type}'),
                                     Text(
-                                        'Date: ${DateFormat('yyyy-MM-dd HH:mm').format(report.date)}'),
-                                    Text('Group: ${report.group}'),
+                                        '${l10n.date}: ${DateFormat('yyyy-MM-dd HH:mm').format(report.date)}'),
+                                    Text('${l10n.group}: ${report.group}'),
+                                    if (report.additionalData != null &&
+                                        (typeLower == 'suivi camion' ||
+                                            typeLower.contains('chargeuse') ||
+                                            typeLower.contains('pelle') ||
+                                            report.additionalData!
+                                                .containsKey('truckData'))) ...[
+                                      const SizedBox(height: 4),
+                                      if (report.additionalData!['mine'] !=
+                                          null)
+                                        Text(
+                                            '${l10n.mine}: ${report.additionalData!['mine']} ${report.additionalData!['zone'] ?? ''}'),
+                                      if (report
+                                              .additionalData!['totalTrips'] !=
+                                          null)
+                                        Text(
+                                            '${l10n.totalVoyages}: ${report.additionalData!['totalTrips']}'),
+                                    ],
                                   ],
                                 ),
                                 trailing: Row(
@@ -4651,7 +5471,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                       .error),
                                               const SizedBox(width: 8),
                                               Text(
-                                                'Supprimer',
+                                                l10n.delete,
                                                 style: TextStyle(
                                                   color: Theme.of(context)
                                                       .colorScheme
@@ -4668,9 +5488,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           showDialog(
                                             context: context,
                                             builder: (context) => AlertDialog(
-                                              title: Text(l10n.delete),
-                                              content: const Text(
-                                                  'Are you sure you want to delete this report?'),
+                                              title: Text(l10n.confirmDelete),
+                                              content: Text(l10n.confirmDelete),
                                               actions: [
                                                 TextButton(
                                                   onPressed: () =>
@@ -4731,12 +5550,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Modifier R TSUD',
-                        style: Theme.of(context).textTheme.titleLarge,
+                      Expanded(
+                        child: Text(
+                          l10n.editDailyTsud,
+                          style: Theme.of(context).textTheme.titleLarge,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close),
+                        icon: const Icon(Icons.save),
                         onPressed: () => Navigator.pop(dialogContext),
                       ),
                     ],
@@ -4758,14 +5580,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Info',
+                                  l10n.infoLabel,
                                   style:
                                       Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
                                 _buildEditableField(
                                   context: context,
-                                  label: 'Description',
+                                  label: l10n.description,
                                   value: report.description,
                                   isEditable: false,
                                   onSave: (value) async {
@@ -4784,7 +5606,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 const SizedBox(height: 8),
                                 _buildEditableDateField(
                                   context: context,
-                                  label: 'Date',
+                                  label: l10n.date,
                                   value: report.date,
                                   onSave: (value) async {
                                     final updatedReport = Report(
@@ -4817,11 +5639,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      'Module 1',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium,
+                                    Expanded(
+                                      child: Text(
+                                        l10n.module1Label,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                     ElevatedButton.icon(
                                       onPressed: () => _showEditModuleDialog(
@@ -4832,7 +5657,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           scaffoldMessenger,
                                           l10n),
                                       icon: const Icon(Icons.edit),
-                                      label: const Text('Modifier'),
+                                      label: Text(l10n.edit),
                                     ),
                                   ],
                                 ),
@@ -4841,15 +5666,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     (data['module1Stops'] as List)
                                         .isNotEmpty) ...[
                                   const SizedBox(height: 8),
-                                  const Text('Arrêts:',
-                                      style: TextStyle(
+                                  Text(l10n.stopsLabel,
+                                      style: const TextStyle(
                                           fontWeight: FontWeight.bold)),
                                   ...List.from(data['module1Stops'])
                                       .map((stop) => Padding(
                                             padding: const EdgeInsets.only(
                                                 left: 16, top: 4),
                                             child: Text(
-                                                '${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
+                                                '${_formatMinutesToHoursMinutes(_parseDurationToMinutes(stop['duration'] ?? ''))} - ${stop['nature'] ?? '-'}'),
                                           )),
                                 ],
                               ],
@@ -4870,11 +5695,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      'Module 2',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium,
+                                    Expanded(
+                                      child: Text(
+                                        l10n.module2Label,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                     ElevatedButton.icon(
                                       onPressed: () => _showEditModuleDialog(
@@ -4885,7 +5713,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           scaffoldMessenger,
                                           l10n),
                                       icon: const Icon(Icons.edit),
-                                      label: const Text('Modifier'),
+                                      label: Text(l10n.modifyLabel),
                                     ),
                                   ],
                                 ),
@@ -4894,15 +5722,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     (data['module2Stops'] as List)
                                         .isNotEmpty) ...[
                                   const SizedBox(height: 8),
-                                  const Text('Arrêts:',
-                                      style: TextStyle(
+                                  Text(l10n.stopsWithColon,
+                                      style: const TextStyle(
                                           fontWeight: FontWeight.bold)),
                                   ...List.from(data['module2Stops'])
                                       .map((stop) => Padding(
                                             padding: const EdgeInsets.only(
                                                 left: 16, top: 4),
                                             child: Text(
-                                                '${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
+                                                '${_formatMinutesToHoursMinutes(_parseDurationToMinutes(stop['duration'] ?? ''))} - ${stop['nature'] ?? '-'}'),
                                           )),
                                 ],
                               ],
@@ -4937,7 +5765,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           scaffoldMessenger,
                                           l10n),
                                       icon: const Icon(Icons.add),
-                                      label: const Text('Aj'),
+                                      label: Text(l10n.ajButton),
                                     ),
                                   ],
                                 ),
@@ -4968,11 +5796,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                                'Poste: ${_getPosteString(stock['poste'])}'),
+                                                'Poste: ${_getPosteString(stock['poste'], l10n)}'),
                                             Text(
-                                                'Parc: ${_getParkString(stock['park'])}'),
+                                                'Parc: ${_getParkString(stock['park'], l10n)}'),
                                             Text(
-                                                'Type: ${_getStockTypeString(stock['type'])}'),
+                                                'Type: ${_getStockTypeString(stock['type'], l10n)}'),
                                             Text(
                                                 'Quantité: ${stock['quantity'] ?? '-'}'),
                                           ],
@@ -5024,8 +5852,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     );
                                   })
                                 else
-                                  const Text('Aucune entrée de stock ajoutée',
-                                      style: TextStyle(color: Colors.grey)),
+                                  Text(l10n.noStockAdded,
+                                      style:
+                                          const TextStyle(color: Colors.grey)),
                               ],
                             ),
                           ),
@@ -5066,7 +5895,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Text('Modifier $modulePrefix'),
+          title: Text(
+              'Modifier ${modulePrefix.replaceFirst('module', 'Module ')}'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -5093,7 +5923,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       });
                     },
                     icon: const Icon(Icons.add),
-                    label: const Text('Ajouter'),
+                    label: Text(l10n.addButton),
                   ),
                 ],
               ),
@@ -5105,7 +5935,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   return ListTile(
                     title: Text('Arrêt ${index + 1}'),
                     subtitle: Text(
-                        '${stop['duration'] ?? '-'} - ${stop['nature'] ?? '-'}'),
+                        '${_formatMinutesToHoursMinutes(_parseDurationToMinutes(stop['duration'] ?? ''))} - ${stop['nature'] ?? '-'}'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -5147,6 +5977,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             data['${modulePrefix}OperatingTime'] =
                                 operatingTime;
                             data['${modulePrefix}Stops'] = stops;
+                            setDialogState(() {});
                           },
                         ),
                       ],
@@ -5159,7 +5990,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler'),
+              child: Text(l10n.cancel),
             ),
             ElevatedButton(
               onPressed: () {
@@ -5179,8 +6010,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                 Navigator.pop(context);
                 _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                setDialogState(() {});
               },
-              child: const Text('Enregistrer'),
+              child: Text(l10n.save),
             ),
           ],
         ),
@@ -5199,55 +6031,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ScaffoldMessengerState scaffoldMessenger,
       AppLocalizations l10n,
       Function(int) onTotalDowntimeChanged) async {
-    const List<String> predefinedNatures = [
-      'Manque Produit',
-      'Attente Saturation Silo',
-      'Vidange Extraction 2',
-      'Arret Mécanique sur:',
-      'Dèfout Élèctrique sur:',
-      'Arret d\'instalation sur:',
-      'Travoux Mècanique sur:',
-      'Travoux Elèctrique sur:',
-      'Travoux dans l\'instalation sur:',
-      'Autre:',
-    ];
-
-    String? selectedNature;
-    String customNature = '';
+    String tempNature = '';
     String tempStopDuration = '';
-    final customNatureController = TextEditingController();
 
     await showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setLocalState) => AlertDialog(
-          title: const Text('Ajouter un arrêt'),
+          title: Text(l10n.addStopTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              DropdownButtonFormField<String>(
-                value: selectedNature,
-                decoration: const InputDecoration(
-                  labelText: 'Nature prédéfinie',
-                  border: OutlineInputBorder(),
-                ),
-                items: predefinedNatures
-                    .map((nature) => DropdownMenuItem(
-                          value: nature,
-                          child: Text(nature),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  setLocalState(() {
-                    selectedNature = value;
-                    customNature = '';
-                    customNatureController.clear();
-                  });
-                },
-                hint: const Text('Sélectionner une nature'),
-                isExpanded: true,
-              ),
-              const SizedBox(height: 16),
               TextField(
                 decoration: const InputDecoration(
                   labelText: 'Durée (ex: 1h 30)',
@@ -5256,67 +6050,52 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 onChanged: (value) =>
                     setLocalState(() => tempStopDuration = value),
               ),
-              if (selectedNature?.endsWith(':') == true) ...[
-                const SizedBox(height: 16),
-                TextField(
-                  controller: customNatureController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nature (complément)',
-                    border: OutlineInputBorder(),
-                    hintText: 'Maximum 20 caractères par ligne',
-                  ),
-                  maxLines: 5,
-                  onChanged: (value) {
-                    final words = value.split(' ');
-                    final lines = <String>[];
-                    String currentLine = '';
-                    for (var word in words) {
-                      if ((currentLine +
-                                  (currentLine.isEmpty ? '' : ' ') +
-                                  word)
-                              .length <=
-                          20) {
-                        currentLine += (currentLine.isEmpty ? '' : ' ') + word;
-                      } else {
-                        if (currentLine.isNotEmpty) {
-                          lines.add(currentLine);
-                        }
-                        currentLine = word;
-                      }
-                    }
-                    if (currentLine.isNotEmpty) {
-                      lines.add(currentLine);
-                    }
-                    setLocalState(() => customNature = lines.join('\n'));
-                  },
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Nature',
+                  border: OutlineInputBorder(),
+                  hintText: 'Maximum 20 caractères par ligne',
                 ),
-              ],
+                maxLines: 5,
+                onChanged: (value) {
+                  // Split text into lines of max 20 characters
+                  final words = value.split(' ');
+                  final lines = <String>[];
+                  String currentLine = '';
+
+                  for (var word in words) {
+                    if (('$currentLine $word').trim().length <= 20) {
+                      currentLine += (currentLine.isEmpty ? '' : ' ') + word;
+                    } else {
+                      if (currentLine.isNotEmpty) {
+                        lines.add(currentLine);
+                      }
+                      currentLine = word;
+                    }
+                  }
+                  if (currentLine.isNotEmpty) {
+                    lines.add(currentLine);
+                  }
+
+                  setLocalState(() => tempNature = lines.join('\n'));
+                },
+              ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler'),
+              child: Text(l10n.cancel),
             ),
             ElevatedButton(
               onPressed: () {
-                String finalNature = '';
-                if (selectedNature != null) {
-                  if (selectedNature?.endsWith(':') == true) {
-                    if (customNature.trim().isEmpty) return;
-                    finalNature = '$selectedNature\n${customNature.trim()}';
-                  } else {
-                    finalNature = selectedNature!;
-                  }
-                } else {
-                  return;
-                }
-                if (tempStopDuration.isNotEmpty && finalNature.isNotEmpty) {
+                if (tempStopDuration.isNotEmpty && tempNature.isNotEmpty) {
                   setState(() {
                     stops.add({
                       'id': DateTime.now().millisecondsSinceEpoch.toString(),
                       'duration': tempStopDuration,
-                      'nature': finalNature,
+                      'nature': tempNature,
                     });
                     final totalDowntime = _calculateDowntimeFromStops(stops);
                     data['${modulePrefix}TotalDowntime'] = totalDowntime;
@@ -5329,7 +6108,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   });
                 }
               },
-              child: const Text('Ajouter'),
+              child: Text(l10n.addButton),
             ),
           ],
         ),
@@ -5350,138 +6129,76 @@ class _ReportsScreenState extends State<ReportsScreen> {
       AppLocalizations l10n,
       Function(int) onTotalDowntimeChanged) async {
     final stop = stops[index];
-    const List<String> predefinedNatures = [
-      'Manque Produit',
-      'Attente Saturation Silo',
-      'Vidange Extraction 2',
-      'Arret Mécanique sur:',
-      'Dèfout Élèctrique sur:',
-      'Arret d\'instalation sur:',
-      'Travoux Mècanique sur:',
-      'Travoux Elèctrique sur:',
-      'Travoux dans l\'instalation sur:',
-      'Autre:',
-    ];
+    String tempNature = stop['nature']?.toString() ?? '';
+    String tempStopDuration = stop['duration']?.toString() ?? '';
 
-    String? selectedNature;
-    String customNature = '';
-    String tempStopDuration = stop['duration'] ?? '';
-    final customNatureController = TextEditingController();
-
-    // Parse the nature to determine selected nature and custom part
-    String currentNature = stop['nature'] ?? '';
-    for (String nature in predefinedNatures) {
-      if (currentNature.startsWith(nature)) {
-        selectedNature = nature;
-        if (nature.endsWith(':')) {
-          customNature = currentNature.substring(nature.length).trim();
-          customNatureController.text = customNature;
-        }
-        break;
-      }
-    }
+    final durationController = TextEditingController(text: tempStopDuration);
+    final natureController = TextEditingController(text: tempNature);
 
     await showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setLocalState) => AlertDialog(
-          title: const Text('Modifier l\'arrêt'),
+          title: Text(l10n.editStopTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              DropdownButtonFormField<String>(
-                value: selectedNature,
-                decoration: const InputDecoration(
-                  labelText: 'Nature prédéfinie',
-                  border: OutlineInputBorder(),
-                ),
-                items: predefinedNatures
-                    .map((nature) => DropdownMenuItem(
-                          value: nature,
-                          child: Text(nature),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  setLocalState(() {
-                    selectedNature = value;
-                    customNature = '';
-                    customNatureController.clear();
-                  });
-                },
-                hint: const Text('Sélectionner une nature'),
-                isExpanded: true,
-              ),
-              const SizedBox(height: 16),
               TextField(
                 decoration: const InputDecoration(
                   labelText: 'Durée (ex: 1h 30)',
                   border: OutlineInputBorder(),
                 ),
-                controller: TextEditingController(text: tempStopDuration),
+                controller: durationController,
                 onChanged: (value) =>
                     setLocalState(() => tempStopDuration = value),
               ),
-              if (selectedNature?.endsWith(':') == true) ...[
-                const SizedBox(height: 16),
-                TextField(
-                  controller: customNatureController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nature (complément)',
-                    border: OutlineInputBorder(),
-                    hintText: 'Maximum 20 caractères par ligne',
-                  ),
-                  maxLines: 5,
-                  onChanged: (value) {
-                    final words = value.split(' ');
-                    final lines = <String>[];
-                    String currentLine = '';
-                    for (var word in words) {
-                      if ((currentLine +
-                                  (currentLine.isEmpty ? '' : ' ') +
-                                  word)
-                              .length <=
-                          20) {
-                        currentLine += (currentLine.isEmpty ? '' : ' ') + word;
-                      } else {
-                        if (currentLine.isNotEmpty) {
-                          lines.add(currentLine);
-                        }
-                        currentLine = word;
-                      }
-                    }
-                    if (currentLine.isNotEmpty) {
-                      lines.add(currentLine);
-                    }
-                    setLocalState(() => customNature = lines.join('\n'));
-                  },
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Nature',
+                  border: OutlineInputBorder(),
+                  hintText: 'Maximum 20 caractères par ligne',
                 ),
-              ],
+                controller: natureController,
+                maxLines: 5,
+                onChanged: (value) {
+                  // Split text into lines of max 20 characters
+                  final words = value.split(' ');
+                  final lines = <String>[];
+                  String currentLine = '';
+
+                  for (var word in words) {
+                    if (('$currentLine $word').trim().length <= 20) {
+                      currentLine += (currentLine.isEmpty ? '' : ' ') + word;
+                    } else {
+                      if (currentLine.isNotEmpty) {
+                        lines.add(currentLine);
+                      }
+                      currentLine = word;
+                    }
+                  }
+                  if (currentLine.isNotEmpty) {
+                    lines.add(currentLine);
+                  }
+
+                  setLocalState(() => tempNature = lines.join('\n'));
+                },
+              ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler'),
+              child: Text(l10n.cancel),
             ),
             ElevatedButton(
               onPressed: () {
-                String finalNature = '';
-                if (selectedNature != null) {
-                  if (selectedNature?.endsWith(':') == true) {
-                    if (customNature.trim().isEmpty) return;
-                    finalNature = '$selectedNature\n${customNature.trim()}';
-                  } else {
-                    finalNature = selectedNature!;
-                  }
-                } else {
-                  return;
-                }
-                if (tempStopDuration.isNotEmpty && finalNature.isNotEmpty) {
+                if (tempStopDuration.isNotEmpty && tempNature.isNotEmpty) {
                   setState(() {
                     stops[index] = {
                       'id': stop['id'],
                       'duration': tempStopDuration,
-                      'nature': finalNature,
+                      'nature': tempNature,
                     };
                     final totalDowntime = _calculateDowntimeFromStops(stops);
                     data['${modulePrefix}TotalDowntime'] = totalDowntime;
@@ -5494,430 +6211,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   Navigator.pop(context);
                 }
               },
-              child: const Text('Modifier'),
+              child: Text(l10n.modifyLabel),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // Machines/Equipment Stopped Editor
-  Future<void> _showMachinesEquipmentStoppedEditor(Report report,
-      ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
-    final data = report.additionalData ?? {};
-    final maxHeight = MediaQuery.of(context).size.height * 0.9;
-
-    await showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => Dialog(
-          insetPadding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: 800,
-              maxHeight: maxHeight,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'M/Eng Arrêtés',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(dialogContext),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Basic Info Card
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Info',
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const Divider(height: 16),
-                                _buildEditableField(
-                                  context: context,
-                                  label: 'Description',
-                                  value: report.description,
-                                  isEditable: false,
-                                  onSave: (value) async {
-                                    final updatedReport = Report(
-                                      id: report.id,
-                                      description: value,
-                                      type: report.type,
-                                      group: report.group,
-                                      date: report.date,
-                                      additionalData: report.additionalData,
-                                    );
-                                    await _saveReportUpdate(
-                                        updatedReport, scaffoldMessenger, l10n);
-                                  },
-                                ),
-                                const SizedBox(height: 8),
-                                _buildEditableDateField(
-                                  context: context,
-                                  label: 'Date',
-                                  value: report.date,
-                                  onSave: (value) async {
-                                    final updatedReport = Report(
-                                      id: report.id,
-                                      description: report.description,
-                                      type: report.type,
-                                      group: report.group,
-                                      date: value,
-                                      additionalData: report.additionalData,
-                                    );
-                                    await _saveReportUpdate(
-                                        updatedReport, scaffoldMessenger, l10n);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Equipment List Management Card
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Équipements',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium,
-                                    ),
-                                    ElevatedButton.icon(
-                                      onPressed: () => _showAddEquipmentDialog(
-                                          report,
-                                          data,
-                                          setDialogState,
-                                          scaffoldMessenger,
-                                          l10n),
-                                      icon: const Icon(Icons.add),
-                                      label: const Text('Aj'),
-                                    ),
-                                  ],
-                                ),
-                                const Divider(height: 16),
-                                if (data['equipmentList'] is List &&
-                                    (data['equipmentList'] as List).isNotEmpty)
-                                  ...List.from(data['equipmentList'])
-                                      .asMap()
-                                      .entries
-                                      .map((entry) {
-                                    final index = entry.key;
-                                    final equipment = entry.value;
-                                    final isSelected =
-                                        _selectedEquipmentIndex == index;
-                                    return Card(
-                                      margin: const EdgeInsets.only(bottom: 8),
-                                      color: isSelected
-                                          ? Colors.blue.withValues(alpha: 0.1)
-                                          : null,
-                                      elevation: isSelected ? 4 : 1,
-                                      child: ListTile(
-                                        selected: isSelected,
-                                        selectedTileColor:
-                                            Colors.blue.withValues(alpha: 0.1),
-                                        title: Text('Équipement ${index + 1}'),
-                                        subtitle: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                                'Type: ${equipment['equipmentType'] ?? '-'}'),
-                                            Text(
-                                                'Raison: ${equipment['Reason'] ?? '-'}'),
-                                          ],
-                                        ),
-                                        leading: isSelected
-                                            ? const Icon(Icons.check_circle,
-                                                color: Colors.blue)
-                                            : null,
-                                        onTap: () {
-                                          setState(() {
-                                            _selectedEquipmentIndex =
-                                                isSelected ? null : index;
-                                          });
-                                        },
-                                        trailing: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            IconButton(
-                                              icon: const Icon(Icons.edit,
-                                                  size: 18),
-                                              onPressed: () =>
-                                                  _showEditEquipmentDialog(
-                                                      report,
-                                                      data,
-                                                      index,
-                                                      setDialogState,
-                                                      scaffoldMessenger,
-                                                      l10n),
-                                              tooltip: 'Modifier l\'équipement',
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(Icons.delete,
-                                                  size: 18, color: Colors.red),
-                                              onPressed: () =>
-                                                  _showDeleteEquipmentDialog(
-                                                      report,
-                                                      data,
-                                                      index,
-                                                      setDialogState,
-                                                      scaffoldMessenger,
-                                                      l10n),
-                                              tooltip:
-                                                  'Supprimer l\'équipement',
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  })
-                                else
-                                  const Text('Aucun équipement arrêté ajouté',
-                                      style: TextStyle(color: Colors.grey)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Add Equipment Dialog for Machines/Equipment Stopped
-  Future<void> _showAddEquipmentDialog(
-      Report report,
-      Map<String, dynamic> data,
-      StateSetter setDialogState,
-      ScaffoldMessengerState scaffoldMessenger,
-      AppLocalizations l10n) async {
-    String equipmentType = '';
-    String stopReason = '';
-
-    await showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Aj équipement'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Type d\'équipement',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (value) => setState(() => equipmentType = value),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Raison de l\'arrêt',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-                onChanged: (value) => setState(() => stopReason = value),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (equipmentType.isNotEmpty && stopReason.isNotEmpty) {
-                  final updatedData = Map<String, dynamic>.from(data);
-                  if (updatedData['equipmentList'] == null) {
-                    updatedData['equipmentList'] = [];
-                  }
-                  (updatedData['equipmentList'] as List).add({
-                    'id': DateTime.now().millisecondsSinceEpoch.toString(),
-                    'equipmentType': equipmentType,
-                    'Reason': stopReason,
-                  });
-
-                  final updatedReport = Report(
-                    id: report.id,
-                    description: report.description,
-                    type: report.type,
-                    group: report.group,
-                    date: report.date,
-                    additionalData: updatedData,
-                  );
-
-                  Navigator.pop(context);
-                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                }
-              },
-              child: const Text('Ajouter'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Edit Equipment Dialog for Machines/Equipment Stopped
-  Future<void> _showEditEquipmentDialog(
-      Report report,
-      Map<String, dynamic> data,
-      int index,
-      StateSetter setDialogState,
-      ScaffoldMessengerState scaffoldMessenger,
-      AppLocalizations l10n) async {
-    final equipment = (data['equipmentList'] as List)[index];
-    String equipmentType = equipment['equipmentType'] ?? '';
-    String stopReason = equipment['Reason'] ?? '';
-
-    await showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Modifier l\'équipement'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Type d\'équipement',
-                  border: OutlineInputBorder(),
-                ),
-                controller: TextEditingController(text: equipmentType),
-                onChanged: (value) => setState(() => equipmentType = value),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Raison de l\'arrêt',
-                  border: OutlineInputBorder(),
-                ),
-                controller: TextEditingController(text: stopReason),
-                maxLines: 3,
-                onChanged: (value) => setState(() => stopReason = value),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (equipmentType.isNotEmpty && stopReason.isNotEmpty) {
-                  final updatedData = Map<String, dynamic>.from(data);
-                  (updatedData['equipmentList'] as List)[index] = {
-                    'id': equipment['id'],
-                    'equipmentType': equipmentType,
-                    'Reason': stopReason,
-                  };
-
-                  final updatedReport = Report(
-                    id: report.id,
-                    description: report.description,
-                    type: report.type,
-                    group: report.group,
-                    date: report.date,
-                    additionalData: updatedData,
-                  );
-
-                  Navigator.pop(context);
-                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                }
-              },
-              child: const Text('Modifier'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Delete Equipment Dialog for Machines/Equipment Stopped
-  Future<void> _showDeleteEquipmentDialog(
-      Report report,
-      Map<String, dynamic> data,
-      int index,
-      StateSetter setDialogState,
-      ScaffoldMessengerState scaffoldMessenger,
-      AppLocalizations l10n) async {
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Supprimer l\'équipement'),
-        content:
-            const Text('Êtes-vous sûr de vouloir supprimer cet équipement ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final updatedData = Map<String, dynamic>.from(data);
-              (updatedData['equipmentList'] as List).removeAt(index);
-
-              final updatedReport = Report(
-                id: report.id,
-                description: report.description,
-                type: report.type,
-                group: report.group,
-                date: report.date,
-                additionalData: updatedData,
-              );
-
-              Navigator.pop(context);
-              _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Supprimer'),
-          ),
-        ],
       ),
     );
   }
@@ -5947,12 +6244,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Modifier - R Camion',
-                        style: Theme.of(context).textTheme.titleLarge,
+                      Expanded(
+                        child: Text(
+                          'Modifier - R Camion',
+                          style: Theme.of(context).textTheme.titleLarge,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close),
+                        icon: const Icon(Icons.save),
                         onPressed: () => Navigator.pop(dialogContext),
                       ),
                     ],
@@ -6002,14 +6302,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   context: context,
                                   label: 'Date',
                                   value: report.date,
+                                  isEditable: false,
                                   onSave: (value) async {
-                                    final updatedReport = Report(
-                                      id: report.id,
-                                      description: report.description,
-                                      type: report.type,
-                                      group: report.group,
+                                    final newDescription =
+                                        "Truck Tracking - ${DateFormat('yyyy-MM-dd').format(value)} - ${report.group}";
+                                    final updatedReport = report.copyWith(
                                       date: value,
-                                      additionalData: report.additionalData,
+                                      description: newDescription,
                                     );
                                     await _saveReportUpdate(
                                         updatedReport, scaffoldMessenger, l10n);
@@ -6021,7 +6320,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Mine and Sortie Card
+                        // Info Card
                         Card(
                           margin: EdgeInsets.zero,
                           child: Padding(
@@ -6030,7 +6329,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Mine et Sortie',
+                                  'Info',
                                   style:
                                       Theme.of(context).textTheme.titleMedium,
                                 ),
@@ -6039,16 +6338,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   context: context,
                                   label: 'Mine',
                                   value: data['mine'] ?? '',
+                                  isEditable: false,
                                   onSave: (value) async {
                                     final updatedData =
                                         Map<String, dynamic>.from(data);
                                     updatedData['mine'] = value;
-                                    final updatedReport = Report(
-                                      id: report.id,
-                                      description: report.description,
-                                      type: report.type,
-                                      group: report.group,
-                                      date: report.date,
+                                    final updatedReport = report.copyWith(
                                       additionalData: updatedData,
                                     );
                                     await _saveReportUpdate(
@@ -6060,16 +6355,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   context: context,
                                   label: 'Zone',
                                   value: data['zone'] ?? '',
+                                  isEditable: false,
                                   onSave: (value) async {
                                     final updatedData =
                                         Map<String, dynamic>.from(data);
                                     updatedData['zone'] = value;
-                                    final updatedReport = Report(
-                                      id: report.id,
-                                      description: report.description,
-                                      type: report.type,
-                                      group: report.group,
-                                      date: report.date,
+                                    final updatedReport = report.copyWith(
                                       additionalData: updatedData,
                                     );
                                     await _saveReportUpdate(
@@ -6081,59 +6372,55 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   context: context,
                                   label: 'Sortie',
                                   value: data['sortie'] ?? '',
+                                  isEditable: false,
                                   onSave: (value) async {
                                     final updatedData =
                                         Map<String, dynamic>.from(data);
                                     updatedData['sortie'] = value;
-                                    final updatedReport = Report(
-                                      id: report.id,
-                                      description: report.description,
-                                      type: report.type,
-                                      group: report.group,
-                                      date: report.date,
+                                    final updatedReport = report.copyWith(
                                       additionalData: updatedData,
                                     );
                                     await _saveReportUpdate(
                                         updatedReport, scaffoldMessenger, l10n);
                                   },
                                 ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Equipment and Operation Card
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Équipement et Opération',
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium,
+                                const SizedBox(height: 8),
+                                _buildEditableField(
+                                  context: context,
+                                  label: 'Poste',
+                                  value: data['selectedPoste'] ??
+                                      data['poste'] ??
+                                      '',
+                                  isEditable: false,
+                                  onSave: (value) async {
+                                    final updatedData =
+                                        Map<String, dynamic>.from(data);
+                                    updatedData['selectedPoste'] = value;
+                                    final newDescription =
+                                        "Truck Tracking - ${DateFormat('yyyy-MM-dd').format(report.date)} - $value";
+                                    final updatedReport = report.copyWith(
+                                      group: value,
+                                      description: newDescription,
+                                      additionalData: updatedData,
+                                    );
+                                    await _saveReportUpdate(
+                                        updatedReport, scaffoldMessenger, l10n);
+                                  },
                                 ),
-                                const Divider(height: 16),
+                                const SizedBox(height: 8),
                                 _buildEditableField(
                                   context: context,
                                   label: 'équipement',
                                   value: data['equipment'] ??
                                       data['selectedEquipment'] ??
                                       '',
+                                  isEditable: false,
                                   onSave: (value) async {
                                     final updatedData =
                                         Map<String, dynamic>.from(data);
                                     updatedData['equipment'] = value;
                                     updatedData['selectedEquipment'] = value;
-                                    final updatedReport = Report(
-                                      id: report.id,
-                                      description: report.description,
-                                      type: report.type,
-                                      group: report.group,
-                                      date: report.date,
+                                    final updatedReport = report.copyWith(
                                       additionalData: updatedData,
                                     );
                                     await _saveReportUpdate(
@@ -6145,16 +6432,29 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   context: context,
                                   label: 'Opération',
                                   value: data['operationType'] ?? '',
+                                  isEditable: false,
                                   onSave: (value) async {
                                     final updatedData =
                                         Map<String, dynamic>.from(data);
                                     updatedData['operationType'] = value;
-                                    final updatedReport = Report(
-                                      id: report.id,
-                                      description: report.description,
-                                      type: report.type,
-                                      group: report.group,
-                                      date: report.date,
+                                    final updatedReport = report.copyWith(
+                                      additionalData: updatedData,
+                                    );
+                                    await _saveReportUpdate(
+                                        updatedReport, scaffoldMessenger, l10n);
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                _buildEditableField(
+                                  context: context,
+                                  label: 'Type Qualité',
+                                  value: data['selectedQualiteType'] ?? '',
+                                  isEditable: false,
+                                  onSave: (value) async {
+                                    final updatedData =
+                                        Map<String, dynamic>.from(data);
+                                    updatedData['selectedQualiteType'] = value;
+                                    final updatedReport = report.copyWith(
                                       additionalData: updatedData,
                                     );
                                     await _saveReportUpdate(
@@ -6179,11 +6479,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      'Camions',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium,
+                                    Expanded(
+                                      child: Text(
+                                        'Camions',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                     ElevatedButton.icon(
                                       onPressed: () => _showDetailedTruckDialog(
@@ -6194,7 +6497,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           scaffoldMessenger,
                                           l10n),
                                       icon: const Icon(Icons.add),
-                                      label: const Text('Aj'),
+                                      label: Text(l10n.ajButton),
                                     ),
                                   ],
                                 ),
@@ -6217,7 +6520,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                                'Chauffeur: ${truck['driver1'] ?? '-'}'),
+                                                '${l10n.driverLabel}: ${truck['driver1'] ?? '-'}'),
                                             if (truck['counts'] is List &&
                                                 (truck['counts'] as List)
                                                     .isNotEmpty)
@@ -6260,8 +6563,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     );
                                   })
                                 else
-                                  const Text('Aucun camion ajouté',
-                                      style: TextStyle(color: Colors.grey)),
+                                  Text(l10n.noTrucksAdded,
+                                      style:
+                                          const TextStyle(color: Colors.grey)),
                               ],
                             ),
                           ),
@@ -6315,11 +6619,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
             showDialog(
               context: context,
               builder: (context) => AlertDialog(
-                title: const Text('Ajouter'),
+                title: Text(l10n.addButton),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Temps du voyage',
+                    Text(l10n.tripTime,
                         style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 8),
                     TimePickerSpinner(
@@ -6341,24 +6645,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
-                      value: selectedEquipment,
+                      initialValue: selectedEquipment,
                       decoration: const InputDecoration(
-                        labelText: "Equipement utilisé",
+                        labelText:
+                            'Heure', // This seems like a typo, should be l10n.equipmentLabel
                         border: OutlineInputBorder(),
                       ),
-                      items: const [
+                      items: [
                         DropdownMenuItem(
                             value: 'Chargeuse 992K',
-                            child: Text('Chargeuse 992K')),
+                            child: Text(l10n.loader992k)),
                         DropdownMenuItem(
                             value: 'Chargeuse 994H',
-                            child: Text('Chargeuse 994H')),
+                            child: Text(l10n.loader994h)),
                         DropdownMenuItem(
                             value: 'Pelle Hy',
-                            child: Text('Pelle hydraulique')),
+                            child: Text(l10n.hydraulicShovel)),
                         DropdownMenuItem(
                             value: 'Pelle B1',
-                            child: Text('Pelle electrique B1')),
+                            child: Text(l10n.electricShovelB1)),
                       ],
                       onChanged: (value) => selectedEquipment = value,
                     ),
@@ -6367,7 +6672,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Annuler'),
+                    child: Text(l10n.cancel),
                   ),
                   ElevatedButton(
                     onPressed: () {
@@ -6382,7 +6687,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         Navigator.pop(context);
                       }
                     },
-                    child: const Text('Ajouter'),
+                    child: Text(l10n.addButton),
                   ),
                 ],
               ),
@@ -6394,9 +6699,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
               context: context,
               builder: (context) => StatefulBuilder(
                 builder: (context, setTripState) => AlertDialog(
-                  title: const Text('Détails des voyages'),
+                  title: Text(l10n.tripDetails),
                   content: counts.isEmpty
-                      ? const Text('Aucun voyage ajouté.')
+                      ? Text(l10n.noTripsAdded)
                       : SizedBox(
                           width: 300,
                           height: 400,
@@ -6417,9 +6722,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text('Temps: ${trip['time']}'),
                                           Text(
-                                              'Equipement: ${trip['equipment'] ?? '-'}'),
+                                              '${l10n.tempsLabel}: ${trip['time']}'),
+                                          Text(
+                                              '${l10n.equipmentLabel}: ${trip['equipment'] ?? '-'}'),
                                         ],
                                       ),
                                       trailing: IconButton(
@@ -6443,7 +6749,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Fermer'),
+                      child: Text(l10n.close),
                     ),
                   ],
                 ),
@@ -6467,9 +6773,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          isEditing ? "Modifier Camion" : "Nouveau Camion",
-                          style: Theme.of(context).textTheme.titleLarge,
+                        Expanded(
+                          child: Text(
+                            isEditing
+                                ? l10n.editTruckTitle
+                                : l10n.newTruckTitle,
+                            style: Theme.of(context).textTheme.titleLarge,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                         IconButton(
                           icon: const Icon(Icons.close),
@@ -6485,15 +6796,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("Selectionner un camion",
+                          Text(l10n.selectTruckLabel,
                               style: Theme.of(context).textTheme.titleMedium),
                           const SizedBox(height: 16),
                           DropdownButtonFormField<String>(
-                            value: predefinedTrucks.contains(truckNumber)
+                            initialValue: predefinedTrucks.contains(truckNumber)
                                 ? truckNumber
                                 : null,
                             decoration: const InputDecoration(
-                              labelText: 'Camion',
+                              labelText:
+                                  'Chauffeur', // This seems like a typo, should be l10n.truckLabel
                               border: OutlineInputBorder(),
                             ),
                             items: predefinedTrucks.map((String value) {
@@ -6509,14 +6821,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             },
                           ),
                           const SizedBox(height: 24),
-                          Text("Informations sur le conducteur",
+                          Text(l10n.driverInfoLabel,
                               style: Theme.of(context).textTheme.titleMedium),
                           const SizedBox(height: 16),
                           TextField(
                             controller: driverController,
-                            decoration: const InputDecoration(
-                              labelText: 'Chauffeur',
-                              border: OutlineInputBorder(),
+                            decoration: InputDecoration(
+                              labelText: l10n.driverLabel,
+                              border: const OutlineInputBorder(),
                             ),
                             onChanged: (value) => driver1 = value,
                           ),
@@ -6526,7 +6838,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               Expanded(
                                 child: ElevatedButton.icon(
                                   icon: const Icon(Icons.add),
-                                  label: const Text('Ajouter Voyage'),
+                                  label: Text(l10n.addTrip),
                                   onPressed: addTrip,
                                 ),
                               ),
@@ -6534,7 +6846,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               Expanded(
                                 child: OutlinedButton.icon(
                                   icon: const Icon(Icons.list),
-                                  label: const Text('Voir les voyages'),
+                                  label: Text(l10n.viewTrips),
                                   onPressed: viewTrips,
                                 ),
                               ),
@@ -6551,7 +6863,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       children: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text('Annuler'),
+                          child: Text(l10n.cancel),
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
@@ -6590,9 +6902,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               Navigator.pop(context);
                               _saveReportUpdate(
                                   updatedReport, scaffoldMessenger, l10n);
+                              setReportState(() {});
                             }
                           },
-                          child: const Text('Enregistrer'),
+                          child: Text(l10n.save),
                         ),
                       ],
                     ),
@@ -6617,12 +6930,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Supprimer le camion'),
-        content: const Text('Êtes-vous sûr de vouloir supprimer ce camion ?'),
+        title: Text(l10n.deleteTruckTitle),
+        content: Text(l10n.deleteTruckConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -6640,9 +6953,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
               Navigator.pop(context);
               _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+              setDialogState(() {});
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Supprimer'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -6674,12 +6988,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Modifier R0',
-                        style: Theme.of(context).textTheme.titleLarge,
+                      Expanded(
+                        child: Text(
+                          l10n.editR0Title,
+                          style: Theme.of(context).textTheme.titleLarge,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close),
+                        icon: const Icon(Icons.save),
                         onPressed: () => Navigator.pop(dialogContext),
                       ),
                     ],
@@ -6734,6 +7051,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   context: dialogContext,
                                   label: 'Date',
                                   value: report.date,
+                                  isEditable: false,
                                   onSave: (value) async {
                                     final navigator =
                                         Navigator.of(dialogContext);
@@ -6776,16 +7094,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           .textTheme
                                           .titleMedium,
                                     ),
-                                    IconButton(
-                                      icon: const Icon(Icons.edit),
-                                      onPressed: () => _showEditR0InfoDialog(
-                                          report,
-                                          data,
-                                          scaffoldMessenger,
-                                          l10n),
-                                      tooltip:
-                                          'Modifier les informations OIB/EE',
-                                    ),
                                   ],
                                 ),
                                 const Divider(height: 16),
@@ -6827,94 +7135,139 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           .textTheme
                                           .titleMedium,
                                     ),
-                                    if (!(data['Compteurs'] is List &&
-                                        (data['Compteurs'] as List).isNotEmpty))
+                                    if (!((data['Compteurs'] is List &&
+                                            (data['Compteurs'] as List)
+                                                .isNotEmpty) ||
+                                        (data['Compteurs'] is Map)))
                                       ElevatedButton.icon(
                                         onPressed: () =>
-                                            _showAddR0CounterDialog(report,
-                                                data, scaffoldMessenger, l10n),
+                                            _showAddR0CounterDialog(
+                                                report,
+                                                data,
+                                                setDialogState,
+                                                scaffoldMessenger,
+                                                l10n),
                                         icon: const Icon(Icons.add),
-                                        label: const Text('Ajouter'),
+                                        label: Text(l10n.addButton),
                                       ),
                                   ],
                                 ),
                                 const Divider(height: 16),
-                                if (data['Compteurs'] is List &&
-                                    (data['Compteurs'] as List).isNotEmpty)
-                                  ...List.from(data['Compteurs'])
-                                      .asMap()
-                                      .entries
-                                      .map((entry) {
-                                    final index = entry.key;
-                                    final compteur = entry.value;
-                                    final isSelected =
-                                        _selectedCounterIndex == index;
-                                    return Card(
+                                if ((data['Compteurs'] is List &&
+                                        (data['Compteurs'] as List)
+                                            .isNotEmpty) ||
+                                    (data['Compteurs'] is Map))
+                                  if (data['Compteurs'] is List)
+                                    ...List.from(data['Compteurs'])
+                                        .asMap()
+                                        .entries
+                                        .map((entry) {
+                                      final index = entry.key;
+                                      final compteur = entry.value;
+                                      final isSelected =
+                                          _selectedCounterIndex == index;
+                                      return Card(
+                                        margin:
+                                            const EdgeInsets.only(bottom: 8),
+                                        color: isSelected
+                                            ? Colors.blue.withValues(alpha: 0.1)
+                                            : null,
+                                        elevation: isSelected ? 4 : 1,
+                                        child: ListTile(
+                                          selected: isSelected,
+                                          selectedTileColor: Colors.blue
+                                              .withValues(alpha: 0.1),
+                                          title: Text(l10n
+                                              .genericCounterTitle(index + 1)),
+                                          subtitle: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                  'Début: ${compteur['duree'] ?? '-'}'),
+                                              Text(
+                                                  'Fin: ${compteur['note'] ?? '-'}'),
+                                            ],
+                                          ),
+                                          leading: isSelected
+                                              ? const Icon(Icons.check_circle,
+                                                  color: Colors.blue)
+                                              : null,
+                                          onTap: () {
+                                            setState(() {
+                                              _selectedCounterIndex =
+                                                  isSelected ? null : index;
+                                            });
+                                          },
+                                          trailing: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              IconButton(
+                                                icon: const Icon(Icons.edit,
+                                                    size: 18),
+                                                onPressed: () =>
+                                                    _showEditR0CounterDialog(
+                                                        report,
+                                                        data,
+                                                        index,
+                                                        setDialogState,
+                                                        scaffoldMessenger,
+                                                        l10n),
+                                                tooltip: l10n.editCounter,
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(Icons.delete,
+                                                    size: 18,
+                                                    color: Colors.red),
+                                                onPressed: () =>
+                                                    _showDeleteR0CounterDialog(
+                                                        report,
+                                                        data,
+                                                        index,
+                                                        setDialogState,
+                                                        scaffoldMessenger,
+                                                        l10n),
+                                                tooltip:
+                                                    l10n.deleteCounterTooltip,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    })
+                                  else if (data['Compteurs'] is Map)
+                                    Card(
                                       margin: const EdgeInsets.only(bottom: 8),
-                                      color: isSelected
-                                          ? Colors.blue.withValues(alpha: 0.1)
-                                          : null,
-                                      elevation: isSelected ? 4 : 1,
                                       child: ListTile(
-                                        selected: isSelected,
-                                        selectedTileColor:
-                                            Colors.blue.withValues(alpha: 0.1),
-                                        title: Text('Compteur ${index + 1}'),
+                                        title: Text(l10n.counter),
                                         subtitle: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                                'Début: ${compteur['duree'] ?? '-'}'),
+                                                'Début: ${data['Compteurs']['duree'] ?? '-'}'),
                                             Text(
-                                                'Fin: ${compteur['note'] ?? '-'}'),
+                                                'Fin: ${data['Compteurs']['note'] ?? '-'}'),
                                           ],
                                         ),
-                                        leading: isSelected
-                                            ? const Icon(Icons.check_circle,
-                                                color: Colors.blue)
-                                            : null,
-                                        onTap: () {
-                                          setState(() {
-                                            _selectedCounterIndex =
-                                                isSelected ? null : index;
-                                          });
-                                        },
-                                        trailing: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            IconButton(
-                                              icon: const Icon(Icons.edit,
-                                                  size: 18),
-                                              onPressed: () =>
-                                                  _showEditR0CounterDialog(
-                                                      report,
-                                                      data,
-                                                      index,
-                                                      scaffoldMessenger,
-                                                      l10n),
-                                              tooltip: 'Modifier le compteur',
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(Icons.delete,
-                                                  size: 18, color: Colors.red),
-                                              onPressed: () =>
-                                                  _showDeleteR0CounterDialog(
-                                                      report,
-                                                      data,
-                                                      index,
-                                                      scaffoldMessenger,
-                                                      l10n),
-                                              tooltip: 'Supprimer le compteur',
-                                            ),
-                                          ],
+                                        trailing: IconButton(
+                                          icon:
+                                              const Icon(Icons.edit, size: 18),
+                                          onPressed: () => _showEditR0CounterDialog(
+                                              report,
+                                              data,
+                                              0, // Map is treated as single item
+                                              setDialogState,
+                                              scaffoldMessenger,
+                                              l10n),
+                                          tooltip: l10n.editCounterTooltip,
                                         ),
                                       ),
-                                    );
-                                  })
-                                else
-                                  const Text('Aucun compteur ajouté',
-                                      style: TextStyle(color: Colors.grey)),
+                                    )
+                                  else
+                                    Text(l10n.noCountersAdded,
+                                        style: const TextStyle(
+                                            color: Colors.grey)),
                               ],
                             ),
                           ),
@@ -6947,7 +7300,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           scaffoldMessenger,
                                           l10n),
                                       icon: const Icon(Icons.add),
-                                      label: const Text('Aj'),
+                                      label: Text(l10n.addButton),
                                     ),
                                   ],
                                 ),
@@ -6972,7 +7325,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         selected: isSelected,
                                         selectedTileColor:
                                             Colors.blue.withValues(alpha: 0.1),
-                                        title: Text('Arrêt ${index + 1}'),
+                                        title: Text(l10n.stopIndex(index + 1)),
                                         subtitle: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -7029,8 +7382,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     );
                                   })
                                 else
-                                  const Text('Aucun arrêt ajouté',
-                                      style: TextStyle(color: Colors.grey)),
+                                  Text(l10n.noStopsAdded,
+                                      style:
+                                          const TextStyle(color: Colors.grey)),
                               ],
                             ),
                           ),
@@ -7058,8 +7412,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     IconButton(
                                       icon: const Icon(Icons.edit),
                                       onPressed: () =>
-                                          _showEditR0ExploitationDialog(report,
-                                              data, scaffoldMessenger, l10n),
+                                          _showEditR0ExploitationDialog(
+                                              report,
+                                              data,
+                                              setDialogState,
+                                              scaffoldMessenger,
+                                              l10n),
                                       tooltip: 'Modifier l\'exploitation',
                                     ),
                                   ],
@@ -7078,8 +7436,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           data['exploitation']['Rendeme'] ??
                                           ''),
                                 ] else
-                                  const Text('Aucune donnée d\'exploitation',
-                                      style: TextStyle(color: Colors.grey)),
+                                  Text(l10n.noExploitationData,
+                                      style:
+                                          const TextStyle(color: Colors.grey)),
                               ],
                             ),
                           ),
@@ -7108,94 +7467,132 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       onPressed: () => _showAddR0WorkDialog(
                                           report,
                                           data,
+                                          setDialogState,
                                           scaffoldMessenger,
                                           l10n),
                                       icon: const Icon(Icons.add),
-                                      label: const Text('Aj'),
+                                      label: Text(l10n.addButton),
                                     ),
                                   ],
                                 ),
                                 const Divider(height: 16),
-                                if (data['Répartition Travail'] is List &&
-                                    (data['Répartition Travail'] as List)
-                                        .isNotEmpty)
-                                  ...List.from(data['Répartition Travail'])
-                                      .asMap()
-                                      .entries
-                                      .map((entry) {
-                                    final index = entry.key;
-                                    final repartition = entry.value;
-                                    final isSelected =
-                                        _selectedStockIndex == index;
-                                    return Card(
+                                if ((data['Répartition Travail'] is List &&
+                                        (data['Répartition Travail'] as List)
+                                            .isNotEmpty) ||
+                                    (data['repartition'] is Map))
+                                  if (data['Répartition Travail'] is List)
+                                    ...List.from(data['Répartition Travail'])
+                                        .asMap()
+                                        .entries
+                                        .map((entry) {
+                                      final index = entry.key;
+                                      final repartition = entry.value;
+                                      final isSelected =
+                                          _selectedStockIndex == index;
+                                      return Card(
+                                        margin:
+                                            const EdgeInsets.only(bottom: 8),
+                                        color: isSelected
+                                            ? Colors.blue.withValues(alpha: 0.1)
+                                            : null,
+                                        elevation: isSelected ? 4 : 1,
+                                        child: ListTile(
+                                          selected: isSelected,
+                                          selectedTileColor: Colors.blue
+                                              .withValues(alpha: 0.1),
+                                          title: Text('Travail ${index + 1}'),
+                                          subtitle: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                  'Chantier: ${repartition['Chantier'] ?? repartition['chantier'] ?? '-'}'),
+                                              Text(
+                                                  'Temps: ${repartition['temps'] ?? repartition['Temps'] ?? '-'}'),
+                                              Text(
+                                                  'Imputation: ${repartition['imputation'] ?? repartition['Imputation'] ?? '-'}'),
+                                            ],
+                                          ),
+                                          leading: isSelected
+                                              ? const Icon(Icons.check_circle,
+                                                  color: Colors.blue)
+                                              : null,
+                                          onTap: () {
+                                            setState(() {
+                                              _selectedStockIndex =
+                                                  isSelected ? null : index;
+                                            });
+                                          },
+                                          trailing: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              IconButton(
+                                                icon: const Icon(Icons.edit,
+                                                    size: 18),
+                                                onPressed: () =>
+                                                    _showEditR0WorkDialog(
+                                                        report,
+                                                        data,
+                                                        index,
+                                                        setDialogState,
+                                                        scaffoldMessenger,
+                                                        l10n),
+                                                tooltip: 'Modifier le travail',
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(Icons.delete,
+                                                    size: 18,
+                                                    color: Colors.red),
+                                                onPressed: () =>
+                                                    _showDeleteR0WorkDialog(
+                                                        report,
+                                                        data,
+                                                        index,
+                                                        setDialogState,
+                                                        scaffoldMessenger,
+                                                        l10n),
+                                                tooltip: 'Supprimer le travail',
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    })
+                                  else if (data['repartition'] is Map)
+                                    Card(
                                       margin: const EdgeInsets.only(bottom: 8),
-                                      color: isSelected
-                                          ? Colors.blue.withValues(alpha: 0.1)
-                                          : null,
-                                      elevation: isSelected ? 4 : 1,
                                       child: ListTile(
-                                        selected: isSelected,
-                                        selectedTileColor:
-                                            Colors.blue.withValues(alpha: 0.1),
-                                        title: Text('Travail ${index + 1}'),
+                                        title: Text(l10n.workDistributionLabel),
                                         subtitle: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                                'Chantier: ${repartition['Chantier'] ?? repartition['chantier'] ?? '-'}'),
+                                                'Chantier: ${data['repartition']['Chantier'] ?? data['repartition']['chantier'] ?? '-'}'),
                                             Text(
-                                                'Temps: ${repartition['temps'] ?? repartition['Temps'] ?? '-'}'),
+                                                'Temps: ${data['repartition']['Temps'] ?? data['repartition']['temps'] ?? '-'}'),
                                             Text(
-                                                'Imputation: ${repartition['imputation'] ?? repartition['Imputation'] ?? '-'}'),
+                                                'Imputation: ${data['repartition']['Imputation'] ?? data['repartition']['imputation'] ?? '-'}'),
                                           ],
                                         ),
-                                        leading: isSelected
-                                            ? const Icon(Icons.check_circle,
-                                                color: Colors.blue)
-                                            : null,
-                                        onTap: () {
-                                          setState(() {
-                                            _selectedStockIndex =
-                                                isSelected ? null : index;
-                                          });
-                                        },
-                                        trailing: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            IconButton(
-                                              icon: const Icon(Icons.edit,
-                                                  size: 18),
-                                              onPressed: () =>
-                                                  _showEditR0WorkDialog(
-                                                      report,
-                                                      data,
-                                                      index,
-                                                      scaffoldMessenger,
-                                                      l10n),
-                                              tooltip: 'Modifier le travail',
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(Icons.delete,
-                                                  size: 18, color: Colors.red),
-                                              onPressed: () =>
-                                                  _showDeleteR0WorkDialog(
-                                                      report,
-                                                      data,
-                                                      index,
-                                                      scaffoldMessenger,
-                                                      l10n),
-                                              tooltip: 'Supprimer le travail',
-                                            ),
-                                          ],
+                                        trailing: IconButton(
+                                          icon:
+                                              const Icon(Icons.edit, size: 18),
+                                          onPressed: () => _showEditR0WorkDialog(
+                                              report,
+                                              data,
+                                              -1, // Special index for 'repartition' map
+                                              setDialogState,
+                                              scaffoldMessenger,
+                                              l10n),
+                                          tooltip: 'Modifier le travail',
                                         ),
                                       ),
-                                    );
-                                  })
-                                else
-                                  const Text(
-                                      'Aucune répartition de travail ajoutée',
-                                      style: TextStyle(color: Colors.grey)),
+                                    )
+                                  else
+                                    const Text(
+                                        'Aucune répartition de travail ajoutée',
+                                        style: TextStyle(color: Colors.grey)),
                               ],
                             ),
                           ),
@@ -7223,8 +7620,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     IconButton(
                                       icon: const Icon(Icons.edit),
                                       onPressed: () =>
-                                          _showEditR0PersonnelDialog(report,
-                                              data, scaffoldMessenger, l10n),
+                                          _showEditR0PersonnelDialog(
+                                              report,
+                                              data,
+                                              setDialogState,
+                                              scaffoldMessenger,
+                                              l10n),
                                       tooltip: 'Modifier le personnel',
                                     ),
                                   ],
@@ -7241,8 +7642,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   _buildSummaryItem('Matricules',
                                       data['personnel']['matricules'] ?? ''),
                                 ] else
-                                  const Text('Aucune donnée de personnel',
-                                      style: TextStyle(color: Colors.grey)),
+                                  Text(l10n.noPersonnelData,
+                                      style:
+                                          const TextStyle(color: Colors.grey)),
                               ],
                             ),
                           ),
@@ -7270,8 +7672,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     IconButton(
                                       icon: const Icon(Icons.edit),
                                       onPressed: () =>
-                                          _showEditR0ConsumptionDialog(report,
-                                              data, scaffoldMessenger, l10n),
+                                          _showEditR0ConsumptionDialog(
+                                              report,
+                                              data,
+                                              setDialogState,
+                                              scaffoldMessenger,
+                                              l10n),
                                       tooltip: 'Modifier la consommation',
                                     ),
                                   ],
@@ -7283,8 +7689,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   _buildSummaryItem('Gasoil',
                                       data['consommation']['gasoil'] ?? ''),
                                 ] else
-                                  const Text('Aucune donnée de consommation',
-                                      style: TextStyle(color: Colors.grey)),
+                                  Text(l10n.noConsumptionData,
+                                      style:
+                                          const TextStyle(color: Colors.grey)),
                               ],
                             ),
                           ),
@@ -7301,355 +7708,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  // Edit R0 Info OIB/EE Dialog
-  Future<void> _showEditR0InfoDialog(Report report, Map<String, dynamic> data,
-      ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
-    // Initialize with current values
-    String selectedMine = data['mine'] ?? '';
-    String selectedZone = data['zone'] ?? '';
-    String selectedSortie = data['sortie'] ?? '';
-    String selectedCategory = data['Category'] ?? '';
-    String selectedType = data['Type'] ?? '';
-    String selectedModel = data['Model'] ?? '';
-    String selectedPoste = data['selectedPoste'] ?? data['poste'] ?? '';
-
-    int step = 0;
-
-    await showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          MineData? mineData = selectedMine.isNotEmpty
-              ? minesData.where((m) => m.name == selectedMine).isNotEmpty
-                  ? minesData.firstWhere((m) => m.name == selectedMine)
-                  : null
-              : null;
-          ZoneData? zoneData = (mineData != null && selectedZone.isNotEmpty)
-              ? mineData.zones.where((z) => z.name == selectedZone).isNotEmpty
-                  ? mineData.zones.firstWhere((z) => z.name == selectedZone)
-                  : null
-              : null;
-
-          void goNext() => setDialogState(() => step++);
-          void goBack() => setDialogState(() => step--);
-
-          Widget content;
-          if (step == 0) {
-            content = Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: selectedMine.isNotEmpty ? selectedMine : null,
-                    decoration: const InputDecoration(
-                        labelText: 'Mine', border: OutlineInputBorder()),
-                    items: minesData
-                        .map((mine) => DropdownMenuItem(
-                            value: mine.name, child: Text(mine.name)))
-                        .toList(),
-                    onChanged: (value) {
-                      setDialogState(() {
-                        selectedMine = value ?? '';
-                        selectedZone = '';
-                        selectedSortie = '';
-                        selectedPoste = '';
-                        selectedCategory = '';
-                        selectedType = '';
-                        selectedModel = '';
-                      });
-                    },
-                  ),
-                ),
-              ],
-            );
-          } else if (step == 1 && mineData != null) {
-            content = Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: selectedZone.isNotEmpty ? selectedZone : null,
-                    decoration: const InputDecoration(
-                        labelText: 'Zone', border: OutlineInputBorder()),
-                    items: mineData.zones
-                        .map((zone) => DropdownMenuItem(
-                            value: zone.name, child: Text(zone.name)))
-                        .toList(),
-                    onChanged: (value) {
-                      setDialogState(() {
-                        selectedZone = value ?? '';
-                        selectedSortie = '';
-                        selectedPoste = '';
-                        selectedCategory = '';
-                        selectedType = '';
-                        selectedModel = '';
-                      });
-                    },
-                  ),
-                ),
-              ],
-            );
-          } else if (step == 2) {
-            content = Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value:
-                        selectedCategory.isNotEmpty ? selectedCategory : null,
-                    decoration: const InputDecoration(
-                        labelText: 'Catégorie', border: OutlineInputBorder()),
-                    items: const [
-                      DropdownMenuItem(value: 'ENGINS', child: Text('ENGINS')),
-                      DropdownMenuItem(
-                          value: 'MACHINES', child: Text('MACHINES')),
-                    ],
-                    onChanged: (value) {
-                      setDialogState(() {
-                        selectedCategory = value ?? '';
-                        selectedType = '';
-                        selectedModel = '';
-                      });
-                    },
-                  ),
-                ),
-              ],
-            );
-          } else if (step == 3 && selectedCategory.isNotEmpty) {
-            final types = selectedCategory == 'ENGINS'
-                ? enginsData.keys.toList()
-                : machinesData.keys.toList();
-            content = Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: selectedType.isNotEmpty ? selectedType : null,
-                    decoration: const InputDecoration(
-                        labelText: 'Type', border: OutlineInputBorder()),
-                    items: types
-                        .map((type) =>
-                            DropdownMenuItem(value: type, child: Text(type)))
-                        .toList(),
-                    onChanged: (value) {
-                      setDialogState(() {
-                        selectedType = value ?? '';
-                        selectedModel = '';
-                      });
-                    },
-                  ),
-                ),
-              ],
-            );
-          } else if (step == 4 && selectedType.isNotEmpty) {
-            final models = selectedCategory == 'ENGINS'
-                ? enginsData[selectedType] ?? []
-                : machinesData[selectedType] ?? [];
-            content = Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: selectedModel.isNotEmpty ? selectedModel : null,
-                    decoration: const InputDecoration(
-                        labelText: 'Modèle', border: OutlineInputBorder()),
-                    items: models
-                        .map((model) =>
-                            DropdownMenuItem(value: model, child: Text(model)))
-                        .toList(),
-                    onChanged: (value) {
-                      setDialogState(() {
-                        selectedModel = value ?? '';
-                      });
-                    },
-                  ),
-                ),
-              ],
-            );
-          } else if (step == 5 &&
-              zoneData != null &&
-              zoneData.sorties.isNotEmpty) {
-            content = Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: selectedSortie.isNotEmpty ? selectedSortie : null,
-                    decoration: const InputDecoration(
-                        labelText: 'Sortie', border: OutlineInputBorder()),
-                    items: zoneData.sorties
-                        .map((sortie) => DropdownMenuItem(
-                            value: sortie, child: Text(sortie)))
-                        .toList(),
-                    onChanged: (value) {
-                      setDialogState(() {
-                        selectedSortie = value ?? '';
-                        selectedPoste = '';
-                      });
-                    },
-                  ),
-                ),
-              ],
-            );
-          } else if ((step == 5 &&
-                  zoneData != null &&
-                  zoneData.sorties.isEmpty) ||
-              step == 6) {
-            content = Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: selectedPoste.isNotEmpty ? selectedPoste : null,
-                    decoration: const InputDecoration(
-                        labelText: 'Poste', border: OutlineInputBorder()),
-                    items: posteOrder
-                        .map((poste) => DropdownMenuItem(
-                            value: poste, child: Text('$poste Poste')))
-                        .toList(),
-                    onChanged: (value) {
-                      setDialogState(() {
-                        selectedPoste = value ?? posteOrder.first;
-                      });
-                    },
-                  ),
-                ),
-              ],
-            );
-          } else {
-            content = const SizedBox();
-          }
-
-          // Determine if all steps are filled for 'Terminer'
-          bool canFinish = selectedMine.isNotEmpty &&
-              selectedZone.isNotEmpty &&
-              selectedCategory.isNotEmpty &&
-              selectedType.isNotEmpty &&
-              selectedModel.isNotEmpty &&
-              (zoneData == null ||
-                  zoneData.sorties.isEmpty ||
-                  selectedSortie.isNotEmpty) &&
-              selectedPoste.isNotEmpty;
-
-          return AlertDialog(
-            title: const Text('Modifier les informations OIB/EE'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (step == 0) ...[
-                    const Text('Sélection de la Mine',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 16),
-                    content,
-                  ] else if (step == 1) ...[
-                    const Text('Sélection de la Zone',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 16),
-                    content,
-                  ] else if (step == 2) ...[
-                    const Text('Sélection Catégorie',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 16),
-                    content,
-                  ] else if (step == 3) ...[
-                    const Text('Sélection Type',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 16),
-                    content,
-                  ] else if (step == 4) ...[
-                    const Text('Sélection Modèle',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 16),
-                    content,
-                  ] else if (step == 5 &&
-                      zoneData != null &&
-                      zoneData.sorties.isNotEmpty) ...[
-                    const Text('Sélection Sortie',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 16),
-                    content,
-                  ] else if ((step == 5 &&
-                          zoneData != null &&
-                          zoneData.sorties.isEmpty) ||
-                      step == 6) ...[
-                    const Text('Sélection Poste',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 16),
-                    content,
-                  ],
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      if (step > 0)
-                        TextButton(
-                          onPressed: goBack,
-                          child: const Text('Précédent'),
-                        )
-                      else
-                        const SizedBox(),
-                      if (step < 6 &&
-                          (step != 5 ||
-                              (zoneData != null &&
-                                  zoneData.sorties.isNotEmpty)))
-                        ElevatedButton(
-                          onPressed: () {
-                            if ((step == 0 && selectedMine.isNotEmpty) ||
-                                (step == 1 && selectedZone.isNotEmpty) ||
-                                (step == 2 && selectedCategory.isNotEmpty) ||
-                                (step == 3 && selectedType.isNotEmpty) ||
-                                (step == 4 && selectedModel.isNotEmpty) ||
-                                (step == 5 &&
-                                    ((zoneData != null &&
-                                            zoneData.sorties.isEmpty) ||
-                                        selectedSortie.isNotEmpty))) {
-                              goNext();
-                            }
-                          },
-                          child: const Text('Suivant'),
-                        )
-                      else if (canFinish)
-                        ElevatedButton(
-                          onPressed: () {
-                            final updatedData = Map<String, dynamic>.from(data);
-                            updatedData['mine'] = selectedMine;
-                            updatedData['zone'] = selectedZone;
-                            updatedData['sortie'] = selectedSortie;
-                            updatedData['Category'] = selectedCategory;
-                            updatedData['Type'] = selectedType;
-                            updatedData['Model'] = selectedModel;
-                            updatedData['selectedPoste'] = selectedPoste;
-
-                            final updatedReport = Report(
-                              id: report.id,
-                              description: 'Rapport R0 - $selectedPoste',
-                              type: selectedModel,
-                              group: report.group,
-                              date: report.date,
-                              additionalData: updatedData,
-                            );
-
-                            Navigator.pop(context);
-                            _saveReportUpdate(
-                                updatedReport, scaffoldMessenger, l10n);
-                          },
-                          child: const Text('Modifier'),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
   // Add R0 Counter Dialog
-  Future<void> _showAddR0CounterDialog(Report report, Map<String, dynamic> data,
-      ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+  Future<void> _showAddR0CounterDialog(
+      Report report,
+      Map<String, dynamic> data,
+      StateSetter setDialogState,
+      ScaffoldMessengerState scaffoldMessenger,
+      AppLocalizations l10n) async {
     String duree = '';
     String note = '';
 
@@ -7657,7 +7722,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Ajouter un compteur'),
+          title: Text(l10n.addCounterTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -7679,29 +7744,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ElevatedButton(
               onPressed: () {
                 if (duree.isNotEmpty || note.isNotEmpty) {
-                  final updatedData = Map<String, dynamic>.from(data);
-                  if (updatedData['Compteurs'] == null) {
-                    updatedData['Compteurs'] = [];
+                  if (data['Compteurs'] == null) {
+                    data['Compteurs'] = [];
                   }
-                  (updatedData['Compteurs'] as List).add({
+                  (data['Compteurs'] as List).add({
                     'duree': duree,
                     'note': note,
                   });
 
                   // Recalculate hours
-                  _recalculateR0Hours(updatedData);
+                  _recalculateR0Hours(data);
 
-                  final updatedReport = Report(
-                    id: report.id,
-                    description: report.description,
-                    type: report.type,
-                    group: report.group,
-                    date: report.date,
-                    additionalData: updatedData,
+                  final updatedReport = report.copyWith(
+                    additionalData: data,
                   );
 
                   Navigator.pop(context);
                   _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                  setDialogState(() {});
                 }
               },
               child: const Text('Ajouter'),
@@ -7717,11 +7777,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
       Report report,
       Map<String, dynamic> data,
       int index,
+      StateSetter setDialogState,
       ScaffoldMessengerState scaffoldMessenger,
       AppLocalizations l10n) async {
-    final compteur = (data['Compteurs'] as List)[index];
-    String duree = compteur['duree'] ?? '';
-    String note = compteur['note'] ?? '';
+    final dynamic compteurData = (data['Compteurs'] is List)
+        ? (data['Compteurs'] as List)[index]
+        : data['Compteurs'];
+    String duree = compteurData['duree'] ?? '';
+    String note = compteurData['note'] ?? '';
 
     await showDialog(
       context: context,
@@ -7731,14 +7794,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
+              TextFormField(
+                initialValue: duree,
                 decoration: const InputDecoration(labelText: 'Début'),
-                controller: TextEditingController(text: duree),
                 onChanged: (value) => setState(() => duree = value),
               ),
-              TextField(
+              TextFormField(
+                initialValue: note,
                 decoration: const InputDecoration(labelText: 'Fin'),
-                controller: TextEditingController(text: note),
                 onChanged: (value) => setState(() => note = value),
               ),
             ],
@@ -7750,14 +7813,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                final updatedData = Map<String, dynamic>.from(data);
-                (updatedData['Compteurs'] as List)[index] = {
-                  'duree': duree,
-                  'note': note,
-                };
+                if (data['Compteurs'] is List) {
+                  (data['Compteurs'] as List)[index] = {
+                    'duree': duree,
+                    'note': note,
+                  };
+                } else {
+                  data['Compteurs'] = {
+                    'duree': duree,
+                    'note': note,
+                  };
+                }
 
                 // Recalculate hours
-                _recalculateR0Hours(updatedData);
+                _recalculateR0Hours(data);
 
                 final updatedReport = Report(
                   id: report.id,
@@ -7765,11 +7834,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   type: report.type,
                   group: report.group,
                   date: report.date,
-                  additionalData: updatedData,
+                  additionalData: data,
                 );
 
                 Navigator.pop(context);
                 _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                setDialogState(() {});
               },
               child: const Text('Modifier'),
             ),
@@ -7784,6 +7854,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       Report report,
       Map<String, dynamic> data,
       int index,
+      StateSetter setDialogState,
       ScaffoldMessengerState scaffoldMessenger,
       AppLocalizations l10n) async {
     await showDialog(
@@ -7798,26 +7869,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              final updatedData = Map<String, dynamic>.from(data);
-              (updatedData['Compteurs'] as List).removeAt(index);
+              (data['Compteurs'] as List).removeAt(index);
 
               // Recalculate hours
-              _recalculateR0Hours(updatedData);
+              _recalculateR0Hours(data);
 
-              final updatedReport = Report(
-                id: report.id,
-                description: report.description,
-                type: report.type,
-                group: report.group,
-                date: report.date,
-                additionalData: updatedData,
+              final updatedReport = report.copyWith(
+                additionalData: data,
               );
 
               Navigator.pop(context);
               _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+              setDialogState(() {});
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Supprimer'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -7825,7 +7891,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   // Build Add/Edit R0 Stop Dialog (same as in R0 creation)
-  Widget _buildAddR0StopDialog(BuildContext context,
+  Widget _buildAddR0StopDialog(BuildContext context, AppLocalizations l10n,
       {Map<String, String>? initialItem}) {
     int step = 0;
     String? selectedCategory = initialItem != null
@@ -7844,9 +7910,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: selectedCategory,
-                  decoration: const InputDecoration(
-                      labelText: 'Catégorie', border: OutlineInputBorder()),
+                  initialValue: selectedCategory,
+                  decoration: InputDecoration(
+                      labelText: l10n.category,
+                      border: const OutlineInputBorder()),
                   items: arretCategories.keys
                       .map((cat) =>
                           DropdownMenuItem(value: cat, child: Text(cat)))
@@ -7866,9 +7933,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: selectedType,
-                  decoration: const InputDecoration(
-                      labelText: 'Type d\'arrêt', border: OutlineInputBorder()),
+                  initialValue: selectedType,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                      labelText: l10n.selectStopTypeStep,
+                      border: const OutlineInputBorder()),
                   items: arretCategories[selectedCategory]!
                       .map((type) =>
                           DropdownMenuItem(value: type, child: Text(type)))
@@ -7886,13 +7955,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
           content = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Catégorie: $selectedCategory'),
-              Text('Type: $selectedType'),
+              Text('${l10n.category}: $selectedCategory'),
+              Text('${l10n.type}: $selectedType'),
               const SizedBox(height: 16),
               ListTile(
-                title: const Text('Heure début'),
-                subtitle: Text(
-                    startTime.isEmpty ? 'Sélectionner l\'heure' : startTime),
+                title: Text(l10n.startTimeLabel),
+                subtitle:
+                    Text(startTime.isEmpty ? l10n.selectTimeTitle : startTime),
                 trailing: const Icon(Icons.access_time),
                 onTap: () async {
                   final picked = await showDialog<TimeOfDay>(
@@ -7900,7 +7969,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     builder: (context) {
                       TimeOfDay tempTime = TimeOfDay.now();
                       return AlertDialog(
-                        title: const Text('Sélectionner l\'heure'),
+                        title: Text(l10n.selectTimeTitle),
                         content: SizedBox(
                           height: 200,
                           child: TimePickerSpinner(
@@ -7924,12 +7993,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('Annuler'),
+                            child: Text(l10n.cancel),
                           ),
                           ElevatedButton(
                             onPressed: () =>
                                 Navigator.of(context).pop(tempTime),
-                            child: const Text('OK'),
+                            child: Text(l10n.okButton),
                           ),
                         ],
                       );
@@ -7945,9 +8014,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
               const SizedBox(height: 16),
               ListTile(
-                title: const Text('Heure fin'),
+                title: Text(l10n.endTimeLabel),
                 subtitle:
-                    Text(endTime.isEmpty ? 'Sélectionner l\'heure' : endTime),
+                    Text(endTime.isEmpty ? l10n.selectTimeTitle : endTime),
                 trailing: const Icon(Icons.access_time),
                 onTap: () async {
                   final picked = await showDialog<TimeOfDay>(
@@ -7955,7 +8024,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     builder: (context) {
                       TimeOfDay tempTime = TimeOfDay.now();
                       return AlertDialog(
-                        title: const Text('Sélectionner l\'heure'),
+                        title: Text(l10n.selectTimeTitle),
                         content: SizedBox(
                           height: 200,
                           child: TimePickerSpinner(
@@ -7979,12 +8048,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('Annuler'),
+                            child: Text(l10n.cancel),
                           ),
                           ElevatedButton(
                             onPressed: () =>
                                 Navigator.of(context).pop(tempTime),
-                            child: const Text('OK'),
+                            child: Text(l10n.okButton),
                           ),
                         ],
                       );
@@ -8008,18 +8077,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (step == 0) ...[
-              const Text('Sélection de la catégorie',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(l10n.selectCategoryStep,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               content,
             ] else if (step == 1) ...[
-              const Text('Sélection du type d\'arrêt',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(l10n.selectStopTypeStep,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               content,
             ] else if (step == 2) ...[
-              const Text('Saisie des détails',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(l10n.enterDetailsStep,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               content,
             ],
@@ -8030,7 +8099,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 if (step > 0)
                   OutlinedButton(
                     onPressed: () => setDialogState(() => step--),
-                    child: const Text('Précédent'),
+                    child: Text(l10n.previous),
                   ),
                 if ((step == 0 && selectedCategory != null) ||
                     (step == 1 && selectedType != null))
@@ -8038,7 +8107,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     onPressed: () {
                       setDialogState(() => step++);
                     },
-                    child: const Text('Suivant'),
+                    child: Text(l10n.next),
                   ),
                 if (step == 2 && selectedType != null)
                   ElevatedButton(
@@ -8051,7 +8120,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             });
                           }
                         : null,
-                    child: const Text('Terminer'),
+                    child: Text(l10n.finishButton),
                   ),
               ],
             ),
@@ -8071,9 +8140,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Ajouter un arrêt'),
+        title: Text(l10n.addStopTitle),
         content: SingleChildScrollView(
-          child: _buildAddR0StopDialog(context),
+          child: _buildAddR0StopDialog(context, l10n),
         ),
       ),
     );
@@ -8120,9 +8189,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Modifier l\'arrêt'),
+        title: Text(l10n.editStopTitle),
         content: SingleChildScrollView(
-          child: _buildAddR0StopDialog(context, initialItem: initialItem),
+          child: _buildAddR0StopDialog(context, l10n, initialItem: initialItem),
         ),
       ),
     );
@@ -8159,12 +8228,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Supprimer l\'arrêt'),
-        content: const Text('Êtes-vous sûr de vouloir supprimer cet arrêt ?'),
+        title: Text(l10n.deleteStopTitle),
+        content: Text(l10n.deleteStopConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -8188,7 +8257,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Supprimer'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -8199,6 +8268,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Future<void> _showEditR0ExploitationDialog(
       Report report,
       Map<String, dynamic> data,
+      StateSetter setDialogState,
       ScaffoldMessengerState scaffoldMessenger,
       AppLocalizations l10n) async {
     final exploitation = data['exploitation'] ?? {};
@@ -8209,79 +8279,84 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final rendemeController =
         TextEditingController(text: exploitation['Rendeme'] ?? '');
 
-    try {
-      await showDialog(
-        context: context,
-        builder: (context) => StatefulBuilder(
-          builder: (context, setState) => AlertDialog(
-            title: const Text('Modifier l\'exploitation'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'H.M'),
-                    controller: hmController,
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(l10n.editExploitationTitle),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  decoration: InputDecoration(
+                    labelText: l10n.hmLabel,
+                    helperText: l10n.calculatedAutomatically,
                   ),
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'H.A'),
-                    controller: haController,
+                  controller: hmController,
+                  enabled: false, // Read-only
+                  style: const TextStyle(color: Colors.grey),
+                ),
+                TextField(
+                  decoration: InputDecoration(
+                    labelText: l10n.haLabel,
+                    helperText: l10n.calculatedAutomatically,
                   ),
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Tonnage'),
-                    controller: tonnageController,
-                  ),
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Rendeme'),
-                    controller: rendemeController,
-                  ),
-                ],
-              ),
+                  controller: haController,
+                  enabled: false, // Read-only
+                  style: const TextStyle(color: Colors.grey),
+                ),
+                TextField(
+                  decoration: InputDecoration(labelText: l10n.tonnageLabel),
+                  controller: tonnageController,
+                ),
+                TextField(
+                  decoration: InputDecoration(labelText: l10n.rendemeLabel),
+                  controller: rendemeController,
+                ),
+              ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  final updatedData = Map<String, dynamic>.from(data);
-                  updatedData['exploitation'] = {
-                    'H.M': hmController.text,
-                    'H.A': haController.text,
-                    'Tonnage': tonnageController.text,
-                    'Rendeme': rendemeController.text,
-                  };
-
-                  final updatedReport = Report(
-                    id: report.id,
-                    description: report.description,
-                    type: report.type,
-                    group: report.group,
-                    date: report.date,
-                    additionalData: updatedData,
-                  );
-
-                  Navigator.pop(context);
-                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                },
-                child: const Text('Modifier'),
-              ),
-            ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Recalculate H.M and H.A from Arrets and Compteurs
+                _recalculateR0Hours(data);
+
+                // Update only the editable fields (Tonnage and Rendeme)
+                if (data['exploitation'] == null) {
+                  data['exploitation'] = {};
+                }
+                data['exploitation']['Tonnage'] = tonnageController.text;
+                data['exploitation']['Rendeme'] = rendemeController.text;
+
+                final updatedReport = report.copyWith(
+                  additionalData: data,
+                );
+
+                Navigator.pop(context);
+                _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                setDialogState(() {});
+              },
+              child: Text(l10n.modifyLabel),
+            ),
+          ],
         ),
-      );
-    } finally {
-      hmController.dispose();
-      haController.dispose();
-      tonnageController.dispose();
-      rendemeController.dispose();
-    }
+      ),
+    );
   }
 
   // Add R0 Work Dialog
-  Future<void> _showAddR0WorkDialog(Report report, Map<String, dynamic> data,
-      ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
+  Future<void> _showAddR0WorkDialog(
+      Report report,
+      Map<String, dynamic> data,
+      StateSetter setDialogState,
+      ScaffoldMessengerState scaffoldMessenger,
+      AppLocalizations l10n) async {
     String chantier = '';
     String temps = '';
     String imputation = '';
@@ -8290,20 +8365,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Ajouter une répartition de travail'),
+          title: Text(l10n.addWorkDistributionTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
-                decoration: const InputDecoration(labelText: 'Chantier'),
+                decoration: InputDecoration(labelText: l10n.chantierLabel),
                 onChanged: (value) => setState(() => chantier = value),
               ),
               TextField(
-                decoration: const InputDecoration(labelText: 'Temps'),
+                decoration: InputDecoration(labelText: l10n.tempsLabel),
                 onChanged: (value) => setState(() => temps = value),
               ),
               TextField(
-                decoration: const InputDecoration(labelText: 'Imputation'),
+                decoration: InputDecoration(labelText: l10n.imputationLabel),
                 onChanged: (value) => setState(() => imputation = value),
               ),
             ],
@@ -8311,37 +8386,41 @@ class _ReportsScreenState extends State<ReportsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler'),
+              child: Text(l10n.cancel),
             ),
             ElevatedButton(
               onPressed: () {
                 if (chantier.isNotEmpty ||
                     temps.isNotEmpty ||
                     imputation.isNotEmpty) {
-                  final updatedData = Map<String, dynamic>.from(data);
-                  if (updatedData['Répartition Travail'] == null) {
-                    updatedData['Répartition Travail'] = [];
+                  // Migration: If repartition (Map) exists and Répartition Travail (List) doesn't, migrate it
+                  if (data['repartition'] is Map &&
+                      (data['Répartition Travail'] == null ||
+                          (data['Répartition Travail'] as List).isEmpty)) {
+                    data['Répartition Travail'] = [data['repartition']];
+                    data.remove(
+                        'repartition'); // Remove old key to avoid confusion
                   }
-                  (updatedData['Répartition Travail'] as List).add({
+
+                  if (data['Répartition Travail'] == null) {
+                    data['Répartition Travail'] = [];
+                  }
+                  (data['Répartition Travail'] as List).add({
                     'Chantier': chantier,
                     'Temps': temps,
                     'Imputation': imputation,
                   });
 
-                  final updatedReport = Report(
-                    id: report.id,
-                    description: report.description,
-                    type: report.type,
-                    group: report.group,
-                    date: report.date,
-                    additionalData: updatedData,
+                  final updatedReport = report.copyWith(
+                    additionalData: data,
                   );
 
                   Navigator.pop(context);
                   _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                  setDialogState(() {});
                 }
               },
-              child: const Text('Ajouter'),
+              child: Text(l10n.add),
             ),
           ],
         ),
@@ -8354,9 +8433,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
       Report report,
       Map<String, dynamic> data,
       int index,
+      StateSetter setDialogState,
       ScaffoldMessengerState scaffoldMessenger,
       AppLocalizations l10n) async {
-    final repartition = (data['Répartition Travail'] as List)[index];
+    final dynamic repartition = (index == -1)
+        ? data['repartition']
+        : (data['Répartition Travail'] as List)[index];
     final chantierController = TextEditingController(
         text: repartition['Chantier'] ?? repartition['chantier'] ?? '');
     final tempsController = TextEditingController(
@@ -8364,68 +8446,65 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final imputationController = TextEditingController(
         text: repartition['Imputation'] ?? repartition['imputation'] ?? '');
 
-    try {
-      await showDialog(
-        context: context,
-        builder: (context) => StatefulBuilder(
-          builder: (context, setState) => AlertDialog(
-            title: const Text('Modifier la répartition de travail'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Chantier'),
-                    controller: chantierController,
-                  ),
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Temps'),
-                    controller: tempsController,
-                  ),
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Imputation'),
-                    controller: imputationController,
-                  ),
-                ],
-              ),
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(l10n.editWorkDistributionTitle),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  decoration: InputDecoration(labelText: l10n.chantierLabel),
+                  controller: chantierController,
+                ),
+                TextField(
+                  decoration: InputDecoration(labelText: l10n.tempsLabel),
+                  controller: tempsController,
+                ),
+                TextField(
+                  decoration: InputDecoration(labelText: l10n.imputationLabel),
+                  controller: imputationController,
+                ),
+              ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  final updatedData = Map<String, dynamic>.from(data);
-                  (updatedData['Répartition Travail'] as List)[index] = {
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (index == -1) {
+                  data['repartition'] = {
                     'Chantier': chantierController.text,
                     'Temps': tempsController.text,
                     'Imputation': imputationController.text,
                   };
+                } else {
+                  (data['Répartition Travail'] as List)[index] = {
+                    'Chantier': chantierController.text,
+                    'Temps': tempsController.text,
+                    'Imputation': imputationController.text,
+                  };
+                }
 
-                  final updatedReport = Report(
-                    id: report.id,
-                    description: report.description,
-                    type: report.type,
-                    group: report.group,
-                    date: report.date,
-                    additionalData: updatedData,
-                  );
+                final updatedReport = report.copyWith(
+                  additionalData: data,
+                );
 
-                  Navigator.pop(context);
-                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                },
-                child: const Text('Modifier'),
-              ),
-            ],
-          ),
+                Navigator.pop(context);
+                _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                setDialogState(() {});
+              },
+              child: Text(l10n.modifyLabel),
+            ),
+          ],
         ),
-      );
-    } finally {
-      chantierController.dispose();
-      tempsController.dispose();
-      imputationController.dispose();
-    }
+      ),
+    );
   }
 
   // Delete R0 Work Dialog
@@ -8433,38 +8512,33 @@ class _ReportsScreenState extends State<ReportsScreen> {
       Report report,
       Map<String, dynamic> data,
       int index,
+      StateSetter setDialogState,
       ScaffoldMessengerState scaffoldMessenger,
       AppLocalizations l10n) async {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Supprimer la répartition de travail'),
-        content: const Text(
-            'Êtes-vous sûr de vouloir supprimer cette répartition de travail ?'),
+        title: Text(l10n.deleteWorkDistributionTitle),
+        content: Text(l10n.deleteWorkDistributionConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () {
-              final updatedData = Map<String, dynamic>.from(data);
-              (updatedData['Répartition Travail'] as List).removeAt(index);
+              (data['Répartition Travail'] as List).removeAt(index);
 
-              final updatedReport = Report(
-                id: report.id,
-                description: report.description,
-                type: report.type,
-                group: report.group,
-                date: report.date,
-                additionalData: updatedData,
+              final updatedReport = report.copyWith(
+                additionalData: data,
               );
 
               Navigator.pop(context);
               _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+              setDialogState(() {});
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Supprimer'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -8475,6 +8549,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Future<void> _showEditR0PersonnelDialog(
       Report report,
       Map<String, dynamic> data,
+      StateSetter setDialogState,
       ScaffoldMessengerState scaffoldMessenger,
       AppLocalizations l10n) async {
     final personnel = data['personnel'] ?? {};
@@ -8485,74 +8560,64 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final matriculesController =
         TextEditingController(text: personnel['matricules'] ?? '');
 
-    try {
-      await showDialog(
-        context: context,
-        builder: (context) => StatefulBuilder(
-          builder: (context, setState) => AlertDialog(
-            title: const Text('Modifier le personnel'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Conductr'),
-                    controller: conductrController,
-                  ),
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Graisseur'),
-                    controller: graisseurController,
-                  ),
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Matricules'),
-                    controller: matriculesController,
-                  ),
-                ],
-              ),
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(l10n.editPersonnelTitle),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  decoration: InputDecoration(labelText: l10n.conductrLabel),
+                  controller: conductrController,
+                ),
+                TextField(
+                  decoration: InputDecoration(labelText: l10n.graisseurLabel),
+                  controller: graisseurController,
+                ),
+                TextField(
+                  decoration: InputDecoration(labelText: l10n.matriculesLabel),
+                  controller: matriculesController,
+                ),
+              ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  final updatedData = Map<String, dynamic>.from(data);
-                  updatedData['personnel'] = {
-                    'conductr': conductrController.text,
-                    'graisseur': graisseurController.text,
-                    'matricules': matriculesController.text,
-                  };
-
-                  final updatedReport = Report(
-                    id: report.id,
-                    description: report.description,
-                    type: report.type,
-                    group: report.group,
-                    date: report.date,
-                    additionalData: updatedData,
-                  );
-
-                  Navigator.pop(context);
-                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                },
-                child: const Text('Modifier'),
-              ),
-            ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                data['personnel'] = {
+                  'conductr': conductrController.text,
+                  'graisseur': graisseurController.text,
+                  'matricules': matriculesController.text,
+                };
+
+                final updatedReport = report.copyWith(
+                  additionalData: data,
+                );
+
+                Navigator.pop(context);
+                _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                setDialogState(() {});
+              },
+              child: Text(l10n.modifyLabel),
+            ),
+          ],
         ),
-      );
-    } finally {
-      conductrController.dispose();
-      graisseurController.dispose();
-      matriculesController.dispose();
-    }
+      ),
+    );
   }
 
   // Edit R0 Consumption Dialog
   Future<void> _showEditR0ConsumptionDialog(
       Report report,
       Map<String, dynamic> data,
+      StateSetter setDialogState,
       ScaffoldMessengerState scaffoldMessenger,
       AppLocalizations l10n) async {
     final consommation = data['consommation'] ?? {};
@@ -8561,68 +8626,60 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final gasoilController =
         TextEditingController(text: consommation['gasoil'] ?? '');
 
-    try {
-      await showDialog(
-        context: context,
-        builder: (context) => StatefulBuilder(
-          builder: (context, setState) => AlertDialog(
-            title: const Text('Modifier la consommation'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Tricone'),
-                    controller: triconeController,
-                  ),
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Gasoil'),
-                    controller: gasoilController,
-                  ),
-                ],
-              ),
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(l10n.editConsumptionTitle),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  decoration: InputDecoration(labelText: l10n.triconeLabel),
+                  controller: triconeController,
+                ),
+                TextField(
+                  decoration: InputDecoration(labelText: l10n.gasoilLabel),
+                  controller: gasoilController,
+                ),
+              ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  final updatedData = Map<String, dynamic>.from(data);
-                  updatedData['consommation'] = {
-                    'tricone': triconeController.text,
-                    'gasoil': gasoilController.text,
-                  };
-
-                  final updatedReport = Report(
-                    id: report.id,
-                    description: report.description,
-                    type: report.type,
-                    group: report.group,
-                    date: report.date,
-                    additionalData: updatedData,
-                  );
-
-                  Navigator.pop(context);
-                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                },
-                child: const Text('Modifier'),
-              ),
-            ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                data['consommation'] = {
+                  'tricone': triconeController.text,
+                  'gasoil': gasoilController.text,
+                };
+
+                final updatedReport = report.copyWith(
+                  additionalData: data,
+                );
+
+                Navigator.pop(context);
+                _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                setDialogState(() {});
+              },
+              child: Text(l10n.modifyLabel),
+            ),
+          ],
         ),
-      );
-    } finally {
-      triconeController.dispose();
-      gasoilController.dispose();
-    }
+      ),
+    );
   }
 
   // Generic Editor
   Future<void> _showGenericEditor(Report report,
       ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
     final maxHeight = MediaQuery.of(context).size.height * 0.9;
+    final bool isTruckOrR0 = report.type.toLowerCase() == 'r0' ||
+        report.type.toLowerCase().contains('camion');
 
     await showDialog(
       context: context,
@@ -8643,12 +8700,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Modifier - ${report.type}',
-                        style: Theme.of(context).textTheme.titleLarge,
+                      Expanded(
+                        child: Text(
+                          'Modifier - ${report.type}',
+                          style: Theme.of(context).textTheme.titleLarge,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close),
+                        icon: const Icon(Icons.save),
                         onPressed: () => Navigator.pop(dialogContext),
                       ),
                     ],
@@ -8670,14 +8730,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Info',
+                                  l10n.infoLabel,
                                   style:
                                       Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
                                 _buildEditableField(
                                   context: dialogContext,
-                                  label: 'Description',
+                                  label: l10n.description,
                                   value: report.description,
                                   isEditable: false,
                                   onSave: (value) async {
@@ -8701,8 +8761,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 const SizedBox(height: 8),
                                 _buildEditableDateField(
                                   context: dialogContext,
-                                  label: 'Date',
+                                  label: l10n.date,
                                   value: report.date,
+                                  isEditable: !isTruckOrR0,
                                   onSave: (value) async {
                                     final navigator =
                                         Navigator.of(dialogContext);
@@ -8724,8 +8785,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 const SizedBox(height: 8),
                                 _buildEditableField(
                                   context: dialogContext,
-                                  label: 'Type',
+                                  label: l10n.type,
                                   value: report.type,
+                                  isEditable: !isTruckOrR0,
                                   onSave: (value) async {
                                     final navigator =
                                         Navigator.of(dialogContext);
@@ -8747,8 +8809,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 const SizedBox(height: 8),
                                 _buildEditableField(
                                   context: dialogContext,
-                                  label: 'Groupe',
+                                  label: l10n.groupLabel,
                                   value: report.group,
+                                  isEditable: !isTruckOrR0,
                                   onSave: (value) async {
                                     final navigator =
                                         Navigator.of(dialogContext);
@@ -8784,7 +8847,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Données supplémentaires',
+                                    l10n.additionalDataLabel,
                                     style:
                                         Theme.of(context).textTheme.titleMedium,
                                   ),

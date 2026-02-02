@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/services/database_helper.dart';
 import 'package:r0/models/report.dart';
-import 'package:r0/screens/home_screen.dart';
+import 'package:r0/widgets/custom_widgets.dart';
 import 'package:r0/theme.dart';
-
 
 class MachinesEquipmentStoppedScreen extends StatefulWidget {
   final DateTime? selectedDate;
@@ -21,186 +20,320 @@ class MachinesEquipmentStoppedScreen extends StatefulWidget {
   });
 
   @override
-  State<MachinesEquipmentStoppedScreen> createState() => _MachinesEquipmentStoppedScreenState();
+  State<MachinesEquipmentStoppedScreen> createState() =>
+      _MachinesEquipmentStoppedScreenState();
 }
 
-class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppedScreen> {
+class _MachinesEquipmentStoppedScreenState
+    extends State<MachinesEquipmentStoppedScreen> {
   final DatabaseHelper _databaseHelper = DatabaseHelper();
-  final _durationController = TextEditingController();
-  
-  String _selectedEquipmentType = '';
-  String _selectedMainCategory = '';
-  String _selectedSubCategory = '';
-  String _selectedEquipment = '';
-  String _stopReason = '';
-  int _currentStep = 0;
   DateTime _selectedDate = DateTime.now();
-  
-  // List to store multiple equipment
+  int _currentStep = 0;
+  bool _isSaving = false;
   final List<Map<String, String>> _equipmentList = [];
-  
 
-  // Equipment data structure
-  final Map<String, Map<String, List<String>>> _equipmentData = {
-  'Camions Servitude': {
-    'Camion Citerne': [
-      '16979-A-68',
-      '17492-A-68',
-      'TEXAS',
-    ],
-    'Camion DCI': [
-      '19164-A-68',
-      '5636-A-68',
-    ],
-    'Camion de Ravitaillmenet': [
-      '1462443',
-      '93292-D-8',
-    ],
-    'Camion Grue': [
-      '12097-A-68',
-    ],
-    'Camion Nacelle': [
-      '17080-A-68',
-    ],
-    'Camion Ridelle': [
-      '11053-A-68',
-      '15836-A-68',
-      '34866-A-54',
-    ],
-    'Vehicule DC': [
-      '513714',
-    ],
-  },
-  'Engins': {
-    'Bulldozers': [
-      'BULL D9R 76',
-      'BULL D9R 79',
-      'BULL D9R 80',
-      'BULL D9R 81',
-      'BULL D9R 82',
-      'BULL D9R 83',
-      'BULL LIB 84',
-      'BULL LIB 85',
-      'BULL D9R 86',
-      'BULL D9R 87',
-    ],
-    'Camions': [
-      'CAMION T24',
-      'CAMION T25',
-      'CAMION T26',
-      'CAMION T27',
-      'CAMION T28',
-      'CAMION T29',
-      'CAMION T30',
-      'CAMION T31',
-      'CAMION T32',
-      'CAMION T33',
-      'WABCO 13',
-      'WABCO 19',
-    ],
-    'Chargeuses': [
-      'CHRG 992C',
-      'CHRG 992K',
-      'CHRG 994H',
-    ],
-    'Niveleuses': [
-      'NIV 14G',
-      'NIV 16H',
-      'NIV KOM01',
-      'NIV KOM02',
-    ],
-    'Paydozers': [
-      'PAY CAT03',
-      'PAY KOM04',
-      'PAY KOM05',
-    ],
-    'Pelle Hydraulique': [
-      'PH365-C',
-      'PH5130',
-    ],
-  },
-  'Machines': {
-    'Draglines': [
-      '1370 W1',
-      '1370 W2',
-    ],
-    'Pelle Electrique': [
-      '195 P1',
-      '195 P2',
-    ],
-    'Sondeuses': [
-      'PV275-1',
-      'PV275-2',
-      'PV275-3',
-    ],
-  },
-};
+  // Data
+  final Map<String, Map<String, List<String>>> _equipmentData = const {
+    'Camions Servitude': {
+      'Camion Citerne': ['16979-A-68', '17492-A-68', 'TEXAS'],
+      'Camion DCI': ['19164-A-68', '5636-A-68'],
+      'Camion de Ravitaillmenet': ['1462443', '93292-D-8'],
+      'Camion Grue': ['12097-A-68'],
+      'Camion Nacelle': ['17080-A-68'],
+      'Camion Ridelle': ['11053-A-68', '15836-A-68', '34866-A-54'],
+      'Vehicule DC': ['513714'],
+    },
+    'Engins': {
+      'Bulldozers': [
+        'BULL D9R 76',
+        'BULL D9R 79',
+        'BULL D9R 80',
+        'BULL D9R 81',
+        'BULL D9R 82',
+        'BULL D9R 83',
+        'BULL LIB 84',
+        'BULL LIB 85',
+        'BULL D9R 86',
+        'BULL D9R 87'
+      ],
+      'Camions': [
+        'CAMION T24',
+        'CAMION T25',
+        'CAMION T26',
+        'CAMION T27',
+        'CAMION T28',
+        'CAMION T29',
+        'CAMION T30',
+        'CAMION T31',
+        'CAMION T32',
+        'CAMION T33',
+        'WABCO 13',
+        'WABCO 19'
+      ],
+      'Chargeuses': ['CHRG 992C', 'CHRG 992K', 'CHRG 994H'],
+      'Niveleuses': ['NIV 14G', 'NIV 16H', 'NIV KOM01', 'NIV KOM02'],
+      'Paydozers': ['PAY CAT03', 'PAY KOM04', 'PAY KOM05'],
+      'Pelle Hydraulique': ['PH365-C', 'PH5130'],
+    },
+    'Machines': {
+      'Draglines': ['1370 W1', '1370 W2'],
+      'Pelle Electrique': ['195 P1', '195 P2'],
+      'Sondeuses': ['PV275-1', 'PV275-2', 'PV275-3'],
+    },
+  };
 
   @override
   void initState() {
     super.initState();
-    
     if (widget.isEditing && widget.initialReport != null) {
-      // Editing mode - load existing data
       _selectedDate = widget.initialReport!.date;
       _loadExistingData();
     } else {
-      // Creation mode
       _selectedDate = widget.selectedDate ?? DateTime.now();
     }
   }
 
   void _loadExistingData() {
     if (widget.initialReport?.additionalData == null) return;
-    
     final data = widget.initialReport!.additionalData!;
-    
-    // Load equipment list
     if (data['equipmentList'] is List) {
       _equipmentList.clear();
       for (var equipment in data['equipmentList']) {
         _equipmentList.add({
           'equipmentType': equipment['equipmentType'] ?? '',
-          'Reason': equipment['Reason'] ?? '',
+          'Reason': equipment['Reason'] ?? ''
         });
       }
     }
   }
 
   @override
-  void dispose() {
-    _durationController.dispose();
-    super.dispose();
+  Widget build(BuildContext context) {
+    final steps = ['Infos', 'Equipements', 'Verif.'];
+    return Scaffold(
+        appBar: AppBar(
+            title: Text(widget.isEditing
+                ? "Modifier Équipements Arrêtés"
+                : "Équipements Arrêtés")),
+        body: Column(children: [
+          OCPStepper(
+              steps: steps,
+              currentStep: _currentStep,
+              onStepTapped: (i) => setState(() => _currentStep = i)),
+          Expanded(
+              child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: _buildStepContent())),
+          _buildBottomBar(),
+        ]));
   }
 
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-    );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
+  Widget _buildStepContent() {
+    switch (_currentStep) {
+      case 0:
+        return _buildStepInfos();
+      case 1:
+        return _buildStepEquipment();
+      case 2:
+        return _buildStepVerification();
+      default:
+        return const SizedBox();
     }
   }
 
+  Widget _buildBottomBar() {
+    bool isLast = _currentStep == 2;
+    return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            boxShadow: const [
+              BoxShadow(blurRadius: 10, color: Colors.black12)
+            ]),
+        child: Row(children: [
+          if (_currentStep > 0)
+            Expanded(
+                child: OCPButton(
+                    text: 'Précédent',
+                    onPressed: () => setState(() => _currentStep--),
+                    isSecondary: true)),
+          if (_currentStep > 0) const SizedBox(width: 16),
+          Expanded(
+              child: OCPButton(
+                  text: isLast ? 'Soumettre' : 'Suivant',
+                  onPressed: () {
+                    if (isLast) {
+                      _saveReport();
+                    } else {
+                      setState(() => _currentStep++);
+                    }
+                  },
+                  isLoading: _isSaving && isLast))
+        ]));
+  }
+
+  Widget _buildStepInfos() {
+    return OCPCard(
+        onTap: () async {
+          final picked = await showDatePicker(
+              context: context,
+              initialDate: _selectedDate,
+              firstDate: DateTime(2000),
+              lastDate: DateTime.now(),
+              locale: const Locale('fr', 'FR'));
+          if (picked != null) setState(() => _selectedDate = picked);
+        },
+        child: Row(children: [
+          const Icon(Icons.calendar_today, color: AppColors.primary),
+          const SizedBox(width: 16),
+          Text(
+              "Date: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
+              style: const TextStyle(fontWeight: FontWeight.bold))
+        ]));
+  }
+
+  Widget _buildStepEquipment() {
+    return Column(children: [
+      ..._equipmentList.asMap().entries.map((e) => OCPCard(
+              child: ListTile(
+            leading: const Icon(Icons.build, color: AppColors.primary),
+            title: Text(e.value['equipmentType'] ?? ''),
+            subtitle: Text(e.value['Reason'] ?? ''),
+            trailing: IconButton(
+                icon: const Icon(Icons.delete, color: AppColors.error),
+                onPressed: () =>
+                    setState(() => _equipmentList.removeAt(e.key))),
+          ))),
+      const SizedBox(height: 16),
+      OCPButton(
+          text: "Ajouter Équipement",
+          icon: Icons.add,
+          isSecondary: true,
+          onPressed: _showAddEquipmentDialog),
+    ]);
+  }
+
+  void _showAddEquipmentDialog() {
+    String? mainCat;
+    String? subCat;
+    String? equip;
+    String reason = '';
+
+    showDialog(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+            builder: (c, setDs) => AlertDialog(
+                    title: const Text("Ajouter Équipement"),
+                    content: SingleChildScrollView(
+                        child:
+                            Column(mainAxisSize: MainAxisSize.min, children: [
+                      DropdownButtonFormField<String>(
+                          hint: const Text("Catégorie"),
+                          isExpanded: true,
+                          items: _equipmentData.keys
+                              .map((k) =>
+                                  DropdownMenuItem(value: k, child: Text(k)))
+                              .toList(),
+                          onChanged: (v) => setDs(() {
+                                mainCat = v;
+                                subCat = null;
+                                equip = null;
+                              }),
+                          initialValue: mainCat),
+                      const SizedBox(height: 16),
+                      if (mainCat != null)
+                        DropdownButtonFormField<String>(
+                            key: ValueKey(mainCat),
+                            hint: const Text("Sous-catégorie"),
+                            isExpanded: true,
+                            items: _equipmentData[mainCat]!
+                                .keys
+                                .map((k) =>
+                                    DropdownMenuItem(value: k, child: Text(k)))
+                                .toList(),
+                            onChanged: (v) => setDs(() {
+                                  subCat = v;
+                                  equip = null;
+                                }),
+                            initialValue: subCat),
+                      const SizedBox(height: 16),
+                      if (subCat != null)
+                        DropdownButtonFormField<String>(
+                            key: ValueKey(subCat),
+                            hint: const Text("Equipement"),
+                            isExpanded: true,
+                            items: _equipmentData[mainCat]![subCat]!
+                                .map((k) =>
+                                    DropdownMenuItem(value: k, child: Text(k)))
+                                .toList(),
+                            onChanged: (v) => setDs(() => equip = v),
+                            initialValue: equip),
+                      const SizedBox(height: 16),
+                      TextField(
+                          decoration:
+                              const InputDecoration(labelText: "Raison"),
+                          maxLines: 2,
+                          onChanged: (v) => setDs(() => reason = v)),
+                    ])),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Annuler")),
+                      ElevatedButton(
+                          onPressed: (equip != null && reason.isNotEmpty)
+                              ? () {
+                                  setState(() => _equipmentList.add({
+                                        'equipmentType':
+                                            "$mainCat - $subCat - $equip",
+                                        'Reason': reason
+                                      }));
+                                  Navigator.pop(context);
+                                }
+                              : null,
+                          child: const Text("Ajouter"))
+                    ])));
+  }
+
+  Widget _buildStepVerification() {
+    return Column(children: [
+      const Icon(Icons.check_circle_outline,
+          size: 64, color: AppColors.success),
+      const SizedBox(height: 16),
+      const Text("Récapitulatif",
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 24),
+      _row("Date",
+          "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}"),
+      const SizedBox(height: 16),
+      const Align(
+          alignment: Alignment.centerLeft,
+          child: Text("Équipements Arrêtés:",
+              style: TextStyle(fontWeight: FontWeight.bold))),
+      const SizedBox(height: 8),
+      ..._equipmentList.map((e) => OCPCard(
+              child: ListTile(
+            leading: const Icon(Icons.build, color: AppColors.primary),
+            title: Text(e['equipmentType'] ?? ''),
+            subtitle: Text(e['Reason'] ?? ''),
+          ))),
+    ]);
+  }
+
+  Widget _row(String l, String v) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(l),
+        Text(v, style: const TextStyle(fontWeight: FontWeight.bold))
+      ]));
 
   Future<void> _saveReport() async {
     if (_equipmentList.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.addAtLeastOneEquipment),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context)!.addAtLeastOneEquipment),
+          backgroundColor: AppColors.error));
       return;
     }
-
+    setState(() => _isSaving = true);
     try {
       final report = Report(
         id: widget.initialReport?.id,
@@ -208,810 +341,28 @@ class _MachinesEquipmentStoppedScreenState extends State<MachinesEquipmentStoppe
         date: _selectedDate,
         type: 'Machine/Engin Arrêtés',
         group: 'Machines Equipment',
-        additionalData: {
-          'equipmentList': _equipmentList,
-        },
+        additionalData: {'equipmentList': _equipmentList},
       );
 
       if (widget.isEditing && widget.onSave != null) {
-        // Editing mode - call the onSave callback
         widget.onSave!(report);
       } else {
-        // Creation mode - save to database
         await _databaseHelper.insertReport(report);
-
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(AppLocalizations.of(context)!.reportSaved),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-            ),
-          );
+              backgroundColor: AppColors.success));
+          Navigator.popUntil(context, (r) => r.isFirst);
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(AppLocalizations.of(context)!.errorSavingReport),
-            backgroundColor: AppColors.error,
-          ),
-        );
+            backgroundColor: AppColors.error));
       }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
-
-  @override
-  Widget build(BuildContext context) {
-    final String formattedDate = "${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}";
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.isEditing ? "Modifier - Machines et Engins Arrêtés" : "Les Machines et l'Engins a l'Arret"),
-      ),
-      body: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-            Text("Date: $formattedDate", style: TextStyle(color: Colors.grey[600])),
-                  const SizedBox(height: 12),
-                  Stepper(
-                    currentStep: _currentStep,
-                    onStepContinue: () {
-                      if (_currentStep < 2) {
-                        setState(() {
-                          _currentStep += 1;
-                        });
-                      }
-                    },
-                    onStepCancel: () {
-                      if (_currentStep > 0) {
-                        setState(() {
-                          _currentStep -= 1;
-                        });
-                      }
-                    },
-                    controlsBuilder: (context, details) {
-                      final isLastStep = _currentStep == 2;
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 16.0),
-                        child: Row(
-                          children: [
-                            if (_currentStep > 0)
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: details.onStepCancel,
-                                  child: const Text('Précédent'),
-                                ),
-                              ),
-                            if (_currentStep > 0)
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: isLastStep
-                                  ? ElevatedButton.icon(
-                                      icon: const Icon(Icons.check_circle, color: Colors.white),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Theme.of(context).colorScheme.secondary,
-                                        foregroundColor: Theme.of(context).colorScheme.onSecondary,
-                                        padding: const EdgeInsets.symmetric(vertical: 16),
-                                        textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        elevation: 2,
-                                      ),
-                                      onPressed: _equipmentList.isNotEmpty
-                                          ? () async {
-                                              final navigator = Navigator.of(context);
-                                              final shouldSave = await showDialog<bool>(
-                                                context: context,
-                                                barrierDismissible: false,
-                                                builder: (context) => AlertDialog(
-                                                  title: const Text('Confirmation'),
-                                                  content: const Text(
-                                                    "When you click Done, the report will be saved on the reports page. If you want to send this report to the company, go to the reports page and send it from there."
-                                                  ),
-                                                  actions: [
-                                                    ElevatedButton(
-                                                      onPressed: () => Navigator.of(context).pop(true),
-                                                      child: const Text('Done'),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                              if (!mounted) return;
-                                              if (shouldSave == true) {
-                                                await _saveReport();
-                                                if (!mounted) return;
-                                                navigator.pushAndRemoveUntil(
-                                                  MaterialPageRoute(builder: (context) => const HomeScreen()),
-                                                  (route) => false,
-                                                );
-                                              }
-                                            }
-                                          : null,
-                                      label: const Text('Soumettre'),
-                                    )
-                                  : ElevatedButton(
-                                      onPressed: details.onStepContinue,
-                                      child: const Text('Suivant'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    steps: [
-                      Step(
-                        title: const Text('Sélection de la date'),
-                        content: _buildStep1Content(),
-                        isActive: _currentStep >= 0,
-                        state: _currentStep > 0 ? StepState.complete : StepState.indexed,
-                      ),
-                      Step(
-                        title: const Text('Sélection de l\'équipement'),
-                        content: _buildStep2Content(),
-                        isActive: _currentStep >= 1,
-                        state: _currentStep > 1 ? StepState.complete : StepState.indexed,
-                      ),
-                      Step(
-                        title: const Text('Vérification'),
-                        content: _buildStep3Content(),
-                        isActive: _currentStep >= 2,
-                        state: _currentStep > 2 ? StepState.complete : StepState.indexed,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-    );
-  }
-
-
-
-  Widget _buildStep1Content() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Date Display
-        Card(
-          child: InkWell(
-            onTap: () => _selectDate(context),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  const Icon(Icons.calendar_today),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Date: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  const Icon(Icons.edit, size: 20),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Sélectionnez la date pour laquelle vous souhaitez créer le rapport',
-          style: TextStyle(color: Colors.grey[600]),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStep2Content() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Équipements - Arrêts',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () => _addEquipment(),
-                icon: const Icon(Icons.add),
-                label: const Text('Ajouter un équipement'),
-                style: ButtonStyles.secondaryButton(context),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _showEquipmentList(),
-                icon: const Icon(Icons.list),
-                label: const Text('Voir les équipements'),
-                style: ButtonStyles.outlinedSecondaryButton(context),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStep3Content() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Vérification des informations',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _showVerificationDetails(),
-                icon: const Icon(Icons.visibility),
-                label: const Text('Voir les détails'),
-                style: ButtonStyles.outlinedSecondaryButton(context),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        if (_equipmentList.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '${_equipmentList.length} équipement${_equipmentList.length > 1 ? 's' : ''} prêt${_equipmentList.length > 1 ? 's' : ''} à être soumis',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-        ),
-      ],
-    );
-  }
-
-  void _addEquipment() {
-    // Reset form fields when opening dialog
-    _selectedMainCategory = '';
-    _selectedSubCategory = '';
-    _selectedEquipment = '';
-    _selectedEquipmentType = '';
-    _stopReason = '';
-    
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          child: Material(
-            type: MaterialType.card,
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-          child: SingleChildScrollView(
-                child: StatefulBuilder(
-                  builder: (context, setDialogState) {
-                    return Column(
-              mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                        Text('Ajouter un équipement', style: Theme.of(context).textTheme.titleLarge),
-                        const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      value: _selectedMainCategory.isEmpty ? null : _selectedMainCategory,
-                          decoration: const InputDecoration(labelText: 'Catégorie principale', border: OutlineInputBorder()),
-                      items: _equipmentData.keys.map((String category) {
-                        return DropdownMenuItem<String>(
-                          value: category,
-                          child: Text(category),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                            setDialogState(() {
-                          _selectedMainCategory = newValue ?? '';
-                          _selectedSubCategory = '';
-                          _selectedEquipment = '';
-                          _selectedEquipmentType = '';
-                        });
-                      },
-                ),
-                const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        value: _selectedSubCategory.isEmpty ? null : _selectedSubCategory,
-                          decoration: const InputDecoration(labelText: 'Sous-catégorie', border: OutlineInputBorder()),
-                          items: (_selectedMainCategory.isNotEmpty ? _equipmentData[_selectedMainCategory]!.keys : <String>[]).map((String subCategory) {
-                          return DropdownMenuItem<String>(
-                            value: subCategory,
-                            child: Text(subCategory),
-                          );
-                        }).toList(),
-                          onChanged: _selectedMainCategory.isNotEmpty ? (String? newValue) {
-                            setDialogState(() {
-                            _selectedSubCategory = newValue ?? '';
-                            _selectedEquipment = '';
-                            _selectedEquipmentType = '';
-                          });
-                          } : null,
-                        ),
-                        const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        value: _selectedEquipment.isEmpty ? null : _selectedEquipment,
-                          decoration: const InputDecoration(labelText: 'Équipement', border: OutlineInputBorder()),
-                          items: (_selectedSubCategory.isNotEmpty ? _equipmentData[_selectedMainCategory]![_selectedSubCategory]! : <String>[]).map((String equipment) {
-                          return DropdownMenuItem<String>(
-                            value: equipment,
-                            child: Text(equipment),
-                          );
-                        }).toList(),
-                          onChanged: _selectedSubCategory.isNotEmpty ? (String? newValue) {
-                            setDialogState(() {
-                            _selectedEquipment = newValue ?? '';
-                            _selectedEquipmentType = '$_selectedMainCategory - $_selectedSubCategory - $_selectedEquipment';
-                          });
-                          } : null,
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          initialValue: _stopReason,
-                          decoration: const InputDecoration(
-                            labelText: 'Raison de l\'arrêt',
-                            border: OutlineInputBorder(),
-                            hintText: 'Entrez la raison de l\'arrêt...',
-                          ),
-                          maxLines: 3,
-                          onChanged: (value) {
-                            setDialogState(() {
-                              _stopReason = value;
-                          });
-                        },
-                      ),
-                        const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('Annuler'),
-                        ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                              onPressed: _selectedEquipment.isNotEmpty && _stopReason.isNotEmpty
-                                  ? () {
-                                      // Add equipment to the list
-                                      setState(() {
-                                        _equipmentList.add({
-                                          'equipmentType': _selectedEquipmentType,
-                                          'Reason': _stopReason,
-                                        });
-                                      });
-                      Navigator.pop(context);
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Équipement ajouté'),
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                        ),
-                      );
-                    }
-                  : null,
-                              child: const Text('Terminer'),
-                            ),
-                          ],
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _editEquipment(int index) {
-    final equipment = _equipmentList[index];
-    
-    // Parse the equipment type to get individual components
-    final equipmentType = equipment['equipmentType'] ?? '';
-    final parts = equipmentType.split(' - ');
-    
-    if (parts.length >= 3) {
-      _selectedMainCategory = parts[0];
-      _selectedSubCategory = parts[1];
-      _selectedEquipment = parts[2];
-      _selectedEquipmentType = equipmentType;
-    }
-    _stopReason = equipment['Reason'] ?? '';
-    
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          child: Material(
-            type: MaterialType.card,
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: SingleChildScrollView(
-                child: StatefulBuilder(
-                  builder: (context, setDialogState) {
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Modifier l\'équipement', style: Theme.of(context).textTheme.titleLarge),
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          value: _selectedMainCategory.isEmpty ? null : _selectedMainCategory,
-                          decoration: const InputDecoration(labelText: 'Catégorie principale', border: OutlineInputBorder()),
-                          items: _equipmentData.keys.map((String category) {
-                            return DropdownMenuItem<String>(
-                              value: category,
-                              child: Text(category),
-                            );
-                          }).toList(),
-                          onChanged: (String? newValue) {
-                            setDialogState(() {
-                              _selectedMainCategory = newValue ?? '';
-                              _selectedSubCategory = '';
-                              _selectedEquipment = '';
-                              _selectedEquipmentType = '';
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          value: _selectedSubCategory.isEmpty ? null : _selectedSubCategory,
-                          decoration: const InputDecoration(labelText: 'Sous-catégorie', border: OutlineInputBorder()),
-                          items: (_selectedMainCategory.isNotEmpty ? _equipmentData[_selectedMainCategory]!.keys : <String>[]).map((String subCategory) {
-                            return DropdownMenuItem<String>(
-                              value: subCategory,
-                              child: Text(subCategory),
-                            );
-                          }).toList(),
-                          onChanged: _selectedMainCategory.isNotEmpty ? (String? newValue) {
-                            setDialogState(() {
-                              _selectedSubCategory = newValue ?? '';
-                              _selectedEquipment = '';
-                              _selectedEquipmentType = '';
-                            });
-                          } : null,
-                        ),
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          value: _selectedEquipment.isEmpty ? null : _selectedEquipment,
-                          decoration: const InputDecoration(labelText: 'Équipement', border: OutlineInputBorder()),
-                          items: (_selectedSubCategory.isNotEmpty ? _equipmentData[_selectedMainCategory]![_selectedSubCategory]! : <String>[]).map((String equipment) {
-                            return DropdownMenuItem<String>(
-                              value: equipment,
-                              child: Text(equipment),
-                            );
-                          }).toList(),
-                          onChanged: _selectedSubCategory.isNotEmpty ? (String? newValue) {
-                            setDialogState(() {
-                              _selectedEquipment = newValue ?? '';
-                              _selectedEquipmentType = '$_selectedMainCategory - $_selectedSubCategory - $_selectedEquipment';
-                            });
-                          } : null,
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          initialValue: _stopReason,
-                          decoration: const InputDecoration(
-                            labelText: 'Raison de l\'arrêt',
-                            border: OutlineInputBorder(),
-                            hintText: 'Entrez la raison de l\'arrêt...',
-                          ),
-                          maxLines: 3,
-                          onChanged: (value) {
-                            setDialogState(() {
-                              _stopReason = value;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              child: const Text('Annuler'),
-                            ),
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              onPressed: _selectedEquipment.isNotEmpty && _stopReason.isNotEmpty
-                                  ? () {
-                                      // Update equipment in the list
-                                      setState(() {
-                                        _equipmentList[index] = {
-                                          'equipmentType': _selectedEquipmentType,
-                                          'Reason': _stopReason,
-                                        };
-                                      });
-                                      Navigator.pop(context);
-                                      if (!mounted) return;
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: const Text('Équipement modifié'),
-                                          backgroundColor: Theme.of(context).colorScheme.primary,
-                                        ),
-                                      );
-                                    }
-                                  : null,
-                              child: const Text('Enregistrer'),
-                            ),
-                          ],
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _showEquipmentList() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Liste des équipements'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: _equipmentList.isNotEmpty
-              ? ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: _equipmentList.length,
-                  itemBuilder: (context, index) {
-                    final equipment = _equipmentList[index];
-                    return ListTile(
-                      title: Text('Équipement: ${equipment['equipmentType']}'),
-                      subtitle: Text('Raison: ${equipment['Reason']}'),
-                      trailing: PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_horiz, size: 20),
-                        padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        position: PopupMenuPosition.under,
-                        itemBuilder: (BuildContext context) => [
-                          PopupMenuItem<String>(
-                            value: 'edit',
-                            height: 36,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Modifier',
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.primary,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem<String>(
-                            value: 'delete',
-                            height: 36,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Supprimer',
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.error,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        onSelected: (value) {
-                          if (value == 'edit') {
-                            Navigator.pop(context);
-                            _editEquipment(index);
-                          } else if (value == 'delete') {
-                            setState(() {
-                              _equipmentList.removeAt(index);
-                            });
-                            Navigator.pop(context);
-                            _showEquipmentList();
-                          }
-                        },
-                      ),
-                    );
-                  },
-                )
-              : const Center(
-                  child: Text('Aucun équipement ajouté'),
-                ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Fermer'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showVerificationDetails() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          child: Material(
-            type: MaterialType.card,
-            borderRadius: BorderRadius.circular(12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Vérification des informations',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.of(context).pop(),
-                        padding: const EdgeInsets.all(6),
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Date Section
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Date du rapport',
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const Divider(height: 16),
-                                Text(
-                                  '${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}',
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                            ],
-                         ),
-                       ),
-                     ),
-                        const SizedBox(height: 16),
-                        // Equipment Section
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Équipements arrêtés',
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const Divider(height: 16),
-                                if (_equipmentList.isEmpty)
-                                  const Text(
-                                    'Aucun équipement ajouté',
-                                    style: TextStyle(color: Colors.grey),
-                                  )
-                                else
-                                  ..._equipmentList.asMap().entries.map((entry) {
-                                    final index = entry.key;
-                                    final equipment = entry.value;
-                                return Padding(
-                                      padding: const EdgeInsets.only(bottom: 8.0),
-                                      child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                          Text(
-                                            'Équipement ${index + 1}:',
-                                   style: const TextStyle(fontWeight: FontWeight.bold),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text('Type: ${equipment['equipmentType']}'),
-                                          Text('Raison: ${equipment['Reason']}'),
-                                          if (index < _equipmentList.length - 1) const Divider(),
-                                        ],
-                                      ),
-                                    );
-                                 }),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        if (_equipmentList.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.06),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                child: Text(
-                                    '${_equipmentList.length} équipement${_equipmentList.length > 1 ? 's' : ''} prêt${_equipmentList.length > 1 ? 's' : ''} à être soumis',
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.primary,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                         ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-} 
+}

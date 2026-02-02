@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/providers/language_provider.dart';
+import 'package:r0/providers/theme_provider.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -21,6 +22,8 @@ class SettingsScreen extends StatelessWidget {
             title: Text(l10n.language),
             trailing: DropdownButton<Locale>(
               value: languageProvider.locale,
+              underline: Container(),
+              isDense: true,
               items: [
                 DropdownMenuItem(
                   value: const Locale('en'),
@@ -39,9 +42,21 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const Divider(),
+          ListTile(
+            title: Text(l10n.darkMode),
+            trailing: Switch(
+              value: Provider.of<ThemeProvider>(context).themeMode ==
+                  ThemeMode.dark,
+              onChanged: (value) {
+                Provider.of<ThemeProvider>(context, listen: false)
+                    .toggleTheme(value);
+              },
+            ),
+          ),
+          const Divider(),
           // Add more settings here as needed
         ],
       ),
     );
   }
-} 
+}

@@ -147,9 +147,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get quality => 'Quality';
 
   @override
-  String get machinesEquipment => 'Machines/Equipment';
-
-  @override
   String get stopsExplanation => 'Stops Explanation';
 
   @override
@@ -196,16 +193,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get counter => 'Counter';
 
   @override
-  String get poste => 'Poste';
-
-  @override
-  String get start => 'Start';
-
-  @override
-  String get end => 'End';
-
-  @override
-  String operatingHoursExceeded(Object hours, Object maxHours) {
+  String operatingHoursExceeded(int hours, int maxHours) {
     return 'Operating hours (${hours}h) exceed the maximum allowed duration for this poste (${maxHours}h).';
   }
 
@@ -321,7 +309,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get viewDetailsButton => 'View Details';
 
   @override
-  String equipmentReadyMessage(Object count) {
+  String equipmentReadyMessage(int count) {
     return '$count equipment ready to be submitted';
   }
 
@@ -375,7 +363,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noEquipmentAdded => 'No equipment added';
 
   @override
-  String equipmentReadyToSubmit(Object count) {
+  String equipmentReadyToSubmit(int count) {
     return '$count equipment ready to be submitted';
   }
 
@@ -386,7 +374,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get viewAllReports => 'View all reports';
 
   @override
-  String get viewAllDetails => 'View All Details';
+  String get viewAllDetails => 'View all details';
 
   @override
   String get dataVerification => 'Data Verification';
@@ -431,7 +419,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get viewLiaisonCounters => 'View Liaison Counters';
 
   @override
-  String addStopForModule(Object module) {
+  String addStopForModule(String module) {
     return 'Add Stop - Module $module';
   }
 
@@ -458,4 +446,1104 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get category => 'Category';
+
+  @override
+  String get darkMode => 'Dark Mode';
+
+  @override
+  String get availableReports => 'Available Reports';
+
+  @override
+  String get ocpReports => 'OCP Reports';
+
+  @override
+  String get settingsTooltip => 'Settings';
+
+  @override
+  String get r0Description => 'Equipment operation';
+
+  @override
+  String get activityReportDescription => 'Daily activities (TNB)';
+
+  @override
+  String get dailyReportDescription => 'Shift summary (TSUD)';
+
+  @override
+  String get truckTrackingDescription => 'Movement monitoring';
+
+  @override
+  String get machinesStoppedTitleShort => 'Machines Stopped';
+
+  @override
+  String get machinesStoppedDescription => 'Downtime log';
+
+  @override
+  String get reportsArchive => 'Reports Archive';
+
+  @override
+  String get reportsArchiveDescription => 'History & Logs';
+
+  @override
+  String get editTruckTracking => 'Edit Truck Tracking';
+
+  @override
+  String get newTruckTracking => 'New Truck Tracking';
+
+  @override
+  String get stepInfos => 'Infos';
+
+  @override
+  String get stepCamions => 'Trucks';
+
+  @override
+  String get stepVoyages => 'Trips';
+
+  @override
+  String get stepVerif => 'Verification';
+
+  @override
+  String get previous => 'Previous';
+
+  @override
+  String get submit => 'Submit';
+
+  @override
+  String get next => 'Next';
+
+  @override
+  String get newTruckLabel => 'New Truck';
+
+  @override
+  String get driverLabel => 'Driver';
+
+  @override
+  String get addTruckTitle => 'Add Truck';
+
+  @override
+  String get truckNumberLabel => 'Truck Number';
+
+  @override
+  String get locationLabel => 'Location';
+
+  @override
+  String get addTrip => 'Add Trip';
+
+  @override
+  String get editTrip => 'Edit Trip';
+
+  @override
+  String get tripLabel => 'Trip';
+
+  @override
+  String get viewDetails => 'View Details';
+
+  @override
+  String tripsCountLabel(int count) {
+    return '$count trips';
+  }
+
+  @override
+  String get summaryTitle => 'Summary';
+
+  @override
+  String get mineZoneLabel => 'Mine / Zone';
+
+  @override
+  String get tripsByEquipment => 'Trips per Equipment';
+
+  @override
+  String get tripsByTruck => 'Trips per Truck';
+
+  @override
+  String get tripDetailsTitle => 'Trip Details';
+
+  @override
+  String get success => 'Success';
+
+  @override
+  String get unknownLabel => 'Unknown';
+
+  @override
+  String get modifierR0 => 'Edit R0 Report';
+
+  @override
+  String get nouveauRapportR0 => 'New R0 Report';
+
+  @override
+  String get stepCompteur => 'Counter';
+
+  @override
+  String get stepArrets => 'Stops';
+
+  @override
+  String get stepExploit => 'Exploitation';
+
+  @override
+  String get stepRepartition => 'Repartition';
+
+  @override
+  String get stepPersonnel => 'Personnel';
+
+  @override
+  String get stepConsom => 'Consumption';
+
+  @override
+  String get categoryLabel => 'Category';
+
+  @override
+  String get modelLabel => 'Model';
+
+  @override
+  String get selectPosteMessage => 'Please choose a poste.';
+
+  @override
+  String counterEntryTitle(String poste) {
+    return 'Counter Entry - $poste Poste';
+  }
+
+  @override
+  String get startCounterLabel => 'Start (Index)';
+
+  @override
+  String get endCounterLabel => 'End (Index)';
+
+  @override
+  String get noStopsRecorded => 'No stops recorded.';
+
+  @override
+  String get addArretTitle => 'Add Stop';
+
+  @override
+  String get heuresMarche => 'Operating Hours (H.M)';
+
+  @override
+  String get heuresArret => 'Stop Hours (H.A)';
+
+  @override
+  String get tonnageLabel => 'Tonnage';
+
+  @override
+  String get rendementLabel => 'Efficiency %';
+
+  @override
+  String get chantierLabel => 'Worksite';
+
+  @override
+  String get gasoilLabel => 'Diesel';
+
+  @override
+  String get modifierRTNB => 'Edit TNB Report';
+
+  @override
+  String get infoLabel => 'Info';
+
+  @override
+  String arretCount(int index) {
+    return 'Stop $index';
+  }
+
+  @override
+  String get dureeLabel => 'Duration';
+
+  @override
+  String get natureLabel => 'Nature';
+
+  @override
+  String get ajButton => 'Add';
+
+  @override
+  String get cvibrLabel => 'Vibrator Counter';
+
+  @override
+  String get cliaisonLabel => 'Liaison Counter';
+
+  @override
+  String get stockLabel => 'Stock';
+
+  @override
+  String get aucunArret => 'No stops added';
+
+  @override
+  String get aucunCompteurVibr => 'No vibrator counter added';
+
+  @override
+  String get aucunCompteurLiaison => 'No liaison counter added';
+
+  @override
+  String get aucuneEntreeStock => 'No stock entry added';
+
+  @override
+  String get zone => 'Zone';
+
+  @override
+  String get operation => 'Operation';
+
+  @override
+  String get details => 'Details';
+
+  @override
+  String get summary => 'Summary';
+
+  @override
+  String get synthesis => 'Synthesis';
+
+  @override
+  String synthesisModule(int module) {
+    return 'Synthesis Module $module';
+  }
+
+  @override
+  String get functioning => 'Functioning';
+
+  @override
+  String get stops => 'Stops';
+
+  @override
+  String get complement => 'Nature (complement)';
+
+  @override
+  String get maxCharactersMessage => 'Maximum 20 characters per line';
+
+  @override
+  String get engines => 'ENGINS';
+
+  @override
+  String get machines => 'MACHINES';
+
+  @override
+  String get normal => 'NORMAL';
+
+  @override
+  String get oceane => 'OCEANE';
+
+  @override
+  String get pb30 => 'PB30';
+
+  @override
+  String get premierPosteShort => '1st';
+
+  @override
+  String get deuxiemePosteShort => '2nd';
+
+  @override
+  String get troisiemePosteShort => '3rd';
+
+  @override
+  String get park1 => 'PARK 1';
+
+  @override
+  String get park2 => 'PARK 2';
+
+  @override
+  String get park3 => 'PARK 3';
+
+  @override
+  String get activityTnb => 'Activity TNB';
+
+  @override
+  String get editActivityTnb => 'Edit Activity TNB';
+
+  @override
+  String get dailyTsud => 'Daily Report TSUD';
+
+  @override
+  String get editDailyTsud => 'Edit Daily Report TSUD';
+
+  @override
+  String get repartitionTravail => 'Work Repartition';
+
+  @override
+  String get mineSortie => 'Mine/Exit';
+
+  @override
+  String get engin => 'Engine';
+
+  @override
+  String get detailsArrets => 'Stops Details';
+
+  @override
+  String get addCounterShort => 'Add Count';
+
+  @override
+  String get vibratorCounterShort => 'Vibr. Counter';
+
+  @override
+  String get liaisonCounterShort => 'Liais. Counter';
+
+  @override
+  String get defeuitage => 'Defeuilltage';
+
+  @override
+  String get reprise => 'Reprise';
+
+  @override
+  String get sterile => 'Sterile';
+
+  @override
+  String get chargeuse992k => 'Loader 992K';
+
+  @override
+  String get chargeuse994h => 'Loader 994H';
+
+  @override
+  String get pelleHydraulique => 'Hydraulic Shovel';
+
+  @override
+  String get pelleElectriqueB1 => 'Electric Shovel B1';
+
+  @override
+  String arretTitle(int index) {
+    return 'Stop $index';
+  }
+
+  @override
+  String cvibrTitle(int index) {
+    return 'Vibr. Counter $index';
+  }
+
+  @override
+  String cliaisonTitle(int index) {
+    return 'Liais. Counter $index';
+  }
+
+  @override
+  String stockEntryTitle(int index) {
+    return 'Stock Entry $index';
+  }
+
+  @override
+  String get poste1er => '1st Shift';
+
+  @override
+  String get poste2eme => '2nd Shift';
+
+  @override
+  String get poste3eme => '3rd Shift';
+
+  @override
+  String get stockTypeNormal => 'NORMAL';
+
+  @override
+  String get stockTypeOceane => 'OCEANE';
+
+  @override
+  String get stockTypePb30 => 'PB30';
+
+  @override
+  String get sector => 'Sector';
+
+  @override
+  String get reportNo => 'Report N°';
+
+  @override
+  String get machinesEquipment => 'Machines/Equipment';
+
+  @override
+  String get poste => 'Shift';
+
+  @override
+  String get start => 'Start';
+
+  @override
+  String get end => 'End';
+
+  @override
+  String get editArret => 'Edit Stop';
+
+  @override
+  String get deleteArret => 'Delete Stop';
+
+  @override
+  String get editCounter => 'Edit Counter';
+
+  @override
+  String get deleteCounter => 'Delete Counter';
+
+  @override
+  String get editStock => 'Edit Stock';
+
+  @override
+  String get deleteStock => 'Delete Stock';
+
+  @override
+  String get allPostes => 'All Shifts';
+
+  @override
+  String get clearFilter => 'Clear Filter';
+
+  @override
+  String get refresh => 'Refresh';
+
+  @override
+  String noReportsFoundForPoste(String poste) {
+    return 'No reports found for shift $poste';
+  }
+
+  @override
+  String get seeAllReports => 'See all reports';
+
+  @override
+  String reportsFound(int count, String poste) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count reports',
+      one: '1 report',
+      zero: 'No reports',
+    );
+    return '$_temp0 found for shift $poste';
+  }
+
+  @override
+  String get totalVoyages => 'Total Trips';
+
+  @override
+  String get dataSummary => 'Data Summary';
+
+  @override
+  String get stopDataNotAvailable => 'Stoppage data not available';
+
+  @override
+  String get vibratorCountersLabel => 'Vibrator Counters';
+
+  @override
+  String get liaisonCountersLabel => 'Liaison Counters';
+
+  @override
+  String get parkLabel => 'Park';
+
+  @override
+  String get quantityLabel => 'Qty';
+
+  @override
+  String get operatingTime => 'Operating Time';
+
+  @override
+  String get stopTime => 'Stop Time';
+
+  @override
+  String get machinesStoppedLabel => 'Stopped Machines/Equipment';
+
+  @override
+  String get noEquipmentStopped => 'No equipment stopped';
+
+  @override
+  String equipmentIndex(int index) {
+    String _temp0 = intl.Intl.pluralLogic(
+      index,
+      locale: localeName,
+      other: 'Equipment $index',
+      one: 'Equipment 1',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get module1Label => 'Module 1';
+
+  @override
+  String get module2Label => 'Module 2';
+
+  @override
+  String get stopsLabel => 'Stops';
+
+  @override
+  String get dateLabel => 'Date';
+
+  @override
+  String get repartitionLabel => 'Repartition';
+
+  @override
+  String get timeLabel => 'Time';
+
+  @override
+  String get imputationLabel => 'Imputation';
+
+  @override
+  String get personnelLabel => 'Personnel';
+
+  @override
+  String get conductorLabel => 'Driver';
+
+  @override
+  String get graisseurLabel => 'Greaser';
+
+  @override
+  String get matriculeLabel => 'Serial Number';
+
+  @override
+  String get consommationLabel => 'Consumption';
+
+  @override
+  String get triconeLabel => 'Tricone';
+
+  @override
+  String get operationLabel => 'Operation';
+
+  @override
+  String get equipmentLabel => 'Equipment';
+
+  @override
+  String get qualityLabel => 'Quality';
+
+  @override
+  String get camionsLabel => 'Trucks';
+
+  @override
+  String get noteLabel => 'Note';
+
+  @override
+  String get deleteStopConfirm => 'Are you sure you want to delete this stop?';
+
+  @override
+  String get calculatedAutoHint => 'Calculated automatically (Stops, Counter)';
+
+  @override
+  String get addWorkDistributionTitle => 'Add a work distribution';
+
+  @override
+  String get editWorkDistributionTitle => 'Edit work distribution';
+
+  @override
+  String get deleteWorkDistributionTitle => 'Delete work distribution';
+
+  @override
+  String get deleteWorkDistributionConfirm =>
+      'Are you sure you want to delete this work distribution?';
+
+  @override
+  String get editPersonnelTitle => 'Edit personnel';
+
+  @override
+  String get editConsumptionTitle => 'Edit consumption';
+
+  @override
+  String get deleteCounterConfirm =>
+      'Are you sure you want to delete this counter?';
+
+  @override
+  String get startTimeLabel => 'Start time';
+
+  @override
+  String get endTimeLabel => 'End time';
+
+  @override
+  String get selectTimeTitle => 'Select time';
+
+  @override
+  String get selectCategoryStep => 'Select category';
+
+  @override
+  String get selectStopTypeStep => 'Select stop type';
+
+  @override
+  String get enterDetailsStep => 'Enter details';
+
+  @override
+  String get okButton => 'OK';
+
+  @override
+  String get deleteTruckTitle => 'Delete the truck';
+
+  @override
+  String get deleteTruckConfirm =>
+      'Are you sure you want to delete this truck?';
+
+  @override
+  String get noCountersAdded => 'No counters added';
+
+  @override
+  String get noStopsAdded => 'No stops added';
+
+  @override
+  String get noExploitationData => 'No exploitation data';
+
+  @override
+  String get noPersonnelData => 'No personnel data';
+
+  @override
+  String get noConsumptionData => 'No consumption data';
+
+  @override
+  String editReportType(String type) {
+    return 'Edit - $type';
+  }
+
+  @override
+  String equipmentLabelWithIndex(int index) {
+    return 'Equipment $index:';
+  }
+
+  @override
+  String totalFor(String key, String value) {
+    return 'Total for $key: $value';
+  }
+
+  @override
+  String tripLabelWithIndex(int index) {
+    return 'v$index: ';
+  }
+
+  @override
+  String workLabelWithIndex(int index) {
+    return 'Work $index';
+  }
+
+  @override
+  String get voyagesLabel => 'Voyages';
+
+  @override
+  String get additionalDataLabel => 'Additional data';
+
+  @override
+  String get addStopTitle => 'Add Stop';
+
+  @override
+  String get editStopTitle => 'Edit Stop';
+
+  @override
+  String get deleteStopTitle => 'Delete Stop';
+
+  @override
+  String get addVibratorCounterTitle => 'Add Vibrator Counter';
+
+  @override
+  String get editVibratorCounterTitle => 'Edit Vibrator Counter';
+
+  @override
+  String get deleteVibratorCounterTitle => 'Delete Vibrator Counter';
+
+  @override
+  String get addLiaisonCounterTitle => 'Add Liaison Counter';
+
+  @override
+  String get editLiaisonCounterTitle => 'Edit Liaison Counter';
+
+  @override
+  String get deleteLiaisonCounterTitle => 'Delete Liaison Counter';
+
+  @override
+  String get addStockEntryTitle => 'Add Stock Entry';
+
+  @override
+  String get editStockEntryTitle => 'Edit Stock Entry';
+
+  @override
+  String get deleteStockEntryTitle => 'Delete Stock Entry';
+
+  @override
+  String get addCounterTitle => 'Add Counter';
+
+  @override
+  String get editCounterTitle => 'Edit Counter';
+
+  @override
+  String get deleteCounterTitle => 'Delete Counter';
+
+  @override
+  String get editExploitationTitle => 'Edit Exploitation';
+
+  @override
+  String get predefinedNatureLabel => 'Predefined nature';
+
+  @override
+  String get durationLabel => 'Duration (e.g., 1h 30)';
+
+  @override
+  String get complementLabel => 'Nature (complement)';
+
+  @override
+  String get maxCharactersHint => 'Maximum 20 characters per line';
+
+  @override
+  String get moduleLabel => 'Module';
+
+  @override
+  String get parkTypeLabel => 'Park Type';
+
+  @override
+  String get hmLabel => 'H.M';
+
+  @override
+  String get haLabel => 'H.A';
+
+  @override
+  String get rendemeLabel => 'Efficiency';
+
+  @override
+  String get conductrLabel => 'Driver';
+
+  @override
+  String get matriculesLabel => 'Serial Numbers';
+
+  @override
+  String get noLiaisonCountersAdded => 'No liaison counter added';
+
+  @override
+  String get noStockEntriesAdded => 'No stock entry added';
+
+  @override
+  String get calculatedAutomatically =>
+      'Calculated automatically (Stops, Counter)';
+
+  @override
+  String get stocksLabel => 'Stocks';
+
+  @override
+  String get exploitationLabel => 'Exploitation';
+
+  @override
+  String get tempsLabel => 'Time';
+
+  @override
+  String get finishLabel => 'Finish';
+
+  @override
+  String get infoOibEeLabel => 'Info OIB/EE';
+
+  @override
+  String get modifyLabel => 'Modify';
+
+  @override
+  String get arretsLabel => 'Stops';
+
+  @override
+  String get deleteStockConfirm =>
+      'Are you sure you want to delete this stock entry?';
+
+  @override
+  String editLabel(String label) {
+    return 'Edit $label';
+  }
+
+  @override
+  String get noMachinesStopped => 'No machines stopped';
+
+  @override
+  String get reportDateLabel => 'Report Date';
+
+  @override
+  String get mainCategoryLabel => 'Main Category';
+
+  @override
+  String get subCategoryLabel => 'Sub Category';
+
+  @override
+  String get stopReasonLabel => 'Stop Reason';
+
+  @override
+  String get enterStopReasonHint => 'Enter stop reason...';
+
+  @override
+  String get groupLabel => 'Group';
+
+  @override
+  String get deleteEquipment => 'Delete Equipment';
+
+  @override
+  String get deleteEquipmentConfirm =>
+      'Are you sure you want to delete this equipment?';
+
+  @override
+  String get vibrTitle => 'Vibrator Counters';
+
+  @override
+  String get liaisonTitle => 'Liaison Counters';
+
+  @override
+  String get workDistributionLabel => 'Work Distribution';
+
+  @override
+  String get addButton => 'Add';
+
+  @override
+  String get noTrucksAdded => 'No trucks added';
+
+  @override
+  String get summaryLabel => 'Summary';
+
+  @override
+  String get noStockAdded => 'No stock added';
+
+  @override
+  String get stopsWithColon => 'Stops:';
+
+  @override
+  String get tripsWithColon => 'Trips:';
+
+  @override
+  String get tripsSummary => 'Trips Summary';
+
+  @override
+  String get noActivityData => 'No activity data available.';
+
+  @override
+  String get noDailyData => 'No daily data available.';
+
+  @override
+  String get noTruckTrackingData => 'No truck tracking data available.';
+
+  @override
+  String get noR0Data => 'No R0 data available.';
+
+  @override
+  String get noAdditionalData => 'No additional data';
+
+  @override
+  String get noTripsAdded => 'No trips added.';
+
+  @override
+  String updateError(String error) {
+    return 'Error updating: $error';
+  }
+
+  @override
+  String get saveChanges => 'Save Changes';
+
+  @override
+  String stockTitleIndex(int index) {
+    return 'Stock $index';
+  }
+
+  @override
+  String get tripTime => 'Trip Time';
+
+  @override
+  String genericCounterTitle(int index) {
+    return 'Counter $index';
+  }
+
+  @override
+  String workTitleIndex(int index) {
+    return 'Work $index';
+  }
+
+  @override
+  String driverParam(String driver) {
+    return 'Driver: $driver';
+  }
+
+  @override
+  String truckParam(String truck) {
+    return 'Truck: $truck';
+  }
+
+  @override
+  String typeParam(String type) {
+    return 'Type: $type';
+  }
+
+  @override
+  String reasonParam(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String endParam(String end) {
+    return 'End: $end';
+  }
+
+  @override
+  String trackingDescription(String date, String poste) {
+    return 'Tracking - $date - $poste';
+  }
+
+  @override
+  String get catBulldozers => 'BULLDOZERS';
+
+  @override
+  String get catTrucks => 'TRUCKS';
+
+  @override
+  String get catLoaders => 'LOADERS';
+
+  @override
+  String get catGraders => 'GRADERS';
+
+  @override
+  String get catPaydozers => 'PAYDOZERS';
+
+  @override
+  String get catHydraulicShovels => 'HYDRAULIC SHOVELS';
+
+  @override
+  String get catDraglines => 'DRAGLINES';
+
+  @override
+  String get catElectricShovels => 'ELECTRIC SHOVELS';
+
+  @override
+  String get catDrills => 'DRILLS';
+
+  @override
+  String get catExterior => 'EXTERNAL';
+
+  @override
+  String get catMaterial => 'MATERIAL';
+
+  @override
+  String get catExploitation => 'EXPLOITATION';
+
+  @override
+  String get stopIndustrialArea => 'INDUSTRIAL AREA STOP';
+
+  @override
+  String get stopPowerCut => 'GENERAL POWER CUT';
+
+  @override
+  String get stopStrike => 'STRIKE';
+
+  @override
+  String get stopWeather => 'BAD WEATHER';
+
+  @override
+  String get stopFullStocks => 'FULL STOCKS';
+
+  @override
+  String get stopHolidays => 'HOLIDAYS OR WEEKLY';
+
+  @override
+  String get stopPowerPlant => 'POWER PLANT STOP';
+
+  @override
+  String get stopControl => 'CONTROL';
+
+  @override
+  String get stopElecFault => 'ELEC FAULT (CABLE, NETWORK)';
+
+  @override
+  String get stopMechBreakdown => 'MECHANICAL BREAKDOWN';
+
+  @override
+  String get stopElecBreakdown => 'ELECTRICAL BREAKDOWN';
+
+  @override
+  String get stopTireWorkshop => 'TIRE WORKSHOP INTERVENTION';
+
+  @override
+  String get stopMaintenance => 'SYSTEMATIC MAINTENANCE';
+
+  @override
+  String get stopRefill => 'REFILL (OIL, DIESEL, WATER)';
+
+  @override
+  String get stopGreasing => 'GREASING';
+
+  @override
+  String get stopFixedInstallElec => 'FIXED INSTALLATION ELEC STOP';
+
+  @override
+  String get stopNoTrucks => 'NO TRUCKS';
+
+  @override
+  String get stopNoBull => 'NO BULLDOZER';
+
+  @override
+  String get stopNoMechanic => 'NO MECHANIC';
+
+  @override
+  String get stopNoTools => 'NO WORK TOOLS';
+
+  @override
+  String get stopMachineStopped => 'MACHINE STOPPED';
+
+  @override
+  String get stopBreakdownFront => 'EQUIPMENT BREAKDOWN IN FRONT';
+
+  @override
+  String get stopShiftChange => 'SHIFT CHANGE';
+
+  @override
+  String get stopPlatformExec => 'PLATFORM EXECUTION';
+
+  @override
+  String get stopMove => 'MOVE';
+
+  @override
+  String get stopBlasting => 'BLASTING';
+
+  @override
+  String get stopCableMove => 'CABLE MOVE';
+
+  @override
+  String get stopDecidedStop => 'DECIDED STOP';
+
+  @override
+  String get stopNoDriver => 'NO DRIVER';
+
+  @override
+  String get stopBreak => 'BREAK';
+
+  @override
+  String get stopTracks => 'TRACKS (EXCL. WEATHER)';
+
+  @override
+  String get stopFixedInstallMech => 'FIXED INSTALLATION MECH STOP';
+
+  @override
+  String get stopTelescoping => 'TELESCOPING';
+
+  @override
+  String get stopPureExcavation => 'PURE EXCAVATION';
+
+  @override
+  String get stopPureEarthworks => 'PURE EARTHWORKS';
+
+  @override
+  String get trackingType => 'Tracking';
+
+  @override
+  String reportDescriptionPattern(String type, String date, String poste) {
+    return '$type - $date - $poste';
+  }
+
+  @override
+  String get deleteCounterTooltip => 'Delete counter';
+
+  @override
+  String get editCounterTooltip => 'Edit counter';
+
+  @override
+  String stopIndex(int index) {
+    return 'Stop $index';
+  }
+
+  @override
+  String get loader992k => 'Loader 992K';
+
+  @override
+  String get loader994h => 'Loader 994H';
+
+  @override
+  String get hydraulicShovel => 'Hydraulic Shovel';
+
+  @override
+  String get electricShovelB1 => 'Electric Shovel B1';
+
+  @override
+  String get selectTruckLabel => 'Select truck';
+
+  @override
+  String get truckLabel => 'Truck';
+
+  @override
+  String get driverInfoLabel => 'Driver information';
+
+  @override
+  String get editR0Title => 'Edit R0 Report';
+
+  @override
+  String get editTruckTitle => 'Edit Truck';
+
+  @override
+  String get newTruckTitle => 'New Truck';
+
+  @override
+  String get machinesEquipmentStoppedTitleShort => 'Machines/Equipment Stopped';
+
+  @override
+  String get conducteurLabel => 'Conductor';
+
+  @override
+  String get reasonLabel => 'Reason';
 }

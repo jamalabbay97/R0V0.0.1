@@ -38,7 +38,8 @@ class _ReportFormState extends State<ReportForm> {
     _selectedTime = TimeOfDay.fromDateTime(
       widget.initialReport?.date ?? DateTime.now(),
     );
-    _selectedGroup = widget.initialReport?.group ?? widget.availableGroups.first;
+    _selectedGroup =
+        widget.initialReport?.group ?? widget.availableGroups.first;
   }
 
   @override
@@ -120,7 +121,8 @@ class _ReportFormState extends State<ReportForm> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _selectedGroup,
+            initialValue: _selectedGroup,
+            isExpanded: true,
             decoration: InputDecoration(
               labelText: l10n.selectGroup,
               border: const OutlineInputBorder(),
@@ -128,7 +130,10 @@ class _ReportFormState extends State<ReportForm> {
             items: widget.availableGroups.map((String group) {
               return DropdownMenuItem<String>(
                 value: group,
-                child: Text(group),
+                child: Text(
+                  group,
+                  overflow: TextOverflow.ellipsis,
+                ),
               );
             }).toList(),
             onChanged: (String? newValue) {
@@ -169,4 +174,4 @@ class _ReportFormState extends State<ReportForm> {
       ),
     );
   }
-} 
+}

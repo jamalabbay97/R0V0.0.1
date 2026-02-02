@@ -49,7 +49,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
 
   Widget _buildEditorForReportType() {
     final typeLower = widget.report.type.toLowerCase();
-    
+
     // Route to the appropriate editor based on report type
     switch (typeLower) {
       case 'activity tnb':
@@ -66,13 +66,13 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
         return _buildR0ReportEditor();
       default:
         // Check if this is an R0 report by looking for mine and selectedPoste
-        if (widget.report.additionalData != null && 
-            widget.report.additionalData!.containsKey('mine') && 
+        if (widget.report.additionalData != null &&
+            widget.report.additionalData!.containsKey('mine') &&
             widget.report.additionalData!.containsKey('selectedPoste')) {
           return _buildR0ReportEditor();
         }
         // Check if this is a truck tracking report by looking for truckData
-        if (widget.report.additionalData != null && 
+        if (widget.report.additionalData != null &&
             widget.report.additionalData!.containsKey('truckData')) {
           return _buildTruckTrackingEditor();
         }
@@ -131,11 +131,12 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
     try {
       // Validate that the report has an ID before updating
       if (updatedReport.id == null) {
-        throw Exception('Report ID is missing. Cannot update report without ID.');
+        throw Exception(
+            'Report ID is missing. Cannot update report without ID.');
       }
 
       await _databaseHelper.updateReport(updatedReport);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -143,10 +144,10 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
             backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
-        
+
         // Wait a bit for the SnackBar to be visible, then navigate back
         await Future.delayed(const Duration(milliseconds: 500));
-        
+
         if (mounted) {
           // Return true to indicate successful update
           Navigator.pop(context, true);
@@ -162,7 +163,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
             duration: const Duration(seconds: 4),
           ),
         );
-        
+
         // Log the error for debugging
         debugPrint('Error updating report: $e');
       }
@@ -240,10 +241,12 @@ class MachinesEquipmentStoppedEditor extends StatefulWidget {
   });
 
   @override
-  State<MachinesEquipmentStoppedEditor> createState() => _MachinesEquipmentStoppedEditorState();
+  State<MachinesEquipmentStoppedEditor> createState() =>
+      _MachinesEquipmentStoppedEditorState();
 }
 
-class _MachinesEquipmentStoppedEditorState extends State<MachinesEquipmentStoppedEditor> {
+class _MachinesEquipmentStoppedEditorState
+    extends State<MachinesEquipmentStoppedEditor> {
   @override
   Widget build(BuildContext context) {
     return MachinesEquipmentStoppedScreen(
@@ -334,12 +337,13 @@ class _GenericReportEditorState extends State<GenericReportEditor> {
   @override
   void initState() {
     super.initState();
-    _descriptionController = TextEditingController(text: widget.report.description);
+    _descriptionController =
+        TextEditingController(text: widget.report.description);
     _selectedDate = widget.report.date;
     _selectedTime = TimeOfDay.fromDateTime(widget.report.date);
     _selectedGroup = widget.report.group;
     _selectedType = widget.report.type;
-    
+
     // Copy additional data
     if (widget.report.additionalData != null) {
       _additionalData.addAll(widget.report.additionalData!);
@@ -403,7 +407,6 @@ class _GenericReportEditorState extends State<GenericReportEditor> {
 
   @override
   Widget build(BuildContext context) {
-
     return Form(
       key: _formKey,
       child: SingleChildScrollView(
@@ -416,7 +419,7 @@ class _GenericReportEditorState extends State<GenericReportEditor> {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 24),
-            
+
             // Description
             TextFormField(
               controller: _descriptionController,
@@ -433,7 +436,7 @@ class _GenericReportEditorState extends State<GenericReportEditor> {
               },
             ),
             const SizedBox(height: 16),
-            
+
             // Date and Time
             Row(
               children: [
@@ -457,10 +460,10 @@ class _GenericReportEditorState extends State<GenericReportEditor> {
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // Group
             DropdownButtonFormField<String>(
-              value: _selectedGroup,
+              initialValue: _selectedGroup,
               decoration: const InputDecoration(
                 labelText: 'Groupe',
                 border: OutlineInputBorder(),
@@ -480,7 +483,7 @@ class _GenericReportEditorState extends State<GenericReportEditor> {
               },
             ),
             const SizedBox(height: 16),
-            
+
             // Type
             TextFormField(
               initialValue: _selectedType,
@@ -493,7 +496,7 @@ class _GenericReportEditorState extends State<GenericReportEditor> {
               },
             ),
             const SizedBox(height: 24),
-            
+
             // Save Button
             ElevatedButton(
               onPressed: _saveReport,

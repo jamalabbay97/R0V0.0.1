@@ -6,6 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/providers/language_provider.dart';
+import 'package:r0/providers/theme_provider.dart';
 import 'package:r0/screens/home_screen.dart';
 import 'package:r0/theme.dart';
 
@@ -31,14 +32,19 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => LanguageProvider(),
-      child: Consumer<LanguageProvider>(
-        builder: (context, languageProvider, child) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => LanguageProvider()),
+        ChangeNotifierProvider(create: (context) => ThemeProvider()),
+      ],
+      child: Consumer2<LanguageProvider, ThemeProvider>(
+        builder: (context, languageProvider, themeProvider, child) {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             title: 'R0',
             theme: buildLightTheme(),
+            darkTheme: buildDarkTheme(),
+            themeMode: themeProvider.themeMode,
             localizationsDelegates: const [
               AppLocalizations.delegate,
               GlobalMaterialLocalizations.delegate,
@@ -56,4 +62,4 @@ class MyApp extends StatelessWidget {
       ),
     );
   }
-} 
+}

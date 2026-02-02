@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/services/database_helper.dart';
 import 'package:r0/models/report.dart';
-// import 'package:r0/l10n/app_localizations.dart';
+import 'package:r0/models/mine_data.dart'; // Import the shared model
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 import 'package:r0/theme.dart';
+import 'package:r0/widgets/custom_widgets.dart';
 
-// Data models
+// --- Data Models ---
 class IndexCompteurPoste {
   String duree;
   String note;
@@ -45,40 +47,26 @@ class ConsommationItem {
   ConsommationItem({this.tricone = '', this.gasoil = ''});
 }
 
-class ZoneData {
-  final String name;
-  final List<String> sorties;
-  ZoneData({required this.name, required this.sorties});
-}
-
-class MineData {
-  final String name;
-  final List<ZoneData> zones;
-  MineData({required this.name, required this.zones});
-}
-
 class R0ReportFormData {
   String selectedMine = '';
   String selectedZone = '';
   String selectedSortie = '';
-  List<IndexCompteurPoste> indexCompteurs =
-      List.generate(3, (_) => IndexCompteurPoste());
+  IndexCompteurPoste indexCompteurs = IndexCompteurPoste();
   String selectedPoste = '';
   List<VentilationItem> ventilation = [];
-  // Use consistent keys across app: H.M, H.A, Tonnage, Rendement
   Map<String, String> exploitation = {
     'H.M': '',
     'H.A': '',
     'Tonnage': '',
-    'Rendeme': '',
+    'Rendement %': '',
   };
-  List<RepartitionItem> repartitionTravail =
-      List.generate(3, (_) => RepartitionItem());
+  RepartitionItem repartitionTravail = RepartitionItem();
   PersonnelItem personnel = PersonnelItem();
   ConsommationItem consommation = ConsommationItem();
   String selectedCategory = '';
   String selectedType = '';
   String selectedModel = '';
+  String selectedMachine = '';
 }
 
 class R0Report extends StatefulWidget {
@@ -102,7 +90,7 @@ class R0Report extends StatefulWidget {
 }
 
 class R0ReportState extends State<R0Report> {
-  final _formKey = GlobalKey<FormState>();
+  // final _formKey = GlobalKey<FormState>(); // Unused
   final _databaseHelper = DatabaseHelper();
   R0ReportFormData formData = R0ReportFormData();
   late DateTime _selectedDate;
@@ -116,72 +104,8 @@ class R0ReportState extends State<R0Report> {
     "2ème": "14:30 - 22:30",
   };
 
-  // Ventilation codes and labels
-  final List<VentilationItem> ventilationCodes = [
-    VentilationItem(code: 121, label: "ARRET CARREAU INDUSTRIEL"),
-  ];
+  // Static Data - Removed local definitions, using imported 'minesData' from model
 
-  // Static mine/zone/sortie data
-  final List<MineData> minesData = [
-    MineData(
-      name: 'Mine G',
-      zones: [
-        ZoneData(
-          name: 'Mine G Zone Dragline',
-          sorties: ['Sortie 1', 'Sortie 2'],
-        ),
-      ],
-    ),
-    MineData(
-      name: 'Mine E',
-      zones: [
-        ZoneData(
-          name: 'Mine E1 Zone Dragline',
-          sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3', 'Sortie 4'],
-        ),
-        ZoneData(
-          name: 'Mine E1 Zone Bulls',
-          sorties: ['Sortie 2', 'Sortie 3'],
-        ),
-        ZoneData(
-          name: 'Mine E3 Zone Dragline',
-          sorties: ['Sortie -1', 'Sortie 0', 'Sortie 1', 'Sortie 2'],
-        ),
-        ZoneData(
-          name: 'Mine E2 Zone Bulls',
-          sorties: ['Sortie 1', 'Sortie 2', 'Sortie 3'],
-        ),
-      ],
-    ),
-    MineData(
-      name: 'Mine C',
-      zones: [
-        ZoneData(
-          name: 'Mine C Zone Dragline',
-          sorties: [],
-        ),
-      ],
-    ),
-    MineData(
-      name: 'Mine A',
-      zones: [
-        ZoneData(
-          name: 'Mine A',
-          sorties: [
-            'Sortie 1',
-            'Sortie 2',
-            'Sortie 3',
-            'Sortie 4',
-            'Sortie 5',
-            'Sortie 6',
-            'Sortie 7'
-          ],
-        ),
-      ],
-    ),
-  ];
-
-// Add ENGINS and MACHINES data maps
   static const Map<String, List<String>> enginsData = {
     'BULLDOZERS': [
       'BULL D9R 76',
@@ -193,7 +117,7 @@ class R0ReportState extends State<R0Report> {
       'BULL LIB 84',
       'BULL LIB 85',
       'BULL D9R 86',
-      'BULL D9R 87',
+      'BULL D9R 87'
     ],
     'CAMIONS': [
       'CAMION T24',
@@ -207,7 +131,7 @@ class R0ReportState extends State<R0Report> {
       'CAMION T32',
       'CAMION T33',
       'WABCO 13',
-      'WABCO 19',
+      'WABCO 19'
     ],
     'CHARGEUSES': ['CHRG 992C', 'CHRG 992K', 'CHRG 994H'],
     'NIVELEUSES': ['NIV 14G', 'NIV 16H', 'NIV KOM01', 'NIV KOM02'],
@@ -220,693 +144,6 @@ class R0ReportState extends State<R0Report> {
     'SONDEUSES': ['PV275-1', 'PV275-2', 'PV275-3'],
   };
 
-  @override
-  void initState() {
-    super.initState();
-
-    if (widget.isEditing && widget.initialReport != null) {
-      // Editing mode - load existing data
-      _selectedDate = widget.initialReport!.date;
-      _loadExistingData();
-    } else {
-      // Creation mode
-      _selectedDate = widget.selectedDate ?? DateTime.now();
-    }
-
-    _calculateHours();
-  }
-
-  void _loadExistingData() {
-    if (widget.initialReport?.additionalData == null) return;
-
-    final data = widget.initialReport!.additionalData!;
-
-    // Load basic fields
-    formData.selectedMine = data['mine'] ?? '';
-    formData.selectedZone = data['zone'] ?? '';
-    formData.selectedSortie = data['sortie'] ?? '';
-    formData.selectedPoste = data['selectedPoste'] ?? '';
-    formData.selectedCategory = data['Category'] ?? '';
-    formData.selectedType = data['Type'] ?? '';
-    formData.selectedModel = data['Model'] ?? '';
-
-    // Load compteurs
-    if (data['Compteurs'] is List) {
-      final compteurs = data['Compteurs'] as List;
-      for (int i = 0;
-          i < compteurs.length && i < formData.indexCompteurs.length;
-          i++) {
-        formData.indexCompteurs[i].duree = compteurs[i]['duree'] ?? '';
-        formData.indexCompteurs[i].note = compteurs[i]['note'] ?? '';
-      }
-    }
-
-    // Load exploitation data
-    if (data['exploitation'] is Map) {
-      final exploitation = data['exploitation'] as Map;
-      formData.exploitation['H.M'] = exploitation['H.M'] ?? '';
-      formData.exploitation['H.A'] = exploitation['H.A'] ?? '';
-      formData.exploitation['Tonnage'] = exploitation['Tonnage'] ?? '';
-      formData.exploitation['Rendeme'] = exploitation['Rendeme'] ?? '';
-    }
-
-    // Load personnel data
-    if (data['personnel'] is Map) {
-      final personnel = data['personnel'] as Map;
-      formData.personnel.conducteur = personnel['conductr'] ?? '';
-      formData.personnel.graisseur = personnel['graisseur'] ?? '';
-      formData.personnel.matricules = personnel['matricules'] ?? '';
-    }
-
-    // Load consommation data
-    if (data['consommation'] is Map) {
-      final consommation = data['consommation'] as Map;
-      formData.consommation.tricone = consommation['tricone'] ?? '';
-      formData.consommation.gasoil = consommation['gasoil'] ?? '';
-    }
-  }
-
-  // Helper functions
-  double _parseNumeric(String value) {
-    if (value.isEmpty) return 0.0;
-    return double.tryParse(value.replaceAll(',', '.')) ?? 0.0;
-  }
-
-  void _calculateHours() {
-    // Calculate gross hours from compteur indexes
-    double totalGrossHours = 0;
-    for (int i = 0; i < formData.indexCompteurs.length; i++) {
-      final start = _parseNumeric(formData.indexCompteurs[i].duree);
-      final end = _parseNumeric(formData.indexCompteurs[i].note);
-      if (end > start) {
-        final shiftHours =
-            (end - start) / 1; // Assuming compteur is in 1.0 hour units
-        totalGrossHours += shiftHours;
-      }
-    }
-
-    formData.exploitation['H.M'] = totalGrossHours.toStringAsFixed(2);
-
-    // Calculate total stoppage time from ventilation data
-    double totalStoppageHours = 0;
-    for (var item in formData.ventilation) {
-      if (item.duree.isNotEmpty && item.note.isNotEmpty) {
-        // Parse time format HH:MM
-        final startParts = item.duree.split(':');
-        final endParts = item.note.split(':');
-        if (startParts.length == 2 && endParts.length == 2) {
-          final startHour = int.parse(startParts[0]);
-          final startMin = int.parse(startParts[1]);
-          final endHour = int.parse(endParts[0]);
-          final endMin = int.parse(endParts[1]);
-
-          final startTotal = startHour * 60 + startMin;
-          final endTotal = endHour * 60 + endMin;
-          int diff = endTotal - startTotal;
-          if (diff <= 0) diff += 24 * 60; // Handle overnight periods
-
-          totalStoppageHours += diff / 60.0;
-        }
-      }
-    }
-
-    formData.exploitation['H.A'] = totalStoppageHours.toStringAsFixed(2);
-    // Calculate net hours - REMOVED: H.M should correspond to actual hour meter difference
-    // final gross = _parseNumeric(formData.exploitation['H.M'] ?? '');
-    // final stops = _parseNumeric(formData.exploitation['H.A'] ?? '');
-    // final net = (gross - stops).clamp(0, double.infinity);
-    // formData.exploitation['H.M'] = net.toStringAsFixed(2);
-  }
-
-  // UI Building methods
-  Widget _buildHierarchicalSelectionDialog(BuildContext context) {
-    int step = 0;
-    return StatefulBuilder(
-      builder: (context, setDialogState) {
-        MineData? selectedMine = formData.selectedMine.isNotEmpty
-            ? minesData.where((m) => m.name == formData.selectedMine).isNotEmpty
-                ? minesData.firstWhere((m) => m.name == formData.selectedMine)
-                : null
-            : null;
-        ZoneData? selectedZone =
-            (selectedMine != null && formData.selectedZone.isNotEmpty)
-                ? selectedMine.zones
-                        .where((z) => z.name == formData.selectedZone)
-                        .isNotEmpty
-                    ? selectedMine.zones
-                        .firstWhere((z) => z.name == formData.selectedZone)
-                    : null
-                : null;
-        String? selectedSortie =
-            (selectedZone != null && formData.selectedSortie.isNotEmpty)
-                ? formData.selectedSortie
-                : null;
-        String? selectedPoste =
-            formData.selectedPoste.isNotEmpty ? formData.selectedPoste : null;
-        String? selectedCategory = formData.selectedCategory.isNotEmpty
-            ? formData.selectedCategory
-            : null;
-        String? selectedType =
-            formData.selectedType.isNotEmpty ? formData.selectedType : null;
-        String? selectedModel =
-            formData.selectedModel.isNotEmpty ? formData.selectedModel : null;
-
-        void goNext() => setDialogState(() => step++);
-        void goBack() => setDialogState(() => step--);
-
-        Widget content;
-        if (step == 0) {
-          content = Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<MineData>(
-                  value: selectedMine,
-                  decoration: const InputDecoration(
-                      labelText: 'Mine', border: OutlineInputBorder()),
-                  items: minesData
-                      .map((mine) =>
-                          DropdownMenuItem(value: mine, child: Text(mine.name)))
-                      .toList(),
-                  onChanged: (value) {
-                    setDialogState(() {
-                      formData.selectedMine = value?.name ?? '';
-                      formData.selectedZone = '';
-                      formData.selectedSortie = '';
-                      formData.selectedPoste = '';
-                      formData.selectedCategory = '';
-                      formData.selectedType = '';
-                      formData.selectedModel = '';
-                    });
-                  },
-                ),
-              ),
-            ],
-          );
-        } else if (step == 1 && selectedMine != null) {
-          content = Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<ZoneData>(
-                  value: selectedZone,
-                  decoration: const InputDecoration(
-                      labelText: 'Zone', border: OutlineInputBorder()),
-                  items: selectedMine.zones
-                      .map((zone) =>
-                          DropdownMenuItem(value: zone, child: Text(zone.name)))
-                      .toList(),
-                  onChanged: (value) {
-                    setDialogState(() {
-                      formData.selectedZone = value?.name ?? '';
-                      formData.selectedSortie = '';
-                      formData.selectedPoste = '';
-                      formData.selectedCategory = '';
-                      formData.selectedType = '';
-                      formData.selectedModel = '';
-                    });
-                  },
-                ),
-              ),
-            ],
-          );
-        } else if (step == 2) {
-          content = Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: selectedCategory,
-                  decoration: const InputDecoration(
-                      labelText: 'Catégorie', border: OutlineInputBorder()),
-                  items: const [
-                    DropdownMenuItem(value: 'ENGINS', child: Text('ENGINS')),
-                    DropdownMenuItem(
-                        value: 'MACHINES', child: Text('MACHINES')),
-                  ],
-                  onChanged: (value) {
-                    setDialogState(() {
-                      formData.selectedCategory = value ?? '';
-                      formData.selectedType = '';
-                      formData.selectedModel = '';
-                    });
-                  },
-                ),
-              ),
-            ],
-          );
-        } else if (step == 3 && selectedCategory != null) {
-          final types = selectedCategory == 'ENGINS'
-              ? enginsData.keys.toList()
-              : machinesData.keys.toList();
-          content = Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: selectedType,
-                  decoration: const InputDecoration(
-                      labelText: 'Type', border: OutlineInputBorder()),
-                  items: types
-                      .map((type) =>
-                          DropdownMenuItem(value: type, child: Text(type)))
-                      .toList(),
-                  onChanged: (value) {
-                    setDialogState(() {
-                      formData.selectedType = value ?? '';
-                      formData.selectedModel = '';
-                    });
-                  },
-                ),
-              ),
-            ],
-          );
-        } else if (step == 4 && selectedType != null) {
-          final models = selectedCategory == 'ENGINS'
-              ? enginsData[selectedType] ?? []
-              : machinesData[selectedType] ?? [];
-          content = Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: selectedModel,
-                  decoration: const InputDecoration(
-                      labelText: 'Modèle', border: OutlineInputBorder()),
-                  items: models
-                      .map((model) =>
-                          DropdownMenuItem(value: model, child: Text(model)))
-                      .toList(),
-                  onChanged: (value) {
-                    setDialogState(() {
-                      formData.selectedModel = value ?? '';
-                    });
-                  },
-                ),
-              ),
-            ],
-          );
-        } else if (step == 5 &&
-            selectedZone != null &&
-            selectedZone.sorties.isNotEmpty) {
-          content = Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: selectedSortie,
-                  decoration: const InputDecoration(
-                      labelText: 'Sortie', border: OutlineInputBorder()),
-                  items: selectedZone.sorties
-                      .map((sortie) =>
-                          DropdownMenuItem(value: sortie, child: Text(sortie)))
-                      .toList(),
-                  onChanged: (value) {
-                    setDialogState(() {
-                      formData.selectedSortie = value ?? '';
-                      formData.selectedPoste = '';
-                    });
-                  },
-                ),
-              ),
-            ],
-          );
-        } else if ((step == 5 &&
-                selectedZone != null &&
-                selectedZone.sorties.isEmpty) ||
-            step == 6) {
-          content = Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: selectedPoste,
-                  decoration: const InputDecoration(
-                      labelText: 'Poste', border: OutlineInputBorder()),
-                  items: posteOrder
-                      .map((poste) => DropdownMenuItem(
-                          value: poste,
-                          child: Text('$poste Poste (${posteTimes[poste]})')))
-                      .toList(),
-                  onChanged: (value) {
-                    setDialogState(() {
-                      formData.selectedPoste = value ?? posteOrder.first;
-                    });
-                  },
-                ),
-              ),
-            ],
-          );
-        } else {
-          content = const SizedBox();
-        }
-
-        // Determine if all steps are filled for 'Terminer'
-        bool canFinish = formData.selectedMine.isNotEmpty &&
-            formData.selectedZone.isNotEmpty &&
-            formData.selectedCategory.isNotEmpty &&
-            formData.selectedType.isNotEmpty &&
-            formData.selectedModel.isNotEmpty &&
-            (selectedZone == null ||
-                selectedZone.sorties.isEmpty ||
-                formData.selectedSortie.isNotEmpty) &&
-            formData.selectedPoste.isNotEmpty;
-
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (step == 0) ...[
-              const Text('Sélection de la Mine',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              content,
-            ] else if (step == 1) ...[
-              const Text('Sélection de la Zone',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              content,
-            ] else if (step == 2) ...[
-              const Text('Sélection Catégorie',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              content,
-            ] else if (step == 3) ...[
-              const Text('Sélection Type',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              content,
-            ] else if (step == 4) ...[
-              const Text('Sélection Modèle',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              content,
-            ] else if (step == 5 &&
-                selectedZone != null &&
-                selectedZone.sorties.isNotEmpty) ...[
-              const Text('Sélection de la Sortie',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              content,
-            ] else if ((step == 5 &&
-                    selectedZone != null &&
-                    selectedZone.sorties.isEmpty) ||
-                step == 6) ...[
-              const Text('Sélection du Poste',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              content,
-            ],
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                if (step > 0)
-                  OutlinedButton(
-                    onPressed: step > 0 ? goBack : null,
-                    child: const Text('Précédent'),
-                  ),
-                if ((step == 0 && selectedMine != null) ||
-                    (step == 1 && selectedZone != null) ||
-                    (step == 2 && selectedCategory != null) ||
-                    (step == 3 && selectedType != null) ||
-                    (step == 4 && selectedModel != null) ||
-                    (step == 5 &&
-                        selectedZone != null &&
-                        (selectedZone.sorties.isEmpty ||
-                            selectedSortie != null)) ||
-                    (step == 6 && selectedPoste != null))
-                  ElevatedButton(
-                    onPressed: () {
-                      if (step == 0 && selectedMine != null) {
-                        goNext();
-                      } else if (step == 1 && selectedZone != null) {
-                        goNext();
-                      } else if (step == 2 && selectedCategory != null) {
-                        goNext();
-                      } else if (step == 3 && selectedType != null) {
-                        goNext();
-                      } else if (step == 4 && selectedModel != null) {
-                        goNext();
-                      } else if (step == 5 &&
-                          selectedZone != null &&
-                          (selectedZone.sorties.isEmpty ||
-                              selectedSortie != null)) {
-                        goNext();
-                      } else if ((step == 6 && selectedPoste != null) &&
-                          canFinish) {
-                        Navigator.of(context).pop();
-                      }
-                    },
-                    child: Text((step == 6 ||
-                                (step == 5 &&
-                                    selectedZone != null &&
-                                    selectedZone.sorties.isEmpty)) &&
-                            canFinish
-                        ? 'Terminer'
-                        : 'Suivant'),
-                  ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildCompteurSection() {
-    final selectedPosteIndex = posteOrder.indexOf(formData.selectedPoste);
-    if (selectedPosteIndex == -1) {
-      return const Text('Veuillez sélectionner un poste.');
-    }
-
-    // Parse allowed hours for the selected poste
-    String timeRange = posteTimes[posteOrder[selectedPosteIndex]] ?? '';
-    double allowedHours = 0.0;
-    if (timeRange.isNotEmpty) {
-      final parts = timeRange.split(' - ');
-      if (parts.length == 2) {
-        final start = parts[0].split(':');
-        final end = parts[1].split(':');
-        if (start.length == 2 && end.length == 2) {
-          int startHour = int.parse(start[0]);
-          int startMin = int.parse(start[1]);
-          int endHour = int.parse(end[0]);
-          int endMin = int.parse(end[1]);
-          // Handle overnight shift (e.g., 22:30 - 06:30)
-          int startTotal = startHour * 60 + startMin;
-          int endTotal = endHour * 60 + endMin;
-          int diff = endTotal - startTotal;
-          if (diff <= 0) diff += 24 * 60;
-          allowedHours = diff / 60.0;
-        }
-      }
-    }
-
-    String? errorText;
-    final compteur = formData.indexCompteurs[selectedPosteIndex];
-    final debut = _parseNumeric(compteur.duree);
-    final fin = _parseNumeric(compteur.note);
-    final marche = fin > debut ? (fin - debut) / 100 : 0.0;
-    if (marche > allowedHours) {
-      errorText =
-          'Heure de marche (${marche.toStringAsFixed(2)}h) dépasse la durée maximale autorisée pour ce poste (${allowedHours.toStringAsFixed(2)}h).';
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Compteur - ${formData.selectedPoste} Poste',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 16),
-        Text(
-          '${posteOrder[selectedPosteIndex]} Poste (${posteTimes[posteOrder[selectedPosteIndex]]})',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          decoration: const InputDecoration(
-            labelText: 'Début',
-            border: OutlineInputBorder(),
-          ),
-          keyboardType: TextInputType.number,
-          initialValue: compteur.duree,
-          onChanged: (value) {
-            setState(() {
-              formData.indexCompteurs[selectedPosteIndex].duree = value;
-            });
-            _calculateHours();
-          },
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          decoration: const InputDecoration(
-            labelText: 'Fin',
-            border: OutlineInputBorder(),
-          ),
-          keyboardType: TextInputType.number,
-          initialValue: compteur.note,
-          onChanged: (value) {
-            setState(() {
-              formData.indexCompteurs[selectedPosteIndex].note = value;
-            });
-            _calculateHours();
-          },
-        ),
-        if (errorText != null) ...[
-          const SizedBox(height: 12),
-          Text(
-            errorText,
-            style: const TextStyle(
-                color: AppColors.error, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildSummaryItem(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            child: Text(value.isEmpty ? 'Non renseigné' : value),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            child: Text(value.isEmpty ? '-' : value),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _saveReport() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final report = Report(
-        id: widget.initialReport?.id,
-        description: 'Rapport R0 - ${formData.selectedPoste}',
-        date: _selectedDate,
-        group: 'R0',
-        type: formData.selectedModel,
-        additionalData: _serializeFormData(),
-      );
-
-      if (widget.isEditing && widget.onSave != null) {
-        // Editing mode - call the onSave callback
-        widget.onSave!(report);
-      } else {
-        // Creation mode - save to database
-        await _databaseHelper.insertReport(report);
-
-        if (!mounted) return;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Rapport soumis avec succès'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
-        // Delay navigation so the SnackBar is visible
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            final navigator = Navigator.of(context);
-            navigator.popUntil((route) => route.isFirst);
-          }
-        });
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur: ${e.toString()}'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Map<String, dynamic> _serializeFormData() {
-    return {
-      'mine': formData.selectedMine,
-      'zone': formData.selectedZone,
-      'sortie': formData.selectedSortie,
-      'Category': formData.selectedCategory,
-      'Type': formData.selectedType,
-      'Model': formData.selectedModel,
-      'selectedPoste': formData.selectedPoste,
-      'Compteurs': formData.indexCompteurs.asMap().entries.where((entry) {
-        final compteur = entry.value;
-        return compteur.duree.isNotEmpty || compteur.note.isNotEmpty;
-      }).map((entry) {
-        final compteur = entry.value;
-        final posteOrder = ['3ème', '1er', '2ème'];
-        return {
-          'duree': compteur.duree,
-          'note': compteur.note,
-          'poste': posteOrder[entry.key],
-        };
-      }).toList(),
-      'Arrets': formData.ventilation
-          .map((v) => {
-                'Arret': v.label,
-                'Début': v.duree,
-                'Fin': v.note,
-              })
-          .toList(),
-      'exploitation': formData.exploitation,
-      'Répartition Travail': formData.repartitionTravail
-          .where((r) =>
-              r.chantier.isNotEmpty ||
-              r.temps.isNotEmpty ||
-              r.imputation.isNotEmpty)
-          .map((r) => {
-                'Chantier': r.chantier,
-                'temps': r.temps,
-                'imputation': r.imputation,
-              })
-          .toList(),
-      'personnel': {
-        'conductr': formData.personnel.conducteur,
-        'graisseur': formData.personnel.graisseur,
-        'matricules': formData.personnel.matricules,
-      },
-      'consommation': {
-        'tricone': formData.consommation.tricone,
-        'gasoil': formData.consommation.gasoil,
-      },
-    };
-  }
-
   static const Map<String, List<String>> arretCategories = {
     'EXTERIEURS': [
       'ARRET CARREAU INDUSTRIEL',
@@ -916,7 +153,7 @@ class R0ReportState extends State<R0Report> {
       'STOCKS PLEINS',
       'J. FERIES OU HEBDOMADAIRES',
       'ARRET PAR LA CENTRALE (M.ENERGIE)',
-      'CONTROLE',
+      'CONTROLE'
     ],
     'MATERIEL': [
       'DEFAUT ELEC. (C.CRAME, RESEAU)',
@@ -932,7 +169,7 @@ class R0ReportState extends State<R0Report> {
       'MANQUE MECANICIEN',
       'MANQUE D\'OUTILS DE TRAVAIL',
       'MACHINE A L\'ARRET',
-      'PANNE ENGIN DEVANT MACHINE',
+      'PANNE ENGIN DEVANT MACHINE'
     ],
     'EXPLOITATION': [
       'RELEVE',
@@ -947,2079 +184,1045 @@ class R0ReportState extends State<R0Report> {
       'ARRETS MECA. INSTALATIONS FIXES',
       'TELESCOPAGE',
       'EXCAVATION PURE',
-      'TERASSEMENT PUR',
+      'TERASSEMENT PUR'
     ],
   };
 
-  Widget _buildAddVentilationDialog(BuildContext context,
-      {int? editIndex, VentilationItem? initialItem}) {
-    int step = 0;
-    String? selectedCategory = initialItem != null
-        ? arretCategories.keys.firstWhere(
-            (cat) => arretCategories[cat]!.contains(initialItem.label),
-            orElse: () => '')
-        : null;
-    String? selectedType = initialItem?.label;
-    String startTime = initialItem?.duree ?? '';
-    String endTime = initialItem?.note ?? '';
-    return StatefulBuilder(
-      builder: (context, setDialogState) {
-        Widget content;
-        if (step == 0) {
-          content = Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: selectedCategory,
-                  decoration: const InputDecoration(
-                      labelText: 'Catégorie', border: OutlineInputBorder()),
-                  items: arretCategories.keys
-                      .map((cat) =>
-                          DropdownMenuItem(value: cat, child: Text(cat)))
-                      .toList(),
-                  onChanged: (value) {
-                    setDialogState(() {
-                      selectedCategory = value;
-                      selectedType = null;
-                    });
-                  },
-                ),
-              ),
-            ],
-          );
-        } else if (step == 1 && selectedCategory != null) {
-          content = Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: selectedType,
-                  decoration: const InputDecoration(
-                      labelText: 'Type d\'arrêt', border: OutlineInputBorder()),
-                  items: arretCategories[selectedCategory]!
-                      .map((type) =>
-                          DropdownMenuItem(value: type, child: Text(type)))
-                      .toList(),
-                  onChanged: (value) {
-                    setDialogState(() {
-                      selectedType = value;
-                    });
-                  },
-                ),
-              ),
-            ],
-          );
-        } else if (step == 2 && selectedType != null) {
-          content = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Catégorie: $selectedCategory'),
-              Text('Type: $selectedType'),
-              const SizedBox(height: 16),
-              ListTile(
-                title: const Text('Heure début'),
-                subtitle: Text(
-                    startTime.isEmpty ? 'Sélectionner l\'heure' : startTime),
-                trailing: const Icon(Icons.access_time),
-                onTap: () async {
-                  final picked = await showDialog<TimeOfDay>(
-                    context: context,
-                    builder: (context) {
-                      TimeOfDay tempTime = TimeOfDay.now();
-                      return AlertDialog(
-                        title: const Text('Sélectionner l\'heure'),
-                        content: SizedBox(
-                          height: 200,
-                          child: TimePickerSpinner(
-                            key: const ValueKey('start_time_picker_spinner'),
-                            is24HourMode: true,
-                            isShowSeconds: false,
-                            minutesInterval: 1,
-                            normalTextStyle: const TextStyle(
-                                fontSize: 18, color: Colors.black54),
-                            highlightedTextStyle: const TextStyle(
-                                fontSize: 24, color: Colors.black),
-                            spacing: 50,
-                            itemHeight: 60,
-                            isForce2Digits: true,
-                            onTimeChange: (dateTime) {
-                              tempTime = TimeOfDay(
-                                  hour: dateTime.hour, minute: dateTime.minute);
-                            },
-                          ),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('Annuler'),
-                          ),
-                          ElevatedButton(
-                            onPressed: () =>
-                                Navigator.of(context).pop(tempTime),
-                            child: const Text('OK'),
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                  if (picked != null) {
-                    setDialogState(() {
-                      startTime =
-                          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-                    });
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                title: const Text('Heure fin'),
-                subtitle:
-                    Text(endTime.isEmpty ? 'Sélectionner l\'heure' : endTime),
-                trailing: const Icon(Icons.access_time),
-                onTap: () async {
-                  final picked = await showDialog<TimeOfDay>(
-                    context: context,
-                    builder: (context) {
-                      TimeOfDay tempTime = TimeOfDay.now();
-                      return AlertDialog(
-                        title: const Text('Sélectionner l\'heure'),
-                        content: SizedBox(
-                          height: 200,
-                          child: TimePickerSpinner(
-                            key: const ValueKey('end_time_picker_spinner'),
-                            is24HourMode: true,
-                            isShowSeconds: false,
-                            minutesInterval: 1,
-                            normalTextStyle: const TextStyle(
-                                fontSize: 18, color: Colors.black54),
-                            highlightedTextStyle: const TextStyle(
-                                fontSize: 24, color: Colors.black),
-                            spacing: 50,
-                            itemHeight: 60,
-                            isForce2Digits: true,
-                            onTimeChange: (dateTime) {
-                              tempTime = TimeOfDay(
-                                  hour: dateTime.hour, minute: dateTime.minute);
-                            },
-                          ),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('Annuler'),
-                          ),
-                          ElevatedButton(
-                            onPressed: () =>
-                                Navigator.of(context).pop(tempTime),
-                            child: const Text('OK'),
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                  if (picked != null) {
-                    setDialogState(() {
-                      endTime =
-                          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-                    });
-                  }
-                },
-              ),
-            ],
-          );
-        } else {
-          content = const SizedBox();
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isEditing && widget.initialReport != null) {
+      _selectedDate = widget.initialReport!.date;
+      _loadExistingData();
+    } else {
+      _selectedDate = widget.selectedDate ?? DateTime.now();
+    }
+    _calculateHours();
+  }
+
+  void _loadExistingData() {
+    if (widget.initialReport?.additionalData == null) return;
+    final data = widget.initialReport!.additionalData!;
+    formData.selectedMine = data['mine'] ?? '';
+    formData.selectedZone = data['zone'] ?? '';
+    formData.selectedSortie = data['sortie'] ?? '';
+    formData.selectedPoste = data['selectedPoste'] ?? '';
+    formData.selectedCategory = data['Category'] ?? '';
+    formData.selectedType = data['Type'] ?? '';
+    formData.selectedModel = data['Model'] ?? '';
+
+    if (data['Compteurs'] is Map) {
+      final compteurs = data['Compteurs'] as Map;
+      formData.indexCompteurs.duree = compteurs['duree'] ?? '';
+      formData.indexCompteurs.note = compteurs['note'] ?? '';
+    }
+    if (data['exploitation'] is Map) {
+      final exploitation = data['exploitation'] as Map;
+      formData.exploitation['H.M'] = exploitation['H.M'] ?? '';
+      formData.exploitation['H.A'] = exploitation['H.A'] ?? '';
+      formData.exploitation['Tonnage'] = exploitation['Tonnage'] ?? '';
+      formData.exploitation['Rendement %'] =
+          exploitation['Rendeme'] ?? exploitation['Rendement %'] ?? '';
+    }
+    if (data['personnel'] is Map) {
+      final personnel = data['personnel'] as Map;
+      formData.personnel.conducteur = personnel['conductr'] ?? '';
+      formData.personnel.graisseur = personnel['graisseur'] ?? '';
+      formData.personnel.matricules = personnel['matricules'] ?? '';
+    }
+    if (data['consommation'] is Map) {
+      final consommation = data['consommation'] as Map;
+      formData.consommation.tricone = consommation['tricone'] ?? '';
+      formData.consommation.gasoil = consommation['gasoil'] ?? '';
+    }
+    if (data['Arrets'] is List) {
+      final arrets = data['Arrets'] as List;
+      // Get all valid arret types from all categories
+      final allValidTypes = <String>{};
+      arretCategories.forEach((category, types) {
+        allValidTypes.addAll(types);
+      });
+
+      formData.ventilation = arrets
+          .map((a) => VentilationItem(
+                code: 0,
+                label: a['Arret'] ?? '',
+                duree: a['Début'] ?? '',
+                note: a['Fin'] ?? '',
+              ))
+          .where((item) {
+        // Only include items with valid arret types (not category names)
+        return allValidTypes.contains(item.label) ||
+            !arretCategories.keys.contains(item.label);
+      }).toList();
+    }
+    // Load Repartition Data
+    if (data['repartition'] is Map) {
+      final repartition = data['repartition'] as Map;
+      formData.repartitionTravail.chantier = repartition['Chantier'] ?? '';
+      formData.repartitionTravail.temps = repartition['Temps'] ?? '';
+      formData.repartitionTravail.imputation = repartition['Imputation'] ?? '';
+    }
+  }
+
+  double _parseNumeric(String value) {
+    if (value.isEmpty) return 0.0;
+    return double.tryParse(value.replaceAll(',', '.')) ?? 0.0;
+  }
+
+  void _calculateHours() {
+    double totalGrossHours = 0;
+    final start = _parseNumeric(formData.indexCompteurs.duree);
+    final end = _parseNumeric(formData.indexCompteurs.note);
+    if (end > start) {
+      totalGrossHours = (end - start);
+    }
+
+    double totalStoppageHours = 0;
+    for (var item in formData.ventilation) {
+      if (item.duree.isNotEmpty && item.note.isNotEmpty) {
+        final startParts = item.duree.split(':');
+        final endParts = item.note.split(':');
+        if (startParts.length == 2 && endParts.length == 2) {
+          final sH = int.tryParse(startParts[0]) ?? 0;
+          final sM = int.tryParse(startParts[1]) ?? 0;
+          final eH = int.tryParse(endParts[0]) ?? 0;
+          final eM = int.tryParse(endParts[1]) ?? 0;
+          int diff = (eH * 60 + eM) - (sH * 60 + sM);
+          if (diff <= 0) diff += 24 * 60;
+          totalStoppageHours += diff / 60.0;
         }
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (step == 0) ...[
-              const Text('Sélection de la catégorie',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              content,
-            ] else if (step == 1) ...[
-              const Text('Sélection du type d\'arrêt',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              content,
-            ] else if (step == 2) ...[
-              const Text('Saisie des détails',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              content,
-            ],
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                if (step > 0)
-                  OutlinedButton(
-                    onPressed: () => setDialogState(() => step--),
-                    child: const Text('Précédent'),
-                  ),
-                if ((step == 0 && selectedCategory != null) ||
-                    (step == 1 && selectedType != null))
-                  ElevatedButton(
-                    onPressed: () {
-                      setDialogState(() => step++);
-                    },
-                    child: const Text('Suivant'),
-                  ),
-                if (step == 2 && selectedType != null)
-                  ElevatedButton(
-                    onPressed: startTime.isNotEmpty && endTime.isNotEmpty
-                        ? () {
-                            setState(() {
-                              if (editIndex != null) {
-                                formData.ventilation[editIndex] =
-                                    VentilationItem(
-                                  code: 0,
-                                  label: selectedType!,
-                                  duree: startTime,
-                                  note: endTime,
-                                );
-                              } else {
-                                formData.ventilation.add(VentilationItem(
-                                  code: 0,
-                                  label: selectedType!,
-                                  duree: startTime,
-                                  note: endTime,
-                                ));
-                              }
-                            });
-                            _calculateHours();
-                            Navigator.of(context).pop();
-                          }
-                        : null,
-                    child: const Text('Terminer'),
-                  ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
+      }
+    }
+
+    formData.exploitation['H.A'] = totalStoppageHours.toStringAsFixed(2);
+    // H.M is the machine hour counter difference
+    double hm = totalGrossHours;
+    formData.exploitation['H.M'] = hm.toStringAsFixed(2);
+
+    // Calculate Rendement %
+    double tonnage = _parseNumeric(formData.exploitation['Tonnage'] ?? '0');
+    if (hm > 0) {
+      formData.exploitation['Rendement %'] = (tonnage / hm).toStringAsFixed(2);
+    } else {
+      formData.exploitation['Rendement %'] = '0.00';
+    }
+
+    if (mounted) setState(() {});
+  }
+
+  String _getLocalizedTypeLabel(String key, AppLocalizations l10n) {
+    final map = {
+      'BULLDOZERS': l10n.catBulldozers,
+      'CAMIONS': l10n.catTrucks,
+      'CHARGEUSES': l10n.catLoaders,
+      'NIVELEUSES': l10n.catGraders,
+      'PAYDOZERS': l10n.catPaydozers,
+      'PELLE HYDRAULIQUE': l10n.catHydraulicShovels,
+      'DRAGLINES': l10n.catDraglines,
+      'PELLE ELECTRIQUE': l10n.catElectricShovels,
+      'SONDEUSES': l10n.catDrills,
+    };
+    return map[key] ?? key;
+  }
+
+  String _getLocalizedCategoryLabel(String key, AppLocalizations l10n) {
+    final map = {
+      'EXTERIEURS': l10n.catExterior,
+      'MATERIEL': l10n.catMaterial,
+      'EXPLOITATION': l10n.catExploitation,
+    };
+    return map[key] ?? key;
+  }
+
+  String _getLocalizedReasonLabel(String key, AppLocalizations l10n) {
+    final map = {
+      'ARRET CARREAU INDUSTRIEL': l10n.stopIndustrialArea,
+      'COUPURE GENERALE DU COURANT': l10n.stopPowerCut,
+      'GREVE': l10n.stopStrike,
+      'INTEMPERIES': l10n.stopWeather,
+      'STOCKS PLEINS': l10n.stopFullStocks,
+      'J. FERIES OU HEBDOMADAIRES': l10n.stopHolidays,
+      'ARRET PAR LA CENTRALE (M.ENERGIE)': l10n.stopPowerPlant,
+      'CONTROLE': l10n.stopControl,
+      'DEFAUT ELEC. (C.CRAME, RESEAU)': l10n.stopElecFault,
+      'PANNE MECANIQUE': l10n.stopMechBreakdown,
+      'PANNE ELECTRIQUE': l10n.stopElecBreakdown,
+      'INTERVENTION ATELIER PNEUMATIQUE': l10n.stopTireWorkshop,
+      'ENTRETIEN SYSTEMATIQUE': l10n.stopMaintenance,
+      'APPOINT (HUILE, GAZOL, EAU)': l10n.stopRefill,
+      'GRAISSAGE': l10n.stopGreasing,
+      'ARRET ELEC. INSTALATION FIXES': l10n.stopFixedInstallElec,
+      'MANQUE CAMIONS': l10n.stopNoTrucks,
+      'MANQUE BULL': l10n.stopNoBull,
+      'MANQUE MECANICIEN': l10n.stopNoMechanic,
+      'MANQUE D\'OUTILS DE TRAVAIL': l10n.stopNoTools,
+      'MACHINE A L\'ARRET': l10n.stopMachineStopped,
+      'PANNE ENGIN DEVANT MACHINE': l10n.stopBreakdownFront,
+      'RELEVE': l10n.stopShiftChange,
+      'EXECUTION PLATE FORME': l10n.stopPlatformExec,
+      'DEPLACEMENT': l10n.stopMove,
+      'TIR ET SAUTAGE': l10n.stopBlasting,
+      'MOUV. DE CABLE': l10n.stopCableMove,
+      'ARRET DECIDE': l10n.stopDecidedStop,
+      'MANQUE CONDUCTEUR': l10n.stopNoDriver,
+      'BRIQUET': l10n.stopBreak,
+      'PISTES (INTEMPERIES EXCLUES)': l10n.stopTracks,
+      'ARRETS MECA. INSTALATIONS FIXES': l10n.stopFixedInstallMech,
+      'TELESCOPAGE': l10n.stopTelescoping,
+      'EXCAVATION PURE': l10n.stopPureExcavation,
+      'TERASSEMENT PUR': l10n.stopPureEarthworks,
+    };
+    return map[key] ?? key;
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final steps = [
+      l10n.stepInfos,
+      l10n.stepCompteur,
+      l10n.stepArrets,
+      l10n.stepExploit,
+      l10n.stepRepartition,
+      l10n.stepPersonnel,
+      l10n.stepConsom,
+      l10n.stepVerif,
+    ];
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isEditing ? "Modifier - Rapport R0" : "Rapport R0"),
-        actions: [
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-        ],
+        title: Text(widget.isEditing ? l10n.modifierR0 : l10n.nouveauRapportR0),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Stepper(
-                  currentStep: _currentStep,
-                  onStepContinue: () {
-                    if (_currentStep < 4) {
-                      // 5 steps: 0 to 4
-                      setState(() {
-                        _currentStep += 1;
-                      });
-                    }
-                  },
-                  onStepCancel: () {
-                    if (_currentStep > 0) {
-                      setState(() {
-                        _currentStep -= 1;
-                      });
-                    }
-                  },
-                  controlsBuilder: (context, details) {
-                    if (_currentStep == 4) {
-                      // Last step
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 16.0),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: details.onStepCancel,
-                                child: const Text('Précédent'),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () async {
-                                  // Show confirmation dialog before saving
-                                  final navigator = Navigator.of(context);
-                                  final shouldSave = await showDialog<bool>(
-                                    context: context,
-                                    barrierDismissible: false,
-                                    builder: (context) => AlertDialog(
-                                      title: const Text('Confirmation'),
-                                      content: const Text(
-                                          "When you click Done, the report will be saved on the reports page. If you want to send this report to the company, go to the reports page and send it from there."),
-                                      actions: [
-                                        ElevatedButton(
-                                          onPressed: () =>
-                                              Navigator.of(context).pop(true),
-                                          child: const Text('Done'),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                  if (!mounted) return;
-                                  if (shouldSave == true) {
-                                    await _saveReport();
-                                    if (!mounted) return;
-                                    // After saving, pop to home page
-                                    navigator
-                                        .popUntil((route) => route.isFirst);
-                                  }
-                                },
-                                child: Text(widget.isEditing
-                                    ? 'Enregistrer'
-                                    : 'Soumettre'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 16.0),
-                      child: Row(
-                        children: [
-                          if (_currentStep > 0)
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: details.onStepCancel,
-                                child: const Text('Précédent'),
-                              ),
-                            ),
-                          if (_currentStep > 0) const SizedBox(width: 8),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: details.onStepContinue,
-                              child: Text(
-                                  _currentStep == 3 ? 'Suivant' : 'Suivant'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  steps: [
-                    Step(
-                      title: const Text('Date du rapport'),
-                      content: Column(
-                        children: [
-                          const Text(
-                            'ÉTAPE 1: DATE',
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 16),
-                          Card(
-                            child: InkWell(
-                              onTap: () async {
-                                final DateTime? picked = await showDatePicker(
-                                  context: context,
-                                  initialDate: _selectedDate,
-                                  firstDate: DateTime(2000),
-                                  lastDate: DateTime.now(), // Restrict to today
-                                  locale: const Locale('fr', 'FR'),
-                                );
-                                if (picked != null && picked != _selectedDate) {
-                                  setState(() {
-                                    _selectedDate = picked;
-                                  });
-                                }
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.calendar_today),
-                                    const SizedBox(width: 16),
-                                    Text(
-                                      '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                                      style: const TextStyle(fontSize: 18),
-                                    ),
-                                    const Spacer(),
-                                    const Icon(Icons.arrow_forward_ios),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      isActive: _currentStep >= 0,
-                      state: _currentStep > 0
-                          ? StepState.complete
-                          : StepState.indexed,
-                    ),
-                    Step(
-                      title: const Text('Info OIB/EE'),
-                      content: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'ÉTAPE 2: INFO OIB/EE',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title:
-                                            const Text('Ajouter Info OIB/EE'),
-                                        content: SingleChildScrollView(
-                                          child:
-                                              _buildHierarchicalSelectionDialog(
-                                                  context),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(context).pop(),
-                                            child: const Text('Terminer'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Ajouter Info OIB/EE'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        Theme.of(context).colorScheme.primary,
-                                    foregroundColor:
-                                        Theme.of(context).colorScheme.onPrimary,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text('Liste Info OIB/EE'),
-                                          ],
-                                        ),
-                                        content: SingleChildScrollView(
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              _buildSummaryItem('Mine',
-                                                  formData.selectedMine),
-                                              _buildSummaryItem('Zone',
-                                                  formData.selectedZone),
-                                              _buildSummaryItem('Sortie',
-                                                  formData.selectedSortie),
-                                              _buildSummaryItem('Catégorie',
-                                                  formData.selectedCategory),
-                                              _buildSummaryItem('Type',
-                                                  formData.selectedType),
-                                              _buildSummaryItem('Modèle',
-                                                  formData.selectedModel),
-                                              _buildSummaryItem('Poste',
-                                                  formData.selectedPoste),
-                                            ],
-                                          ),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(context).pop(),
-                                            child: const Text('Terminer'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.list),
-                                  label: const Text('Voir Info OIB/EE'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor:
-                                        Theme.of(context).colorScheme.primary,
-                                    side: BorderSide(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary),
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Divider(height: 32),
-                          // Insert Compteurs content from old step 3 here
-                          Text(
-                            'ÉTAPE 3: INDEX COMPTEURS',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Text('Ajouter'),
-                                        content: SingleChildScrollView(
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              _buildCompteurSection(),
-                                            ],
-                                          ),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(context).pop(),
-                                            child: const Text('Terminer'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Ajouter'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        Theme.of(context).colorScheme.primary,
-                                    foregroundColor:
-                                        Theme.of(context).colorScheme.onPrimary,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () {
-                                    // Get the index of the selected poste
-                                    final selectedPosteIndex = posteOrder
-                                        .indexOf(formData.selectedPoste);
-                                    if (selectedPosteIndex == -1) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                              'Veuillez d\'abord sélectionner un poste'),
-                                          backgroundColor: AppColors.warning,
-                                        ),
-                                      );
-                                      return;
-                                    }
-                                    final compteur = formData
-                                        .indexCompteurs[selectedPosteIndex];
-                                    final debut = _parseNumeric(compteur.duree);
-                                    final fin = _parseNumeric(compteur.note);
-                                    final heureMarche = fin > debut
-                                        ? (fin - debut) / 1
-                                        : 0.0; // Assuming compteur is in 1.0 hour units
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                                'Compteur - ${formData.selectedPoste} Poste'),
-                                          ],
-                                        ),
-                                        content: SingleChildScrollView(
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              _buildSummaryItem(
-                                                  'Début',
-                                                  compteur.duree.isEmpty
-                                                      ? 'Non renseigné'
-                                                      : compteur.duree),
-                                              _buildSummaryItem(
-                                                  'Fin',
-                                                  compteur.note.isEmpty
-                                                      ? 'Non renseigné'
-                                                      : compteur.note),
-                                              _buildSummaryItem(
-                                                  'Heure de marche',
-                                                  '${heureMarche.toStringAsFixed(2)}h'),
-                                            ],
-                                          ),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(context).pop(),
-                                            child: const Text('Terminer'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.list),
-                                  label: const Text('Voir'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor:
-                                        Theme.of(context).colorScheme.primary,
-                                    side: BorderSide(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary),
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      isActive: _currentStep >= 1,
-                      state: _currentStep > 1
-                          ? StepState.complete
-                          : StepState.indexed,
-                    ),
-                    Step(
-                      title: const Text('Arrêts'),
-                      content: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'ÉTAPE 4: DES ARRÊTS',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Text('Ajouter'),
-                                        content: SingleChildScrollView(
-                                          child: _buildAddVentilationDialog(
-                                              context),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Ajouter'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        Theme.of(context).colorScheme.primary,
-                                    foregroundColor:
-                                        Theme.of(context).colorScheme.onPrimary,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => StatefulBuilder(
-                                        builder: (context, setDialogState) =>
-                                            AlertDialog(
-                                          title: const Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Text('Liste Arrêts'),
-                                            ],
-                                          ),
-                                          content: SingleChildScrollView(
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: formData.ventilation
-                                                          .isEmpty ||
-                                                      formData.ventilation
-                                                          .every((v) =>
-                                                              v.label.isEmpty &&
-                                                              v.duree.isEmpty &&
-                                                              v.note.isEmpty)
-                                                  ? [
-                                                      const Text(
-                                                          'Aucun arrêt ajouté.')
-                                                    ]
-                                                  : List.generate(
-                                                      formData.ventilation
-                                                          .length, (index) {
-                                                      final v = formData
-                                                          .ventilation[index];
-                                                      if ((v.label.isEmpty &&
-                                                          v.duree.isEmpty &&
-                                                          v.note.isEmpty)) {
-                                                        return const SizedBox
-                                                            .shrink();
-                                                      }
-                                                      return Row(
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .spaceBetween,
-                                                        children: [
-                                                          Expanded(
-                                                            child: Column(
-                                                              crossAxisAlignment:
-                                                                  CrossAxisAlignment
-                                                                      .start,
-                                                              children: [
-                                                                Text(
-                                                                    'Type: ${v.label}'),
-                                                                Text(
-                                                                    'Début: ${v.duree}'),
-                                                                Text(
-                                                                    'Fin: ${v.note}'),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                          PopupMenuButton<
-                                                              String>(
-                                                            icon: const Icon(
-                                                                Icons
-                                                                    .more_horiz,
-                                                                size: 20),
-                                                            padding:
-                                                                EdgeInsets.zero,
-                                                            shape:
-                                                                RoundedRectangleBorder(
-                                                              borderRadius:
-                                                                  BorderRadius
-                                                                      .circular(
-                                                                          8),
-                                                            ),
-                                                            position:
-                                                                PopupMenuPosition
-                                                                    .under,
-                                                            itemBuilder:
-                                                                (BuildContext
-                                                                        context) =>
-                                                                    [
-                                                              PopupMenuItem<
-                                                                  String>(
-                                                                value: 'edit',
-                                                                height: 36,
-                                                                child: Row(
-                                                                  mainAxisSize:
-                                                                      MainAxisSize
-                                                                          .min,
-                                                                  children: [
-                                                                    Icon(
-                                                                        Icons
-                                                                            .edit,
-                                                                        size:
-                                                                            18,
-                                                                        color: Theme.of(context)
-                                                                            .colorScheme
-                                                                            .primary),
-                                                                    const SizedBox(
-                                                                        width:
-                                                                            8),
-                                                                    Text(
-                                                                      'Modifier',
-                                                                      style:
-                                                                          TextStyle(
-                                                                        color: Theme.of(context)
-                                                                            .colorScheme
-                                                                            .primary,
-                                                                        fontSize:
-                                                                            14,
-                                                                      ),
-                                                                    ),
-                                                                  ],
-                                                                ),
-                                                              ),
-                                                              PopupMenuItem<
-                                                                  String>(
-                                                                value: 'delete',
-                                                                height: 36,
-                                                                child: Row(
-                                                                  mainAxisSize:
-                                                                      MainAxisSize
-                                                                          .min,
-                                                                  children: [
-                                                                    Icon(
-                                                                        Icons
-                                                                            .delete_outline,
-                                                                        size:
-                                                                            18,
-                                                                        color: Theme.of(context)
-                                                                            .colorScheme
-                                                                            .error),
-                                                                    const SizedBox(
-                                                                        width:
-                                                                            8),
-                                                                    Text(
-                                                                      'Supprimer',
-                                                                      style:
-                                                                          TextStyle(
-                                                                        color: Theme.of(context)
-                                                                            .colorScheme
-                                                                            .error,
-                                                                        fontSize:
-                                                                            14,
-                                                                      ),
-                                                                    ),
-                                                                  ],
-                                                                ),
-                                                              ),
-                                                            ],
-                                                            onSelected:
-                                                                (value) async {
-                                                              if (value ==
-                                                                  'edit') {
-                                                                // Open the add/edit dialog pre-filled with v's data
-                                                                await showDialog(
-                                                                  context:
-                                                                      context,
-                                                                  builder:
-                                                                      (context) =>
-                                                                          AlertDialog(
-                                                                    title: const Text(
-                                                                        'Modifier Arrêt'),
-                                                                    content:
-                                                                        SingleChildScrollView(
-                                                                      child: _buildAddVentilationDialog(
-                                                                          context,
-                                                                          editIndex:
-                                                                              index,
-                                                                          initialItem:
-                                                                              v),
-                                                                    ),
-                                                                  ),
-                                                                );
-                                                                setDialogState(
-                                                                    () {}); // Refresh
-                                                              } else if (value ==
-                                                                  'delete') {
-                                                                setState(() {
-                                                                  formData
-                                                                      .ventilation
-                                                                      .removeAt(
-                                                                          index);
-                                                                });
-                                                                setDialogState(
-                                                                    () {}); // Refresh
-                                                              }
-                                                            },
-                                                          ),
-                                                        ],
-                                                      );
-                                                    }),
-                                            ),
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.of(context).pop(),
-                                              child: const Text('Terminer'),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.list),
-                                  label: const Text('Voir'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor:
-                                        Theme.of(context).colorScheme.primary,
-                                    side: BorderSide(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary),
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      isActive: _currentStep >= 2,
-                      state: _currentStep > 2
-                          ? StepState.complete
-                          : StepState.indexed,
-                    ),
-                    Step(
-                      title: const Text('Exploitation'),
-                      content: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'ÉTAPE 5: EXPLOITATION, RÉPARTITION, PERSONNEL & CONSOMMATION',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) {
-                                        int subStep = 0;
-                                        // --- Persistent controllers for all fields ---
-                                        // Exploitation
-                                        final TextEditingController
-                                            heuresBrutesController =
-                                            TextEditingController(
-                                                text: formData
-                                                    .exploitation['H.M']);
-                                        final TextEditingController
-                                            heuresArretsController =
-                                            TextEditingController(
-                                                text: formData
-                                                    .exploitation['H.A']);
-                                        final TextEditingController
-                                            tonnageController =
-                                            TextEditingController(
-                                                text: formData
-                                                    .exploitation['Tonnage']);
-                                        final TextEditingController
-                                            rendementController =
-                                            TextEditingController(
-                                                text: formData
-                                                    .exploitation['Rendeme']);
-                                        // Répartition
-                                        final TextEditingController
-                                            chantierController =
-                                            TextEditingController(
-                                                text: formData
-                                                        .repartitionTravail
-                                                        .isNotEmpty
-                                                    ? formData
-                                                        .repartitionTravail[0]
-                                                        .chantier
-                                                    : '');
-                                        final TextEditingController
-                                            tempsController =
-                                            TextEditingController(
-                                                text: formData
-                                                        .repartitionTravail
-                                                        .isNotEmpty
-                                                    ? formData
-                                                        .repartitionTravail[0]
-                                                        .temps
-                                                    : '');
-                                        final TextEditingController
-                                            imputationController =
-                                            TextEditingController(
-                                                text: formData
-                                                        .repartitionTravail
-                                                        .isNotEmpty
-                                                    ? formData
-                                                        .repartitionTravail[0]
-                                                        .imputation
-                                                    : '');
-                                        // Personnel
-                                        final TextEditingController
-                                            conducteurController =
-                                            TextEditingController(
-                                                text: formData
-                                                    .personnel.conducteur);
-                                        final TextEditingController
-                                            graisseurController =
-                                            TextEditingController(
-                                                text: formData
-                                                    .personnel.graisseur);
-                                        final TextEditingController
-                                            matriculesController =
-                                            TextEditingController(
-                                                text: formData
-                                                    .personnel.matricules);
-                                        // Consommation
-                                        final TextEditingController
-                                            triconeController =
-                                            TextEditingController(
-                                                text: formData
-                                                    .consommation.tricone);
-                                        final TextEditingController
-                                            gasoilController =
-                                            TextEditingController(
-                                                text: formData
-                                                    .consommation.gasoil);
-                                        return StatefulBuilder(
-                                          builder: (context, setDialogState) {
-                                            Widget content;
-                                            String title;
-                                            switch (subStep) {
-                                              case 0:
-                                                title = 'Exploitation';
-                                                content = Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text('Exploitation',
-                                                        style: Theme.of(context)
-                                                            .textTheme
-                                                            .titleLarge),
-                                                    const SizedBox(height: 16),
-                                                    TextFormField(
-                                                      decoration:
-                                                          InputDecoration(
-                                                        labelText:
-                                                            'Heures marche',
-                                                        border:
-                                                            const OutlineInputBorder(),
-                                                        suffixText: 'h',
-                                                        filled: true,
-                                                        fillColor:
-                                                            Colors.grey[100],
-                                                      ),
-                                                      readOnly: true,
-                                                      controller:
-                                                          heuresBrutesController,
-                                                    ),
-                                                    const SizedBox(height: 16),
-                                                    TextFormField(
-                                                      decoration:
-                                                          InputDecoration(
-                                                        labelText:
-                                                            'Heures Arrêts',
-                                                        border:
-                                                            const OutlineInputBorder(),
-                                                        suffixText: 'h',
-                                                        filled: true,
-                                                        fillColor:
-                                                            Colors.grey[100],
-                                                      ),
-                                                      readOnly: true,
-                                                      controller:
-                                                          heuresArretsController,
-                                                    ),
-                                                    const SizedBox(height: 16),
-                                                    TextFormField(
-                                                      decoration:
-                                                          const InputDecoration(
-                                                        labelText: 'Tonnage',
-                                                        border:
-                                                            OutlineInputBorder(),
-                                                      ),
-                                                      keyboardType:
-                                                          TextInputType.number,
-                                                      controller:
-                                                          tonnageController,
-                                                    ),
-                                                    const SizedBox(height: 16),
-                                                    TextFormField(
-                                                      decoration:
-                                                          const InputDecoration(
-                                                        labelText: 'Rendement',
-                                                        border:
-                                                            OutlineInputBorder(),
-                                                      ),
-                                                      keyboardType:
-                                                          TextInputType.number,
-                                                      controller:
-                                                          rendementController,
-                                                    ),
-                                                  ],
-                                                );
-                                                break;
-                                              case 1:
-                                                title = 'Répartition';
-                                                content = Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text('Répartition',
-                                                        style: Theme.of(context)
-                                                            .textTheme
-                                                            .titleMedium),
-                                                    const SizedBox(height: 16),
-                                                    TextFormField(
-                                                      controller:
-                                                          chantierController,
-                                                      decoration:
-                                                          const InputDecoration(
-                                                        labelText: 'Chantier',
-                                                        border:
-                                                            OutlineInputBorder(),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 16),
-                                                    TextFormField(
-                                                      controller:
-                                                          tempsController,
-                                                      decoration:
-                                                          const InputDecoration(
-                                                        labelText: 'Temps',
-                                                        border:
-                                                            OutlineInputBorder(),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 16),
-                                                    TextFormField(
-                                                      controller:
-                                                          imputationController,
-                                                      decoration:
-                                                          const InputDecoration(
-                                                        labelText: 'Imputation',
-                                                        border:
-                                                            OutlineInputBorder(),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                );
-                                                break;
-                                              case 2:
-                                                title = 'Personnel';
-                                                content = Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text('Personnel',
-                                                        style: Theme.of(context)
-                                                            .textTheme
-                                                            .titleLarge),
-                                                    const SizedBox(height: 16),
-                                                    TextFormField(
-                                                      decoration:
-                                                          const InputDecoration(
-                                                        labelText: 'Conductr',
-                                                        border:
-                                                            OutlineInputBorder(),
-                                                      ),
-                                                      controller:
-                                                          conducteurController,
-                                                    ),
-                                                    const SizedBox(height: 16),
-                                                    TextFormField(
-                                                      decoration:
-                                                          const InputDecoration(
-                                                        labelText: 'Graisseur',
-                                                        border:
-                                                            OutlineInputBorder(),
-                                                      ),
-                                                      controller:
-                                                          graisseurController,
-                                                    ),
-                                                    const SizedBox(height: 16),
-                                                    TextFormField(
-                                                      decoration:
-                                                          const InputDecoration(
-                                                        labelText: 'Matricules',
-                                                        border:
-                                                            OutlineInputBorder(),
-                                                      ),
-                                                      controller:
-                                                          matriculesController,
-                                                    ),
-                                                  ],
-                                                );
-                                                break;
-                                              case 3:
-                                                title = 'Consommation';
-                                                content = Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text('Suivi Consommation',
-                                                        style: Theme.of(context)
-                                                            .textTheme
-                                                            .titleLarge),
-                                                    const SizedBox(height: 16),
-                                                    TextFormField(
-                                                      decoration:
-                                                          const InputDecoration(
-                                                        labelText: 'Tricone',
-                                                        border:
-                                                            OutlineInputBorder(),
-                                                      ),
-                                                      keyboardType:
-                                                          TextInputType.number,
-                                                      controller:
-                                                          triconeController,
-                                                    ),
-                                                    const SizedBox(height: 16),
-                                                    TextFormField(
-                                                      decoration:
-                                                          const InputDecoration(
-                                                        labelText: 'Gasoil',
-                                                        border:
-                                                            OutlineInputBorder(),
-                                                      ),
-                                                      keyboardType:
-                                                          TextInputType.number,
-                                                      controller:
-                                                          gasoilController,
-                                                    ),
-                                                  ],
-                                                );
-                                                break;
-                                              default:
-                                                title = '';
-                                                content = const SizedBox();
-                                            }
-                                            return AlertDialog(
-                                              title: Text(title),
-                                              content: SingleChildScrollView(
-                                                child: content,
-                                              ),
-                                              actions: [
-                                                if (subStep > 0)
-                                                  TextButton(
-                                                    onPressed: () =>
-                                                        setDialogState(
-                                                            () => subStep--),
-                                                    child:
-                                                        const Text('Précédent'),
-                                                  ),
-                                                if (subStep < 3)
-                                                  ElevatedButton(
-                                                    onPressed: () {
-                                                      // Save data for the current sub-step before moving forward
-                                                      if (subStep == 0) {
-                                                        formData.exploitation[
-                                                                'H.M'] =
-                                                            heuresBrutesController
-                                                                .text;
-                                                        formData.exploitation[
-                                                                'H.A'] =
-                                                            heuresArretsController
-                                                                .text;
-                                                        formData.exploitation[
-                                                                'Tonnage'] =
-                                                            tonnageController
-                                                                .text;
-                                                        formData.exploitation[
-                                                                'Rendeme'] =
-                                                            rendementController
-                                                                .text;
-                                                      } else if (subStep == 1) {
-                                                        if (formData
-                                                            .repartitionTravail
-                                                            .isEmpty) {
-                                                          formData
-                                                              .repartitionTravail
-                                                              .add(
-                                                                  RepartitionItem());
-                                                        }
-                                                        formData.repartitionTravail[
-                                                                0] =
-                                                            RepartitionItem(
-                                                          chantier:
-                                                              chantierController
-                                                                  .text,
-                                                          temps: tempsController
-                                                              .text,
-                                                          imputation:
-                                                              imputationController
-                                                                  .text,
-                                                        );
-                                                      } else if (subStep == 2) {
-                                                        formData.personnel
-                                                                .conducteur =
-                                                            conducteurController
-                                                                .text;
-                                                        formData.personnel
-                                                                .graisseur =
-                                                            graisseurController
-                                                                .text;
-                                                        formData.personnel
-                                                                .matricules =
-                                                            matriculesController
-                                                                .text;
-                                                      }
-                                                      setDialogState(
-                                                          () => subStep++);
-                                                    },
-                                                    child:
-                                                        const Text('Suivant'),
-                                                  ),
-                                                if (subStep == 3)
-                                                  ElevatedButton(
-                                                    onPressed: () {
-                                                      // Save data for the last sub-step
-                                                      formData.consommation
-                                                              .tricone =
-                                                          triconeController
-                                                              .text;
-                                                      formData.consommation
-                                                              .gasoil =
-                                                          gasoilController.text;
-                                                      Navigator.of(context)
-                                                          .pop();
-                                                    },
-                                                    child:
-                                                        const Text('Terminer'),
-                                                  ),
-                                              ],
-                                            );
-                                          },
-                                        );
-                                      },
-                                    );
-                                  },
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Ajouter'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        Theme.of(context).colorScheme.primary,
-                                    foregroundColor:
-                                        Theme.of(context).colorScheme.onPrimary,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text('Liste'),
-                                          ],
-                                        ),
-                                        content: SingleChildScrollView(
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              // Exploitation Section
-                                              Text('Exploitation',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .titleMedium),
-                                              const Divider(height: 16),
-                                              Text(
-                                                  'Heures marche: ${formData.exploitation['H.M']}'),
-                                              Text(
-                                                  'Heures Arrêts: ${formData.exploitation['H.A']}'),
-                                              Text(
-                                                  'Tonnage: ${formData.exploitation['Tonnage']}t'),
-                                              Text(
-                                                  'Rendeme: ${formData.exploitation['Rendeme']}%'),
-                                              const SizedBox(height: 20),
-                                              // Répartition Section
-                                              Text('Répartition',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .titleMedium),
-                                              const Divider(height: 16),
-                                              ...(() {
-                                                final List<RepartitionItem>
-                                                    nonEmptyRepartitions =
-                                                    formData.repartitionTravail
-                                                        .where((r) =>
-                                                            r.chantier
-                                                                .isNotEmpty ||
-                                                            r.temps
-                                                                .isNotEmpty ||
-                                                            r.imputation
-                                                                .isNotEmpty)
-                                                        .toList();
-                                                if (nonEmptyRepartitions
-                                                    .isEmpty) {
-                                                  return [
-                                                    const Text(
-                                                        'Aucune répartition ajoutée.')
-                                                  ];
-                                                }
-                                                return List.generate(
-                                                    nonEmptyRepartitions.length,
-                                                    (index) {
-                                                  final r =
-                                                      nonEmptyRepartitions[
-                                                          index];
-                                                  return Padding(
-                                                    padding:
-                                                        const EdgeInsets.only(
-                                                            bottom: 8.0),
-                                                    child: Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        Text(
-                                                            'Chantier: ${r.chantier}'),
-                                                        Text(
-                                                            'Temps: ${r.temps}'),
-                                                        Text(
-                                                            'Imputation: ${r.imputation}'),
-                                                        if (index <
-                                                            nonEmptyRepartitions
-                                                                    .length -
-                                                                1)
-                                                          const Divider(
-                                                              height: 12),
-                                                      ],
-                                                    ),
-                                                  );
-                                                });
-                                              })(),
-                                              const SizedBox(height: 20),
-                                              // Personnel Section
-                                              Text('Personnel',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .titleMedium),
-                                              const Divider(height: 16),
-                                              if (formData.personnel.conducteur
-                                                  .isNotEmpty)
-                                                Text(
-                                                    'Conductr: ${formData.personnel.conducteur}'),
-                                              if (formData.personnel.graisseur
-                                                  .isNotEmpty)
-                                                Text(
-                                                    'Graisseur: ${formData.personnel.graisseur}'),
-                                              if (formData.personnel.matricules
-                                                  .isNotEmpty)
-                                                Text(
-                                                    'Matricules: ${formData.personnel.matricules}'),
-                                              if (formData.personnel.conducteur
-                                                      .isEmpty &&
-                                                  formData.personnel.graisseur
-                                                      .isEmpty &&
-                                                  formData.personnel.matricules
-                                                      .isEmpty)
-                                                const Text(
-                                                    'Aucun personnel renseigné.'),
-                                              const SizedBox(height: 20),
-                                              // Consommation Section
-                                              Text('Consommation',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .titleMedium),
-                                              const Divider(height: 16),
-                                              if (formData.consommation.tricone
-                                                  .isNotEmpty)
-                                                Text(
-                                                    'Tricone: ${formData.consommation.tricone}'),
-                                              if (formData.consommation.gasoil
-                                                  .isNotEmpty)
-                                                Text(
-                                                    'Gasoil: ${formData.consommation.gasoil}'),
-                                              if (formData.consommation.tricone
-                                                      .isEmpty &&
-                                                  formData.consommation.gasoil
-                                                      .isEmpty)
-                                                const Text(
-                                                    'Aucune consommation renseignée.'),
-                                            ],
-                                          ),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(context).pop(),
-                                            child: const Text('Terminer'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.list),
-                                  label: const Text('Voir'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor:
-                                        Theme.of(context).colorScheme.primary,
-                                    side: BorderSide(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary),
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      isActive: _currentStep >= 3,
-                      state: _currentStep > 3
-                          ? StepState.complete
-                          : StepState.indexed,
-                    ),
-                    Step(
-                      title: const Text('Vérification'),
-                      content: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'ÉTAPE 6: VÉRIFICATION',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return Dialog(
-                                    insetPadding: const EdgeInsets.symmetric(
-                                        horizontal: 20, vertical: 20),
-                                    child: ConstrainedBox(
-                                      constraints: BoxConstraints(
-                                        maxWidth: 600,
-                                        maxHeight:
-                                            MediaQuery.of(context).size.height *
-                                                0.6,
-                                      ),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Padding(
-                                            padding: EdgeInsets.fromLTRB(
-                                                14, 10, 6, 10),
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Text(
-                                                  'Vérification du Rapport R0',
-                                                  style: TextStyle(
-                                                    fontSize: 18,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const Divider(height: 1),
-                                          Flexible(
-                                            child: SingleChildScrollView(
-                                              padding: const EdgeInsets.all(16),
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  // Date Section
-                                                  Card(
-                                                    margin: EdgeInsets.zero,
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              16),
-                                                      child: _buildSummaryItem(
-                                                        'Date',
-                                                        '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 16),
-                                                  // Info OIB/EE Section
-                                                  Card(
-                                                    margin: EdgeInsets.zero,
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              16),
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          const Text(
-                                                              'Info OIB/EE',
-                                                              style: TextStyle(
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold)),
-                                                          const Divider(
-                                                              height: 16),
-                                                          _buildSummaryItem(
-                                                              'Mine',
-                                                              formData
-                                                                  .selectedMine),
-                                                          _buildSummaryItem(
-                                                              'Zone',
-                                                              formData
-                                                                  .selectedZone),
-                                                          _buildSummaryItem(
-                                                              'Sortie',
-                                                              formData
-                                                                  .selectedSortie),
-                                                          _buildSummaryItem(
-                                                              'Catégorie',
-                                                              formData
-                                                                  .selectedCategory),
-                                                          _buildSummaryItem(
-                                                              'Type',
-                                                              formData
-                                                                  .selectedType),
-                                                          _buildSummaryItem(
-                                                              'Modèle',
-                                                              formData
-                                                                  .selectedModel),
-                                                          _buildSummaryItem(
-                                                              'Poste',
-                                                              formData
-                                                                  .selectedPoste),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 16),
-                                                  // Compteurs Section
-                                                  Card(
-                                                    margin: EdgeInsets.zero,
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              16),
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          Text(
-                                                            'Compteurs',
-                                                            style: Theme.of(
-                                                                    context)
-                                                                .textTheme
-                                                                .titleMedium,
-                                                          ),
-                                                          const Divider(
-                                                              height: 16),
-                                                          ...List.generate(
-                                                              formData
-                                                                  .indexCompteurs
-                                                                  .length,
-                                                              (index) {
-                                                            final compteur =
-                                                                formData.indexCompteurs[
-                                                                    index];
-                                                            if (compteur.duree
-                                                                    .isEmpty &&
-                                                                compteur.note
-                                                                    .isEmpty) {
-                                                              return const SizedBox
-                                                                  .shrink();
-                                                            }
-                                                            return Column(
-                                                              crossAxisAlignment:
-                                                                  CrossAxisAlignment
-                                                                      .start,
-                                                              children: [
-                                                                Text(
-                                                                  '${posteOrder[index]} Poste',
-                                                                  style: Theme.of(
-                                                                          context)
-                                                                      .textTheme
-                                                                      .titleSmall,
-                                                                ),
-                                                                const SizedBox(
-                                                                    height: 8),
-                                                                _buildInfoRow(
-                                                                    'Début',
-                                                                    compteur
-                                                                        .duree),
-                                                                _buildInfoRow(
-                                                                    'Fin',
-                                                                    compteur
-                                                                        .note),
-                                                                const Divider(
-                                                                    height: 16),
-                                                              ],
-                                                            );
-                                                          }),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 16),
-                                                  // After Compteurs Section
-                                                  Card(
-                                                    margin: EdgeInsets.zero,
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              16),
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          const Text('Arrêts',
-                                                              style: TextStyle(
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold)),
-                                                          const Divider(
-                                                              height: 16),
-                                                          if (formData
-                                                              .ventilation
-                                                              .isEmpty)
-                                                            const Text(
-                                                                'Aucun arrêt ajouté.'),
-                                                          ...formData
-                                                              .ventilation
-                                                              .asMap()
-                                                              .entries
-                                                              .map((entry) {
-                                                            final v =
-                                                                entry.value;
-                                                            if (v.label.isEmpty &&
-                                                                v.duree
-                                                                    .isEmpty &&
-                                                                v.note
-                                                                    .isEmpty) {
-                                                              return const SizedBox
-                                                                  .shrink();
-                                                            }
-                                                            return Padding(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .only(
-                                                                      bottom:
-                                                                          12.0),
-                                                              child: Column(
-                                                                crossAxisAlignment:
-                                                                    CrossAxisAlignment
-                                                                        .start,
-                                                                children: [
-                                                                  Text(
-                                                                      'Type: ${v.label}',
-                                                                      style: Theme.of(
-                                                                              context)
-                                                                          .textTheme
-                                                                          .titleSmall),
-                                                                  _buildInfoRow(
-                                                                      'Début',
-                                                                      v.duree),
-                                                                  _buildInfoRow(
-                                                                      'Fin',
-                                                                      v.note),
-                                                                  const Divider(
-                                                                      height:
-                                                                          12),
-                                                                ],
-                                                              ),
-                                                            );
-                                                          }),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 16),
-                                                  // Exploitation Section
-                                                  Card(
-                                                    margin: EdgeInsets.zero,
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              16),
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          const Text(
-                                                              'Exploitation',
-                                                              style: TextStyle(
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold)),
-                                                          const Divider(
-                                                              height: 16),
-                                                          _buildInfoRow(
-                                                              'H.M',
-                                                              formData.exploitation[
-                                                                      'H.M'] ??
-                                                                  ''),
-                                                          _buildInfoRow(
-                                                              'H.A',
-                                                              formData.exploitation[
-                                                                      'H.A'] ??
-                                                                  ''),
-                                                          _buildInfoRow(
-                                                              'Tonnage',
-                                                              formData.exploitation[
-                                                                      'Tonnage'] ??
-                                                                  ''),
-                                                          _buildInfoRow(
-                                                              'Rendeme',
-                                                              formData.exploitation[
-                                                                      'Rendeme'] ??
-                                                                  ''),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 16),
-                                                  // Répartition Section
-                                                  Card(
-                                                    margin: EdgeInsets.zero,
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              16),
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          const Text(
-                                                              'Répartition',
-                                                              style: TextStyle(
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold)),
-                                                          const Divider(
-                                                              height: 16),
-                                                          ...(() {
-                                                            final List<
-                                                                    RepartitionItem>
-                                                                nonEmptyRepartitions =
-                                                                formData
-                                                                    .repartitionTravail
-                                                                    .where((r) =>
-                                                                        r.chantier
-                                                                            .isNotEmpty ||
-                                                                        r.temps
-                                                                            .isNotEmpty ||
-                                                                        r.imputation
-                                                                            .isNotEmpty)
-                                                                    .toList();
-                                                            if (nonEmptyRepartitions
-                                                                .isEmpty) {
-                                                              return [
-                                                                const Text(
-                                                                    'Aucune répartition ajoutée.')
-                                                              ];
-                                                            }
-                                                            return List.generate(
-                                                                nonEmptyRepartitions
-                                                                    .length,
-                                                                (index) {
-                                                              final r =
-                                                                  nonEmptyRepartitions[
-                                                                      index];
-                                                              return Padding(
-                                                                padding:
-                                                                    const EdgeInsets
-                                                                        .only(
-                                                                        bottom:
-                                                                            8.0),
-                                                                child: Column(
-                                                                  crossAxisAlignment:
-                                                                      CrossAxisAlignment
-                                                                          .start,
-                                                                  children: [
-                                                                    Text(
-                                                                        'Chantier: ${r.chantier}'),
-                                                                    Text(
-                                                                        'Temps: ${r.temps}'),
-                                                                    Text(
-                                                                        'Imputation: ${r.imputation}'),
-                                                                    if (index <
-                                                                        nonEmptyRepartitions.length -
-                                                                            1)
-                                                                      const Divider(
-                                                                          height:
-                                                                              12),
-                                                                  ],
-                                                                ),
-                                                              );
-                                                            });
-                                                          })(),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 16),
-                                                  // Personnel Section
-                                                  Card(
-                                                    margin: EdgeInsets.zero,
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              16),
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          const Text(
-                                                              'Personnel',
-                                                              style: TextStyle(
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold)),
-                                                          const Divider(
-                                                              height: 16),
-                                                          _buildInfoRow(
-                                                              'Conductr',
-                                                              formData.personnel
-                                                                  .conducteur),
-                                                          _buildInfoRow(
-                                                              'Graisseur',
-                                                              formData.personnel
-                                                                  .graisseur),
-                                                          _buildInfoRow(
-                                                              'Matricules',
-                                                              formData.personnel
-                                                                  .matricules),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 16),
-                                                  // Consommation Section
-                                                  Card(
-                                                    margin: EdgeInsets.zero,
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              16),
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          Text(
-                                                            'Consommation',
-                                                            style: Theme.of(
-                                                                    context)
-                                                                .textTheme
-                                                                .titleMedium,
-                                                          ),
-                                                          const Divider(
-                                                              height: 16),
-                                                          _buildInfoRow(
-                                                              'Tricone',
-                                                              formData
-                                                                  .consommation
-                                                                  .tricone),
-                                                          _buildInfoRow(
-                                                              'Gasoil',
-                                                              formData
-                                                                  .consommation
-                                                                  .gasoil),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-                            icon: const Icon(Icons.visibility),
-                            label: const Text("Voir tous les détails"),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 12, horizontal: 24),
-                            ),
-                          ),
-                        ],
-                      ),
-                      isActive: _currentStep >= 4,
-                      state: _currentStep > 4
-                          ? StepState.complete
-                          : StepState.indexed,
-                    ),
-                  ],
-                ),
-              ],
+      body: Column(
+        children: [
+          OCPStepper(
+            steps: steps,
+            currentStep: _currentStep,
+            onStepTapped: (index) {
+              setState(() => _currentStep = index);
+            },
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: _buildStepContent(l10n),
             ),
           ),
-        ),
+          _buildBottomBar(l10n),
+        ],
       ),
     );
+  }
+
+  Widget _buildStepContent(AppLocalizations l10n) {
+    switch (_currentStep) {
+      case 0:
+        return _buildStepInfos(l10n);
+      case 1:
+        return _buildStepCompteur(l10n);
+      case 2:
+        return _buildStepArrets(l10n);
+      case 3:
+        return _buildStepExploitation(l10n);
+      case 4:
+        return _buildStepRepartition(l10n);
+      case 5:
+        return _buildStepPersonnel(l10n);
+      case 6:
+        return _buildStepConsommation(l10n);
+      case 7:
+        return _buildStepVerification(l10n);
+      default:
+        return const SizedBox();
+    }
+  }
+
+  Widget _buildBottomBar(AppLocalizations l10n) {
+    bool isFirst = _currentStep == 0;
+    bool isLast = _currentStep == 7;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        boxShadow: const [BoxShadow(blurRadius: 10, color: Colors.black12)],
+      ),
+      child: Row(
+        children: [
+          if (!isFirst)
+            Expanded(
+              child: OCPButton(
+                text: l10n.previous,
+                onPressed: () => setState(() => _currentStep--),
+                isSecondary: true,
+              ),
+            ),
+          if (!isFirst) const SizedBox(width: 16),
+          Expanded(
+            child: OCPButton(
+              text: isLast ? l10n.submit : l10n.next,
+              onPressed: () => _validateAndProceed(l10n),
+              isLoading: _isLoading && isLast,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _validateAndProceed(AppLocalizations l10n) {
+    if (_currentStep == 0) {
+      if (formData.selectedMine.isEmpty ||
+          formData.selectedPoste.isEmpty ||
+          formData.selectedModel.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(l10n
+                .selectPosteMessage))); // Using selectPosteMessage as a general validation message for now or similar
+        return;
+      }
+    }
+
+    if (_currentStep < 7) {
+      setState(() => _currentStep++);
+    } else {
+      _saveReport(l10n);
+    }
+  }
+
+  // --- Step 1: Infos ---
+  Widget _buildStepInfos(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Date Selection
+        OCPCard(
+          onTap: () async {
+            final DateTime? picked = await showDatePicker(
+              context: context,
+              initialDate: _selectedDate,
+              firstDate: DateTime(2000),
+              lastDate: DateTime.now(),
+              locale: const Locale('fr', 'FR'),
+            );
+            if (picked != null) setState(() => _selectedDate = picked);
+          },
+          child: Row(
+            children: [
+              const Icon(Icons.calendar_today, color: AppColors.primary),
+              const SizedBox(width: 16),
+              Text(
+                '${l10n.date}: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              const Icon(Icons.arrow_forward_ios, size: 16),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Mine Selection
+        OCPDropdown<String>(
+            label: l10n.mine,
+            value:
+                formData.selectedMine.isNotEmpty ? formData.selectedMine : null,
+            items: minesData
+                .map(
+                    (m) => DropdownMenuItem(value: m.name, child: Text(m.name)))
+                .toList(),
+            onChanged: (val) {
+              setState(() {
+                formData.selectedMine = val!;
+                formData.selectedZone = '';
+                formData.selectedSortie = '';
+              });
+            }),
+        const SizedBox(height: 16),
+
+        // Zone Selection
+        if (formData.selectedMine.isNotEmpty) ...[
+          OCPDropdown<String>(
+              label: l10n.zone,
+              value: formData.selectedZone.isNotEmpty
+                  ? formData.selectedZone
+                  : null,
+              items: minesData
+                  .firstWhere((m) => m.name == formData.selectedMine)
+                  .zones
+                  .map((z) =>
+                      DropdownMenuItem(value: z.name, child: Text(z.name)))
+                  .toList(),
+              onChanged: (val) {
+                setState(() {
+                  formData.selectedZone = val!;
+                  formData.selectedSortie = '';
+                });
+              }),
+          const SizedBox(height: 16),
+        ],
+
+        // Sortie Selection
+        if (formData.selectedZone.isNotEmpty) ...[
+          OCPDropdown<String>(
+            label: l10n.exit,
+            value: formData.selectedSortie.isNotEmpty
+                ? formData.selectedSortie
+                : null,
+            items: minesData
+                .firstWhere((m) => m.name == formData.selectedMine)
+                .zones
+                .firstWhere((z) => z.name == formData.selectedZone)
+                .sorties
+                .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                .toList(),
+            onChanged: (val) => setState(() => formData.selectedSortie = val!),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // Category/Type/Model Selection
+        OCPDropdown<String>(
+            label: l10n.categoryLabel,
+            value: formData.selectedCategory.isNotEmpty
+                ? formData.selectedCategory
+                : null,
+            items: [l10n.engines, l10n.machines]
+                .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                .toList(),
+            onChanged: (val) => setState(() {
+                  formData.selectedCategory = val!;
+                  formData.selectedType = '';
+                  formData.selectedModel = '';
+                })),
+        const SizedBox(height: 16),
+
+        if (formData.selectedCategory.isNotEmpty) ...[
+          OCPDropdown<String>(
+              label: l10n.type,
+              value: formData.selectedType.isNotEmpty
+                  ? formData.selectedType
+                  : null,
+              items: (formData.selectedCategory == l10n.engines
+                      ? enginsData.keys
+                      : machinesData.keys)
+                  .map((s) => DropdownMenuItem(
+                      value: s, child: Text(_getLocalizedTypeLabel(s, l10n))))
+                  .toList(),
+              onChanged: (val) => setState(() {
+                    formData.selectedType = val!;
+                    formData.selectedModel = '';
+                  })),
+          const SizedBox(height: 16),
+        ],
+
+        if (formData.selectedType.isNotEmpty) ...[
+          OCPDropdown<String>(
+              label: l10n.modelLabel,
+              value: formData.selectedModel.isNotEmpty
+                  ? formData.selectedModel
+                  : null,
+              items: (formData.selectedCategory == l10n.engines
+                      ? enginsData[formData.selectedType]
+                      : machinesData[formData.selectedType])!
+                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                  .toList(),
+              onChanged: (val) =>
+                  setState(() => formData.selectedModel = val!)),
+          const SizedBox(height: 16),
+        ],
+
+        // Poste Selection
+        OCPDropdown<String>(
+            label: l10n.poste,
+            value: formData.selectedPoste.isNotEmpty
+                ? formData.selectedPoste
+                : null,
+            items: posteOrder
+                .map((p) => DropdownMenuItem(
+                    value: p, child: Text('$p (${posteTimes[p]})')))
+                .toList(),
+            onChanged: (val) => setState(() => formData.selectedPoste = val!)),
+      ],
+    );
+  }
+
+  // --- Step 2: Compteur ---
+  Widget _buildStepCompteur(AppLocalizations l10n) {
+    final selectedPosteIndex = posteOrder.indexOf(formData.selectedPoste);
+    if (selectedPosteIndex == -1) {
+      return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(l10n.selectPosteMessage));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.counterEntryTitle(formData.selectedPoste),
+            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 16),
+        OCPTextField(
+          label: l10n.startCounterLabel,
+          keyboardType: TextInputType.number,
+          controller: TextEditingController(text: formData.indexCompteurs.duree)
+            ..selection = TextSelection.fromPosition(
+                TextPosition(offset: formData.indexCompteurs.duree.length)),
+          onChanged: (val) {
+            formData.indexCompteurs.duree = val;
+            _calculateHours();
+          },
+        ),
+        const SizedBox(height: 16),
+        OCPTextField(
+          label: l10n.endCounterLabel,
+          keyboardType: TextInputType.number,
+          controller: TextEditingController(text: formData.indexCompteurs.note)
+            ..selection = TextSelection.fromPosition(
+                TextPosition(offset: formData.indexCompteurs.note.length)),
+          onChanged: (val) {
+            formData.indexCompteurs.note = val;
+            _calculateHours();
+          },
+        ),
+      ],
+    );
+  }
+
+  // --- Step 3: Arrêts ---
+  Widget _buildStepArrets(AppLocalizations l10n) {
+    return Column(
+      children: [
+        if (formData.ventilation.isEmpty)
+          Padding(
+              padding: const EdgeInsets.all(32),
+              child: Text(l10n.noStopsRecorded,
+                  style: const TextStyle(color: Colors.grey))),
+        ...formData.ventilation.asMap().entries.map((entry) {
+          final idx = entry.key;
+          final item = entry.value;
+          return OCPCard(
+            padding: const EdgeInsets.all(12),
+            child: ListTile(
+              leading: const Icon(Icons.warning, color: AppColors.warning),
+              title: Text(_getLocalizedReasonLabel(item.label, l10n),
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text("${item.duree} -> ${item.note}"),
+              trailing: IconButton(
+                  icon: const Icon(Icons.delete, color: AppColors.error),
+                  onPressed: () {
+                    setState(() => formData.ventilation.removeAt(idx));
+                    _calculateHours();
+                  }),
+            ),
+          );
+        }),
+        const SizedBox(height: 16),
+        OCPButton(
+          text: l10n.addArretTitle,
+          icon: Icons.add,
+          onPressed: () => _showAddArretDialog(l10n),
+          isSecondary: true,
+        )
+      ],
+    );
+  }
+
+  void _showAddArretDialog(AppLocalizations l10n) {
+    int step = 0;
+    String? selectedCategory;
+    String? selectedType;
+    DateTime startTime = DateTime.now();
+    DateTime endTime = DateTime.now();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDs) {
+          Widget content;
+          if (step == 0) {
+            content = DropdownButtonFormField<String>(
+              hint: Text(l10n.category),
+              items: arretCategories.keys
+                  .map((c) => DropdownMenuItem(
+                      value: c,
+                      child: Text(_getLocalizedCategoryLabel(c, l10n))))
+                  .toList(),
+              onChanged: (v) => setDs(() {
+                selectedCategory = v;
+                selectedType = null;
+              }),
+              initialValue: selectedCategory,
+            );
+          } else if (step == 1 && selectedCategory != null) {
+            content = DropdownButtonFormField<String>(
+              hint: Text(l10n.type),
+              initialValue: selectedType,
+              isExpanded: true,
+              items: arretCategories[selectedCategory]!
+                  .map((t) => DropdownMenuItem(
+                      value: t, child: Text(_getLocalizedReasonLabel(t, l10n))))
+                  .toList(),
+              onChanged: (v) => setDs(() => selectedType = v),
+            );
+          } else if (step == 2 && selectedType != null) {
+            content = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                    '${l10n.category}: ${_getLocalizedCategoryLabel(selectedCategory!, l10n)}'),
+                Text(
+                    '${l10n.type}: ${_getLocalizedReasonLabel(selectedType!, l10n)}'),
+                const SizedBox(height: 16),
+                ListTile(
+                  title: Text(l10n.startTimeLabel),
+                  subtitle: Text(
+                      "${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}"),
+                  trailing: const Icon(Icons.access_time),
+                  onTap: () async {
+                    final picked = await showDialog<TimeOfDay>(
+                      context: context,
+                      builder: (context) {
+                        TimeOfDay tempTime = TimeOfDay.fromDateTime(startTime);
+                        return AlertDialog(
+                          title: Text(l10n.selectTimeTitle),
+                          content: SizedBox(
+                            height: 200,
+                            child: TimePickerSpinner(
+                              time: startTime,
+                              is24HourMode: true,
+                              isShowSeconds: false,
+                              minutesInterval: 1,
+                              normalTextStyle: const TextStyle(
+                                  fontSize: 18,
+                                  color: Color.fromARGB(255, 211, 211, 211)),
+                              highlightedTextStyle: const TextStyle(
+                                  fontSize: 24,
+                                  color: Color.fromARGB(255, 211, 211, 211)),
+                              spacing: 50,
+                              itemHeight: 60,
+                              isForce2Digits: true,
+                              onTimeChange: (dateTime) {
+                                tempTime = TimeOfDay(
+                                    hour: dateTime.hour,
+                                    minute: dateTime.minute);
+                              },
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: Text(l10n.cancel),
+                            ),
+                            ElevatedButton(
+                              onPressed: () =>
+                                  Navigator.of(context).pop(tempTime),
+                              child: Text(l10n.okButton),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    if (picked != null) {
+                      setDs(() {
+                        startTime = DateTime(startTime.year, startTime.month,
+                            startTime.day, picked.hour, picked.minute);
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  title: Text(l10n.endTimeLabel),
+                  subtitle: Text(
+                      "${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}"),
+                  trailing: const Icon(Icons.access_time),
+                  onTap: () async {
+                    final picked = await showDialog<TimeOfDay>(
+                      context: context,
+                      builder: (context) {
+                        TimeOfDay tempTime = TimeOfDay.fromDateTime(endTime);
+                        return AlertDialog(
+                          title: Text(l10n.selectTimeTitle),
+                          content: SizedBox(
+                            height: 200,
+                            child: TimePickerSpinner(
+                              time: endTime,
+                              is24HourMode: true,
+                              isShowSeconds: false,
+                              minutesInterval: 1,
+                              normalTextStyle: const TextStyle(
+                                  fontSize: 18,
+                                  color: Color.fromARGB(255, 188, 188, 188)),
+                              highlightedTextStyle: const TextStyle(
+                                  fontSize: 24,
+                                  color: Color.fromARGB(255, 188, 188, 188)),
+                              spacing: 50,
+                              itemHeight: 60,
+                              isForce2Digits: true,
+                              onTimeChange: (dateTime) {
+                                tempTime = TimeOfDay(
+                                    hour: dateTime.hour,
+                                    minute: dateTime.minute);
+                              },
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: Text(l10n.cancel),
+                            ),
+                            ElevatedButton(
+                              onPressed: () =>
+                                  Navigator.of(context).pop(tempTime),
+                              child: Text(l10n.okButton),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    if (picked != null) {
+                      setDs(() {
+                        endTime = DateTime(endTime.year, endTime.month,
+                            endTime.day, picked.hour, picked.minute);
+                      });
+                    }
+                  },
+                ),
+              ],
+            );
+          } else {
+            content = const SizedBox();
+          }
+
+          return AlertDialog(
+            title: Text(l10n.addArretTitle),
+            content: SingleChildScrollView(
+              child: SizedBox(
+                width: 300,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (step == 0) ...[
+                      Text(l10n.selectCategoryStep,
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 16),
+                      content,
+                    ] else if (step == 1) ...[
+                      Text(l10n.selectStopTypeStep,
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 16),
+                      content,
+                    ] else if (step == 2) ...[
+                      Text(l10n.enterDetailsStep,
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 16),
+                      content,
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (step > 0)
+                    TextButton(
+                      onPressed: () => setDs(() => step--),
+                      child: Text(l10n.previous),
+                    )
+                  else
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(l10n.cancel),
+                    ),
+                  if ((step == 0 && selectedCategory != null) ||
+                      (step == 1 && selectedType != null))
+                    ElevatedButton(
+                      onPressed: () => setDs(() => step++),
+                      child: Text(l10n.next),
+                    ),
+                  if (step == 2 && selectedType != null)
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          formData.ventilation.add(VentilationItem(
+                              code: 0,
+                              label: selectedType!,
+                              duree:
+                                  "${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}",
+                              note:
+                                  "${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}"));
+                          _calculateHours();
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: Text(l10n.add),
+                    ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // --- Step 4: Exploitation ---
+  Widget _buildStepExploitation(AppLocalizations l10n) {
+    return Column(
+      children: [
+        _exploitRow(l10n.heuresMarche, formData.exploitation['H.M']!,
+            readOnly: true),
+        _exploitRow(l10n.heuresArret, formData.exploitation['H.A']!,
+            readOnly: true),
+        const Divider(),
+        _exploitRow(l10n.tonnageLabel, formData.exploitation['Tonnage']!,
+            onChanged: (v) {
+          formData.exploitation['Tonnage'] = v;
+          _calculateHours();
+        }),
+        _exploitRow(l10n.rendementLabel, formData.exploitation['Rendement %']!,
+            readOnly: true),
+      ],
+    );
+  }
+
+  Widget _exploitRow(String label, String value,
+      {bool readOnly = false, Function(String)? onChanged}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: OCPTextField(
+        label: label,
+        controller: TextEditingController(text: value)
+          ..selection =
+              TextSelection.fromPosition(TextPosition(offset: value.length)),
+        readOnly: readOnly,
+        keyboardType: TextInputType.number,
+        onChanged: onChanged,
+      ),
+    );
+  }
+
+  // --- Step 5: Repartition ---
+  Widget _buildStepRepartition(AppLocalizations l10n) {
+    return Column(
+      children: [
+        Text(l10n.repartitionTravail,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 16),
+        OCPCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.details,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              OCPTextField(
+                label: l10n.chantierLabel,
+                controller: TextEditingController(
+                    text: formData.repartitionTravail.chantier),
+                onChanged: (v) => formData.repartitionTravail.chantier = v,
+              ),
+              const SizedBox(height: 8),
+              OCPTextField(
+                label: l10n.duration,
+                controller: TextEditingController(
+                    text: formData.repartitionTravail.temps),
+                onChanged: (v) => formData.repartitionTravail.temps = v,
+              ),
+              const SizedBox(height: 8),
+              OCPTextField(
+                label: l10n.imputationLabel,
+                controller: TextEditingController(
+                    text: formData.repartitionTravail.imputation),
+                onChanged: (v) => formData.repartitionTravail.imputation = v,
+              ),
+            ],
+          ),
+        )
+      ],
+    );
+  }
+
+  // --- Step 6: Personnel ---
+  Widget _buildStepPersonnel(AppLocalizations l10n) {
+    return Column(
+      children: [
+        OCPTextField(
+            label: l10n.conducteurLabel,
+            controller:
+                TextEditingController(text: formData.personnel.conducteur),
+            onChanged: (v) => formData.personnel.conducteur = v),
+        const SizedBox(height: 16),
+        OCPTextField(
+            label: l10n.graisseurLabel,
+            controller:
+                TextEditingController(text: formData.personnel.graisseur),
+            onChanged: (v) => formData.personnel.graisseur = v),
+        const SizedBox(height: 16),
+        OCPTextField(
+            label: l10n.matriculesLabel,
+            controller:
+                TextEditingController(text: formData.personnel.matricules),
+            onChanged: (v) => formData.personnel.matricules = v),
+      ],
+    );
+  }
+
+  // --- Step 7: Consommation ---
+  Widget _buildStepConsommation(AppLocalizations l10n) {
+    return Column(
+      children: [
+        OCPTextField(
+            label: l10n.triconeLabel,
+            controller:
+                TextEditingController(text: formData.consommation.tricone),
+            onChanged: (v) => formData.consommation.tricone = v),
+        const SizedBox(height: 16),
+        OCPTextField(
+            label: l10n.gasoilLabel,
+            controller:
+                TextEditingController(text: formData.consommation.gasoil),
+            onChanged: (v) => formData.consommation.gasoil = v),
+      ],
+    );
+  }
+
+  // --- Step 8: Verification ---
+  Widget _buildStepVerification(AppLocalizations l10n) {
+    return Column(
+      children: [
+        const Icon(Icons.check_circle_outline,
+            size: 64, color: AppColors.success),
+        const SizedBox(height: 16),
+        Text(l10n.summary,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 24),
+        _row(l10n.mineSortie,
+            "${formData.selectedMine} / ${formData.selectedSortie}"),
+        _row(l10n.engin,
+            "${_getLocalizedTypeLabel(formData.selectedType, l10n)} - ${formData.selectedModel}"),
+        _row(l10n.poste, formData.selectedPoste),
+        _row(l10n.counter,
+            "${formData.indexCompteurs.duree} -> ${formData.indexCompteurs.note}"),
+        const Divider(),
+        if (formData.ventilation.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(l10n.detailsArrets,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
+          ...formData.ventilation.map((item) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                        child: Text(_getLocalizedReasonLabel(item.label, l10n),
+                            style: const TextStyle(fontSize: 13))),
+                    Text("${item.duree} - ${item.note}",
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 13)),
+                  ],
+                ),
+              )),
+        ] else
+          _row(l10n.stops, l10n.aucunArret),
+        const Divider(),
+        _row(l10n.heuresMarche, formData.exploitation['H.M']!),
+        _row(l10n.heuresArret, formData.exploitation['H.A']!),
+        _row(l10n.tonnageLabel, formData.exploitation['Tonnage']!),
+        _row(l10n.rendementLabel, formData.exploitation['Rendement %'] ?? ''),
+        const Divider(),
+        _row("${l10n.conducteurLabel}:", formData.personnel.conducteur),
+        _row("${l10n.graisseurLabel}:", formData.personnel.graisseur),
+        _row("${l10n.matriculesLabel}:", formData.personnel.matricules),
+        const Divider(),
+        _row("${l10n.chantierLabel}:", formData.repartitionTravail.chantier),
+        _row("${l10n.duration}:", formData.repartitionTravail.temps),
+        _row(
+            "${l10n.imputationLabel}:", formData.repartitionTravail.imputation),
+        const Divider(),
+        _row("${l10n.triconeLabel}:", formData.consommation.tricone),
+        _row("${l10n.gasoilLabel}:", formData.consommation.gasoil),
+      ],
+    );
+  }
+
+  Widget _row(String l, String v) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(l),
+        Text(v, style: const TextStyle(fontWeight: FontWeight.bold))
+      ]));
+
+  Future<void> _saveReport(AppLocalizations l10n) async {
+    setState(() => _isLoading = true);
+    try {
+      final report = Report(
+        id: widget.initialReport?.id,
+        description: 'Rapport R0 - ${formData.selectedPoste}',
+        date: _selectedDate,
+        type: formData.selectedModel,
+        group: formData.selectedPoste,
+        additionalData: {
+          'mine': formData.selectedMine,
+          'zone': formData.selectedZone,
+          'sortie': formData.selectedSortie,
+          'selectedPoste': formData.selectedPoste,
+          'Category': formData.selectedCategory,
+          'Type': formData.selectedType,
+          'Model': formData.selectedModel,
+          'Compteurs': {
+            'duree': formData.indexCompteurs.duree,
+            'note': formData.indexCompteurs.note
+          },
+          'Arrets': formData.ventilation
+              .map((v) => {'Arret': v.label, 'Début': v.duree, 'Fin': v.note})
+              .toList(),
+          'exploitation': {
+            ...formData.exploitation,
+            'Rendeme': formData.exploitation[
+                'Rendement %'], // For backward compatibility if needed
+          },
+          'repartition': {
+            'Chantier': formData.repartitionTravail.chantier,
+            'Temps': formData.repartitionTravail.temps,
+            'Imputation': formData.repartitionTravail.imputation,
+          },
+          'personnel': {
+            'conductr': formData.personnel.conducteur,
+            'graisseur': formData.personnel.graisseur,
+            'matricules': formData.personnel.matricules
+          },
+          'consommation': {
+            'tricone': formData.consommation.tricone,
+            'gasoil': formData.consommation.gasoil
+          }
+        },
+      );
+
+      if (widget.isEditing && widget.onSave != null) {
+        widget.onSave!(report);
+      } else {
+        await _databaseHelper.insertReport(report);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(l10n.success), backgroundColor: AppColors.success));
+          Navigator.popUntil(context, (r) => r.isFirst);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("Error: $e"), backgroundColor: AppColors.error));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 }

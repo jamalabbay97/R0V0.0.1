@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:r0/l10n/app_localizations.dart';
+// import 'package:r0/l10n/app_localizations.dart'; // Unused
 import 'package:uuid/uuid.dart';
 import 'package:r0/services/database_helper.dart';
 import 'package:r0/models/report.dart';
 import 'package:intl/intl.dart';
 import 'package:r0/theme.dart';
+import 'package:r0/widgets/custom_widgets.dart';
 
+// --- Models & Enums ---
 class ModuleStop {
   final String id;
   String duration;
   String nature;
-
   ModuleStop({required this.id, this.duration = '', this.nature = ''});
 }
 
-// Stock enums and helpers (mirrors activity_report_screen.dart)
 enum Poste { premier, deuxieme, troisieme }
+
 enum Park { park1, park2, park3 }
+
 enum StockType { normal, oceane, pb30 }
 
 String posteToString(Poste? p) {
@@ -64,83 +66,53 @@ class DailyStockEntry {
   Park? park;
   StockType? type;
   String quantity;
-  DailyStockEntry({
-    required this.id,
-    this.poste,
-    this.park,
-    this.type,
-    this.quantity = '',
-  });
+  DailyStockEntry(
+      {required this.id, this.poste, this.park, this.type, this.quantity = ''});
 }
 
+// --- Helper Functions ---
+int parseDurationToMinutes(String duration) {
+  if (duration.isEmpty) return 0;
+  final cleaned = duration.replaceAll(RegExp(r'[^0-9Hh:·\s]'), '').trim();
+  // Simplified parsing logic
+  try {
+    if (cleaned.contains('h')) {
+      final parts = cleaned.split('h');
+      int h = int.parse(parts[0]);
+      int m = parts.length > 1 && parts[1].isNotEmpty ? int.parse(parts[1]) : 0;
+      return h * 60 + m;
+    }
+    return int.parse(cleaned);
+  } catch (_) {
+    return 0;
+  }
+}
+
+String formatMinutesToHoursMinutes(int totalMinutes) {
+  if (totalMinutes <= 0) return "0h 00m";
+  int hours = totalMinutes ~/ 60;
+  int minutes = totalMinutes % 60;
+  return "${hours}h ${minutes.toString().padLeft(2, '0')}m";
+}
+
+// --- Screen ---
 class DailyReportScreen extends StatefulWidget {
   final Report? initialReport;
   final Function(Report)? onSave;
   final bool isEditing;
 
-  const DailyReportScreen({
-    super.key,
-    this.initialReport,
-    this.onSave,
-    this.isEditing = false,
-  });
+  const DailyReportScreen(
+      {super.key, this.initialReport, this.onSave, this.isEditing = false});
 
   @override
   State<DailyReportScreen> createState() => _DailyReportScreenState();
 }
 
 class _DailyReportScreenState extends State<DailyReportScreen> {
-  final _formKey = GlobalKey<FormState>();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.isEditing ? 'Modifier Daily Report TSUD' : 'Daily Report TSUD'),
-      ),
-      body: Form(
-        key: _formKey,
-        child: DailyReport(
-          formKey: _formKey,
-          initialReport: widget.initialReport,
-          onSave: widget.onSave,
-          isEditing: widget.isEditing,
-        ),
-      ),
-    );
-  }
-}
-
-class DailyReport extends StatefulWidget {
-  final GlobalKey<FormState> formKey;
-  final Report? initialReport;
-  final Function(Report)? onSave;
-  final bool isEditing;
-
-  const DailyReport({
-    super.key, 
-    required this.formKey,
-    this.initialReport,
-    this.onSave,
-    this.isEditing = false,
-  });
-
-  @override
-  DailyReportState createState() => DailyReportState();
-}
-
-class DailyReportState extends State<DailyReport> {
-  static const totalPeriodMinutes = 24 * 60; // Total minutes in a day
-  static const uuid = Uuid();
+  static const totalPeriodMinutes = 24 * 60;
   final _databaseHelper = DatabaseHelper();
-  int _currentStep = 0;
-  DateTime _selectedDate = DateTime.now();
 
-  // Form fields
-  String entree = '';
-  String secteur = '';
-  String rapportNo = '';
-  String machineEngins = '';
+  DateTime _selectedDate = DateTime.now();
 
   List<ModuleStop> module1Stops = [];
   List<ModuleStop> module2Stops = [];
@@ -151,1341 +123,493 @@ class DailyReportState extends State<DailyReport> {
   int module1OperatingTime = totalPeriodMinutes;
   int module2OperatingTime = totalPeriodMinutes;
 
-  final Map<String, TextEditingController> _controllers = {};
-
-  // Temp vars for stock dialogs
-  Poste? _tempStockPoste;
-  Park? _tempStockPark;
-  StockType? _tempStockType;
-  String _tempStockQuantity = '';
+  int _currentStep = 0;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    
     if (widget.isEditing && widget.initialReport != null) {
-      // Editing mode - load existing data
+      _selectedDate = widget.initialReport!.date;
       _loadExistingData();
     }
-    
     _calculateTotals();
   }
 
   void _loadExistingData() {
     if (widget.initialReport?.additionalData == null) return;
-    
     final data = widget.initialReport!.additionalData!;
-    
-    // Load basic fields
-    entree = data['entree'] ?? '';
-    secteur = data['secteur'] ?? '';
-    rapportNo = data['rapportNo'] ?? '';
-    machineEngins = data['machineEngins'] ?? '';
-    
-    // Load module 1 stops
+
     if (data['module1Stops'] is List) {
-      module1Stops = (data['module1Stops'] as List).map((stop) => ModuleStop(
-        id: stop['id'] ?? const Uuid().v4(),
-        duration: stop['duration'] ?? '',
-        nature: stop['nature'] ?? '',
-      )).toList();
+      module1Stops = (data['module1Stops'] as List)
+          .map((s) => ModuleStop(
+              id: s['id'] ?? const Uuid().v4(),
+              duration: s['duration'] ?? '',
+              nature: s['nature'] ?? ''))
+          .toList();
     }
-    
-    // Load module 2 stops
     if (data['module2Stops'] is List) {
-      module2Stops = (data['module2Stops'] as List).map((stop) => ModuleStop(
-        id: stop['id'] ?? const Uuid().v4(),
-        duration: stop['duration'] ?? '',
-        nature: stop['nature'] ?? '',
-      )).toList();
+      module2Stops = (data['module2Stops'] as List)
+          .map((s) => ModuleStop(
+              id: s['id'] ?? const Uuid().v4(),
+              duration: s['duration'] ?? '',
+              nature: s['nature'] ?? ''))
+          .toList();
     }
-    
-    // Load stock entries
     if (data['stock'] is List) {
-      stockEntries = (data['stock'] as List).map((entry) => DailyStockEntry(
-        id: entry['id'] ?? const Uuid().v4(),
-        poste: _parsePosteFromString(entry['poste']),
-        park: _parseParkFromString(entry['park']),
-        type: _parseStockTypeFromString(entry['type']),
-        quantity: entry['quantity'] ?? '',
-      )).toList();
+      stockEntries = (data['stock'] as List)
+          .map((s) => DailyStockEntry(
+              id: s['id'] ?? const Uuid().v4(),
+              poste: _parsePoste(s['poste']),
+              park: _parsePark(s['park']),
+              type: _parseStockType(s['type']),
+              quantity: s['quantity'] ?? ''))
+          .toList();
     }
   }
 
-  Poste? _parsePosteFromString(dynamic posteValue) {
-    if (posteValue == null) return null;
-    final posteStr = posteValue.toString();
-    switch (posteStr) {
-      case '0':
-      case '3ème':
-        return Poste.premier;
-      case '1':
-      case '1er':
-        return Poste.deuxieme;
-      case '2':
-      case '2ème':
-        return Poste.troisieme;
-      default:
-        return null;
+  Poste? _parsePoste(dynamic val) {
+    if (val == null) return null;
+    int? idx = int.tryParse(val.toString());
+    if (idx != null && idx >= 0 && idx < Poste.values.length) {
+      return Poste.values[idx];
     }
+    return null;
   }
 
-  Park? _parseParkFromString(dynamic parkValue) {
-    if (parkValue == null) return null;
-    final posteStr = parkValue.toString();
-    switch (posteStr) {
-      case '0':
-      case 'PARK 1':
-        return Park.park1;
-      case '1':
-      case 'PARK 2':
-        return Park.park2;
-      case '2':
-      case 'PARK 3':
-        return Park.park3;
-      default:
-        return null;
+  Park? _parsePark(dynamic val) {
+    if (val == null) return null;
+    int? idx = int.tryParse(val.toString());
+    if (idx != null && idx >= 0 && idx < Park.values.length) {
+      return Park.values[idx];
     }
+    return null;
   }
 
-  StockType? _parseStockTypeFromString(dynamic typeValue) {
-    if (typeValue == null) return null;
-    final typeStr = typeValue.toString();
-    switch (typeStr) {
-      case '0':
-      case 'NORMAL':
-        return StockType.normal;
-      case '1':
-      case 'OCEANE':
-        return StockType.pb30;
-      case '2':
-      case 'PB30':
-        return StockType.pb30;
-      default:
-        return null;
+  StockType? _parseStockType(dynamic val) {
+    if (val == null) return null;
+    int? idx = int.tryParse(val.toString());
+    if (idx != null && idx >= 0 && idx < StockType.values.length) {
+      return StockType.values[idx];
     }
-  }
-
-  @override
-  void dispose() {
-    for (var controller in _controllers.values) {
-      controller.dispose();
-    }
-    super.dispose();
+    return null;
   }
 
   void _calculateTotals() {
-    int totalDowntime(List<ModuleStop> stops) => stops
-        .map((stop) => parseDurationToMinutes(stop.duration))
-        .fold(0, (a, b) => a + b);
-
     setState(() {
-      module1TotalDowntime = totalDowntime(module1Stops);
-      module2TotalDowntime = totalDowntime(module2Stops);
-      module1OperatingTime = (totalPeriodMinutes - module1TotalDowntime).clamp(0, totalPeriodMinutes);
-      module2OperatingTime = (totalPeriodMinutes - module2TotalDowntime).clamp(0, totalPeriodMinutes);
+      module1TotalDowntime = module1Stops.fold(
+          0, (acc, s) => acc + parseDurationToMinutes(s.duration));
+      module2TotalDowntime = module2Stops.fold(
+          0, (acc, s) => acc + parseDurationToMinutes(s.duration));
+
+      module1OperatingTime = (totalPeriodMinutes - module1TotalDowntime)
+          .clamp(0, totalPeriodMinutes);
+      module2OperatingTime = (totalPeriodMinutes - module2TotalDowntime)
+          .clamp(0, totalPeriodMinutes);
     });
-  }
-
-  int parseDurationToMinutes(String duration) {
-    if (duration.isEmpty) return 0;
-    final cleaned = duration.replaceAll(RegExp(r'[^0-9Hh:·\s]'), '').trim();
-    final regex1 = RegExp(r'^(?:(\d{1,2})\s?[Hh:·]\s?)?(\d{1,2})$');
-    final regex2 = RegExp(r'^(\d{1,2})\s?[Hh]$');
-    final regex3 = RegExp(r'^(\d+)$');
-    var match = regex1.firstMatch(cleaned);
-    if (match != null) {
-      int hours = int.tryParse(match.group(1) ?? '0') ?? 0;
-      int minutes = int.tryParse(match.group(2) ?? '0') ?? 0;
-      return hours * 60 + minutes;
-    }
-    match = regex2.firstMatch(cleaned);
-    if (match != null) {
-      int hours = int.tryParse(match.group(1) ?? '0') ?? 0;
-      return hours * 60;
-    }
-    match = regex3.firstMatch(cleaned);
-    if (match != null) {
-      return int.tryParse(match.group(1) ?? '0') ?? 0;
-    }
-    debugPrint('Could not parse duration: "$duration"');
-    return 0;
-  }
-
-  String formatMinutesToHoursMinutes(int totalMinutes) {
-    if (totalMinutes <= 0) return "0h 0m";
-    int hours = totalMinutes ~/ 60;
-    int minutes = totalMinutes % 60;
-    return "${hours}h ${minutes}m";
-  }
-
-  void addStop(int module) {
-    String tempDuration = '';
-    String tempNature = '';
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Ajouter un arrêt - Module $module'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              decoration: const InputDecoration(
-                labelText: 'Durée (ex: 1h 30)',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (value) => tempDuration = value,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              decoration: const InputDecoration(
-                labelText: 'Nature',
-                border: OutlineInputBorder(),
-                hintText: 'Maximum 20 caractères par ligne',
-              ),
-              maxLines: 5,
-              onChanged: (value) {
-                // Split text into lines of max 20 characters
-                final words = value.split(' ');
-                final lines = <String>[];
-                String currentLine = '';
-                
-                for (var word in words) {
-                  if (('$currentLine $word').trim().length <= 20) {
-                    currentLine += (currentLine.isEmpty ? '' : ' ') + word;
-                  } else {
-                    if (currentLine.isNotEmpty) {
-                      lines.add(currentLine);
-                    }
-                    currentLine = word;
-                  }
-                }
-                if (currentLine.isNotEmpty) {
-                  lines.add(currentLine);
-                }
-                
-                tempNature = lines.join('\n');
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (tempDuration.isNotEmpty && tempNature.isNotEmpty) {
-    setState(() {
-      if (module == 1) {
-                    module1Stops.add(ModuleStop(
-                      id: uuid.v4(),
-                      duration: tempDuration,
-                      nature: tempNature,
-                    ));
-      } else {
-                    module2Stops.add(ModuleStop(
-                      id: uuid.v4(),
-                      duration: tempDuration,
-                      nature: tempNature,
-                    ));
-      }
-      _calculateTotals();
-    });
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Ajouter'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void deleteStop(int module, String id) {
-    setState(() {
-      if (module == 1) {
-        module1Stops.removeWhere((stop) => stop.id == id);
-      } else {
-        module2Stops.removeWhere((stop) => stop.id == id);
-      }
-      _calculateTotals();
-    });
-  }
-
-  void updateStop(int module, String id, String field, String value) {
-    setState(() {
-      List<ModuleStop> stops = module == 1 ? module1Stops : module2Stops;
-      for (var stop in stops) {
-        if (stop.id == id) {
-          if (field == 'duration') stop.duration = value;
-          if (field == 'nature') stop.nature = value;
-        }
-      }
-      _calculateTotals();
-    });
-  }
-
-  void handleFieldChange(String field, String value) {
-    setState(() {
-      // reportData[field] = value;
-    });
-  }
-
-  String? validateRequired(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Ce champ est requis';
-    }
-    return null;
-  }
-
-  String? validateNumeric(String? value) {
-    if (value == null || value.isEmpty) return null;
-    if (int.tryParse(value) == null) {
-      return 'Veuillez entrer un nombre valide';
-    }
-    return null;
-  }
-
-  Future<void> _saveReport() async {
-    try {
-      final report = Report(
-        id: widget.initialReport?.id,
-        description: 'Daily TSUD - ${DateFormat('yyyy-MM-dd').format(_selectedDate)}',
-        date: _selectedDate,
-        group: 'Daily',
-        type: 'daily TSUD',
-        additionalData: {
-          'entree': entree,
-          'secteur': secteur,
-          'rapportNo': rapportNo,
-          'machineEngins': machineEngins,
-          'module1Stops': module1Stops.map((stop) => {
-            'id': stop.id,
-            'duration': stop.duration,
-            'nature': stop.nature,
-          }).toList(),
-          'module2Stops': module2Stops.map((stop) => {
-            'id': stop.id,
-            'duration': stop.duration,
-            'nature': stop.nature,
-          }).toList(),
-          'T H.A': module1TotalDowntime + module2TotalDowntime,
-          'T H.M': module1OperatingTime + module2OperatingTime,
-          'stock': stockEntries.map((entry) => {
-            'id': entry.id,
-            'poste': entry.poste?.index,
-            'park': entry.park?.index,
-            'type': entry.type?.index,
-            'quantity': entry.quantity,
-          }).toList(),
-        },
-      );
-
-      if (widget.isEditing && widget.onSave != null) {
-        // Editing mode - call the onSave callback
-        widget.onSave!(report);
-      } else {
-        // Creation mode - save to database
-        await _databaseHelper.insertReport(report);
-        if (mounted) {
-          final l10n = AppLocalizations.of(context)!;
-          // Show confirmation dialog
-          await showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text(l10n.reportConfirmationTitle),
-                content: Text(l10n.reportConfirmationMessage),
-                actions: [
-                  TextButton(
-                    child: Text(l10n.done),
-                    onPressed: () {
-                      Navigator.of(context).pop(); // Close dialog
-                      Navigator.of(context).pop(); // Return to home
-                    },
-                  ),
-                ],
-              );
-            },
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur: ${e.toString()}'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            AppLocalizations.of(context)!.dailyReport,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 16),
+    // Localizations handled naively or assume English/French provided context
+    final title =
+        widget.isEditing ? 'Modifier Daily Report TSUD' : 'Daily Report TSUD';
+    final steps = ['Infos', 'Arrêts M1', 'Arrêts M2', 'Stock', 'Verif.'];
 
-          Stepper(
-            currentStep: _currentStep,
-            onStepContinue: () {
-              if (_currentStep < 5) {
-                setState(() {
-                  _currentStep += 1;
-                });
-              }
-            },
-            onStepCancel: () {
-              if (_currentStep > 0) {
-                setState(() {
-                  _currentStep -= 1;
-                });
-              }
-            },
-            controlsBuilder: (context, details) {
-              if (_currentStep == 5) {
-                return Padding(
-                  padding: const EdgeInsets.only(top: 16.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: details.onStepCancel,
-                          child: const Text('Précédent'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => _saveReport(),
-                          child: Text(widget.isEditing ? 'Enregistrer' : 'Soumettre'),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-              return Padding(
-                padding: const EdgeInsets.only(top: 16.0),
-                child: Row(
-                  children: [
-                    if (_currentStep > 0)
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: details.onStepCancel,
-                          child: const Text('Précédent'),
-                        ),
-                      ),
-                    if (_currentStep > 0)
-                      const SizedBox(width: 8),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: details.onStepContinue,
-                        child: Text(_currentStep == 4 ? 'Terminer' : 'Suivant'),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-            steps: [
-              Step(
-                title: const Text('Date du rapport'),
-                content: SingleChildScrollView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Sélectionnez la date du rapport',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 16),
-                      Card(
-                        child: InkWell(
-                          onTap: () async {
-                            final DateTime? picked = await showDatePicker(
-                              context: context,
-                              initialDate: _selectedDate,
-                              firstDate: DateTime(2000),
-                              lastDate: DateTime.now(),
-                              locale: const Locale('fr', 'FR'),
-                            );
-                            if (picked != null && picked != _selectedDate) {
-                              setState(() {
-                                _selectedDate = picked;
-                              });
-                            }
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.calendar_today),
-                                const SizedBox(width: 16),
-                                Text(
-                                  '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                                  style: const TextStyle(fontSize: 18),
-                                ),
-                                const Spacer(),
-                                const Icon(Icons.arrow_forward_ios),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                isActive: _currentStep >= 0,
-              ),
-              Step(
-                title: const Text('Module 1 - Arrêts'),
-                content: SingleChildScrollView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  child: buildModuleStops(1, module1Stops),
-                ),
-                isActive: _currentStep >= 1,
-              ),
-              Step(
-                title: const Text('Module 2 - Arrêts'),
-                content: SingleChildScrollView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  child: buildModuleStops(2, module2Stops),
-                ),
-                isActive: _currentStep >= 2,
-              ),
-              Step(
-                title: const Text('Totaux Fonctionnement'),
-                content: SingleChildScrollView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  child: Column(
-                    children: [
-                      Card(
-                        color: Colors.grey.shade100,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Temps de Fonctionnement (24h - Arrêts)',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'Module 1',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          formatMinutesToHoursMinutes(module1OperatingTime),
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            color: Theme.of(context).colorScheme.primary,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'Arrêts: ${formatMinutesToHoursMinutes(module1TotalDowntime)}',
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            color: AppColors.error,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'Module 2',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          formatMinutesToHoursMinutes(module2OperatingTime),
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            color: Theme.of(context).colorScheme.primary,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'Arrêts: ${formatMinutesToHoursMinutes(module2TotalDowntime)}',
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            color: AppColors.error,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                isActive: _currentStep >= 3,
-              ),
-              Step(
-                title: const Text('Stock'),
-                content: SingleChildScrollView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  child: buildStockSection(),
-                ),
-                isActive: _currentStep >= 4,
-              ),
-              Step(
-                title: const Text('VÉRIFICATION'),
-                content: SingleChildScrollView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  child: buildFinalStep(),
-                ),
-                isActive: _currentStep >= 5,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: Column(
+        children: [
+          OCPStepper(
+              steps: steps,
+              currentStep: _currentStep,
+              onStepTapped: (i) => setState(() => _currentStep = i)),
+          Expanded(
+              child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: _buildStepContent())),
+          _buildBottomBar(),
         ],
       ),
     );
   }
 
-  Widget buildModuleStops(int module, List<ModuleStop> stops) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Module $module - Arrêts',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () => addStop(module),
-              icon: const Icon(Icons.add),
-                label: const Text('Ajouter un arrêt'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.secondary,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _showStopsList(module, stops),
-                icon: const Icon(Icons.list),
-                label: const Text('Voir les arrêts'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.secondary,
-                  side: BorderSide(color: Theme.of(context).colorScheme.secondary),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
+  Widget _buildStepContent() {
+    switch (_currentStep) {
+      case 0:
+        return _buildStepInfos();
+      case 1:
+        return _buildStepArrets(1, module1Stops);
+      case 2:
+        return _buildStepArrets(2, module2Stops);
+      case 3:
+        return _buildStepStock();
+      case 4:
+        return _buildStepVerification();
+      default:
+        return const SizedBox();
+    }
+  }
+
+  Widget _buildBottomBar() {
+    bool isFirst = _currentStep == 0;
+    bool isLast = _currentStep == 4;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          boxShadow: const [BoxShadow(blurRadius: 10, color: Colors.black12)]),
+      child: Row(children: [
+        if (!isFirst)
+          Expanded(
+              child: OCPButton(
+                  text: 'Précédent',
+                  onPressed: () => setState(() => _currentStep--),
+                  isSecondary: true)),
+        if (!isFirst) const SizedBox(width: 16),
+        Expanded(
+            child: OCPButton(
+                text: isLast ? 'Soumettre' : 'Suivant',
+                onPressed: () {
+                  if (isLast) {
+                    _saveReport();
+                  } else {
+                    setState(() => _currentStep++);
+                  }
+                },
+                isLoading: _isSaving && isLast)),
+      ]),
     );
   }
 
-  // STOCK UI
-  Widget buildStockSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'ÉTAPE 5: STOCK',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _showAddStockDialog,
-                icon: const Icon(Icons.add),
-                label: const Text('Ajouter un stock'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _showStockList,
-                icon: const Icon(Icons.list),
-                label: const Text('Voir les stocks'),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
+  // --- Step 0: Infos ---
+  Widget _buildStepInfos() {
+    return Column(children: [
+      OCPCard(
+        onTap: () async {
+          final picked = await showDatePicker(
+              context: context,
+              initialDate: _selectedDate,
+              firstDate: DateTime(2000),
+              lastDate: DateTime.now(),
+              locale: const Locale('fr', 'FR'));
+          if (picked != null) setState(() => _selectedDate = picked);
+        },
+        child: Row(children: [
+          const Icon(Icons.calendar_today, color: AppColors.primary),
+          const SizedBox(width: 16),
+          Text(
+              "Date: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
+              style:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const Spacer(),
+          const Icon(Icons.arrow_forward_ios, size: 16),
+        ]),
+      ),
+    ]);
+  }
+
+  // --- Step 1 & 2: Arrêts ---
+  Widget _buildStepArrets(int module, List<ModuleStop> stops) {
+    return Column(children: [
+      Text("Module $module",
+          style: Theme.of(context)
+              .textTheme
+              .titleLarge
+              ?.copyWith(color: AppColors.primary)),
+      const SizedBox(height: 16),
+      if (stops.isEmpty)
+        const Text("Aucun arrêt enregistré.",
+            style: TextStyle(color: Colors.grey)),
+      ...stops.asMap().entries.map((e) => OCPCard(
+              child: ListTile(
+            title: Text(e.value.nature),
+            subtitle: Text(
+                "Durée: ${formatMinutesToHoursMinutes(parseDurationToMinutes(e.value.duration))}"),
+            trailing: IconButton(
+                icon: const Icon(Icons.delete, color: AppColors.error),
+                onPressed: () {
+                  setState(() {
+                    stops.removeAt(e.key);
+                    _calculateTotals();
+                  });
+                }),
+          ))),
+      const SizedBox(height: 16),
+      OCPButton(
+          text: "Ajouter Arrêt (Module $module)",
+          icon: Icons.add,
+          isSecondary: true,
+          onPressed: () => _showAddStopDialog(module))
+    ]);
+  }
+
+  void _showAddStopDialog(int module) {
+    String duration = '';
+    String nature = '';
+    showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+              title: Text("Ajouter Arrêt - Module $module"),
+              content: Column(mainAxisSize: MainAxisSize.min, children: [
+                TextField(
+                    decoration:
+                        const InputDecoration(labelText: "Durée (ex: 1h30)"),
+                    onChanged: (v) => duration = v),
+                const SizedBox(height: 8),
+                TextField(
+                    decoration: const InputDecoration(labelText: "Nature"),
+                    maxLines: 3,
+                    onChanged: (v) => nature = v),
+              ]),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("Annuler")),
+                ElevatedButton(
+                    onPressed: () {
+                      if (duration.isNotEmpty && nature.isNotEmpty) {
+                        setState(() {
+                          if (module == 1) {
+                            module1Stops.add(ModuleStop(
+                                id: const Uuid().v4(),
+                                duration: duration,
+                                nature: nature));
+                          } else {
+                            module2Stops.add(ModuleStop(
+                                id: const Uuid().v4(),
+                                duration: duration,
+                                nature: nature));
+                          }
+                          _calculateTotals();
+                        });
+                        Navigator.pop(context);
+                      }
+                    },
+                    child: const Text("Ajouter"))
+              ],
+            ));
+  }
+
+  Widget _syntheseCard(String title, int operating, int downtime) {
+    return OCPCard(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(title,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+      const Divider(),
+      _row("Fonctionnement", formatMinutesToHoursMinutes(operating),
+          color: AppColors.primary),
+      _row("Arrêts", formatMinutesToHoursMinutes(downtime),
+          color: AppColors.error),
+    ]));
+  }
+
+  Widget _row(String l, String v, {Color? color}) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(l),
+        Text(v, style: TextStyle(fontWeight: FontWeight.bold, color: color))
+      ]));
+
+  // --- Step 3: Stock ---
+  Widget _buildStepStock() {
+    return Column(children: [
+      ...stockEntries.asMap().entries.map((e) => OCPCard(
+              child: ListTile(
+            title: Text(
+                "${posteToString(e.value.poste)} - ${parkToString(e.value.park)}"),
+            subtitle:
+                Text("${stockTypeToString(e.value.type)}: ${e.value.quantity}"),
+            trailing: IconButton(
+                icon: const Icon(Icons.delete, color: AppColors.error),
+                onPressed: () {
+                  setState(() => stockEntries.removeAt(e.key));
+                }),
+          ))),
+      const SizedBox(height: 16),
+      OCPButton(
+          text: "Ajouter Stock",
+          icon: Icons.add,
+          isSecondary: true,
+          onPressed: _showAddStockDialog)
+    ]);
   }
 
   void _showAddStockDialog() {
+    Poste? poste;
+    Park? park;
+    StockType? type;
+    String qty = '';
     showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Ajouter un stock'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<Poste>(
-              value: _tempStockPoste,
-              decoration: const InputDecoration(
-                labelText: 'Poste',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (value) => setState(() => _tempStockPoste = value),
-              items: Poste.values
-                  .map((p) => DropdownMenuItem(
-                        value: p,
-                        child: Text(posteToString(p)),
-                      ))
-                  .toList(),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<Park>(
-              value: _tempStockPark,
-              decoration: const InputDecoration(
-                labelText: 'PARK',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (value) => setState(() => _tempStockPark = value),
-              items: Park.values
-                  .map((p) => DropdownMenuItem(
-                        value: p,
-                        child: Text(parkToString(p)),
-                      ))
-                  .toList(),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<StockType>(
-              value: _tempStockType,
-              decoration: const InputDecoration(
-                labelText: 'Type Produit',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (value) => setState(() => _tempStockType = value),
-              items: StockType.values
-                  .map((t) => DropdownMenuItem(
-                        value: t,
-                        child: Text(stockTypeToString(t)),
-                      ))
-                  .toList(),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              decoration: const InputDecoration(
-                labelText: 'Quantité',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (value) => setState(() => _tempStockQuantity = value),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (_tempStockPoste != null &&
-                  _tempStockPark != null &&
-                  _tempStockType != null &&
-                  _tempStockQuantity.isNotEmpty) {
-                setState(() {
-                  stockEntries.add(DailyStockEntry(
-                    id: const Uuid().v4(),
-                    poste: _tempStockPoste,
-                    park: _tempStockPark,
-                    type: _tempStockType,
-                    quantity: _tempStockQuantity,
-                  ));
-                  _tempStockPoste = null;
-                  _tempStockPark = null;
-                  _tempStockType = null;
-                  _tempStockQuantity = '';
-                });
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Ajouter'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showStockList() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Liste des stocks'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: stockEntries.length,
-            itemBuilder: (context, index) {
-              final entry = stockEntries[index];
-              return ListTile(
-                title: Text('Poste: ${posteToString(entry.poste)}'),
-                subtitle: Text(
-                  'PARK: ${parkToString(entry.park)}\n'
-                  'Type: ${stockTypeToString(entry.type)}\n'
-                  'Quantité: ${entry.quantity}',
-                ),
-                trailing: PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_horiz, size: 20),
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  position: PopupMenuPosition.under,
-                  itemBuilder: (BuildContext context) => [
-                    PopupMenuItem<String>(
-                      value: 'edit',
-                      height: 36,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Modifier',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'delete',
-                      height: 36,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Supprimer',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      Navigator.pop(context);
-                      _showEditStockDialog(entry, index);
-                    } else if (value == 'delete') {
-                      setState(() {
-                        stockEntries.removeAt(index);
-                      });
-                      Navigator.pop(context);
-                      _showStockList();
-                    }
-                  },
-                ),
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Fermer'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showEditStockDialog(DailyStockEntry entry, int index) {
-    _tempStockPoste = entry.poste;
-    _tempStockPark = entry.park;
-    _tempStockType = entry.type;
-    _tempStockQuantity = entry.quantity;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Modifier le stock'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<Poste>(
-              value: _tempStockPoste,
-              decoration: const InputDecoration(
-                labelText: 'Poste',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (value) => setState(() => _tempStockPoste = value),
-              items: Poste.values
-                  .map((p) => DropdownMenuItem(
-                        value: p,
-                        child: Text(posteToString(p)),
-                      ))
-                  .toList(),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<Park>(
-              value: _tempStockPark,
-              decoration: const InputDecoration(
-                labelText: 'PARK',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (value) => setState(() => _tempStockPark = value),
-              items: Park.values
-                  .map((p) => DropdownMenuItem(
-                        value: p,
-                        child: Text(parkToString(p)),
-                      ))
-                  .toList(),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<StockType>(
-              value: _tempStockType,
-              decoration: const InputDecoration(
-                labelText: 'Type Produit',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (value) => setState(() => _tempStockType = value),
-              items: StockType.values
-                  .map((t) => DropdownMenuItem(
-                        value: t,
-                        child: Text(stockTypeToString(t)),
-                      ))
-                  .toList(),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              decoration: const InputDecoration(
-                labelText: 'Quantité',
-                border: OutlineInputBorder(),
-              ),
-              controller: TextEditingController(text: _tempStockQuantity),
-              onChanged: (value) => setState(() => _tempStockQuantity = value),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (_tempStockPoste != null &&
-                  _tempStockPark != null &&
-                  _tempStockType != null &&
-                  _tempStockQuantity.isNotEmpty) {
-                setState(() {
-                  stockEntries[index] = DailyStockEntry(
-                    id: entry.id,
-                    poste: _tempStockPoste,
-                    park: _tempStockPark,
-                    type: _tempStockType,
-                    quantity: _tempStockQuantity,
-                  );
-                  _tempStockPoste = null;
-                  _tempStockPark = null;
-                  _tempStockType = null;
-                  _tempStockQuantity = '';
-                });
-                Navigator.pop(context);
-                _showStockList();
-              }
-            },
-            child: const Text('Enregistrer'),
-          ),
-        ],
-      ),
-    );
-  }
-  void _showStopsList(int module, List<ModuleStop> stops) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Liste des arrêts - Module $module'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: stops.length,
-            itemBuilder: (context, index) {
-              final stop = stops[index];
-              return ListTile(
-                title: Text('Durée: ${stop.duration}'),
-                subtitle: Text('Nature: ${stop.nature}'),
-                trailing: PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_horiz, size: 20),
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  position: PopupMenuPosition.under,
-                  itemBuilder: (BuildContext context) => [
-                    PopupMenuItem<String>(
-                      value: 'edit',
-                      height: 36,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.edit, size: 18, color: Theme.of(context).colorScheme.primary),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Modifier',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'delete',
-                      height: 36,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Supprimer',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      Navigator.pop(context);
-                      _showEditStopDialog(module, stop);
-                    } else if (value == 'delete') {
-                      setState(() {
-                        deleteStop(module, stop.id);
-                      });
-                      Navigator.pop(context);
-                      _showStopsList(module, stops);
-                    }
-                  },
-                ),
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Fermer'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showEditStopDialog(int module, ModuleStop stop) {
-    String tempDuration = stop.duration;
-    String tempNature = stop.nature;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Modifier l\'arrêt - Module $module'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              decoration: const InputDecoration(
-                labelText: 'Durée (ex: 1h 30)',
-                border: OutlineInputBorder(),
-              ),
-              controller: TextEditingController(text: tempDuration),
-              onChanged: (value) => tempDuration = value,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              decoration: const InputDecoration(
-                labelText: 'Nature',
-                border: OutlineInputBorder(),
-                hintText: 'Maximum 20 caractères par ligne',
-              ),
-              controller: TextEditingController(text: tempNature),
-              maxLines: 5,
-              onChanged: (value) {
-                // Split text into lines of max 20 characters
-                final words = value.split(' ');
-                final lines = <String>[];
-                String currentLine = '';
-                
-                for (var word in words) {
-                  if (('$currentLine $word').trim().length <= 20) {
-                    currentLine += (currentLine.isEmpty ? '' : ' ') + word;
-                  } else {
-                    if (currentLine.isNotEmpty) {
-                      lines.add(currentLine);
-                    }
-                    currentLine = word;
-                  }
-                }
-                if (currentLine.isNotEmpty) {
-                  lines.add(currentLine);
-                }
-                
-                tempNature = lines.join('\n');
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (tempDuration.isNotEmpty && tempNature.isNotEmpty) {
-                setState(() {
-                  updateStop(module, stop.id, 'duration', tempDuration);
-                  updateStop(module, stop.id, 'nature', tempNature);
-                  _calculateTotals();
-                });
-                Navigator.pop(context);
-                _showStopsList(module, module == 1 ? module1Stops : module2Stops);
-              }
-            },
-            child: const Text('Enregistrer'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildFinalStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'ÉTAPE 6: VÉRIFICATION',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
-        const SizedBox(height: 16),
-        OutlinedButton.icon(
-          onPressed: () => _showVerificationDialog(),
-          icon: const Icon(Icons.visibility),
-          label: const Text("Voir tous les détails"),
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showVerificationDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: 600,
-              maxHeight: MediaQuery.of(context).size.height * 0.6,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Vérification des informations',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+            builder: (c, setDs) => AlertDialog(
+                  title: const Text("Ajouter Stock"),
+                  content: SingleChildScrollView(
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    DropdownButtonFormField<Poste>(
+                        hint: const Text("Poste"),
+                        items: Poste.values
+                            .map((p) => DropdownMenuItem(
+                                value: p, child: Text(posteToString(p))))
+                            .toList(),
+                        onChanged: (v) => setDs(() => poste = v)),
+                    DropdownButtonFormField<Park>(
+                        hint: const Text("Park"),
+                        items: Park.values
+                            .map((p) => DropdownMenuItem(
+                                value: p, child: Text(parkToString(p))))
+                            .toList(),
+                        onChanged: (v) => setDs(() => park = v)),
+                    DropdownButtonFormField<StockType>(
+                        hint: const Text("Type"),
+                        items: StockType.values
+                            .map((p) => DropdownMenuItem(
+                                value: p, child: Text(stockTypeToString(p))))
+                            .toList(),
+                        onChanged: (v) => setDs(() => type = v)),
+                    TextField(
+                        decoration:
+                            const InputDecoration(labelText: "Quantité"),
+                        onChanged: (v) => qty = v),
+                  ])),
+                  actions: [
+                    TextButton(
                         onPressed: () => Navigator.pop(context),
-                        padding: const EdgeInsets.all(6),
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Module 1 Section
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Module 1',
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const Divider(height: 16),
-                                Text('Temps de fonctionnement: ${formatMinutesToHoursMinutes(module1OperatingTime)}'),
-                                Text('Temps d\'arrêt: ${formatMinutesToHoursMinutes(module1TotalDowntime)}'),
-                                if (module1Stops.isNotEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    'Arrêts:',
-                                    style: TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  ...module1Stops.map((stop) => Padding(
-                                    padding: const EdgeInsets.only(left: 16, top: 4),
-                                    child: Text('${stop.duration} - ${stop.nature}'),
-                                  )),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        // Module 2 Section
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Module 2',
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const Divider(height: 16),
-                                Text('Temps de fonctionnement: ${formatMinutesToHoursMinutes(module2OperatingTime)}'),
-                                Text('Temps d\'arrêt: ${formatMinutesToHoursMinutes(module2TotalDowntime)}'),
-                                if (module2Stops.isNotEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    'Arrêts:',
-                                    style: TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  ...module2Stops.map((stop) => Padding(
-                                    padding: const EdgeInsets.only(left: 16, top: 4),
-                                    child: Text('${stop.duration} - ${stop.nature}'),
-                                  )),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        // Stocks Section
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Stocks',
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const Divider(height: 16),
-                                if (stockEntries.isEmpty)
-                                  const Text('Aucun stock ajouté', style: TextStyle(color: Colors.grey)),
-                                if (stockEntries.isNotEmpty)
-                                  ...stockEntries.map((entry) => Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 2),
-                                        child: Text(
-                                          '• Poste: ${posteToString(entry.poste)} | PARK: ${parkToString(entry.park)} | Type: ${stockTypeToString(entry.type)} | Qté: ${entry.quantity}',
-                                        ),
-                                      )),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+                        child: const Text("Annuler")),
+                    ElevatedButton(
+                        onPressed: (poste != null &&
+                                park != null &&
+                                type != null)
+                            ? () {
+                                setState(() => stockEntries.add(DailyStockEntry(
+                                    id: const Uuid().v4(),
+                                    poste: poste,
+                                    park: park,
+                                    type: type,
+                                    quantity: qty)));
+                                Navigator.pop(context);
+                              }
+                            : null,
+                        child: const Text("Ajouter"))
+                  ],
+                )));
   }
-} 
+
+  // --- Step 4: Verification ---
+  Widget _buildStepVerification() {
+    return Column(children: [
+      const Icon(Icons.check_circle_outline,
+          size: 64, color: AppColors.success),
+      const SizedBox(height: 16),
+      const Text("Récapitulatif",
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 24),
+      _row("Date",
+          "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}"),
+      const Divider(),
+
+      // Details Arrêts M1
+      if (module1Stops.isNotEmpty) ...[
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8.0),
+          child: Text("Détails Arrêts M1",
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: AppColors.primary)),
+        ),
+        ...module1Stops.map((s) => _row(s.nature,
+            formatMinutesToHoursMinutes(parseDurationToMinutes(s.duration)))),
+        const Divider(),
+      ],
+
+      // Details Arrêts M2
+      if (module2Stops.isNotEmpty) ...[
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8.0),
+          child: Text("Détails Arrêts M2",
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: AppColors.primary)),
+        ),
+        ...module2Stops.map((s) => _row(s.nature,
+            formatMinutesToHoursMinutes(parseDurationToMinutes(s.duration)))),
+        const Divider(),
+      ],
+
+      _syntheseCard(
+          "Synthèse Module 1", module1OperatingTime, module1TotalDowntime),
+      const SizedBox(height: 16),
+      _syntheseCard(
+          "Synthèse Module 2", module2OperatingTime, module2TotalDowntime),
+      const Divider(),
+
+      // Details Stock
+      if (stockEntries.isNotEmpty) ...[
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8.0),
+          child: Text("Détails Stock",
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: AppColors.primary)),
+        ),
+        ...stockEntries.map((e) => _row(
+            "${posteToString(e.poste)} - ${parkToString(e.park)}",
+            "${stockTypeToString(e.type)}: ${e.quantity}")),
+        const Divider(),
+      ],
+    ]);
+  }
+
+  Future<void> _saveReport() async {
+    setState(() => _isSaving = true);
+    try {
+      final report = Report(
+        id: widget.initialReport?.id,
+        description:
+            'Daily TSUD - ${DateFormat('yyyy-MM-dd').format(_selectedDate)}',
+        date: _selectedDate,
+        group: 'Daily',
+        type: 'daily TSUD',
+        additionalData: {
+          'module1Stops': module1Stops
+              .map((s) =>
+                  {'id': s.id, 'duration': s.duration, 'nature': s.nature})
+              .toList(),
+          'module2Stops': module2Stops
+              .map((s) =>
+                  {'id': s.id, 'duration': s.duration, 'nature': s.nature})
+              .toList(),
+          'T H.A1': module1TotalDowntime,
+          'T H.M1': module1OperatingTime,
+          'T H.A2': module2TotalDowntime,
+          'T H.M2': module2OperatingTime,
+          'stock': stockEntries
+              .map((e) => {
+                    'id': e.id,
+                    'poste': e.poste?.index,
+                    'park': e.park?.index,
+                    'type': e.type?.index,
+                    'quantity': e.quantity
+                  })
+              .toList(),
+        },
+      );
+
+      if (widget.isEditing && widget.onSave != null) {
+        widget.onSave!(report);
+      } else {
+        await _databaseHelper.insertReport(report);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Succès'), backgroundColor: AppColors.success));
+          Navigator.popUntil(context, (route) => route.isFirst);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("Error: $e"), backgroundColor: AppColors.error));
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+}
