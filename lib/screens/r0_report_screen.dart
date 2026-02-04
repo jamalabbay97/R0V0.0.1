@@ -6,6 +6,7 @@ import 'package:r0/models/mine_data.dart'; // Import the shared model
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 import 'package:r0/theme.dart';
 import 'package:r0/widgets/custom_widgets.dart';
+import 'package:r0/data/r0_arrets_data.dart';
 
 // --- Data Models ---
 class IndexCompteurPoste {
@@ -175,49 +176,9 @@ class R0ReportState extends State<R0Report> {
     'SONDEUSES': ['PV275-1', 'PV275-2', 'PV275-3'],
   };
 
-  static const Map<String, List<String>> arretCategories = {
-    'EXTERIEURS': [
-      'ARRET CARREAU INDUSTRIEL',
-      'COUPURE GENERALE DU COURANT',
-      'GREVE',
-      'INTEMPERIES',
-      'STOCKS PLEINS',
-      'J. FERIES OU HEBDOMADAIRES',
-      'ARRET PAR LA CENTRALE (M.ENERGIE)',
-      'CONTROLE'
-    ],
-    'MATERIEL': [
-      'DEFAUT ELEC. (C.CRAME, RESEAU)',
-      'PANNE MECANIQUE',
-      'PANNE ELECTRIQUE',
-      'INTERVENTION ATELIER PNEUMATIQUE',
-      'ENTRETIEN SYSTEMATIQUE',
-      'APPOINT (HUILE, GAZOL, EAU)',
-      'GRAISSAGE',
-      'ARRET ELEC. INSTALATION FIXES',
-      'MANQUE CAMIONS',
-      'MANQUE BULL',
-      'MANQUE MECANICIEN',
-      'MANQUE D\'OUTILS DE TRAVAIL',
-      'MACHINE A L\'ARRET',
-      'PANNE ENGIN DEVANT MACHINE'
-    ],
-    'EXPLOITATION': [
-      'RELEVE',
-      'EXECUTION PLATE FORME',
-      'DEPLACEMENT',
-      'TIR ET SAUTAGE',
-      'MOUV. DE CABLE',
-      'ARRET DECIDE',
-      'MANQUE CONDUCTEUR',
-      'BRIQUET',
-      'PISTES (INTEMPERIES EXCLUES)',
-      'ARRETS MECA. INSTALATIONS FIXES',
-      'TELESCOPAGE',
-      'EXCAVATION PURE',
-      'TERASSEMENT PUR'
-    ],
-  };
+  Map<String, List<String>> _currentArretCategories() {
+    return R0ArretsData.arretsForType(formData.selectedType);
+  }
 
   @override
   void initState() {
@@ -280,6 +241,7 @@ class R0ReportState extends State<R0Report> {
       final arrets = data['Arrets'] as List;
       // Get all valid arret types from all categories
       final allValidTypes = <String>{};
+      final arretCategories = _currentArretCategories();
       arretCategories.forEach((category, types) {
         allValidTypes.addAll(types);
       });
@@ -784,6 +746,7 @@ class R0ReportState extends State<R0Report> {
     String? selectedType;
     DateTime startTime = DateTime.now();
     DateTime endTime = DateTime.now();
+    final arretCategories = _currentArretCategories();
 
     showDialog(
       context: context,
@@ -1000,6 +963,7 @@ class R0ReportState extends State<R0Report> {
                         setState(() {
                           formData.ventilation.add(VentilationItem(
                               code: 0,
+                              category: selectedCategory ?? '',
                               label: selectedType!,
                               duree:
                                   "${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}",

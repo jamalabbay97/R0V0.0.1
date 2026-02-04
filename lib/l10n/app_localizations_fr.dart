@@ -298,12 +298,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get equipmentStopsTitle => 'Équipements - Arrêts';
 
   @override
-  String get reportedStops => 'Arrêts signalés';
-
-  @override
-  String get noStopsFoundToday => 'Aucun arrêt trouvé pour aujourd\'hui.';
-
-  @override
   String get addEquipmentButton => 'Ajouter un équipement';
 
   @override

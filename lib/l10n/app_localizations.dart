@@ -668,18 +668,6 @@ abstract class AppLocalizations {
   /// **'Equipment - Stops'**
   String get equipmentStopsTitle;
 
-  /// No description provided for @reportedStops.
-  ///
-  /// In en, this message translates to:
-  /// **'Reported Stops'**
-  String get reportedStops;
-
-  /// No description provided for @noStopsFoundToday.
-  ///
-  /// In en, this message translates to:
-  /// **'No stops found for today.'**
-  String get noStopsFoundToday;
-
   /// No description provided for @addEquipmentButton.
   ///
   /// In en, this message translates to:

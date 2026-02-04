@@ -297,12 +297,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get equipmentStopsTitle => 'Equipment - Stops';
 
   @override
-  String get reportedStops => 'Reported Stops';
-
-  @override
-  String get noStopsFoundToday => 'No stops found for today.';
-
-  @override
   String get addEquipmentButton => 'Add Equipment';
 
   @override

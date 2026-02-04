@@ -6,6 +6,7 @@ import 'package:r0/services/database_helper.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 import 'package:uuid/uuid.dart';
+import 'package:r0/data/r0_arrets_data.dart';
 
 /// ReportsScreen displays all saved reports with filtering capabilities.
 ///
@@ -56,50 +57,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     'TEREX 32',
   ];
 
-  // Arrêt categories for R0 reports
-  static const Map<String, List<String>> arretCategories = {
-    'EXTERIEURS': [
-      'ARRET CARREAU INDUSTRIEL',
-      'COUPURE GENERALE DU COURANT',
-      'GREVE',
-      'INTEMPERIES',
-      'STOCKS PLEINS',
-      'J. FERIES OU HEBDOMADAIRES',
-      'ARRET PAR LA CENTRALE (M.ENERGIE)',
-      'CONTROLE',
-    ],
-    'MATERIEL': [
-      'DEFAUT ELEC. (C.CRAME, RESEAU)',
-      'PANNE MECANIQUE',
-      'PANNE ELECTRIQUE',
-      'INTERVENTION ATELIER PNEUMATIQUE',
-      'ENTRETIEN SYSTEMATIQUE',
-      'APPOINT (HUILE, GAZOL, EAU)',
-      'GRAISSAGE',
-      'ARRET ELEC. INSTALATION FIXES',
-      'MANQUE CAMIONS',
-      'MANQUE BULL',
-      'MANQUE MECANICIEN',
-      'MANQUE D\'OUTILS DE TRAVAIL',
-      'MACHINE A L\'ARRET',
-      'PANNE ENGIN DEVANT MACHINE',
-    ],
-    'EXPLOITATION': [
-      'RELEVE',
-      'EXECUTION PLATE FORME',
-      'DEPLACEMENT',
-      'TIR ET SAUTAGE',
-      'MOUV. DE CABLE',
-      'ARRET DECIDE',
-      'MANQUE CONDUCTEUR',
-      'BRIQUET',
-      'PISTES (INTEMPERIES EXCLUES)',
-      'ARRETS MECA. INSTALATIONS FIXES',
-      'TELESCOPAGE',
-      'EXCAVATION PURE',
-      'TERASSEMENT PUR',
-    ],
-  };
+  Map<String, List<String>> _arretsForReport(Map<String, dynamic> data) {
+    return R0ArretsData.arretsForType(data['Type']?.toString());
+  }
 
   final posteOrder = const ["3ème", "1er", "2ème"];
 
@@ -7964,14 +7924,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   // Build Add/Edit R0 Stop Dialog (same as in R0 creation)
-  Widget _buildAddR0StopDialog(BuildContext context, AppLocalizations l10n,
-      {Map<String, String>? initialItem}) {
+  Widget _buildAddR0StopDialog(
+    BuildContext context,
+    AppLocalizations l10n, {
+    required Map<String, List<String>> arretCategories,
+    Map<String, String>? initialItem,
+  }) {
     int step = 0;
-    String? selectedCategory = initialItem != null
-        ? arretCategories.keys.firstWhere(
-            (cat) => arretCategories[cat]!.contains(initialItem['Arret']),
-            orElse: () => '')
-        : null;
+    String? selectedCategory = initialItem?['Catégorie'];
+    if (selectedCategory == null || selectedCategory.isEmpty) {
+      selectedCategory = initialItem != null
+          ? arretCategories.keys.firstWhere(
+              (cat) => arretCategories[cat]!.contains(initialItem['Arret']),
+              orElse: () => '')
+          : null;
+    }
+    if (selectedCategory != null && selectedCategory.isEmpty) {
+      selectedCategory = null;
+    }
     String? selectedType = initialItem?['Arret'];
     String startTime = initialItem?['Début'] ?? '';
     String endTime = initialItem?['Fin'] ?? '';
@@ -8187,6 +8157,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     onPressed: startTime.isNotEmpty && endTime.isNotEmpty
                         ? () {
                             Navigator.of(context).pop({
+                              'Catégorie': selectedCategory ?? '',
                               'Arret': selectedType!,
                               'Début': startTime,
                               'Fin': endTime,
@@ -8210,12 +8181,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
       StateSetter setDialogState,
       ScaffoldMessengerState scaffoldMessenger,
       AppLocalizations l10n) async {
+    final arretCategories = _arretsForReport(data);
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.addStopTitle),
         content: SingleChildScrollView(
-          child: _buildAddR0StopDialog(context, l10n),
+          child: _buildAddR0StopDialog(context, l10n,
+              arretCategories: arretCategories),
         ),
       ),
     );
@@ -8254,17 +8227,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
       AppLocalizations l10n) async {
     final arret = (data['Arrets'] as List)[index] as Map<String, dynamic>;
     final initialItem = {
+      'Catégorie': (arret['Catégorie'] ?? '').toString(),
       'Arret': (arret['Arret'] ?? '').toString(),
       'Début': (arret['Début'] ?? '').toString(),
       'Fin': (arret['Fin'] ?? '').toString(),
     };
+    final arretCategories = _arretsForReport(data);
 
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.editStopTitle),
         content: SingleChildScrollView(
-          child: _buildAddR0StopDialog(context, l10n, initialItem: initialItem),
+          child: _buildAddR0StopDialog(context, l10n,
+              arretCategories: arretCategories, initialItem: initialItem),
         ),
       ),
     );
