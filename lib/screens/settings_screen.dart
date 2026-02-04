@@ -16,46 +16,51 @@ class SettingsScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(l10n.settings),
       ),
-      body: ListView(
-        children: [
-          ListTile(
-            title: Text(l10n.language),
-            trailing: DropdownButton<Locale>(
-              value: languageProvider.locale,
-              underline: Container(),
-              isDense: true,
-              items: [
-                DropdownMenuItem(
-                  value: const Locale('en'),
-                  child: Text(l10n.english),
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: ListView(
+            children: [
+              ListTile(
+                title: Text(l10n.language),
+                trailing: DropdownButton<Locale>(
+                  value: languageProvider.locale,
+                  underline: Container(),
+                  isDense: true,
+                  items: [
+                    DropdownMenuItem(
+                      value: const Locale('en'),
+                      child: Text(l10n.english),
+                    ),
+                    DropdownMenuItem(
+                      value: const Locale('fr'),
+                      child: Text(l10n.french),
+                    ),
+                  ],
+                  onChanged: (Locale? newLocale) {
+                    if (newLocale != null) {
+                      languageProvider.setLocale(newLocale);
+                    }
+                  },
                 ),
-                DropdownMenuItem(
-                  value: const Locale('fr'),
-                  child: Text(l10n.french),
+              ),
+              const Divider(),
+              ListTile(
+                title: Text(l10n.darkMode),
+                trailing: Switch(
+                  value: Provider.of<ThemeProvider>(context).themeMode ==
+                      ThemeMode.dark,
+                  onChanged: (value) {
+                    Provider.of<ThemeProvider>(context, listen: false)
+                        .toggleTheme(value);
+                  },
                 ),
-              ],
-              onChanged: (Locale? newLocale) {
-                if (newLocale != null) {
-                  languageProvider.setLocale(newLocale);
-                }
-              },
-            ),
+              ),
+              const Divider(),
+              // Add more settings here as needed
+            ],
           ),
-          const Divider(),
-          ListTile(
-            title: Text(l10n.darkMode),
-            trailing: Switch(
-              value: Provider.of<ThemeProvider>(context).themeMode ==
-                  ThemeMode.dark,
-              onChanged: (value) {
-                Provider.of<ThemeProvider>(context, listen: false)
-                    .toggleTheme(value);
-              },
-            ),
-          ),
-          const Divider(),
-          // Add more settings here as needed
-        ],
+        ),
       ),
     );
   }

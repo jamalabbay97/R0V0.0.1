@@ -362,20 +362,25 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
         title:
             Text(widget.isEditing ? "Modifier Activité TNB" : "Activité TNB"),
       ),
-      body: Column(
-        children: [
-          OCPStepper(
-              steps: steps,
-              currentStep: _currentStep,
-              onStepTapped: (i) => setState(() => _currentStep = i)),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: _buildStepContent(),
-            ),
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: Column(
+            children: [
+              OCPStepper(
+                  steps: steps,
+                  currentStep: _currentStep,
+                  onStepTapped: (i) => setState(() => _currentStep = i)),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: _buildStepContent(),
+                ),
+              ),
+              _buildBottomBar(),
+            ],
           ),
-          _buildBottomBar(),
-        ],
+        ),
       ),
     );
   }

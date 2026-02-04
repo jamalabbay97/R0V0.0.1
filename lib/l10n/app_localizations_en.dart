@@ -614,13 +614,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addArretTitle => 'Add Stop';
 
   @override
-  String get heuresMarche => 'Operating Hours (H.M)';
+  String get heuresMarche => 'H.M';
 
   @override
-  String get heuresArret => 'Stop Hours (H.A)';
+  String get heuresArret => 'H.A';
 
   @override
   String get tonnageLabel => 'Tonnage';
+
+  @override
+  String get metrageFore => 'Drilling Meters';
+
+  @override
+  String get nrTrousFores => 'Nr Drilled';
+
+  @override
+  String get nrVoyages => 'Nr Trips';
+
+  @override
+  String get m3Decapage => 'M³ Strippe';
+
+  @override
+  String get nombreTKU => 'Nr T.K.U';
+
+  @override
+  String get rendementSimple => 'Yield';
 
   @override
   String get rendementLabel => 'Efficiency %';

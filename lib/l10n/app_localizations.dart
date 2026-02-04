@@ -1283,13 +1283,13 @@ abstract class AppLocalizations {
   /// No description provided for @heuresMarche.
   ///
   /// In en, this message translates to:
-  /// **'Operating Hours (H.M)'**
+  /// **'H.M'**
   String get heuresMarche;
 
   /// No description provided for @heuresArret.
   ///
   /// In en, this message translates to:
-  /// **'Stop Hours (H.A)'**
+  /// **'H.A'**
   String get heuresArret;
 
   /// No description provided for @tonnageLabel.
@@ -1297,6 +1297,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tonnage'**
   String get tonnageLabel;
+
+  /// No description provided for @metrageFore.
+  ///
+  /// In en, this message translates to:
+  /// **'Drilling Meters'**
+  String get metrageFore;
+
+  /// No description provided for @nrTrousFores.
+  ///
+  /// In en, this message translates to:
+  /// **'Nr Drilled'**
+  String get nrTrousFores;
+
+  /// No description provided for @nrVoyages.
+  ///
+  /// In en, this message translates to:
+  /// **'Nr Trips'**
+  String get nrVoyages;
+
+  /// No description provided for @m3Decapage.
+  ///
+  /// In en, this message translates to:
+  /// **'M³ Strippe'**
+  String get m3Decapage;
+
+  /// No description provided for @nombreTKU.
+  ///
+  /// In en, this message translates to:
+  /// **'Nr T.K.U'**
+  String get nombreTKU;
+
+  /// No description provided for @rendementSimple.
+  ///
+  /// In en, this message translates to:
+  /// **'Yield'**
+  String get rendementSimple;
 
   /// No description provided for @rendementLabel.
   ///

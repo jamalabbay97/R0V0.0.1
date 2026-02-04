@@ -30,32 +30,37 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
-        child: Column(
-          children: [
-            // Header with OCP Logo and Title
-            _buildHeader(context, theme, dateStr, l10n),
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 1200),
+            child: Column(
+              children: [
+                // Header with OCP Logo and Title
+                _buildHeader(context, theme, dateStr, l10n),
 
-            // Scrollable report cards grid
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.availableReports,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color:
-                            theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
+                // Scrollable report cards grid
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.availableReports,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.7),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildReportCardsGrid(context, l10n, theme),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    _buildReportCardsGrid(context, l10n, theme),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -195,14 +200,30 @@ class HomeScreen extends StatelessWidget {
       ),
     ];
 
+    // Responsive grid layout calculation
+    final screenWidth = MediaQuery.of(context).size.width;
+    int crossAxisCount = 2;
+    double childAspectRatio = 0.85;
+
+    if (screenWidth > 1200) {
+      crossAxisCount = 4;
+      childAspectRatio = 1.1;
+    } else if (screenWidth > 800) {
+      crossAxisCount = 3;
+      childAspectRatio = 1.0;
+    } else if (screenWidth > 600) {
+      crossAxisCount = 2;
+      childAspectRatio = 0.95;
+    }
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 0.85, // Taller cards for better info
+        childAspectRatio: childAspectRatio,
       ),
       itemCount: reportCards.length,
       itemBuilder: (context, index) {

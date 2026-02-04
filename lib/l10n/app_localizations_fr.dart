@@ -615,13 +615,31 @@ class AppLocalizationsFr extends AppLocalizations {
   String get addArretTitle => 'Ajouter un arrêt';
 
   @override
-  String get heuresMarche => 'Heures Marche (H.M)';
+  String get heuresMarche => 'H.M';
 
   @override
-  String get heuresArret => 'Heures Arrêt (H.A)';
+  String get heuresArret => 'H.A';
 
   @override
   String get tonnageLabel => 'Tonnage';
+
+  @override
+  String get metrageFore => 'Metrage Fore';
+
+  @override
+  String get nrTrousFores => 'Nr Tr.Fore';
+
+  @override
+  String get nrVoyages => 'Nr Voyages';
+
+  @override
+  String get m3Decapage => 'M³ Decapage';
+
+  @override
+  String get nombreTKU => 'Nr T.K.U';
+
+  @override
+  String get rendementSimple => 'Rendement';
 
   @override
   String get rendementLabel => 'Rendement %';

@@ -177,19 +177,24 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
             title: Text(widget.isEditing
                 ? l10n.editTruckTracking
                 : l10n.newTruckTracking)),
-        body: Form(
-            key: widget.formKey,
-            child: Column(children: [
-              OCPStepper(
-                  steps: steps,
-                  currentStep: _currentStep,
-                  onStepTapped: (i) => setState(() => _currentStep = i)),
-              Expanded(
-                  child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: _buildStepContent(l10n))),
-              _buildBottomBar(l10n),
-            ])));
+        body: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Form(
+                key: widget.formKey,
+                child: Column(children: [
+                  OCPStepper(
+                      steps: steps,
+                      currentStep: _currentStep,
+                      onStepTapped: (i) => setState(() => _currentStep = i)),
+                  Expanded(
+                      child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(16),
+                          child: _buildStepContent(l10n))),
+                  _buildBottomBar(l10n),
+                ])),
+          ),
+        ));
   }
 
   Widget _buildStepContent(AppLocalizations l10n) {

@@ -58,6 +58,11 @@ class R0ReportFormData {
     'H.M': '',
     'H.A': '',
     'Tonnage': '',
+    'metrage fore': '',
+    'Nr de Trous Fores': '',
+    'Nr de Voyages': '',
+    'M³ Decapages': '',
+    'Nombre T.K.U': '',
     'Rendement %': '',
   };
   RepartitionItem repartitionTravail = RepartitionItem();
@@ -221,6 +226,16 @@ class R0ReportState extends State<R0Report> {
       formData.exploitation['H.M'] = exploitation['H.M'] ?? '';
       formData.exploitation['H.A'] = exploitation['H.A'] ?? '';
       formData.exploitation['Tonnage'] = exploitation['Tonnage'] ?? '';
+      formData.exploitation['metrage fore'] =
+          exploitation['metrage fore'] ?? '';
+      formData.exploitation['Nr de Trous Fores'] =
+          exploitation['Nr de Trous Fores'] ?? '';
+      formData.exploitation['Nr de Voyages'] =
+          exploitation['Nr de Voyages'] ?? '';
+      formData.exploitation['M³ Decapages'] =
+          exploitation['M³ Decapages'] ?? '';
+      formData.exploitation['Nombre T.K.U'] =
+          exploitation['Nombre T.K.U'] ?? '';
       formData.exploitation['Rendement %'] =
           exploitation['Rendeme'] ?? exploitation['Rendement %'] ?? '';
     }
@@ -394,23 +409,28 @@ class R0ReportState extends State<R0Report> {
       appBar: AppBar(
         title: Text(widget.isEditing ? l10n.modifierR0 : l10n.nouveauRapportR0),
       ),
-      body: Column(
-        children: [
-          OCPStepper(
-            steps: steps,
-            currentStep: _currentStep,
-            onStepTapped: (index) {
-              setState(() => _currentStep = index);
-            },
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: Column(
+            children: [
+              OCPStepper(
+                steps: steps,
+                currentStep: _currentStep,
+                onStepTapped: (index) {
+                  setState(() => _currentStep = index);
+                },
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: _buildStepContent(l10n),
+                ),
+              ),
+              _buildBottomBar(l10n),
+            ],
           ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: _buildStepContent(l10n),
-            ),
-          ),
-          _buildBottomBar(l10n),
-        ],
+        ),
       ),
     );
   }
@@ -796,10 +816,10 @@ class R0ReportState extends State<R0Report> {
                               minutesInterval: 1,
                               normalTextStyle: const TextStyle(
                                   fontSize: 18,
-                                  color: Color.fromARGB(255, 211, 211, 211)),
+                                  color: Color.fromARGB(255, 0, 0, 0)),
                               highlightedTextStyle: const TextStyle(
                                   fontSize: 24,
-                                  color: Color.fromARGB(255, 211, 211, 211)),
+                                  color: Color.fromARGB(255, 0, 0, 0)),
                               spacing: 50,
                               itemHeight: 60,
                               isForce2Digits: true,
@@ -854,10 +874,10 @@ class R0ReportState extends State<R0Report> {
                               minutesInterval: 1,
                               normalTextStyle: const TextStyle(
                                   fontSize: 18,
-                                  color: Color.fromARGB(255, 188, 188, 188)),
+                                  color: Color.fromARGB(255, 0, 0, 0)),
                               highlightedTextStyle: const TextStyle(
                                   fontSize: 24,
-                                  color: Color.fromARGB(255, 188, 188, 188)),
+                                  color: Color.fromARGB(255, 0, 0, 0)),
                               spacing: 50,
                               itemHeight: 60,
                               isForce2Digits: true,
@@ -980,11 +1000,22 @@ class R0ReportState extends State<R0Report> {
         _exploitRow(l10n.heuresArret, formData.exploitation['H.A']!,
             readOnly: true),
         const Divider(),
+        _exploitRow(l10n.metrageFore, formData.exploitation['metrage fore']!,
+            onChanged: (v) => formData.exploitation['metrage fore'] = v),
+        _exploitRow(
+            l10n.nrTrousFores, formData.exploitation['Nr de Trous Fores']!,
+            onChanged: (v) => formData.exploitation['Nr de Trous Fores'] = v),
+        _exploitRow(l10n.nrVoyages, formData.exploitation['Nr de Voyages']!,
+            onChanged: (v) => formData.exploitation['Nr de Voyages'] = v),
+        _exploitRow(l10n.m3Decapage, formData.exploitation['M³ Decapages']!,
+            onChanged: (v) => formData.exploitation['M³ Decapages'] = v),
         _exploitRow(l10n.tonnageLabel, formData.exploitation['Tonnage']!,
             onChanged: (v) {
           formData.exploitation['Tonnage'] = v;
           _calculateHours();
         }),
+        _exploitRow(l10n.nombreTKU, formData.exploitation['Nombre T.K.U']!,
+            onChanged: (v) => formData.exploitation['Nombre T.K.U'] = v),
         _exploitRow(l10n.rendementLabel, formData.exploitation['Rendement %']!,
             readOnly: true),
       ],
@@ -1135,7 +1166,13 @@ class R0ReportState extends State<R0Report> {
         const Divider(),
         _row(l10n.heuresMarche, formData.exploitation['H.M']!),
         _row(l10n.heuresArret, formData.exploitation['H.A']!),
+        const Divider(),
+        _row(l10n.metrageFore, formData.exploitation['metrage fore']!),
+        _row(l10n.nrTrousFores, formData.exploitation['Nr de Trous Fores']!),
+        _row(l10n.nrVoyages, formData.exploitation['Nr de Voyages']!),
+        _row(l10n.m3Decapage, formData.exploitation['M³ Decapages']!),
         _row(l10n.tonnageLabel, formData.exploitation['Tonnage']!),
+        _row(l10n.nombreTKU, formData.exploitation['Nombre T.K.U']!),
         _row(l10n.rendementLabel, formData.exploitation['Rendement %'] ?? ''),
         const Divider(),
         _row("${l10n.conducteurLabel}:", formData.personnel.conducteur),

@@ -3802,10 +3802,34 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       data['exploitation']['H.M'] ?? '-'),
                                   _buildInfoRow(l10n.heuresArret,
                                       data['exploitation']['H.A'] ?? '-'),
+                                  _buildInfoRow(
+                                      l10n.metrageFore,
+                                      data['exploitation']['metrage fore'] ??
+                                          '-'),
+                                  _buildInfoRow(
+                                      l10n.nrTrousFores,
+                                      data['exploitation']
+                                              ['Nr de Trous Fores'] ??
+                                          '-'),
+                                  _buildInfoRow(
+                                      l10n.nrVoyages,
+                                      data['exploitation']['Nr de Voyages'] ??
+                                          '-'),
+                                  _buildInfoRow(
+                                      l10n.m3Decapage,
+                                      data['exploitation']['M³ Decapages'] ??
+                                          '-'),
                                   _buildInfoRow(l10n.tonnageLabel,
                                       data['exploitation']['Tonnage'] ?? '-'),
-                                  _buildInfoRow(l10n.rendementLabel,
-                                      data['exploitation']['Rendeme'] ?? '-'),
+                                  _buildInfoRow(
+                                      l10n.nombreTKU,
+                                      data['exploitation']['Nombre T.K.U'] ??
+                                          '-'),
+                                  _buildInfoRow(
+                                      l10n.rendementLabel,
+                                      data['exploitation']['Rendement %'] ??
+                                          data['exploitation']['Rendeme'] ??
+                                          '-'),
                                 ],
                               ),
                             ),
@@ -5130,13 +5154,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   const Divider(height: 16),
                   _buildSummaryItem('H.M', data['exploitation']['H.M'] ?? ''),
                   _buildSummaryItem('H.A', data['exploitation']['H.A'] ?? ''),
+                  _buildSummaryItem(l10n.metrageFore,
+                      data['exploitation']['metrage fore'] ?? ''),
+                  _buildSummaryItem(l10n.nrTrousFores,
+                      data['exploitation']['Nr de Trous Fores'] ?? ''),
+                  _buildSummaryItem(l10n.nrVoyages,
+                      data['exploitation']['Nr de Voyages'] ?? ''),
+                  _buildSummaryItem(l10n.m3Decapage,
+                      data['exploitation']['M³ Decapages'] ?? ''),
                   _buildSummaryItem(
-                      'Tonnage', data['exploitation']['Tonnage'] ?? ''),
+                      l10n.tonnageLabel, data['exploitation']['Tonnage'] ?? ''),
+                  _buildSummaryItem(l10n.nombreTKU,
+                      data['exploitation']['Nombre T.K.U'] ?? ''),
                   _buildSummaryItem(
-                      'Rendement %',
+                      l10n.rendementLabel,
                       data['exploitation']['Rendement %']?.toString() ??
                           data['exploitation']['Rendeme']?.toString() ??
-                          data['exploitation']['Rendement']?.toString() ??
                           ''),
                 ],
               ),
@@ -5336,192 +5369,211 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _filteredReports.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.description_outlined,
-                          size: 64, color: Colors.grey),
-                      const SizedBox(height: 16),
-                      Text(
-                        _selectedPosteFilter != null
-                            ? l10n.noReportsFoundForPoste(_selectedPosteFilter!)
-                            : l10n.noDataMessage,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      if (_selectedPosteFilter != null) ...[
-                        const SizedBox(height: 16),
-                        TextButton(
-                          onPressed: () => _onPosteFilterChanged(null),
-                          child: Text(l10n.seeAllReports),
-                        ),
-                      ],
-                    ],
-                  ),
-                )
-              : Column(
-                  children: [
-                    // Filter summary
-                    if (_selectedPosteFilter != null)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withValues(alpha: 0.06),
-                        child: Row(
-                          children: [
-                            Icon(Icons.filter_list,
-                                color: Theme.of(context).colorScheme.primary,
-                                size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              l10n.reportsFound(_filteredReports.length,
-                                  _selectedPosteFilter!),
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.w500,
-                              ),
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _filteredReports.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.description_outlined,
+                              size: 64, color: Colors.grey),
+                          const SizedBox(height: 16),
+                          Text(
+                            _selectedPosteFilter != null
+                                ? l10n.noReportsFoundForPoste(
+                                    _selectedPosteFilter!)
+                                : l10n.noDataMessage,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          if (_selectedPosteFilter != null) ...[
+                            const SizedBox(height: 16),
+                            TextButton(
+                              onPressed: () => _onPosteFilterChanged(null),
+                              child: Text(l10n.seeAllReports),
                             ),
                           ],
-                        ),
+                        ],
                       ),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _filteredReports.length,
-                          itemBuilder: (context, index) {
-                            final report = _filteredReports[index];
-                            // Logic to determine title
-                            String title = report.description;
-                            final typeLower = report.type.toLowerCase();
-                            if (typeLower == 'activity tnb') {
-                              title = l10n.activityReport;
-                            } else if (typeLower == 'daily tsud') {
-                              title = l10n.dailyReport;
-                            } else if (typeLower == 'suivi camion') {
-                              title = l10n.truckTracking;
-                            } else if (typeLower == 'machine/engin arrêtés') {
-                              title = l10n.machinesEquipmentStoppedTitleShort;
-                            } else if (typeLower == 'r0') {
-                              title = l10n.r0Report;
-                            }
-
-                            return Card(
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                              child: ListTile(
-                                title: Text(title),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('${l10n.type}: ${report.type}'),
-                                    Text(
-                                        '${l10n.date}: ${DateFormat('yyyy-MM-dd HH:mm').format(report.date)}'),
-                                    Text('${l10n.group}: ${report.group}'),
-                                    if (report.additionalData != null &&
-                                        (typeLower == 'suivi camion' ||
-                                            typeLower.contains('chargeuse') ||
-                                            typeLower.contains('pelle') ||
-                                            report.additionalData!
-                                                .containsKey('truckData'))) ...[
-                                      const SizedBox(height: 4),
-                                      if (report.additionalData!['mine'] !=
-                                          null)
-                                        Text(
-                                            '${l10n.mine}: ${report.additionalData!['mine']} ${report.additionalData!['zone'] ?? ''}'),
-                                      if (report
-                                              .additionalData!['totalTrips'] !=
-                                          null)
-                                        Text(
-                                            '${l10n.totalVoyages}: ${report.additionalData!['totalTrips']}'),
-                                    ],
-                                  ],
+                    )
+                  : Column(
+                      children: [
+                        // Filter summary
+                        if (_selectedPosteFilter != null)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.06),
+                            child: Row(
+                              children: [
+                                Icon(Icons.filter_list,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                    size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  l10n.reportsFound(_filteredReports.length,
+                                      _selectedPosteFilter!),
+                                  style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    // Popup menu for additional actions
-                                    PopupMenuButton<String>(
-                                      icon: const Icon(Icons.more_horiz,
-                                          size: 20),
-                                      padding: EdgeInsets.zero,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      position: PopupMenuPosition.under,
-                                      itemBuilder: (BuildContext context) => [
-                                        PopupMenuItem<String>(
-                                          value: 'delete',
-                                          height: 36,
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(Icons.delete_outline,
-                                                  size: 18,
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .error),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                l10n.delete,
-                                                style: TextStyle(
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .error,
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                            ],
+                              ],
+                            ),
+                          ),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: _filteredReports.length,
+                              itemBuilder: (context, index) {
+                                final report = _filteredReports[index];
+                                // Logic to determine title
+                                String title = report.description;
+                                final typeLower = report.type.toLowerCase();
+                                if (typeLower == 'activity tnb') {
+                                  title = l10n.activityReport;
+                                } else if (typeLower == 'daily tsud') {
+                                  title = l10n.dailyReport;
+                                } else if (typeLower == 'suivi camion') {
+                                  title = l10n.truckTracking;
+                                } else if (typeLower ==
+                                    'machine/engin arrêtés') {
+                                  title =
+                                      l10n.machinesEquipmentStoppedTitleShort;
+                                } else if (typeLower == 'r0') {
+                                  title = l10n.r0Report;
+                                }
+
+                                return Card(
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
+                                  child: ListTile(
+                                    title: Text(title),
+                                    subtitle: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text('${l10n.type}: ${report.type}'),
+                                        Text(
+                                            '${l10n.date}: ${DateFormat('yyyy-MM-dd HH:mm').format(report.date)}'),
+                                        Text('${l10n.group}: ${report.group}'),
+                                        if (report.additionalData != null &&
+                                            (typeLower == 'suivi camion' ||
+                                                typeLower
+                                                    .contains('chargeuse') ||
+                                                typeLower.contains('pelle') ||
+                                                report.additionalData!
+                                                    .containsKey(
+                                                        'truckData'))) ...[
+                                          const SizedBox(height: 4),
+                                          if (report.additionalData!['mine'] !=
+                                              null)
+                                            Text(
+                                                '${l10n.mine}: ${report.additionalData!['mine']} ${report.additionalData!['zone'] ?? ''}'),
+                                          if (report.additionalData![
+                                                  'totalTrips'] !=
+                                              null)
+                                            Text(
+                                                '${l10n.totalVoyages}: ${report.additionalData!['totalTrips']}'),
+                                        ],
+                                      ],
+                                    ),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        // Popup menu for additional actions
+                                        PopupMenuButton<String>(
+                                          icon: const Icon(Icons.more_horiz,
+                                              size: 20),
+                                          padding: EdgeInsets.zero,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
                                           ),
+                                          position: PopupMenuPosition.under,
+                                          itemBuilder: (BuildContext context) =>
+                                              [
+                                            PopupMenuItem<String>(
+                                              value: 'delete',
+                                              height: 36,
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.delete_outline,
+                                                      size: 18,
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .error),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    l10n.delete,
+                                                    style: TextStyle(
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .error,
+                                                      fontSize: 14,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                          onSelected: (String value) {
+                                            if (value == 'delete') {
+                                              showDialog(
+                                                context: context,
+                                                builder: (context) =>
+                                                    AlertDialog(
+                                                  title:
+                                                      Text(l10n.confirmDelete),
+                                                  content:
+                                                      Text(l10n.confirmDelete),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () =>
+                                                          Navigator.pop(
+                                                              context),
+                                                      child: Text(l10n.cancel),
+                                                    ),
+                                                    TextButton(
+                                                      onPressed: () {
+                                                        Navigator.pop(context);
+                                                        _deleteReport(report);
+                                                      },
+                                                      child: Text(l10n.delete),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            }
+                                          },
                                         ),
                                       ],
-                                      onSelected: (String value) {
-                                        if (value == 'delete') {
-                                          showDialog(
-                                            context: context,
-                                            builder: (context) => AlertDialog(
-                                              title: Text(l10n.confirmDelete),
-                                              content: Text(l10n.confirmDelete),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () =>
-                                                      Navigator.pop(context),
-                                                  child: Text(l10n.cancel),
-                                                ),
-                                                TextButton(
-                                                  onPressed: () {
-                                                    Navigator.pop(context);
-                                                    _deleteReport(report);
-                                                  },
-                                                  child: Text(l10n.delete),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        }
-                                      },
                                     ),
-                                  ],
-                                ),
-                                onTap: () {
-                                  _showReportDetails(report);
-                                },
-                              ),
-                            );
-                          },
+                                    onTap: () {
+                                      _showReportDetails(report);
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
+        ),
+      ),
     );
   }
 
@@ -6302,7 +6354,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   context: context,
                                   label: 'Date',
                                   value: report.date,
-                                  isEditable: false,
+                                  isEditable: true,
                                   onSave: (value) async {
                                     final newDescription =
                                         "Truck Tracking - ${DateFormat('yyyy-MM-dd').format(value)} - ${report.group}";
@@ -7051,7 +7103,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   context: dialogContext,
                                   label: 'Date',
                                   value: report.date,
-                                  isEditable: false,
+                                  isEditable: true,
                                   onSave: (value) async {
                                     final navigator =
                                         Navigator.of(dialogContext);
@@ -7428,11 +7480,32 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       'H.M', data['exploitation']['H.M'] ?? ''),
                                   _buildSummaryItem(
                                       'H.A', data['exploitation']['H.A'] ?? ''),
-                                  _buildSummaryItem('Tonnage',
+                                  _buildSummaryItem(
+                                      l10n.metrageFore,
+                                      data['exploitation']['metrage fore'] ??
+                                          ''),
+                                  _buildSummaryItem(
+                                      l10n.nrTrousFores,
+                                      data['exploitation']
+                                              ['Nr de Trous Fores'] ??
+                                          ''),
+                                  _buildSummaryItem(
+                                      l10n.nrVoyages,
+                                      data['exploitation']['Nr de Voyages'] ??
+                                          ''),
+                                  _buildSummaryItem(
+                                      l10n.m3Decapage,
+                                      data['exploitation']['M³ Decapages'] ??
+                                          ''),
+                                  _buildSummaryItem(l10n.tonnageLabel,
                                       data['exploitation']['Tonnage'] ?? ''),
                                   _buildSummaryItem(
-                                      'Rendeme',
-                                      data['exploitation']['Rendeme'] ??
+                                      l10n.nombreTKU,
+                                      data['exploitation']['Nombre T.K.U'] ??
+                                          ''),
+                                  _buildSummaryItem(
+                                      l10n.rendementLabel,
+                                      data['exploitation']['Rendement %'] ??
                                           data['exploitation']['Rendeme'] ??
                                           ''),
                                 ] else
@@ -8274,10 +8347,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final exploitation = data['exploitation'] ?? {};
     final hmController = TextEditingController(text: exploitation['H.M'] ?? '');
     final haController = TextEditingController(text: exploitation['H.A'] ?? '');
+    final metrageForeController =
+        TextEditingController(text: exploitation['metrage fore'] ?? '');
+    final nrTrousForesController =
+        TextEditingController(text: exploitation['Nr de Trous Fores'] ?? '');
+    final nrVoyagesController =
+        TextEditingController(text: exploitation['Nr de Voyages'] ?? '');
+    final m3DecapageController =
+        TextEditingController(text: exploitation['M³ Decapages'] ?? '');
     final tonnageController =
         TextEditingController(text: exploitation['Tonnage'] ?? '');
-    final rendemeController =
-        TextEditingController(text: exploitation['Rendeme'] ?? '');
+    final nombreTKUController =
+        TextEditingController(text: exploitation['Nombre T.K.U'] ?? '');
+    final rendementPctController = TextEditingController(
+        text: data['exploitation']['Rendement %']?.toString() ??
+            data['exploitation']['Rendeme']?.toString() ??
+            '');
 
     await showDialog(
       context: context,
@@ -8307,12 +8392,37 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   style: const TextStyle(color: Colors.grey),
                 ),
                 TextField(
+                  decoration: InputDecoration(labelText: l10n.metrageFore),
+                  controller: metrageForeController,
+                ),
+                TextField(
+                  decoration: InputDecoration(labelText: l10n.nrTrousFores),
+                  controller: nrTrousForesController,
+                ),
+                TextField(
+                  decoration: InputDecoration(labelText: l10n.nrVoyages),
+                  controller: nrVoyagesController,
+                ),
+                TextField(
+                  decoration: InputDecoration(labelText: l10n.m3Decapage),
+                  controller: m3DecapageController,
+                ),
+                TextField(
                   decoration: InputDecoration(labelText: l10n.tonnageLabel),
                   controller: tonnageController,
                 ),
                 TextField(
-                  decoration: InputDecoration(labelText: l10n.rendemeLabel),
-                  controller: rendemeController,
+                  decoration: InputDecoration(labelText: l10n.nombreTKU),
+                  controller: nombreTKUController,
+                ),
+                TextField(
+                  decoration: InputDecoration(
+                    labelText: l10n.rendementLabel,
+                    helperText: l10n.calculatedAutomatically,
+                  ),
+                  controller: rendementPctController,
+                  enabled: false,
+                  style: const TextStyle(color: Colors.grey),
                 ),
               ],
             ),
@@ -8327,12 +8437,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 // Recalculate H.M and H.A from Arrets and Compteurs
                 _recalculateR0Hours(data);
 
-                // Update only the editable fields (Tonnage and Rendeme)
+                // Update the fields
                 if (data['exploitation'] == null) {
                   data['exploitation'] = {};
                 }
+                data['exploitation']['metrage fore'] =
+                    metrageForeController.text;
+                data['exploitation']['Nr de Trous Fores'] =
+                    nrTrousForesController.text;
+                data['exploitation']['Nr de Voyages'] =
+                    nrVoyagesController.text;
+                data['exploitation']['M³ Decapages'] =
+                    m3DecapageController.text;
                 data['exploitation']['Tonnage'] = tonnageController.text;
-                data['exploitation']['Rendeme'] = rendemeController.text;
+                data['exploitation']['Nombre T.K.U'] = nombreTKUController.text;
+                // Rendement % remains as is (calculated or previous value)
 
                 final updatedReport = report.copyWith(
                   additionalData: data,
