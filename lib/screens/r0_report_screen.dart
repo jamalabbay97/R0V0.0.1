@@ -16,11 +16,13 @@ class IndexCompteurPoste {
 
 class VentilationItem {
   int code;
+  String category;
   String label;
   String duree;
   String note;
   VentilationItem(
       {required this.code,
+      this.category = '',
       required this.label,
       this.duree = '',
       this.note = ''});
@@ -113,16 +115,19 @@ class R0ReportState extends State<R0Report> {
 
   static const Map<String, List<String>> enginsData = {
     'BULLDOZERS': [
+      'BULL D11T 720',
+      'BULL D9GC 88',
+      'BULL D9GC 89',
       'BULL D9R 76',
       'BULL D9R 79',
       'BULL D9R 80',
       'BULL D9R 81',
       'BULL D9R 82',
       'BULL D9R 83',
-      'BULL LIB 84',
-      'BULL LIB 85',
       'BULL D9R 86',
-      'BULL D9R 87'
+      'BULL D9R 87',
+      'BULL LIB 84',
+      'BULL LIB 85'
     ],
     'CAMIONS': [
       'CAMION T24',
@@ -138,10 +143,31 @@ class R0ReportState extends State<R0Report> {
       'WABCO 13',
       'WABCO 19'
     ],
-    'CHARGEUSES': ['CHRG 992C', 'CHRG 992K', 'CHRG 994H'],
-    'NIVELEUSES': ['NIV 14G', 'NIV 16H', 'NIV KOM01', 'NIV KOM02'],
+    'CHARGEUSES': [
+      'CHRG 980C-1',
+      'CHRG 980C-2',
+      'CHRG 992C',
+      'CHRG 992K',
+      'CHRG 994H'
+    ],
+    'NIVELEUSES': [
+      'NIV 14G',
+      'NIV 14G-2',
+      'NIV 14G-3',
+      'NIV 16H',
+      'NIV KOM01',
+      'NIV KOM02'
+    ],
     'PAYDOZERS': ['PAY CAT03', 'PAY KOM04', 'PAY KOM05'],
     'PELLE HYDRAULIQUE': ['PH365-C', 'PH5130'],
+    'PORT CHAR': ['CAMION W18', 'CAMION W21'],
+    'MINI CHARGEUSES': [
+      'CHRG CASE 1',
+      'CHRG CAT 216B2-2',
+      'CHRG CAT 216B3-2',
+      'CHRG LIEBH',
+      'CHRG NEWHOL'
+    ],
   };
   static const Map<String, List<String>> machinesData = {
     'DRAGLINES': ['1370 W1', '1370 W2'],
@@ -261,6 +287,7 @@ class R0ReportState extends State<R0Report> {
       formData.ventilation = arrets
           .map((a) => VentilationItem(
                 code: 0,
+                category: a['Catégorie'] ?? '',
                 label: a['Arret'] ?? '',
                 duree: a['Début'] ?? '',
                 note: a['Fin'] ?? '',
@@ -337,6 +364,8 @@ class R0ReportState extends State<R0Report> {
       'DRAGLINES': l10n.catDraglines,
       'PELLE ELECTRIQUE': l10n.catElectricShovels,
       'SONDEUSES': l10n.catDrills,
+      'MINI CHARGEUSES': l10n.catMiniLoaders,
+      'PORT CHAR': l10n.catTruckLoaders
     };
     return map[key] ?? key;
   }
@@ -1219,7 +1248,12 @@ class R0ReportState extends State<R0Report> {
             'note': formData.indexCompteurs.note
           },
           'Arrets': formData.ventilation
-              .map((v) => {'Arret': v.label, 'Début': v.duree, 'Fin': v.note})
+              .map((v) => {
+                    'Catégorie': v.category,
+                    'Arret': v.label,
+                    'Début': v.duree,
+                    'Fin': v.note
+                  })
               .toList(),
           'exploitation': {
             ...formData.exploitation,

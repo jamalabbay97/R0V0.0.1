@@ -297,6 +297,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get equipmentStopsTitle => 'Equipment - Stops';
 
   @override
+  String get reportedStops => 'Reported Stops';
+
+  @override
+  String get noStopsFoundToday => 'No stops found for today.';
+
+  @override
   String get addEquipmentButton => 'Add Equipment';
 
   @override
@@ -623,7 +629,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tonnageLabel => 'Tonnage';
 
   @override
-  String get metrageFore => 'Drilling Meters';
+  String get metrageFore => 'Drilling m';
 
   @override
   String get nrTrousFores => 'Nr Drilled';
@@ -641,7 +647,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rendementSimple => 'Yield';
 
   @override
-  String get rendementLabel => 'Efficiency %';
+  String get rendementLabel => 'Efficiency';
 
   @override
   String get chantierLabel => 'Worksite';
@@ -873,6 +879,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editCounter => 'Edit Counter';
+
+  @override
+  String get catMiniLoaders => 'Mini Loaders';
+
+  @override
+  String get catTruckLoaders => 'Truck Loaders';
 
   @override
   String get deleteCounter => 'Delete Counter';

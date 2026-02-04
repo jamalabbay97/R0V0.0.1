@@ -348,14 +348,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final steps = [
-      'Infos',
-      'Arrêts',
-      'Comp. Vibreur',
-      'Comp. Liaison',
-      'Stock',
-      'Verif.'
-    ];
+    final steps = ['Infos', 'Arrêts', 'Vibreur', 'Liaison', 'Stock', 'Verif.'];
 
     return Scaffold(
       appBar: AppBar(

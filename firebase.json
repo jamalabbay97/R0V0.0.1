@@ -1,1 +1,27 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"r0v01-5b577","appId":"1:863567983944:android:5508e5a1b74accdb2b6f7d","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"r0v01-5b577","configurations":{"android":"1:863567983944:android:5508e5a1b74accdb2b6f7d","ios":"1:863567983944:ios:8471d24121a1877a2b6f7d","web":"1:863567983944:web:527491e3670545df2b6f7d"}}}}}}
+{
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "r0v01-5b577",
+                    "appId": "1:863567983944:android:5508e5a1b74accdb2b6f7d",
+                    "fileOutput": "android/app/google-services.json"
+                }
+            },
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "r0v01-5b577",
+                    "configurations": {
+                        "android": "1:863567983944:android:5508e5a1b74accdb2b6f7d",
+                        "ios": "1:863567983944:ios:8471d24121a1877a2b6f7d",
+                        "web": "1:863567983944:web:527491e3670545df2b6f7d"
+                    }
+                }
+            }
+        }
+    },
+    "firestore": {
+        "rules": "firestore.rules",
+        "indexes": "firestore.indexes.json"
+    }
+}

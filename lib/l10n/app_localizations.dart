@@ -668,6 +668,18 @@ abstract class AppLocalizations {
   /// **'Equipment - Stops'**
   String get equipmentStopsTitle;
 
+  /// No description provided for @reportedStops.
+  ///
+  /// In en, this message translates to:
+  /// **'Reported Stops'**
+  String get reportedStops;
+
+  /// No description provided for @noStopsFoundToday.
+  ///
+  /// In en, this message translates to:
+  /// **'No stops found for today.'**
+  String get noStopsFoundToday;
+
   /// No description provided for @addEquipmentButton.
   ///
   /// In en, this message translates to:
@@ -1301,7 +1313,7 @@ abstract class AppLocalizations {
   /// No description provided for @metrageFore.
   ///
   /// In en, this message translates to:
-  /// **'Drilling Meters'**
+  /// **'Drilling m'**
   String get metrageFore;
 
   /// No description provided for @nrTrousFores.
@@ -1337,7 +1349,7 @@ abstract class AppLocalizations {
   /// No description provided for @rendementLabel.
   ///
   /// In en, this message translates to:
-  /// **'Efficiency %'**
+  /// **'Efficiency'**
   String get rendementLabel;
 
   /// No description provided for @chantierLabel.
@@ -1777,6 +1789,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit Counter'**
   String get editCounter;
+
+  /// No description provided for @catMiniLoaders.
+  ///
+  /// In en, this message translates to:
+  /// **'Mini Loaders'**
+  String get catMiniLoaders;
+
+  /// No description provided for @catTruckLoaders.
+  ///
+  /// In en, this message translates to:
+  /// **'Truck Loaders'**
+  String get catTruckLoaders;
 
   /// No description provided for @deleteCounter.
   ///

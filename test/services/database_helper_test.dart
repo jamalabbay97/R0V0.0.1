@@ -61,6 +61,41 @@ void main() {
       expect(reports.any((r) => r.description == 'Report 2'), isTrue);
     });
 
+    test('should retrieve reports in pages ordered by date', () async {
+      final report1 = Report(
+        description: 'Report 1',
+        date: DateTime(2024, 1, 1),
+        group: 'R0',
+        type: 'Activity',
+      );
+      final report2 = Report(
+        description: 'Report 2',
+        date: DateTime(2024, 1, 2),
+        group: 'R0',
+        type: 'Daily',
+      );
+      final report3 = Report(
+        description: 'Report 3',
+        date: DateTime(2024, 1, 3),
+        group: 'R0',
+        type: 'Daily',
+      );
+
+      await databaseHelper.insertReport(report1);
+      await databaseHelper.insertReport(report2);
+      await databaseHelper.insertReport(report3);
+
+      final firstPage = await databaseHelper.getReportsPage(limit: 2);
+      final secondPage =
+          await databaseHelper.getReportsPage(limit: 2, offset: 2);
+
+      expect(firstPage.length, 2);
+      expect(firstPage.first.description, 'Report 3');
+      expect(firstPage.last.description, 'Report 2');
+      expect(secondPage.length, 1);
+      expect(secondPage.first.description, 'Report 1');
+    });
+
     test('should retrieve a report by id', () async {
       final report = Report(
         description: 'Test Report',

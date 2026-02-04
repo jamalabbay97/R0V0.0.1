@@ -298,6 +298,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get equipmentStopsTitle => 'Équipements - Arrêts';
 
   @override
+  String get reportedStops => 'Arrêts signalés';
+
+  @override
+  String get noStopsFoundToday => 'Aucun arrêt trouvé pour aujourd\'hui.';
+
+  @override
   String get addEquipmentButton => 'Ajouter un équipement';
 
   @override
@@ -624,10 +630,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get tonnageLabel => 'Tonnage';
 
   @override
-  String get metrageFore => 'Metrage Fore';
+  String get metrageFore => 'm Fore';
 
   @override
-  String get nrTrousFores => 'Nr Tr.Fore';
+  String get nrTrousFores => 'N Tr.Fore';
 
   @override
   String get nrVoyages => 'Nr Voyages';
@@ -642,7 +648,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get rendementSimple => 'Rendement';
 
   @override
-  String get rendementLabel => 'Rendement %';
+  String get rendementLabel => 'Rendement';
 
   @override
   String get chantierLabel => 'Chantier';
@@ -874,6 +880,12 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get editCounter => 'Modifier le compteur';
+
+  @override
+  String get catMiniLoaders => 'Mini chargeuses';
+
+  @override
+  String get catTruckLoaders => 'port Char';
 
   @override
   String get deleteCounter => 'Supprimer le compteur';

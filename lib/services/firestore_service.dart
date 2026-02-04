@@ -45,7 +45,7 @@ class FirestoreService {
 
     try {
       final reportData = _reportToFirestore(report);
-      
+
       // If report has a Firestore ID, update it; otherwise create new
       if (report.firestoreId != null) {
         await _firestore
@@ -54,9 +54,8 @@ class FirestoreService {
             .update(reportData);
         return report.firestoreId!;
       } else {
-        final docRef = await _firestore
-            .collection(_reportsCollection)
-            .add(reportData);
+        final docRef =
+            await _firestore.collection(_reportsCollection).add(reportData);
         return docRef.id;
       }
     } catch (e) {
@@ -85,6 +84,39 @@ class FirestoreService {
     }
   }
 
+  /// Download reports in pages (for large datasets)
+  Future<ReportPage> downloadReportsPage({
+    DocumentSnapshot? startAfter,
+    int limit = 50,
+  }) async {
+    if (!isAuthenticated) {
+      throw Exception('User must be authenticated to download reports');
+    }
+
+    try {
+      Query<Map<String, dynamic>> query = _firestore
+          .collection(_reportsCollection)
+          .where('userId', isEqualTo: _userId)
+          .orderBy('date', descending: true)
+          .limit(limit);
+
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
+      }
+
+      final snapshot = await query.get();
+
+      return ReportPage(
+        reports: snapshot.docs
+            .map((doc) => _reportFromFirestore(doc.id, doc.data()))
+            .toList(),
+        lastDocument: snapshot.docs.isNotEmpty ? snapshot.docs.last : null,
+      );
+    } catch (e) {
+      throw Exception('Failed to download paged reports: $e');
+    }
+  }
+
   /// Get reports stream (real-time updates)
   Stream<List<Report>> getReportsStream() {
     if (!isAuthenticated) {
@@ -108,10 +140,7 @@ class FirestoreService {
     }
 
     try {
-      await _firestore
-          .collection(_reportsCollection)
-          .doc(firestoreId)
-          .delete();
+      await _firestore.collection(_reportsCollection).doc(firestoreId).delete();
     } catch (e) {
       throw Exception('Failed to delete report from Firestore: $e');
     }
@@ -177,4 +206,14 @@ class FirestoreService {
       additionalData: data['additionalData'] as Map<String, dynamic>?,
     );
   }
+}
+
+class ReportPage {
+  final List<Report> reports;
+  final DocumentSnapshot? lastDocument;
+
+  ReportPage({
+    required this.reports,
+    required this.lastDocument,
+  });
 }

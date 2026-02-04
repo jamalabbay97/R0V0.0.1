@@ -20,7 +20,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'R0.db');
     return await openDatabase(
       path,
-      version: 2, // Incremented to add firestore_id column
+      version: 3, // Incremented to add indexes for performance
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -38,6 +38,7 @@ class DatabaseHelper {
         additional_data TEXT
       )
     ''');
+    await _createIndexes(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -45,6 +46,24 @@ class DatabaseHelper {
       // Add firestore_id column for existing databases
       await db.execute('ALTER TABLE reports ADD COLUMN firestore_id TEXT');
     }
+    if (oldVersion < 3) {
+      await _createIndexes(db);
+    }
+  }
+
+  Future<void> _createIndexes(Database db) async {
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_reports_firestore_id ON reports(firestore_id)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_reports_type ON reports(type)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_reports_date ON reports(date)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_reports_group ON reports(group_name)',
+    );
   }
 
   Future<int> insertReport(Report report) async {
@@ -54,7 +73,24 @@ class DatabaseHelper {
 
   Future<List<Report>> getReports() async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('reports');
+    final List<Map<String, dynamic>> maps = await db.query(
+      'reports',
+      orderBy: 'date DESC',
+    );
+    return List.generate(maps.length, (i) => Report.fromMap(maps[i]));
+  }
+
+  Future<List<Report>> getReportsPage({
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'reports',
+      orderBy: 'date DESC',
+      limit: limit,
+      offset: offset,
+    );
     return List.generate(maps.length, (i) => Report.fromMap(maps[i]));
   }
 
@@ -64,6 +100,7 @@ class DatabaseHelper {
       'reports',
       where: 'type = ?',
       whereArgs: [type],
+      orderBy: 'date DESC',
     );
     return List.generate(maps.length, (i) => Report.fromMap(maps[i]));
   }
@@ -102,4 +139,4 @@ class DatabaseHelper {
     final db = await database;
     db.close();
   }
-} 
+}
