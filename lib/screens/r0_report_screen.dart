@@ -12,7 +12,9 @@ import 'package:r0/data/r0_arrets_data.dart';
 class IndexCompteurPoste {
   String duree;
   String note;
-  IndexCompteurPoste({this.duree = '', this.note = ''});
+  bool isDefective;
+  IndexCompteurPoste(
+      {this.duree = '', this.note = '', this.isDefective = false});
 }
 
 class VentilationItem {
@@ -116,7 +118,6 @@ class R0ReportState extends State<R0Report> {
 
   static const Map<String, List<String>> enginsData = {
     'BULLDOZERS': [
-      'BULL D11T 720',
       'BULL D9GC 88',
       'BULL D9GC 89',
       'BULL D9R 76',
@@ -144,6 +145,7 @@ class R0ReportState extends State<R0Report> {
       'WABCO 13',
       'WABCO 19'
     ],
+    'ARROSEUR': ['ARROSEUR T33'],
     'CHARGEUSES': [
       'CHRG 980C-1',
       'CHRG 980C-2',
@@ -173,7 +175,8 @@ class R0ReportState extends State<R0Report> {
   static const Map<String, List<String>> machinesData = {
     'DRAGLINES': ['1370 W1', '1370 W2'],
     'PELLE ELECTRIQUE': ['195 P1', '195 P2'],
-    'SONDEUSES': ['PV275-1', 'PV275-2', 'PV275-3'],
+    'SONDEUSES Gasoil': ['PV275-1'],
+    'SONDEUSES Electrique': ['PV275-2', 'PV275-3'],
   };
 
   Map<String, List<String>> _currentArretCategories() {
@@ -674,27 +677,51 @@ class R0ReportState extends State<R0Report> {
         Text(l10n.counterEntryTitle(formData.selectedPoste),
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 16),
+        CheckboxListTile(
+          title: const Text("Compteur Défectueux"), // Simplified label
+          value: formData.indexCompteurs.isDefective,
+          onChanged: (val) {
+            setState(() {
+              formData.indexCompteurs.isDefective = val ?? false;
+              if (formData.indexCompteurs.isDefective) {
+                formData.indexCompteurs.duree = 'défaut';
+                formData.indexCompteurs.note = 'défaut';
+              } else {
+                formData.indexCompteurs.duree = '';
+                formData.indexCompteurs.note = '';
+              }
+              _calculateHours();
+            });
+          },
+        ),
+        const SizedBox(height: 16),
         OCPTextField(
           label: l10n.startCounterLabel,
+          readOnly: formData.indexCompteurs.isDefective,
           keyboardType: TextInputType.number,
           controller: TextEditingController(text: formData.indexCompteurs.duree)
             ..selection = TextSelection.fromPosition(
                 TextPosition(offset: formData.indexCompteurs.duree.length)),
           onChanged: (val) {
-            formData.indexCompteurs.duree = val;
-            _calculateHours();
+            if (!formData.indexCompteurs.isDefective) {
+              formData.indexCompteurs.duree = val;
+              _calculateHours();
+            }
           },
         ),
         const SizedBox(height: 16),
         OCPTextField(
           label: l10n.endCounterLabel,
+          readOnly: formData.indexCompteurs.isDefective,
           keyboardType: TextInputType.number,
           controller: TextEditingController(text: formData.indexCompteurs.note)
             ..selection = TextSelection.fromPosition(
                 TextPosition(offset: formData.indexCompteurs.note.length)),
           onChanged: (val) {
-            formData.indexCompteurs.note = val;
-            _calculateHours();
+            if (!formData.indexCompteurs.isDefective) {
+              formData.indexCompteurs.note = val;
+              _calculateHours();
+            }
           },
         ),
       ],

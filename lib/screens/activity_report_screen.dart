@@ -68,17 +68,24 @@ class Counter {
   String start;
   String end;
   String? error;
+  bool isDefective;
   Counter(
       {required this.id,
       this.poste,
       this.start = '',
       this.end = '',
-      this.error});
+      this.error,
+      this.isDefective = false});
 }
 
 class LiaisonCounter extends Counter {
   LiaisonCounter(
-      {required super.id, super.poste, super.start, super.end, super.error});
+      {required super.id,
+      super.poste,
+      super.start,
+      super.end,
+      super.error,
+      super.isDefective = false}); // Pass isDefective
 }
 
 class StockEntry {
@@ -222,24 +229,26 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     // Load vibrator counters
     if (data['vibrator Counters'] is List) {
       vibratorCounters = (data['vibrator Counters'] as List)
-          .map((counter) => Counter(
-                id: counter['id'] ?? const Uuid().v4(),
-                poste: _parsePosteFromString(counter['poste']),
-                start: counter['start'] ?? '',
-                end: counter['end'] ?? '',
-                error: counter['error'],
+          .map((c) => Counter(
+                id: c['id'] ?? const Uuid().v4(),
+                poste: _parsePosteFromString(c['poste']),
+                start: c['start'] ?? '',
+                end: c['end'] ?? '',
+                error: c['error'],
+                isDefective: (c['start'] == 'défaut' || c['end'] == 'défaut'),
               ))
           .toList();
     }
     // Load liaison counters
     if (data['liaison Counters'] is List) {
       liaisonCounters = (data['liaison Counters'] as List)
-          .map((counter) => LiaisonCounter(
-                id: counter['id'] ?? const Uuid().v4(),
-                poste: _parsePosteFromString(counter['poste']),
-                start: counter['start'] ?? '',
-                end: counter['end'] ?? '',
-                error: counter['error'],
+          .map((c) => LiaisonCounter(
+                id: c['id'] ?? const Uuid().v4(),
+                poste: _parsePosteFromString(c['poste']),
+                start: c['start'] ?? '',
+                end: c['end'] ?? '',
+                error: c['error'],
+                isDefective: (c['start'] == 'défaut' || c['end'] == 'défaut'),
               ))
           .toList();
     }
@@ -644,7 +653,6 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       OCPButton(
           text: "Aj Compteur",
           icon: Icons.add,
-          isSecondary: true,
           onPressed: () => _showAddCounterDialog(onAdd))
     ]);
   }
@@ -653,6 +661,10 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     Poste? poste;
     String start = '';
     String end = '';
+    bool isDefective = false;
+    final TextEditingController startController = TextEditingController();
+    final TextEditingController endController = TextEditingController();
+
     showDialog(
         context: context,
         builder: (ctx) => StatefulBuilder(
@@ -666,14 +678,42 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                                 value: p, child: Text(posteToString(p))))
                             .toList(),
                         onChanged: (v) => setDs(() => poste = v)),
+                    CheckboxListTile(
+                      title: const Text("Compteur Défectueux"),
+                      value: isDefective,
+                      onChanged: (val) {
+                        setDs(() {
+                          isDefective = val ?? false;
+                          if (isDefective) {
+                            start = 'défaut';
+                            end = 'défaut';
+                            startController.text = 'défaut';
+                            endController.text = 'défaut';
+                          } else {
+                            start = '';
+                            end = '';
+                            startController.text = '';
+                            endController.text = '';
+                          }
+                        });
+                      },
+                    ),
                     TextField(
                         decoration: const InputDecoration(labelText: "Début"),
                         keyboardType: TextInputType.number,
-                        onChanged: (v) => start = v),
+                        controller: startController,
+                        readOnly: isDefective,
+                        onChanged: (v) {
+                          if (!isDefective) start = v;
+                        }),
                     TextField(
                         decoration: const InputDecoration(labelText: "Fin"),
                         keyboardType: TextInputType.number,
-                        onChanged: (v) => end = v),
+                        controller: endController,
+                        readOnly: isDefective,
+                        onChanged: (v) {
+                          if (!isDefective) end = v;
+                        }),
                   ]),
                   actions: [
                     TextButton(
@@ -686,7 +726,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                                     id: const Uuid().v4(),
                                     poste: poste,
                                     start: start,
-                                    end: end));
+                                    end: end,
+                                    isDefective: isDefective));
                                 recalculateTimes();
                                 Navigator.pop(context);
                               }
