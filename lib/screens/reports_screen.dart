@@ -4693,6 +4693,26 @@ class _ReportsScreenState extends State<ReportsScreen> {
   // Calculate downtime from stops list
   int _calculateDowntimeFromStops(List stops) {
     if (stops.isEmpty) return 0;
+    final hasTimeRanges = stops.any((stop) =>
+        (stop is Map && stop['start'] != null && stop['end'] != null) ||
+        (stop is Map && stop['Début'] != null && stop['Fin'] != null));
+    if (hasTimeRanges) {
+      final rawRanges = stops
+          .whereType<Map>()
+          .map((stop) {
+            final start = stop['start'] ?? stop['Début'];
+            final end = stop['end'] ?? stop['Fin'];
+            if (start == null || end == null) return null;
+            return {
+              'start': start.toString(),
+              'end': end.toString(),
+            };
+          })
+          .whereType<Map<String, String>>()
+          .toList();
+      final ranges = TimeCalculationService.parseTimeRanges(rawRanges);
+      return TimeCalculationService.calculateTotalDowntimeMinutes(ranges);
+    }
     return stops
         .map((stop) => _parseDurationToMinutes(stop['duration'] ?? ''))
         .fold(0, (a, b) => a + b);

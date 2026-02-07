@@ -14,7 +14,21 @@ class TimeCalculationService {
   /// Overlapping intervals are merged to avoid double counting.
   /// The total duration is capped at 8 hours.
   static double calculateTotalDowntime(List<TimeRange> ranges) {
-    if (ranges.isEmpty) return 0.0;
+    final totalMinutes =
+        calculateTotalDowntimeMinutes(ranges, maxMinutes: 8 * 60);
+
+    // Convert to hours
+    return totalMinutes / 60.0;
+  }
+
+  /// Calculates the total downtime duration in minutes from a list of time ranges.
+  /// Overlapping intervals are merged to avoid double counting.
+  /// Optionally caps the total duration in minutes.
+  static int calculateTotalDowntimeMinutes(
+    List<TimeRange> ranges, {
+    int? maxMinutes,
+  }) {
+    if (ranges.isEmpty) return 0;
 
     // 1. Sort ranges by start time
     ranges.sort((a, b) => a.startMinutes.compareTo(b.startMinutes));
@@ -47,15 +61,11 @@ class TimeCalculationService {
       totalMinutes += range.duration;
     }
 
-    // 4. Convert to hours
-    double totalHours = totalMinutes / 60.0;
-
-    // 5. Clamp to 8 hours max
-    if (totalHours > 8.0) {
-      return 8.0;
+    if (maxMinutes != null && totalMinutes > maxMinutes) {
+      return maxMinutes;
     }
 
-    return totalHours;
+    return totalMinutes;
   }
 
   /// Parses a time string "HH:MM" to minutes from start of day.

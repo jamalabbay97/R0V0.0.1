@@ -319,26 +319,16 @@ class R0ReportState extends State<R0Report> {
     }
     if (data['Arrets'] is List) {
       final arrets = data['Arrets'] as List;
-      // Get all valid arret types from all categories
-      final allValidTypes = <String>{};
-      final arretCategories = _currentArretCategories();
-      arretCategories.forEach((category, types) {
-        allValidTypes.addAll(types);
-      });
-
       formData.ventilation = arrets
+          .whereType<Map>()
           .map((a) => VentilationItem(
                 code: 0,
-                category: a['Catégorie'] ?? '',
-                label: a['Arret'] ?? '',
-                duree: a['Début'] ?? '',
-                note: a['Fin'] ?? '',
+                category: a['Catégorie']?.toString() ?? '',
+                label: a['Arret']?.toString() ?? '',
+                duree: a['Début']?.toString() ?? '',
+                note: a['Fin']?.toString() ?? '',
               ))
-          .where((item) {
-        // Only include items with valid arret types (not category names)
-        return allValidTypes.contains(item.label) ||
-            !arretCategories.keys.contains(item.label);
-      }).toList();
+          .toList();
     }
     // Load Repartition Data
     if (data['repartition'] is Map) {
