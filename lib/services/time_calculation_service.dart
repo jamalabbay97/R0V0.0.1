@@ -12,10 +12,8 @@ class TimeRange {
 class TimeCalculationService {
   /// Calculates the total downtime duration in hours from a list of time ranges.
   /// Overlapping intervals are merged to avoid double counting.
-  /// The total duration is capped at 8 hours.
   static double calculateTotalDowntime(List<TimeRange> ranges) {
-    final totalMinutes =
-        calculateTotalDowntimeMinutes(ranges, maxMinutes: 8 * 60);
+    final totalMinutes = calculateTotalDowntimeMinutes(ranges);
 
     // Convert to hours
     return totalMinutes / 60.0;

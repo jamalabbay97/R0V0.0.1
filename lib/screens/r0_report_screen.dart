@@ -1382,6 +1382,33 @@ class R0ReportState extends State<R0Report> {
         int.parse(parts[1]));
   }
 
+  DateTime _getDateTimeForShift(
+    DateTime date,
+    String timeStr,
+    String poste,
+  ) {
+    final parts = timeStr.split(':');
+    final hour = int.parse(parts[0]);
+    final minute = int.parse(parts[1]);
+    var targetDate = date;
+
+    if (poste == "3ème") {
+      final timeMinutes = hour * 60 + minute;
+      const thirdShiftStartMinutes = 22 * 60 + 30;
+      if (timeMinutes >= thirdShiftStartMinutes) {
+        targetDate = date.subtract(const Duration(days: 1));
+      }
+    }
+
+    return DateTime(
+      targetDate.year,
+      targetDate.month,
+      targetDate.day,
+      hour,
+      minute,
+    );
+  }
+
   String _formatDateTimeToTimeString(DateTime dt) {
     return "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
   }
@@ -1389,9 +1416,9 @@ class R0ReportState extends State<R0Report> {
   _ShiftWindow _shiftWindow(String poste, DateTime date) {
     switch (poste) {
       case "3ème":
-        final start = _getDateTimeFromTimeString(date, "22:30");
-        final end = _getDateTimeFromTimeString(date, "06:30")
-            .add(const Duration(days: 1));
+        final startDate = date.subtract(const Duration(days: 1));
+        final start = _getDateTimeFromTimeString(startDate, "22:30");
+        final end = _getDateTimeFromTimeString(date, "06:30");
         return _ShiftWindow(poste: poste, date: date, start: start, end: end);
       case "1er":
         return _ShiftWindow(
@@ -1414,13 +1441,13 @@ class R0ReportState extends State<R0Report> {
   _ShiftPointer _nextShift(_ShiftPointer current) {
     switch (current.poste) {
       case "3ème":
-        return _ShiftPointer(
-            poste: "1er", date: current.date.add(const Duration(days: 1)));
+        return _ShiftPointer(poste: "1er", date: current.date);
       case "1er":
         return _ShiftPointer(poste: "2ème", date: current.date);
       case "2ème":
       default:
-        return _ShiftPointer(poste: "3ème", date: current.date);
+        return _ShiftPointer(
+            poste: "3ème", date: current.date.add(const Duration(days: 1)));
     }
   }
 
@@ -1436,9 +1463,9 @@ class R0ReportState extends State<R0Report> {
 
       for (var item in formData.ventilation) {
         DateTime arretStart =
-            _getDateTimeFromTimeString(_selectedDate, item.duree);
+            _getDateTimeForShift(_selectedDate, item.duree, currentShift.poste);
         DateTime arretEnd =
-            _getDateTimeFromTimeString(_selectedDate, item.note);
+            _getDateTimeForShift(_selectedDate, item.note, currentShift.poste);
 
         // Adjust for same-day wrap around if necessary (though usually picked times are within 24h)
         if (arretEnd.isBefore(arretStart)) {
