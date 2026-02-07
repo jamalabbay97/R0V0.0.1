@@ -569,7 +569,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tripDetailsTitle => 'Trip Details';
 
   @override
+  String get invalidStopStartTimeForPoste =>
+      'Start time must fall within the selected shift time range.';
+
+  @override
   String get success => 'Success';
+
+  @override
+  String get longStopCarryOverNotice =>
+      'Long stop detected. Reports were created for the subsequent shifts/day. Please start a new report if the stop continues.';
 
   @override
   String get unknownLabel => 'Unknown';

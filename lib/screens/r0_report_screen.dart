@@ -58,6 +58,39 @@ class ConsommationItem {
   ConsommationItem({this.tricone = '', this.gasoil = ''});
 }
 
+class _ShiftWindow {
+  final String poste;
+  final DateTime date;
+  final DateTime start;
+  final DateTime end;
+
+  const _ShiftWindow({
+    required this.poste,
+    required this.date,
+    required this.start,
+    required this.end,
+  });
+}
+
+class _ShiftPointer {
+  final String poste;
+  final DateTime date;
+
+  const _ShiftPointer({required this.poste, required this.date});
+}
+
+class _CarryOverShift {
+  final String poste;
+  final DateTime date;
+  final List<Map<String, dynamic>> arrets;
+
+  _CarryOverShift({
+    required this.poste,
+    required this.date,
+    List<Map<String, dynamic>>? arrets,
+  }) : arrets = arrets ?? [];
+}
+
 class R0ReportFormData {
   String selectedMine = '';
   String selectedZone = '';
@@ -119,6 +152,42 @@ class R0ReportState extends State<R0Report> {
     "1er": "06:30 - 14:30",
     "2ème": "14:30 - 22:30",
   };
+
+  int _posteOrderIndex(String poste) {
+    return posteOrder.indexOf(poste);
+  }
+
+  int _timeOfDayToMinutes(TimeOfDay time) {
+    return time.hour * 60 + time.minute;
+  }
+
+  bool _isTimeWithinShift(TimeOfDay time, String poste) {
+    final ranges = {
+      "3ème": const [
+        TimeOfDay(hour: 22, minute: 30),
+        TimeOfDay(hour: 6, minute: 30)
+      ],
+      "1er": const [
+        TimeOfDay(hour: 6, minute: 30),
+        TimeOfDay(hour: 14, minute: 30)
+      ],
+      "2ème": const [
+        TimeOfDay(hour: 14, minute: 30),
+        TimeOfDay(hour: 22, minute: 30)
+      ],
+    };
+
+    final shiftRange = ranges[poste];
+    if (shiftRange == null) return true;
+    final start = _timeOfDayToMinutes(shiftRange[0]);
+    final end = _timeOfDayToMinutes(shiftRange[1]);
+    final value = _timeOfDayToMinutes(time);
+
+    if (end < start) {
+      return value >= start || value <= end;
+    }
+    return value >= start && value <= end;
+  }
 
   // Static Data - Removed local definitions, using imported 'minesData' from model
 
@@ -323,6 +392,32 @@ class R0ReportState extends State<R0Report> {
     }
 
     if (mounted) setState(() {});
+  }
+
+  double _calculateDowntimeFromRanges(List<Map<String, String>> rawRanges) {
+    final ranges = TimeCalculationService.parseTimeRanges(rawRanges);
+    return TimeCalculationService.calculateTotalDowntime(ranges);
+  }
+
+  double _calculateDowntimeFromVentilation(List<VentilationItem> items) {
+    final rawRanges = items
+        .where((v) => v.duree.isNotEmpty && v.note.isNotEmpty)
+        .map((v) => {'start': v.duree, 'end': v.note})
+        .toList();
+    return _calculateDowntimeFromRanges(rawRanges);
+  }
+
+  double _calculateDowntimeFromArrets(List<Map<String, dynamic>> arrets) {
+    final rawRanges = arrets
+        .where((v) =>
+            (v['Début'] ?? '').toString().isNotEmpty &&
+            (v['Fin'] ?? '').toString().isNotEmpty)
+        .map((v) => {
+              'start': v['Début'].toString(),
+              'end': v['Fin'].toString(),
+            })
+        .toList();
+    return _calculateDowntimeFromRanges(rawRanges);
   }
 
   String _getLocalizedTypeLabel(String key, AppLocalizations l10n) {
@@ -1052,6 +1147,15 @@ class R0ReportState extends State<R0Report> {
                   if (step == 2 && selectedType != null)
                     ElevatedButton(
                       onPressed: () {
+                        final startTod = TimeOfDay.fromDateTime(startTime);
+                        if (formData.selectedPoste.isNotEmpty &&
+                            !_isTimeWithinShift(
+                                startTod, formData.selectedPoste)) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(l10n.invalidStopStartTimeForPoste),
+                              backgroundColor: AppColors.error));
+                          return;
+                        }
                         setState(() {
                           formData.ventilation.add(VentilationItem(
                               code: 0,
@@ -1292,35 +1396,53 @@ class R0ReportState extends State<R0Report> {
     return "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
   }
 
+  _ShiftWindow _shiftWindow(String poste, DateTime date) {
+    switch (poste) {
+      case "3ème":
+        final start = _getDateTimeFromTimeString(date, "22:30");
+        final end = _getDateTimeFromTimeString(date, "06:30")
+            .add(const Duration(days: 1));
+        return _ShiftWindow(poste: poste, date: date, start: start, end: end);
+      case "1er":
+        return _ShiftWindow(
+          poste: poste,
+          date: date,
+          start: _getDateTimeFromTimeString(date, "06:30"),
+          end: _getDateTimeFromTimeString(date, "14:30"),
+        );
+      case "2ème":
+      default:
+        return _ShiftWindow(
+          poste: poste,
+          date: date,
+          start: _getDateTimeFromTimeString(date, "14:30"),
+          end: _getDateTimeFromTimeString(date, "22:30"),
+        );
+    }
+  }
+
+  _ShiftPointer _nextShift(_ShiftPointer current) {
+    switch (current.poste) {
+      case "3ème":
+        return _ShiftPointer(
+            poste: "1er", date: current.date.add(const Duration(days: 1)));
+      case "1er":
+        return _ShiftPointer(poste: "2ème", date: current.date);
+      case "2ème":
+      default:
+        return _ShiftPointer(poste: "3ème", date: current.date);
+    }
+  }
+
   Future<void> _saveReport(AppLocalizations l10n) async {
     setState(() => _isLoading = true);
     try {
-      // Define shift boundaries
-      final shiftStartTimes = {
-        "3ème": "22:30",
-        "1er": "06:30",
-        "2ème": "14:30",
-      };
-      final shiftEndTimes = {
-        "3ème": "06:30",
-        "1er": "14:30",
-        "2ème": "22:30",
-      };
-
-      String startTimeStr = shiftStartTimes[formData.selectedPoste]!;
-      String endTimeStr = shiftEndTimes[formData.selectedPoste]!;
-
-      DateTime shiftStart =
-          _getDateTimeFromTimeString(_selectedDate, startTimeStr);
-      DateTime shiftEnd = _getDateTimeFromTimeString(_selectedDate, endTimeStr);
-
-      if (formData.selectedPoste == "3ème") {
-        // 3ème shift starts on current day and ends on next day
-        shiftEnd = shiftEnd.add(const Duration(days: 1));
-      }
+      final currentShift = _shiftWindow(formData.selectedPoste, _selectedDate);
+      final shiftStart = currentShift.start;
+      final shiftEnd = currentShift.end;
 
       List<VentilationItem> currentShiftArrets = [];
-      List<Map<String, dynamic>> carryOverData = [];
+      final Map<String, _CarryOverShift> carryOverByShift = {};
 
       for (var item in formData.ventilation) {
         DateTime arretStart =
@@ -1351,19 +1473,46 @@ class R0ReportState extends State<R0Report> {
           ));
         }
 
-        // 2. Part after shift (Carry Over)
+        // 2. Parts after shift (Carry Over across subsequent shifts)
         if (arretEnd.isAfter(shiftEnd)) {
           DateTime carryStart =
               arretStart.isBefore(shiftEnd) ? shiftEnd : arretStart;
-          carryOverData.add({
-            'Catégorie': item.category,
-            'Arret': item.label,
-            'Début': _formatDateTimeToTimeString(carryStart),
-            'Fin': _formatDateTimeToTimeString(arretEnd),
-            'OriginalStart': item.duree,
-            'OriginalEnd': item.note,
-            'CarryOver': true
-          });
+          var pointer = _nextShift(_ShiftPointer(
+              poste: currentShift.poste, date: currentShift.date));
+
+          while (carryStart.isBefore(arretEnd)) {
+            final nextShift = _shiftWindow(pointer.poste, pointer.date);
+            final segmentStart = carryStart.isAfter(nextShift.start)
+                ? carryStart
+                : nextShift.start;
+            final segmentEnd =
+                arretEnd.isBefore(nextShift.end) ? arretEnd : nextShift.end;
+
+            if (segmentStart.isBefore(segmentEnd)) {
+              final key =
+                  '${nextShift.poste}-${nextShift.date.toIso8601String().split('T').first}';
+              carryOverByShift.putIfAbsent(
+                  key,
+                  () => _CarryOverShift(
+                        poste: nextShift.poste,
+                        date: nextShift.date,
+                      ));
+              carryOverByShift[key]!.arrets.add({
+                'Catégorie': item.category,
+                'Arret': item.label,
+                'Début': _formatDateTimeToTimeString(segmentStart),
+                'Fin': _formatDateTimeToTimeString(segmentEnd),
+                'OriginalStart': item.duree,
+                'OriginalEnd': item.note,
+                'CarryOver': true
+              });
+            }
+
+            carryStart = segmentEnd;
+            if (carryStart.isBefore(arretEnd)) {
+              pointer = _nextShift(pointer);
+            }
+          }
         }
       }
 
@@ -1395,12 +1544,8 @@ class R0ReportState extends State<R0Report> {
               .toList(),
           'exploitation': {
             ...formData.exploitation,
-            'H.A': (currentShiftArrets.fold<double>(0, (sum, item) {
-              final s = _getDateTimeFromTimeString(_selectedDate, item.duree);
-              var e = _getDateTimeFromTimeString(_selectedDate, item.note);
-              if (e.isBefore(s)) e = e.add(const Duration(days: 1));
-              return sum + (e.difference(s).inMinutes / 60.0);
-            })).toStringAsFixed(2),
+            'H.A': _calculateDowntimeFromVentilation(currentShiftArrets)
+                .toStringAsFixed(2),
             'Rendeme': formData.exploitation['Rendement %'],
           },
           'repartition': {
@@ -1426,66 +1571,72 @@ class R0ReportState extends State<R0Report> {
         await _databaseHelper.insertReport(report);
 
         // Handle Carry Over to Next Poste
-        if (carryOverData.isNotEmpty) {
-          String nextPoste;
-          DateTime nextDate = _selectedDate;
-          if (formData.selectedPoste == "3ème") {
-            nextPoste = "1er";
-          } else if (formData.selectedPoste == "1er") {
-            nextPoste = "2ème";
-          } else {
-            nextPoste = "3ème";
-            nextDate = nextDate.add(const Duration(days: 1));
-          }
+        final carryOverShifts = carryOverByShift.values.toList()
+          ..sort((a, b) {
+            final dateCompare = a.date.compareTo(b.date);
+            if (dateCompare != 0) return dateCompare;
+            return _posteOrderIndex(a.poste)
+                .compareTo(_posteOrderIndex(b.poste));
+          });
 
-          // Create a new report for the next poste with carried over arrêts
-          final nextReport = Report(
-            description: 'Rapport R0 - $nextPoste (Carry Over)',
-            date: nextDate,
-            type: formData.selectedModel,
-            group: nextPoste,
-            additionalData: {
-              'mine': formData.selectedMine,
-              'zone': formData.selectedZone,
-              'sortie': formData.selectedSortie,
-              'selectedPoste': nextPoste,
-              'Category': formData.selectedCategory,
-              'Type': formData.selectedType,
-              'Model': formData.selectedModel,
-              'Compteurs': {'duree': '', 'note': ''},
-              'Arrets': carryOverData,
-              'exploitation': {
-                'H.M': '0.00',
-                'H.A': (carryOverData.fold<double>(0, (sum, item) {
-                  final s = _getDateTimeFromTimeString(nextDate, item['Début']);
-                  var e = _getDateTimeFromTimeString(nextDate, item['Fin']);
-                  if (e.isBefore(s)) e = e.add(const Duration(days: 1));
-                  return sum + (e.difference(s).inMinutes / 60.0);
-                })).toStringAsFixed(2),
-                'Tonnage': '0',
-                'metrage fore': '',
-                'Nr de Trous Fores': '',
-                'Nr de Voyages': '',
-                'M³ Decapages': '',
-                'Nombre T.K.U': '',
-                'Rendement %': '0.00',
+        if (carryOverShifts.isNotEmpty) {
+          for (final carryShift in carryOverShifts) {
+            final shiftArrets = carryShift.arrets;
+            if (shiftArrets.isEmpty) continue;
+
+            final nextReport = Report(
+              description: 'Rapport R0 - ${carryShift.poste} (Carry Over)',
+              date: carryShift.date,
+              type: formData.selectedModel,
+              group: carryShift.poste,
+              additionalData: {
+                'mine': formData.selectedMine,
+                'zone': formData.selectedZone,
+                'sortie': formData.selectedSortie,
+                'selectedPoste': carryShift.poste,
+                'Category': formData.selectedCategory,
+                'Type': formData.selectedType,
+                'Model': formData.selectedModel,
+                'Compteurs': {'duree': '', 'note': ''},
+                'Arrets': shiftArrets,
+                'exploitation': {
+                  'H.M': '0.00',
+                  'H.A': _calculateDowntimeFromArrets(shiftArrets)
+                      .toStringAsFixed(2),
+                  'Tonnage': '0',
+                  'metrage fore': '',
+                  'Nr de Trous Fores': '',
+                  'Nr de Voyages': '',
+                  'M³ Decapages': '',
+                  'Nombre T.K.U': '',
+                  'Rendement %': '0.00',
+                },
+                'repartition': {
+                  'Chantier': '',
+                  'Temps': '',
+                  'Imputation': '',
+                },
+                'personnel': {
+                  'conductr': '',
+                  'graisseur': '',
+                  'matricules': ''
+                },
+                'consommation': {'tricone': '', 'gasoil': ''},
+                'carryOverFrom': formData.selectedPoste
               },
-              'repartition': {
-                'Chantier': '',
-                'Temps': '',
-                'Imputation': '',
-              },
-              'personnel': {'conductr': '', 'graisseur': '', 'matricules': ''},
-              'consommation': {'tricone': '', 'gasoil': ''},
-              'carryOverFrom': formData.selectedPoste
-            },
-          );
-          await _databaseHelper.insertReport(nextReport);
+            );
+            await _databaseHelper.insertReport(nextReport);
+          }
         }
 
         if (mounted) {
+          final shouldNotifyLongStop = carryOverShifts.length > 1 &&
+              carryOverShifts.any((shift) => shift.date.isAfter(_selectedDate));
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(l10n.success), backgroundColor: AppColors.success));
+              content: Text(shouldNotifyLongStop
+                  ? l10n.longStopCarryOverNotice
+                  : l10n.success),
+              backgroundColor: AppColors.success));
           Navigator.popUntil(context, (r) => r.isFirst);
         }
       }

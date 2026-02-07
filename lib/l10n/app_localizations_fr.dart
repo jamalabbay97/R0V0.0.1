@@ -570,7 +570,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get tripDetailsTitle => 'Détails des voyages';
 
   @override
+  String get invalidStopStartTimeForPoste =>
+      'L\'heure de début doit être comprise dans la plage horaire du poste sélectionné.';
+
+  @override
   String get success => 'Succès';
+
+  @override
+  String get longStopCarryOverNotice =>
+      'Arrêt prolongé détecté. Des rapports ont été créés pour les postes suivants/journée. Veuillez démarrer un nouveau rapport si l\'arrêt se poursuit.';
 
   @override
   String get unknownLabel => 'Inconnu';

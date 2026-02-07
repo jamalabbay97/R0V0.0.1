@@ -1190,11 +1190,23 @@ abstract class AppLocalizations {
   /// **'Trip Details'**
   String get tripDetailsTitle;
 
+  /// No description provided for @invalidStopStartTimeForPoste.
+  ///
+  /// In en, this message translates to:
+  /// **'Start time must fall within the selected shift time range.'**
+  String get invalidStopStartTimeForPoste;
+
   /// No description provided for @success.
   ///
   /// In en, this message translates to:
   /// **'Success'**
   String get success;
+
+  /// No description provided for @longStopCarryOverNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Long stop detected. Reports were created for the subsequent shifts/day. Please start a new report if the stop continues.'**
+  String get longStopCarryOverNotice;
 
   /// No description provided for @unknownLabel.
   ///
