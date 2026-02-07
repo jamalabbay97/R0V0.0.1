@@ -346,14 +346,7 @@ class R0ReportState extends State<R0Report> {
 
   void _calculateHours() {
     // Calculate total stoppage hours (H.A) with interval merging
-    final rawRanges = formData.ventilation
-        .where((v) => v.duree.isNotEmpty && v.note.isNotEmpty)
-        .map((v) => {'start': v.duree, 'end': v.note})
-        .toList();
-
-    final ranges = TimeCalculationService.parseTimeRanges(rawRanges);
-    double totalStoppageHours =
-        TimeCalculationService.calculateTotalDowntime(ranges);
+    final totalStoppageHours = _calculateCurrentShiftDowntime();
 
     formData.exploitation['H.A'] = totalStoppageHours.toStringAsFixed(2);
 
@@ -395,6 +388,47 @@ class R0ReportState extends State<R0Report> {
         .map((v) => {'start': v.duree, 'end': v.note})
         .toList();
     return _calculateDowntimeFromRanges(rawRanges);
+  }
+
+  double _calculateDowntimeForShift(
+    List<VentilationItem> items,
+    _ShiftWindow shift,
+  ) {
+    final ranges = <TimeRange>[];
+
+    for (final item in items) {
+      if (item.duree.isEmpty || item.note.isEmpty) continue;
+
+      DateTime arretStart =
+          _getDateTimeForShift(_selectedDate, item.duree, shift.poste);
+      DateTime arretEnd =
+          _getDateTimeForShift(_selectedDate, item.note, shift.poste);
+
+      if (arretEnd.isBefore(arretStart)) {
+        arretEnd = arretEnd.add(const Duration(days: 1));
+      }
+
+      final effectiveStart =
+          arretStart.isBefore(shift.start) ? shift.start : arretStart;
+      final effectiveEnd = arretEnd.isAfter(shift.end) ? shift.end : arretEnd;
+
+      if (effectiveStart.isBefore(effectiveEnd)) {
+        final startMin = effectiveStart.difference(shift.start).inMinutes;
+        final endMin = effectiveEnd.difference(shift.start).inMinutes;
+        ranges.add(TimeRange(startMin, endMin));
+      }
+    }
+
+    return TimeCalculationService.calculateTotalDowntime(ranges);
+  }
+
+  double _calculateCurrentShiftDowntime() {
+    if (formData.selectedPoste.isEmpty) {
+      return _calculateDowntimeFromVentilation(formData.ventilation);
+    }
+
+    final shift = _shiftWindow(formData.selectedPoste, _selectedDate);
+    return _calculateDowntimeForShift(formData.ventilation, shift);
   }
 
   double _calculateDowntimeFromArrets(List<Map<String, dynamic>> arrets) {

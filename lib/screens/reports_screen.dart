@@ -9,6 +9,53 @@ import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 import 'package:uuid/uuid.dart';
 import 'package:r0/data/r0_arrets_data.dart';
 
+class _ShiftWindow {
+  final String poste;
+  final DateTime date;
+  final DateTime start;
+  final DateTime end;
+
+  const _ShiftWindow({
+    required this.poste,
+    required this.date,
+    required this.start,
+    required this.end,
+  });
+}
+
+class _ShiftPointer {
+  final String poste;
+  final DateTime date;
+
+  const _ShiftPointer({required this.poste, required this.date});
+}
+
+class _CarryOverShift {
+  final String poste;
+  final DateTime date;
+  final List<Map<String, dynamic>> arrets;
+
+  _CarryOverShift({
+    required this.poste,
+    required this.date,
+    List<Map<String, dynamic>>? arrets,
+  }) : arrets = arrets ?? [];
+}
+
+class _CarryOverResult {
+  final Report baseReport;
+  final List<int> deleteIds;
+  final List<Report> updateReports;
+  final List<Report> insertReports;
+
+  const _CarryOverResult({
+    required this.baseReport,
+    required this.deleteIds,
+    required this.updateReports,
+    required this.insertReports,
+  });
+}
+
 /// ReportsScreen displays all saved reports with filtering capabilities.
 ///
 /// Features:
@@ -158,24 +205,346 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return double.tryParse(value.replaceAll(',', '.')) ?? 0.0;
   }
 
-  void _recalculateR0Hours(Map<String, dynamic> data) {
-    // 1. Calculate H.A (Total Stoppage Hours) with interval merging
+  DateTime _getDateTimeFromTimeString(DateTime date, String timeStr) {
+    final parts = timeStr.split(':');
+    return DateTime(date.year, date.month, date.day, int.parse(parts[0]),
+        int.parse(parts[1]));
+  }
+
+  DateTime _getDateTimeForShift(
+    DateTime date,
+    String timeStr,
+    String poste,
+  ) {
+    final parts = timeStr.split(':');
+    final hour = int.parse(parts[0]);
+    final minute = int.parse(parts[1]);
+    var targetDate = date;
+
+    if (poste == "3ème") {
+      final timeMinutes = hour * 60 + minute;
+      const thirdShiftStartMinutes = 22 * 60 + 30;
+      if (timeMinutes >= thirdShiftStartMinutes) {
+        targetDate = date.subtract(const Duration(days: 1));
+      }
+    }
+
+    return DateTime(
+      targetDate.year,
+      targetDate.month,
+      targetDate.day,
+      hour,
+      minute,
+    );
+  }
+
+  String _formatDateTimeToTimeString(DateTime dt) {
+    return "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+  }
+
+  _ShiftWindow _shiftWindow(String poste, DateTime date) {
+    switch (poste) {
+      case "3ème":
+        final startDate = date.subtract(const Duration(days: 1));
+        final start = _getDateTimeFromTimeString(startDate, "22:30");
+        final end = _getDateTimeFromTimeString(date, "06:30");
+        return _ShiftWindow(poste: poste, date: date, start: start, end: end);
+      case "1er":
+        return _ShiftWindow(
+          poste: poste,
+          date: date,
+          start: _getDateTimeFromTimeString(date, "06:30"),
+          end: _getDateTimeFromTimeString(date, "14:30"),
+        );
+      case "2ème":
+      default:
+        return _ShiftWindow(
+          poste: poste,
+          date: date,
+          start: _getDateTimeFromTimeString(date, "14:30"),
+          end: _getDateTimeFromTimeString(date, "22:30"),
+        );
+    }
+  }
+
+  int _posteOrderIndex(String poste) {
+    return posteOrder.indexOf(poste);
+  }
+
+  _ShiftPointer _nextShift(_ShiftPointer current) {
+    switch (current.poste) {
+      case "3ème":
+        return _ShiftPointer(poste: "1er", date: current.date);
+      case "1er":
+        return _ShiftPointer(poste: "2ème", date: current.date);
+      case "2ème":
+      default:
+        return _ShiftPointer(
+            poste: "3ème", date: current.date.add(const Duration(days: 1)));
+    }
+  }
+
+  double _calculateDowntimeForShift(
+    List<dynamic> arrets,
+    _ShiftWindow shift,
+    DateTime reportDate,
+  ) {
+    final ranges = <TimeRange>[];
+
+    for (final arret in arrets) {
+      if (arret is! Map) continue;
+      final debut = arret['Début']?.toString() ?? '';
+      final fin = arret['Fin']?.toString() ?? '';
+      if (debut.isEmpty || fin.isEmpty) continue;
+
+      DateTime arretStart =
+          _getDateTimeForShift(reportDate, debut, shift.poste);
+      DateTime arretEnd = _getDateTimeForShift(reportDate, fin, shift.poste);
+
+      if (arretEnd.isBefore(arretStart)) {
+        arretEnd = arretEnd.add(const Duration(days: 1));
+      }
+
+      final effectiveStart =
+          arretStart.isBefore(shift.start) ? shift.start : arretStart;
+      final effectiveEnd = arretEnd.isAfter(shift.end) ? shift.end : arretEnd;
+
+      if (effectiveStart.isBefore(effectiveEnd)) {
+        final startMin = effectiveStart.difference(shift.start).inMinutes;
+        final endMin = effectiveEnd.difference(shift.start).inMinutes;
+        ranges.add(TimeRange(startMin, endMin));
+      }
+    }
+
+    return TimeCalculationService.calculateTotalDowntime(ranges);
+  }
+
+  double _calculateR0Downtime(Map<String, dynamic> data, DateTime reportDate) {
+    final poste =
+        data['selectedPoste'] ?? data['poste'] ?? data['posteSelected'];
+    final arrets = data['Arrets'] as List? ?? [];
+
+    if (poste is String && poste.isNotEmpty) {
+      final shift = _shiftWindow(poste, reportDate);
+      return _calculateDowntimeForShift(arrets, shift, reportDate);
+    }
+
     final rawRanges = <Map<String, String>>[];
-    if (data['Arrets'] is List) {
-      for (var arret in data['Arrets'] as List) {
-        if (arret is Map && arret['Début'] != null && arret['Fin'] != null) {
-          final debut = arret['Début'].toString();
-          final fin = arret['Fin'].toString();
-          if (debut.isNotEmpty && fin.isNotEmpty) {
-            rawRanges.add({'start': debut, 'end': fin});
-          }
+    for (var arret in arrets) {
+      if (arret is Map && arret['Début'] != null && arret['Fin'] != null) {
+        final debut = arret['Début'].toString();
+        final fin = arret['Fin'].toString();
+        if (debut.isNotEmpty && fin.isNotEmpty) {
+          rawRanges.add({'start': debut, 'end': fin});
         }
       }
     }
 
     final ranges = TimeCalculationService.parseTimeRanges(rawRanges);
-    double totalStoppageHours =
-        TimeCalculationService.calculateTotalDowntime(ranges);
+    return TimeCalculationService.calculateTotalDowntime(ranges);
+  }
+
+  _CarryOverResult _prepareR0CarryOverUpdates(Report report) {
+    final data = Map<String, dynamic>.from(report.additionalData ?? {});
+    if (data['carryOverFrom'] != null) {
+      return _CarryOverResult(
+        baseReport: report,
+        deleteIds: const [],
+        updateReports: const [],
+        insertReports: const [],
+      );
+    }
+
+    final poste =
+        data['selectedPoste'] ?? data['poste'] ?? data['posteSelected'];
+    if (poste is! String || poste.isEmpty) {
+      return _CarryOverResult(
+        baseReport: report,
+        deleteIds: const [],
+        updateReports: const [],
+        insertReports: const [],
+      );
+    }
+
+    final currentShift = _shiftWindow(poste, report.date);
+    final shiftStart = currentShift.start;
+    final shiftEnd = currentShift.end;
+    final arrets = data['Arrets'] as List? ?? [];
+
+    final currentShiftArrets = <Map<String, dynamic>>[];
+    final Map<String, _CarryOverShift> carryOverByShift = {};
+
+    for (final arret in arrets) {
+      if (arret is! Map) continue;
+      final debut = arret['Début']?.toString() ?? '';
+      final fin = arret['Fin']?.toString() ?? '';
+      if (debut.isEmpty || fin.isEmpty) continue;
+
+      DateTime arretStart =
+          _getDateTimeForShift(report.date, debut, currentShift.poste);
+      DateTime arretEnd =
+          _getDateTimeForShift(report.date, fin, currentShift.poste);
+
+      if (arretEnd.isBefore(arretStart)) {
+        arretEnd = arretEnd.add(const Duration(days: 1));
+      }
+
+      final effectiveStart =
+          arretStart.isBefore(shiftStart) ? shiftStart : arretStart;
+      final effectiveEnd = arretEnd.isAfter(shiftEnd) ? shiftEnd : arretEnd;
+
+      if (effectiveStart.isBefore(effectiveEnd) &&
+          effectiveStart.isBefore(shiftEnd) &&
+          effectiveEnd.isAfter(shiftStart)) {
+        currentShiftArrets.add({
+          'Catégorie': arret['Catégorie'] ?? '',
+          'Arret': arret['Arret'] ?? '',
+          'Début': _formatDateTimeToTimeString(effectiveStart),
+          'Fin': _formatDateTimeToTimeString(effectiveEnd),
+        });
+      }
+
+      if (arretEnd.isAfter(shiftEnd)) {
+        DateTime carryStart =
+            arretStart.isBefore(shiftEnd) ? shiftEnd : arretStart;
+        var pointer = _nextShift(
+            _ShiftPointer(poste: currentShift.poste, date: currentShift.date));
+
+        while (carryStart.isBefore(arretEnd)) {
+          final nextShift = _shiftWindow(pointer.poste, pointer.date);
+          final segmentStart = carryStart.isAfter(nextShift.start)
+              ? carryStart
+              : nextShift.start;
+          final segmentEnd =
+              arretEnd.isBefore(nextShift.end) ? arretEnd : nextShift.end;
+
+          if (segmentStart.isBefore(segmentEnd)) {
+            final key =
+                '${nextShift.poste}-${nextShift.date.toIso8601String().split('T').first}';
+            carryOverByShift.putIfAbsent(
+                key,
+                () => _CarryOverShift(
+                      poste: nextShift.poste,
+                      date: nextShift.date,
+                    ));
+            carryOverByShift[key]!.arrets.add({
+              'Catégorie': arret['Catégorie'] ?? '',
+              'Arret': arret['Arret'] ?? '',
+              'Début': _formatDateTimeToTimeString(segmentStart),
+              'Fin': _formatDateTimeToTimeString(segmentEnd),
+              'OriginalStart': debut,
+              'OriginalEnd': fin,
+              'CarryOver': true,
+            });
+          }
+
+          carryStart = segmentEnd;
+          if (carryStart.isBefore(arretEnd)) {
+            pointer = _nextShift(pointer);
+          }
+        }
+      }
+    }
+
+    data['Arrets'] = currentShiftArrets;
+    _recalculateR0Hours(data, report.date);
+
+    final updatedReport = report.copyWith(additionalData: data);
+
+    final carryOverReports = carryOverByShift.values.toList()
+      ..sort((a, b) {
+        final dateCompare = a.date.compareTo(b.date);
+        if (dateCompare != 0) return dateCompare;
+        return _posteOrderIndex(a.poste).compareTo(_posteOrderIndex(b.poste));
+      });
+
+    final existingCarryOvers = _reports.where((existing) {
+      if (existing.id == report.id) return false;
+      if (existing.type != report.type) return false;
+      final existingData = existing.additionalData;
+      if (existingData == null) return false;
+      if (existingData['carryOverFrom'] != poste) return false;
+      if (existingData['Model'] != data['Model']) return false;
+      if (existingData['Type'] != data['Type']) return false;
+      if (existingData['mine'] != data['mine']) return false;
+      if (existingData['zone'] != data['zone']) return false;
+      if (existingData['sortie'] != data['sortie']) return false;
+      return true;
+    }).toList();
+
+    final existingByKey = <String, Report>{};
+    for (final existing in existingCarryOvers) {
+      final key =
+          '${existing.group}-${existing.date.toIso8601String().split('T').first}';
+      existingByKey[key] = existing;
+    }
+
+    final createdCarryOvers =
+        carryOverReports.where((shift) => shift.arrets.isNotEmpty).map((shift) {
+      final key =
+          '${shift.poste}-${shift.date.toIso8601String().split('T').first}';
+      final existing = existingByKey.remove(key);
+      return Report(
+        id: existing?.id,
+        description: 'Rapport R0 - ${shift.poste} (Carry Over)',
+        date: shift.date,
+        type: report.type,
+        group: shift.poste,
+        additionalData: {
+          'mine': data['mine'] ?? '',
+          'zone': data['zone'] ?? '',
+          'sortie': data['sortie'] ?? '',
+          'selectedPoste': shift.poste,
+          'Category': data['Category'] ?? '',
+          'Type': data['Type'] ?? '',
+          'Model': data['Model'] ?? '',
+          'Compteurs': {'duree': '', 'note': ''},
+          'Arrets': shift.arrets,
+          'exploitation': {
+            'H.M': '0.00',
+            'H.A': _calculateR0Downtime({'Arrets': shift.arrets}, shift.date)
+                .toStringAsFixed(2),
+            'Tonnage': '0',
+            'metrage fore': '',
+            'Nr de Trous Fores': '',
+            'Nr de Voyages': '',
+            'M³ Decapages': '',
+            'Nombre T.K.U': '',
+            'Rendement %': '0.00',
+          },
+          'repartition': {
+            'Chantier': '',
+            'Temps': '',
+            'Imputation': '',
+          },
+          'personnel': {'conductr': '', 'graisseur': '', 'matricules': ''},
+          'consommation': {'tricone': '', 'gasoil': ''},
+          'carryOverFrom': poste,
+        },
+      );
+    }).toList();
+
+    final deleteIds = existingByKey.values
+        .map((report) => report.id)
+        .whereType<int>()
+        .toList();
+
+    final updateReports =
+        createdCarryOvers.where((report) => report.id != null).toList();
+    final insertReports =
+        createdCarryOvers.where((report) => report.id == null).toList();
+
+    return _CarryOverResult(
+      baseReport: updatedReport,
+      deleteIds: deleteIds,
+      updateReports: updateReports,
+      insertReports: insertReports,
+    );
+  }
+
+  void _recalculateR0Hours(Map<String, dynamic> data, DateTime reportDate) {
+    // 1. Calculate H.A (Total Stoppage Hours) with interval merging
+    final totalStoppageHours = _calculateR0Downtime(data, reportDate);
 
     // 2. Calculate H.M (Working Hours) using TimeCalculationService
     double totalGrossHours = 0;
@@ -5531,7 +5900,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
     AppLocalizations l10n,
   ) async {
     try {
-      await _databaseHelper.updateReport(updatedReport);
+      final carryOverResult = _prepareR0CarryOverUpdates(updatedReport);
+      await _databaseHelper.updateReport(carryOverResult.baseReport);
+      for (final id in carryOverResult.deleteIds) {
+        await _databaseHelper.deleteReport(id);
+      }
+      for (final report in carryOverResult.updateReports) {
+        await _databaseHelper.updateReport(report);
+      }
+      for (final report in carryOverResult.insertReports) {
+        await _databaseHelper.insertReport(report);
+      }
       await _loadReports();
       if (!mounted) return;
       scaffoldMessenger.showSnackBar(
@@ -8104,7 +8483,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   });
 
                   // Recalculate hours
-                  _recalculateR0Hours(data);
+                  _recalculateR0Hours(data, report.date);
 
                   final updatedReport = report.copyWith(
                     additionalData: data,
@@ -8225,7 +8604,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 }
 
                 // Recalculate hours
-                _recalculateR0Hours(data);
+                _recalculateR0Hours(data, report.date);
 
                 final updatedReport = Report(
                   id: report.id,
@@ -8271,7 +8650,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               (data['Compteurs'] as List).removeAt(index);
 
               // Recalculate hours
-              _recalculateR0Hours(data);
+              _recalculateR0Hours(data, report.date);
 
               final updatedReport = report.copyWith(
                 additionalData: data,
@@ -8566,7 +8945,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       (data['Arrets'] as List).add(result);
 
       // Recalculate hours
-      _recalculateR0Hours(data);
+      _recalculateR0Hours(data, report.date);
 
       setDialogState(() {});
 
@@ -8615,7 +8994,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       (data['Arrets'] as List)[index] = result;
 
       // Recalculate hours
-      _recalculateR0Hours(data);
+      _recalculateR0Hours(data, report.date);
 
       setDialogState(() {});
 
@@ -8655,7 +9034,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               (data['Arrets'] as List).removeAt(index);
 
               // Recalculate hours
-              _recalculateR0Hours(data);
+              _recalculateR0Hours(data, report.date);
 
               setDialogState(() {});
 
@@ -8777,7 +9156,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ElevatedButton(
               onPressed: () {
                 // Recalculate H.M and H.A from Arrets and Compteurs
-                _recalculateR0Hours(data);
+                _recalculateR0Hours(data, report.date);
 
                 // Update the fields
                 if (data['exploitation'] == null) {
