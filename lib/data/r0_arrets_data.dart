@@ -16,7 +16,7 @@ class R0ArretsData {
         'Contrôle début poste',
         'Ravitaillement Gasoil',
       ],
-      'EXTERIEUR': [
+      'EXTERIEURS': [
         'Arrêt lié à la sécurité',
         'Manque Gasoil',
         'Grève',
@@ -67,7 +67,7 @@ class R0ArretsData {
         'Contrôle début poste',
         'Ravitaillement Gasoil',
       ],
-      'EXTERIEUR': [
+      'EXTERIEURS': [
         'Arrêt lié à la sécurité',
         'Manque Gasoil',
         'Grève',
@@ -110,7 +110,7 @@ class R0ArretsData {
         'Contrôle début poste',
         'Ravitaillement Gasoil',
       ],
-      'EXTERIEUR': [
+      'EXTERIEURS': [
         'Arrêt lié à la sécurité',
         'Manque Gasoil',
         'Grève',
@@ -251,7 +251,7 @@ class R0ArretsData {
       'Systématique': [
         'Contrôle début de poste',
       ],
-      'EXTERIEUR': [
+      'EXTERIEURS': [
         'Arrêt lié à la sécurité',
         'Coupure de courant',
         'Délestage ou manque énergie',
@@ -313,7 +313,7 @@ class R0ArretsData {
       'Systématique': [
         'Contrôle début de poste',
       ],
-      'EXTERIEUR': [
+      'EXTERIEURS': [
         'Arrêt lié à la sécurité',
         'Coupure de courant',
         'Délestage ou manque énergie',
@@ -349,7 +349,7 @@ class R0ArretsData {
         'Maintenance planifiée',
       ],
     },
-    'SONDEUSES Gasoil': {
+    'SONDEUSES GASOIL': {
       'EXPLOITATION': [
         'Aménagement plate forme',
         'Déplacement planifié',
@@ -406,7 +406,7 @@ class R0ArretsData {
         'Descente des vérins',
       ],
     },
-    'SONDEUSES Electrique': {
+    'SONDEUSES ELECTRIQUE': {
       'EXPLOITATION': [
         'Aménagement plate forme',
         'Déplacement planifié',
@@ -526,9 +526,9 @@ class R0ArretsData {
         'Contrôle début de poste',
         'Ravitaillement Gasoil',
       ],
-      'EXTERIEUR': [
+      'EXTERIEURS': [
         'Arrêt lié à la sécurité',
-        'Manque gasoil',
+        'Manque Gasoil',
         'Grève',
         'Machine à l\'arrêt',
         'Arrêts installations fixes',

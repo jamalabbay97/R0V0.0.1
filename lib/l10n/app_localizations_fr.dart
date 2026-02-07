@@ -199,6 +199,14 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get carryOver => 'Reporté';
+
+  @override
+  String carriedOverFrom(String poste) {
+    return 'Reporté du poste $poste';
+  }
+
+  @override
   String get errorsDetected => 'Erreurs détectées';
 
   @override
@@ -209,6 +217,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get stockEntryErrors => '• Erreurs dans les entrées stock';
+
+  @override
+  String get defautLabel => 'Défaut';
 
   @override
   String get addStop => 'Ajouter un arrêt';

@@ -470,6 +470,18 @@ abstract class AppLocalizations {
   /// **'Operating hours ({hours}h) exceed the maximum allowed duration for this poste ({maxHours}h).'**
   String operatingHoursExceeded(int hours, int maxHours);
 
+  /// No description provided for @carryOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Carry-over'**
+  String get carryOver;
+
+  /// No description provided for @carriedOverFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Carried over from {poste}'**
+  String carriedOverFrom(String poste);
+
   /// No description provided for @errorsDetected.
   ///
   /// In en, this message translates to:
@@ -493,6 +505,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'• Errors in stock entries'**
   String get stockEntryErrors;
+
+  /// No description provided for @defautLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Defect'**
+  String get defautLabel;
 
   /// No description provided for @addStop.
   ///

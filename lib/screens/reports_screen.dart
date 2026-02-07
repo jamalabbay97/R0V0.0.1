@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/models/report.dart';
 import 'package:r0/services/database_helper.dart';
+import 'package:r0/services/time_calculation_service.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 import 'package:uuid/uuid.dart';
@@ -158,57 +159,70 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   void _recalculateR0Hours(Map<String, dynamic> data) {
-    // 1. Calculate H.A (Total Stoppage Hours)
-    double totalStoppageHours = 0;
+    // 1. Calculate H.A (Total Stoppage Hours) with interval merging
+    final rawRanges = <Map<String, String>>[];
     if (data['Arrets'] is List) {
       for (var arret in data['Arrets'] as List) {
         if (arret is Map && arret['Début'] != null && arret['Fin'] != null) {
           final debut = arret['Début'].toString();
           final fin = arret['Fin'].toString();
           if (debut.isNotEmpty && fin.isNotEmpty) {
-            // Parse time format HH:MM
-            final startParts = debut.split(':');
-            final endParts = fin.split(':');
-            if (startParts.length == 2 && endParts.length == 2) {
-              final startHour = int.tryParse(startParts[0]) ?? 0;
-              final startMin = int.tryParse(startParts[1]) ?? 0;
-              final endHour = int.tryParse(endParts[0]) ?? 0;
-              final endMin = int.tryParse(endParts[1]) ?? 0;
-
-              final startTotal = startHour * 60 + startMin;
-              final endTotal = endHour * 60 + endMin;
-              int diff = endTotal - startTotal;
-              if (diff <= 0) diff += 24 * 60; // Handle overnight periods
-
-              totalStoppageHours += diff / 60.0;
-            }
+            rawRanges.add({'start': debut, 'end': fin});
           }
         }
       }
     }
 
-    // 2. Calculate H.M (Working Hours) - Gross
+    final ranges = TimeCalculationService.parseTimeRanges(rawRanges);
+    double totalStoppageHours =
+        TimeCalculationService.calculateTotalDowntime(ranges);
+
+    // 2. Calculate H.M (Working Hours) using TimeCalculationService
     double totalGrossHours = 0;
     final compteursData = data['Compteurs'];
+
+    bool hasDefect = false;
+    double? start;
+    double? end;
+
     if (compteursData is List && compteursData.isNotEmpty) {
+      // Handle potential list format for counters
       for (var compteur in compteursData) {
-        if (compteur is Map &&
-            compteur['duree'] != null &&
-            compteur['note'] != null) {
-          final start = _parseNumeric(compteur['duree'].toString());
-          final end = _parseNumeric(compteur['note'].toString());
-          if (end > start) {
-            totalGrossHours += (end - start);
+        if (compteur is Map) {
+          if (compteur['dureeDefaut'] == true ||
+              compteur['noteDefaut'] == true) {
+            hasDefect = true;
+            break;
+          }
+          final s = _parseNumeric(compteur['duree']?.toString() ?? '');
+          final e = _parseNumeric(compteur['note']?.toString() ?? '');
+          if (e > s) {
+            totalGrossHours += (e - s);
           }
         }
       }
+      // If we have multiple counters, simple sum might be used, but usually R0 has one pair.
+      // If defect was found in any, we use the fallback.
     } else if (compteursData is Map) {
-      final start = _parseNumeric(compteursData['duree']?.toString() ?? '');
-      final end = _parseNumeric(compteursData['note']?.toString() ?? '');
-      if (end > start) {
-        totalGrossHours += (end - start);
+      hasDefect = compteursData['dureeDefaut'] == true ||
+          compteursData['noteDefaut'] == true;
+      if (!hasDefect) {
+        start = _parseNumeric(compteursData['duree']?.toString() ?? '');
+        end = _parseNumeric(compteursData['note']?.toString() ?? '');
       }
     }
+
+    double hm = hasDefect
+        ? TimeCalculationService.calculateWorkingHours(
+            hasDefect: true, totalStoppageHours: totalStoppageHours)
+        : (compteursData is List
+            ? totalGrossHours
+            : TimeCalculationService.calculateWorkingHours(
+                startCounter: start,
+                endCounter: end,
+                hasDefect: false,
+                totalStoppageHours: totalStoppageHours,
+              ));
 
     // 3. Apply Rules
     if (data['exploitation'] == null) {
@@ -217,9 +231,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     if (data['exploitation'] is Map) {
       data['exploitation']['H.A'] = totalStoppageHours.toStringAsFixed(2);
+      data['exploitation']['H.M'] = hm.toStringAsFixed(2);
 
-      // H.M = Gross Hours only (not subtracting stops)
-      data['exploitation']['H.M'] = totalGrossHours.toStringAsFixed(2);
+      // Also update Rendement if needed
+      double tonnage =
+          _parseNumeric(data['exploitation']['Tonnage']?.toString() ?? '0');
+      if (hm > 0) {
+        data['exploitation']['Rendement %'] = (tonnage / hm).toStringAsFixed(2);
+      } else {
+        data['exploitation']['Rendement %'] = '0.00';
+      }
     }
   }
 
@@ -1279,6 +1300,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     int? selectedPoste;
     String startIndex = '';
     String endIndex = '';
+    bool startDefect = false;
+    bool endDefect = false;
 
     await showDialog(
       context: context,
@@ -1302,20 +1325,66 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 onChanged: (value) => setState(() => selectedPoste = value),
               ),
               const SizedBox(height: 16),
-              TextField(
-                decoration: InputDecoration(
-                  labelText: l10n.startCounterLabel,
-                  border: const OutlineInputBorder(),
-                ),
-                onChanged: (value) => setState(() => startIndex = value),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        labelText: l10n.startCounterLabel,
+                        border: const OutlineInputBorder(),
+                      ),
+                      enabled: !startDefect,
+                      controller: startDefect
+                          ? TextEditingController(text: l10n.defautLabel)
+                          : null,
+                      onChanged: (value) => setState(() => startIndex = value),
+                    ),
+                  ),
+                  Column(
+                    children: [
+                      Checkbox(
+                        value: startDefect,
+                        onChanged: (val) => setState(() {
+                          startDefect = val ?? false;
+                          if (startDefect) startIndex = '';
+                        }),
+                      ),
+                      Text(l10n.defautLabel,
+                          style: const TextStyle(fontSize: 10)),
+                    ],
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
-              TextField(
-                decoration: InputDecoration(
-                  labelText: l10n.endCounterLabel,
-                  border: const OutlineInputBorder(),
-                ),
-                onChanged: (value) => setState(() => endIndex = value),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        labelText: l10n.endCounterLabel,
+                        border: const OutlineInputBorder(),
+                      ),
+                      enabled: !endDefect,
+                      controller: endDefect
+                          ? TextEditingController(text: l10n.defautLabel)
+                          : null,
+                      onChanged: (value) => setState(() => endIndex = value),
+                    ),
+                  ),
+                  Column(
+                    children: [
+                      Checkbox(
+                        value: endDefect,
+                        onChanged: (val) => setState(() {
+                          endDefect = val ?? false;
+                          if (endDefect) endIndex = '';
+                        }),
+                      ),
+                      Text(l10n.defautLabel,
+                          style: const TextStyle(fontSize: 10)),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
@@ -1338,6 +1407,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     'poste': selectedPoste,
                     'start': startIndex,
                     'end': endIndex,
+                    'startDefect': startDefect,
+                    'endDefect': endDefect,
                   });
 
                   // Recalculate totals for Activity TNB reports
@@ -1390,6 +1461,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
     final startController = TextEditingController(text: counter['start'] ?? '');
     final endController = TextEditingController(text: counter['end'] ?? '');
+    bool startDefect = counter['startDefect'] ?? false;
+    bool endDefect = counter['endDefect'] ?? false;
 
     await showDialog(
       context: context,
@@ -1414,20 +1487,67 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 onChanged: (value) => setState(() => selectedPoste = value),
               ),
               const SizedBox(height: 16),
-              TextField(
-                decoration: InputDecoration(
-                  labelText: l10n.startCounterLabel,
-                  border: const OutlineInputBorder(),
-                ),
-                controller: startController,
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        labelText: l10n.startCounterLabel,
+                        border: const OutlineInputBorder(),
+                      ),
+                      controller: startDefect
+                          ? TextEditingController(text: l10n.defautLabel)
+                          : startController,
+                      enabled: !startDefect,
+                      onChanged: (v) {
+                        // Controller handles text, but we might need explicit state update if validation relies on it
+                      },
+                    ),
+                  ),
+                  Column(
+                    children: [
+                      Checkbox(
+                        value: startDefect,
+                        onChanged: (val) => setState(() {
+                          startDefect = val ?? false;
+                          if (startDefect) startController.text = '';
+                        }),
+                      ),
+                      Text(l10n.defautLabel,
+                          style: const TextStyle(fontSize: 10)),
+                    ],
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
-              TextField(
-                decoration: InputDecoration(
-                  labelText: l10n.endCounterLabel,
-                  border: const OutlineInputBorder(),
-                ),
-                controller: endController,
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        labelText: l10n.endCounterLabel,
+                        border: const OutlineInputBorder(),
+                      ),
+                      controller: endDefect
+                          ? TextEditingController(text: l10n.defautLabel)
+                          : endController,
+                      enabled: !endDefect,
+                    ),
+                  ),
+                  Column(
+                    children: [
+                      Checkbox(
+                        value: endDefect,
+                        onChanged: (val) => setState(() {
+                          endDefect = val ?? false;
+                          if (endDefect) endController.text = '';
+                        }),
+                      ),
+                      Text(l10n.defautLabel,
+                          style: const TextStyle(fontSize: 10)),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
@@ -1447,6 +1567,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     'poste': selectedPoste,
                     'start': startController.text,
                     'end': endController.text,
+                    'startDefect': startDefect,
+                    'endDefect': endDefect,
                   };
 
                   // Recalculate totals for Activity TNB reports
@@ -1532,6 +1654,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     int? selectedPoste;
     String startIndex = '';
     String endIndex = '';
+    bool startDefect = false;
+    bool endDefect = false;
 
     await showDialog(
       context: context,
@@ -1555,20 +1679,66 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 onChanged: (value) => setState(() => selectedPoste = value),
               ),
               const SizedBox(height: 16),
-              TextField(
-                decoration: InputDecoration(
-                  labelText: l10n.startCounterLabel,
-                  border: const OutlineInputBorder(),
-                ),
-                onChanged: (value) => setState(() => startIndex = value),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        labelText: l10n.startCounterLabel,
+                        border: const OutlineInputBorder(),
+                      ),
+                      enabled: !startDefect,
+                      controller: startDefect
+                          ? TextEditingController(text: l10n.defautLabel)
+                          : null,
+                      onChanged: (value) => setState(() => startIndex = value),
+                    ),
+                  ),
+                  Column(
+                    children: [
+                      Checkbox(
+                        value: startDefect,
+                        onChanged: (val) => setState(() {
+                          startDefect = val ?? false;
+                          if (startDefect) startIndex = '';
+                        }),
+                      ),
+                      Text(l10n.defautLabel,
+                          style: const TextStyle(fontSize: 10)),
+                    ],
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
-              TextField(
-                decoration: InputDecoration(
-                  labelText: l10n.endCounterLabel,
-                  border: const OutlineInputBorder(),
-                ),
-                onChanged: (value) => setState(() => endIndex = value),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        labelText: l10n.endCounterLabel,
+                        border: const OutlineInputBorder(),
+                      ),
+                      enabled: !endDefect,
+                      controller: endDefect
+                          ? TextEditingController(text: l10n.defautLabel)
+                          : null,
+                      onChanged: (value) => setState(() => endIndex = value),
+                    ),
+                  ),
+                  Column(
+                    children: [
+                      Checkbox(
+                        value: endDefect,
+                        onChanged: (val) => setState(() {
+                          endDefect = val ?? false;
+                          if (endDefect) endIndex = '';
+                        }),
+                      ),
+                      Text(l10n.defautLabel,
+                          style: const TextStyle(fontSize: 10)),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
@@ -1591,6 +1761,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     'poste': selectedPoste,
                     'start': startIndex,
                     'end': endIndex,
+                    'startDefect': startDefect,
+                    'endDefect': endDefect,
                   });
 
                   // Recalculate totals for Activity TNB reports
@@ -1643,6 +1815,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
     final startController = TextEditingController(text: counter['start'] ?? '');
     final endController = TextEditingController(text: counter['end'] ?? '');
+    bool startDefect = counter['startDefect'] ?? false;
+    bool endDefect = counter['endDefect'] ?? false;
 
     await showDialog(
       context: context,
@@ -1667,20 +1841,67 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 onChanged: (value) => setState(() => selectedPoste = value),
               ),
               const SizedBox(height: 16),
-              TextField(
-                decoration: InputDecoration(
-                  labelText: l10n.startCounterLabel,
-                  border: const OutlineInputBorder(),
-                ),
-                controller: startController,
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        labelText: l10n.startCounterLabel,
+                        border: const OutlineInputBorder(),
+                      ),
+                      controller: startDefect
+                          ? TextEditingController(text: l10n.defautLabel)
+                          : startController,
+                      enabled: !startDefect,
+                      onChanged: (v) {
+                        // Controller handles text
+                      },
+                    ),
+                  ),
+                  Column(
+                    children: [
+                      Checkbox(
+                        value: startDefect,
+                        onChanged: (val) => setState(() {
+                          startDefect = val ?? false;
+                          if (startDefect) startController.text = '';
+                        }),
+                      ),
+                      Text(l10n.defautLabel,
+                          style: const TextStyle(fontSize: 10)),
+                    ],
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
-              TextField(
-                decoration: InputDecoration(
-                  labelText: l10n.endCounterLabel,
-                  border: const OutlineInputBorder(),
-                ),
-                controller: endController,
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        labelText: l10n.endCounterLabel,
+                        border: const OutlineInputBorder(),
+                      ),
+                      controller: endDefect
+                          ? TextEditingController(text: l10n.defautLabel)
+                          : endController,
+                      enabled: !endDefect,
+                    ),
+                  ),
+                  Column(
+                    children: [
+                      Checkbox(
+                        value: endDefect,
+                        onChanged: (val) => setState(() {
+                          endDefect = val ?? false;
+                          if (endDefect) endController.text = '';
+                        }),
+                      ),
+                      Text(l10n.defautLabel,
+                          style: const TextStyle(fontSize: 10)),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
@@ -1700,6 +1921,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     'poste': selectedPoste,
                     'start': startController.text,
                     'end': endController.text,
+                    'startDefect': startDefect,
+                    'endDefect': endDefect,
                   };
 
                   // Recalculate totals for Activity TNB reports
@@ -4513,6 +4736,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   int _calculateTotalCounterMinutes(List counters) {
     double totalHours = 0;
     for (var counter in counters) {
+      if (counter['startDefect'] == true || counter['endDefect'] == true) {
+        continue;
+      }
       var startVal = _validateAndParseCounterValue(counter['start'] ?? '');
       var endVal = _validateAndParseCounterValue(counter['end'] ?? '');
       if (startVal != null && endVal != null && endVal >= startVal) {
@@ -5019,6 +5245,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 _buildSummaryItem('Modèle', data['Model'] ?? ''),
                 _buildSummaryItem(
                     'Poste', data['selectedPoste'] ?? data['poste'] ?? ''),
+                if (data['carryOverFrom'] != null)
+                  _buildSummaryItem(l10n.carryOver,
+                      l10n.carriedOverFrom(data['carryOverFrom'])),
               ],
             ),
           ),
@@ -5087,9 +5316,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(l10n.typeParam(arret['Arret'] ?? '-')),
+                            Text(l10n.typeParam(arret['Arret'] ?? '-'),
+                                style: TextStyle(
+                                    color: arret['CarryOver'] == true
+                                        ? Colors.orange
+                                        : null,
+                                    fontWeight: arret['CarryOver'] == true
+                                        ? FontWeight.bold
+                                        : null)),
                             _buildSummaryItem('Début', arret['Début'] ?? ''),
                             _buildSummaryItem('Fin', arret['Fin'] ?? ''),
+                            if (arret['CarryOver'] == true)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 16),
+                                child: Text("(${l10n.carryOver})",
+                                    style: const TextStyle(
+                                        color: Colors.orange,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold)),
+                              ),
                             const Divider(height: 8),
                           ],
                         ),
@@ -7750,6 +7995,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
       AppLocalizations l10n) async {
     String duree = '';
     String note = '';
+    bool dureeDefaut = false;
+    bool noteDefaut = false;
 
     await showDialog(
       context: context,
@@ -7759,13 +8006,59 @@ class _ReportsScreenState extends State<ReportsScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
-                decoration: const InputDecoration(labelText: 'Début'),
-                onChanged: (value) => setState(() => duree = value),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: const InputDecoration(labelText: 'Début'),
+                      onChanged: (value) => setState(() => duree = value),
+                      enabled: !dureeDefaut,
+                      controller: dureeDefaut
+                          ? TextEditingController(text: l10n.defautLabel)
+                          : null,
+                    ),
+                  ),
+                  Column(
+                    children: [
+                      Checkbox(
+                        value: dureeDefaut,
+                        onChanged: (val) => setState(() {
+                          dureeDefaut = val ?? false;
+                          if (dureeDefaut) duree = '';
+                        }),
+                      ),
+                      Text(l10n.defautLabel,
+                          style: const TextStyle(fontSize: 10)),
+                    ],
+                  ),
+                ],
               ),
-              TextField(
-                decoration: const InputDecoration(labelText: 'Fin'),
-                onChanged: (value) => setState(() => note = value),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: const InputDecoration(labelText: 'Fin'),
+                      onChanged: (value) => setState(() => note = value),
+                      enabled: !noteDefaut,
+                      controller: noteDefaut
+                          ? TextEditingController(text: l10n.defautLabel)
+                          : null,
+                    ),
+                  ),
+                  Column(
+                    children: [
+                      Checkbox(
+                        value: noteDefaut,
+                        onChanged: (val) => setState(() {
+                          noteDefaut = val ?? false;
+                          if (noteDefaut) note = '';
+                        }),
+                      ),
+                      Text(l10n.defautLabel,
+                          style: const TextStyle(fontSize: 10)),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
@@ -7776,13 +8069,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                if (duree.isNotEmpty || note.isNotEmpty) {
+                if (duree.isNotEmpty ||
+                    note.isNotEmpty ||
+                    dureeDefaut ||
+                    noteDefaut) {
                   if (data['Compteurs'] == null) {
                     data['Compteurs'] = [];
                   }
                   (data['Compteurs'] as List).add({
                     'duree': duree,
                     'note': note,
+                    'dureeDefaut': dureeDefaut,
+                    'noteDefaut': noteDefaut,
                   });
 
                   // Recalculate hours
@@ -7818,6 +8116,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
         : data['Compteurs'];
     String duree = compteurData['duree'] ?? '';
     String note = compteurData['note'] ?? '';
+    bool dureeDefaut = compteurData['dureeDefaut'] == true;
+    bool noteDefaut = compteurData['noteDefaut'] == true;
 
     await showDialog(
       context: context,
@@ -7827,15 +8127,61 @@ class _ReportsScreenState extends State<ReportsScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextFormField(
-                initialValue: duree,
-                decoration: const InputDecoration(labelText: 'Début'),
-                onChanged: (value) => setState(() => duree = value),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: dureeDefaut ? null : duree,
+                      decoration: const InputDecoration(labelText: 'Début'),
+                      onChanged: (value) => setState(() => duree = value),
+                      enabled: !dureeDefaut,
+                      controller: dureeDefaut
+                          ? TextEditingController(text: l10n.defautLabel)
+                          : null,
+                    ),
+                  ),
+                  Column(
+                    children: [
+                      Checkbox(
+                        value: dureeDefaut,
+                        onChanged: (val) => setState(() {
+                          dureeDefaut = val ?? false;
+                          if (dureeDefaut) duree = '';
+                        }),
+                      ),
+                      Text(l10n.defautLabel,
+                          style: const TextStyle(fontSize: 10)),
+                    ],
+                  ),
+                ],
               ),
-              TextFormField(
-                initialValue: note,
-                decoration: const InputDecoration(labelText: 'Fin'),
-                onChanged: (value) => setState(() => note = value),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: noteDefaut ? null : note,
+                      decoration: const InputDecoration(labelText: 'Fin'),
+                      onChanged: (value) => setState(() => note = value),
+                      enabled: !noteDefaut,
+                      controller: noteDefaut
+                          ? TextEditingController(text: l10n.defautLabel)
+                          : null,
+                    ),
+                  ),
+                  Column(
+                    children: [
+                      Checkbox(
+                        value: noteDefaut,
+                        onChanged: (val) => setState(() {
+                          noteDefaut = val ?? false;
+                          if (noteDefaut) note = '';
+                        }),
+                      ),
+                      Text(l10n.defautLabel,
+                          style: const TextStyle(fontSize: 10)),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
@@ -7846,16 +8192,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
             ElevatedButton(
               onPressed: () {
+                final newCompteur = {
+                  'duree': duree,
+                  'note': note,
+                  'dureeDefaut': dureeDefaut,
+                  'noteDefaut': noteDefaut,
+                };
                 if (data['Compteurs'] is List) {
-                  (data['Compteurs'] as List)[index] = {
-                    'duree': duree,
-                    'note': note,
-                  };
+                  (data['Compteurs'] as List)[index] = newCompteur;
                 } else {
-                  data['Compteurs'] = {
-                    'duree': duree,
-                    'note': note,
-                  };
+                  data['Compteurs'] = newCompteur;
                 }
 
                 // Recalculate hours

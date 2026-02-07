@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/services/database_helper.dart';
+import 'package:r0/services/time_calculation_service.dart';
 import 'package:r0/models/report.dart';
 import 'package:r0/models/mine_data.dart'; // Import the shared model
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
@@ -12,9 +13,14 @@ import 'package:r0/data/r0_arrets_data.dart';
 class IndexCompteurPoste {
   String duree;
   String note;
-  bool isDefective;
-  IndexCompteurPoste(
-      {this.duree = '', this.note = '', this.isDefective = false});
+  bool dureeDefaut;
+  bool noteDefaut;
+  IndexCompteurPoste({
+    this.duree = '',
+    this.note = '',
+    this.dureeDefaut = false,
+    this.noteDefaut = false,
+  });
 }
 
 class VentilationItem {
@@ -210,6 +216,8 @@ class R0ReportState extends State<R0Report> {
       final compteurs = data['Compteurs'] as Map;
       formData.indexCompteurs.duree = compteurs['duree'] ?? '';
       formData.indexCompteurs.note = compteurs['note'] ?? '';
+      formData.indexCompteurs.dureeDefaut = compteurs['dureeDefaut'] ?? false;
+      formData.indexCompteurs.noteDefaut = compteurs['noteDefaut'] ?? false;
     }
     if (data['exploitation'] is Map) {
       final exploitation = data['exploitation'] as Map;
@@ -278,33 +286,32 @@ class R0ReportState extends State<R0Report> {
   }
 
   void _calculateHours() {
-    double totalGrossHours = 0;
-    final start = _parseNumeric(formData.indexCompteurs.duree);
-    final end = _parseNumeric(formData.indexCompteurs.note);
-    if (end > start) {
-      totalGrossHours = (end - start);
-    }
+    // Calculate total stoppage hours (H.A) with interval merging
+    final rawRanges = formData.ventilation
+        .where((v) => v.duree.isNotEmpty && v.note.isNotEmpty)
+        .map((v) => {'start': v.duree, 'end': v.note})
+        .toList();
 
-    double totalStoppageHours = 0;
-    for (var item in formData.ventilation) {
-      if (item.duree.isNotEmpty && item.note.isNotEmpty) {
-        final startParts = item.duree.split(':');
-        final endParts = item.note.split(':');
-        if (startParts.length == 2 && endParts.length == 2) {
-          final sH = int.tryParse(startParts[0]) ?? 0;
-          final sM = int.tryParse(startParts[1]) ?? 0;
-          final eH = int.tryParse(endParts[0]) ?? 0;
-          final eM = int.tryParse(endParts[1]) ?? 0;
-          int diff = (eH * 60 + eM) - (sH * 60 + sM);
-          if (diff <= 0) diff += 24 * 60;
-          totalStoppageHours += diff / 60.0;
-        }
-      }
-    }
+    final ranges = TimeCalculationService.parseTimeRanges(rawRanges);
+    double totalStoppageHours =
+        TimeCalculationService.calculateTotalDowntime(ranges);
 
     formData.exploitation['H.A'] = totalStoppageHours.toStringAsFixed(2);
-    // H.M is the machine hour counter difference
-    double hm = totalGrossHours;
+
+    // Calculate working hours (H.M) using TimeCalculationService
+    final hasDefect = formData.indexCompteurs.dureeDefaut ||
+        formData.indexCompteurs.noteDefaut;
+    final start =
+        hasDefect ? null : _parseNumeric(formData.indexCompteurs.duree);
+    final end = hasDefect ? null : _parseNumeric(formData.indexCompteurs.note);
+
+    double hm = TimeCalculationService.calculateWorkingHours(
+      startCounter: start,
+      endCounter: end,
+      hasDefect: hasDefect,
+      totalStoppageHours: totalStoppageHours,
+    );
+
     formData.exploitation['H.M'] = hm.toStringAsFixed(2);
 
     // Calculate Rendement %
@@ -490,10 +497,26 @@ class R0ReportState extends State<R0Report> {
       if (formData.selectedMine.isEmpty ||
           formData.selectedPoste.isEmpty ||
           formData.selectedModel.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(l10n
-                .selectPosteMessage))); // Using selectPosteMessage as a general validation message for now or similar
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.selectPosteMessage)));
         return;
+      }
+    }
+
+    if (_currentStep == 1) {
+      // Validate working hours (Counters)
+      final start = _parseNumeric(formData.indexCompteurs.duree);
+      final end = _parseNumeric(formData.indexCompteurs.note);
+      if (!formData.indexCompteurs.dureeDefaut &&
+          !formData.indexCompteurs.noteDefaut) {
+        if (end - start > 8.0) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content:
+                Text(l10n.operatingHoursExceeded((end - start).toInt(), 8)),
+            backgroundColor: AppColors.error,
+          ));
+          return;
+        }
       }
     }
 
@@ -677,52 +700,94 @@ class R0ReportState extends State<R0Report> {
         Text(l10n.counterEntryTitle(formData.selectedPoste),
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 16),
-        CheckboxListTile(
-          title: const Text("Compteur Défectueux"), // Simplified label
-          value: formData.indexCompteurs.isDefective,
-          onChanged: (val) {
-            setState(() {
-              formData.indexCompteurs.isDefective = val ?? false;
-              if (formData.indexCompteurs.isDefective) {
-                formData.indexCompteurs.duree = 'défaut';
-                formData.indexCompteurs.note = 'défaut';
-              } else {
-                formData.indexCompteurs.duree = '';
-                formData.indexCompteurs.note = '';
-              }
-              _calculateHours();
-            });
-          },
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: OCPTextField(
+                label: l10n.startCounterLabel,
+                keyboardType: TextInputType.number,
+                enabled: !formData.indexCompteurs.dureeDefaut,
+                controller: TextEditingController(
+                    text: formData.indexCompteurs.dureeDefaut
+                        ? 'Défaut'
+                        : formData.indexCompteurs.duree)
+                  ..selection = TextSelection.fromPosition(TextPosition(
+                      offset: formData.indexCompteurs.dureeDefaut
+                          ? 0
+                          : formData.indexCompteurs.duree.length)),
+                onChanged: (val) {
+                  if (!formData.indexCompteurs.dureeDefaut) {
+                    formData.indexCompteurs.duree = val;
+                    _calculateHours();
+                  }
+                },
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              children: [
+                Checkbox(
+                  value: formData.indexCompteurs.dureeDefaut,
+                  onChanged: (val) {
+                    setState(() {
+                      formData.indexCompteurs.dureeDefaut = val ?? false;
+                      if (formData.indexCompteurs.dureeDefaut) {
+                        formData.indexCompteurs.duree = '';
+                      }
+                      _calculateHours();
+                    });
+                  },
+                ),
+                Text(l10n.defautLabel, style: const TextStyle(fontSize: 12)),
+              ],
+            ),
+          ],
         ),
         const SizedBox(height: 16),
-        OCPTextField(
-          label: l10n.startCounterLabel,
-          readOnly: formData.indexCompteurs.isDefective,
-          keyboardType: TextInputType.number,
-          controller: TextEditingController(text: formData.indexCompteurs.duree)
-            ..selection = TextSelection.fromPosition(
-                TextPosition(offset: formData.indexCompteurs.duree.length)),
-          onChanged: (val) {
-            if (!formData.indexCompteurs.isDefective) {
-              formData.indexCompteurs.duree = val;
-              _calculateHours();
-            }
-          },
-        ),
-        const SizedBox(height: 16),
-        OCPTextField(
-          label: l10n.endCounterLabel,
-          readOnly: formData.indexCompteurs.isDefective,
-          keyboardType: TextInputType.number,
-          controller: TextEditingController(text: formData.indexCompteurs.note)
-            ..selection = TextSelection.fromPosition(
-                TextPosition(offset: formData.indexCompteurs.note.length)),
-          onChanged: (val) {
-            if (!formData.indexCompteurs.isDefective) {
-              formData.indexCompteurs.note = val;
-              _calculateHours();
-            }
-          },
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: OCPTextField(
+                label: l10n.endCounterLabel,
+                keyboardType: TextInputType.number,
+                enabled: !formData.indexCompteurs.noteDefaut,
+                controller: TextEditingController(
+                    text: formData.indexCompteurs.noteDefaut
+                        ? 'Défaut'
+                        : formData.indexCompteurs.note)
+                  ..selection = TextSelection.fromPosition(TextPosition(
+                      offset: formData.indexCompteurs.noteDefaut
+                          ? 0
+                          : formData.indexCompteurs.note.length)),
+                onChanged: (val) {
+                  if (!formData.indexCompteurs.noteDefaut) {
+                    formData.indexCompteurs.note = val;
+                    _calculateHours();
+                  }
+                },
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              children: [
+                Checkbox(
+                  value: formData.indexCompteurs.noteDefaut,
+                  onChanged: (val) {
+                    setState(() {
+                      formData.indexCompteurs.noteDefaut = val ?? false;
+                      if (formData.indexCompteurs.noteDefaut) {
+                        formData.indexCompteurs.note = '';
+                      }
+                      _calculateHours();
+                    });
+                  },
+                ),
+                Text(l10n.defautLabel, style: const TextStyle(fontSize: 12)),
+              ],
+            ),
+          ],
         ),
       ],
     );
@@ -1217,9 +1282,91 @@ class R0ReportState extends State<R0Report> {
         Text(v, style: const TextStyle(fontWeight: FontWeight.bold))
       ]));
 
+  DateTime _getDateTimeFromTimeString(DateTime date, String timeStr) {
+    final parts = timeStr.split(':');
+    return DateTime(date.year, date.month, date.day, int.parse(parts[0]),
+        int.parse(parts[1]));
+  }
+
+  String _formatDateTimeToTimeString(DateTime dt) {
+    return "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+  }
+
   Future<void> _saveReport(AppLocalizations l10n) async {
     setState(() => _isLoading = true);
     try {
+      // Define shift boundaries
+      final shiftStartTimes = {
+        "3ème": "22:30",
+        "1er": "06:30",
+        "2ème": "14:30",
+      };
+      final shiftEndTimes = {
+        "3ème": "06:30",
+        "1er": "14:30",
+        "2ème": "22:30",
+      };
+
+      String startTimeStr = shiftStartTimes[formData.selectedPoste]!;
+      String endTimeStr = shiftEndTimes[formData.selectedPoste]!;
+
+      DateTime shiftStart =
+          _getDateTimeFromTimeString(_selectedDate, startTimeStr);
+      DateTime shiftEnd = _getDateTimeFromTimeString(_selectedDate, endTimeStr);
+
+      if (formData.selectedPoste == "3ème") {
+        // 3ème shift starts on current day and ends on next day
+        shiftEnd = shiftEnd.add(const Duration(days: 1));
+      }
+
+      List<VentilationItem> currentShiftArrets = [];
+      List<Map<String, dynamic>> carryOverData = [];
+
+      for (var item in formData.ventilation) {
+        DateTime arretStart =
+            _getDateTimeFromTimeString(_selectedDate, item.duree);
+        DateTime arretEnd =
+            _getDateTimeFromTimeString(_selectedDate, item.note);
+
+        // Adjust for same-day wrap around if necessary (though usually picked times are within 24h)
+        if (arretEnd.isBefore(arretStart)) {
+          arretEnd = arretEnd.add(const Duration(days: 1));
+        }
+
+        // 1. Part during shift (clipped to shift boundaries)
+        DateTime effectiveStart =
+            arretStart.isBefore(shiftStart) ? shiftStart : arretStart;
+        DateTime effectiveEnd =
+            arretEnd.isAfter(shiftEnd) ? shiftEnd : arretEnd;
+
+        if (effectiveStart.isBefore(effectiveEnd) &&
+            effectiveStart.isBefore(shiftEnd) &&
+            effectiveEnd.isAfter(shiftStart)) {
+          currentShiftArrets.add(VentilationItem(
+            code: item.code,
+            category: item.category,
+            label: item.label,
+            duree: _formatDateTimeToTimeString(effectiveStart),
+            note: _formatDateTimeToTimeString(effectiveEnd),
+          ));
+        }
+
+        // 2. Part after shift (Carry Over)
+        if (arretEnd.isAfter(shiftEnd)) {
+          DateTime carryStart =
+              arretStart.isBefore(shiftEnd) ? shiftEnd : arretStart;
+          carryOverData.add({
+            'Catégorie': item.category,
+            'Arret': item.label,
+            'Début': _formatDateTimeToTimeString(carryStart),
+            'Fin': _formatDateTimeToTimeString(arretEnd),
+            'OriginalStart': item.duree,
+            'OriginalEnd': item.note,
+            'CarryOver': true
+          });
+        }
+      }
+
       final report = Report(
         id: widget.initialReport?.id,
         description: 'Rapport R0 - ${formData.selectedPoste}',
@@ -1238,7 +1385,7 @@ class R0ReportState extends State<R0Report> {
             'duree': formData.indexCompteurs.duree,
             'note': formData.indexCompteurs.note
           },
-          'Arrets': formData.ventilation
+          'Arrets': currentShiftArrets
               .map((v) => {
                     'Catégorie': v.category,
                     'Arret': v.label,
@@ -1248,8 +1395,13 @@ class R0ReportState extends State<R0Report> {
               .toList(),
           'exploitation': {
             ...formData.exploitation,
-            'Rendeme': formData.exploitation[
-                'Rendement %'], // For backward compatibility if needed
+            'H.A': (currentShiftArrets.fold<double>(0, (sum, item) {
+              final s = _getDateTimeFromTimeString(_selectedDate, item.duree);
+              var e = _getDateTimeFromTimeString(_selectedDate, item.note);
+              if (e.isBefore(s)) e = e.add(const Duration(days: 1));
+              return sum + (e.difference(s).inMinutes / 60.0);
+            })).toStringAsFixed(2),
+            'Rendeme': formData.exploitation['Rendement %'],
           },
           'repartition': {
             'Chantier': formData.repartitionTravail.chantier,
@@ -1272,6 +1424,65 @@ class R0ReportState extends State<R0Report> {
         widget.onSave!(report);
       } else {
         await _databaseHelper.insertReport(report);
+
+        // Handle Carry Over to Next Poste
+        if (carryOverData.isNotEmpty) {
+          String nextPoste;
+          DateTime nextDate = _selectedDate;
+          if (formData.selectedPoste == "3ème") {
+            nextPoste = "1er";
+          } else if (formData.selectedPoste == "1er") {
+            nextPoste = "2ème";
+          } else {
+            nextPoste = "3ème";
+            nextDate = nextDate.add(const Duration(days: 1));
+          }
+
+          // Create a new report for the next poste with carried over arrêts
+          final nextReport = Report(
+            description: 'Rapport R0 - $nextPoste (Carry Over)',
+            date: nextDate,
+            type: formData.selectedModel,
+            group: nextPoste,
+            additionalData: {
+              'mine': formData.selectedMine,
+              'zone': formData.selectedZone,
+              'sortie': formData.selectedSortie,
+              'selectedPoste': nextPoste,
+              'Category': formData.selectedCategory,
+              'Type': formData.selectedType,
+              'Model': formData.selectedModel,
+              'Compteurs': {'duree': '', 'note': ''},
+              'Arrets': carryOverData,
+              'exploitation': {
+                'H.M': '0.00',
+                'H.A': (carryOverData.fold<double>(0, (sum, item) {
+                  final s = _getDateTimeFromTimeString(nextDate, item['Début']);
+                  var e = _getDateTimeFromTimeString(nextDate, item['Fin']);
+                  if (e.isBefore(s)) e = e.add(const Duration(days: 1));
+                  return sum + (e.difference(s).inMinutes / 60.0);
+                })).toStringAsFixed(2),
+                'Tonnage': '0',
+                'metrage fore': '',
+                'Nr de Trous Fores': '',
+                'Nr de Voyages': '',
+                'M³ Decapages': '',
+                'Nombre T.K.U': '',
+                'Rendement %': '0.00',
+              },
+              'repartition': {
+                'Chantier': '',
+                'Temps': '',
+                'Imputation': '',
+              },
+              'personnel': {'conductr': '', 'graisseur': '', 'matricules': ''},
+              'consommation': {'tricone': '', 'gasoil': ''},
+              'carryOverFrom': formData.selectedPoste
+            },
+          );
+          await _databaseHelper.insertReport(nextReport);
+        }
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(l10n.success), backgroundColor: AppColors.success));

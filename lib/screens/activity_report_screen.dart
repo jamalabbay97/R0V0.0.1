@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import 'package:r0/models/report.dart';
 import 'package:r0/services/database_helper.dart';
 import 'package:r0/theme.dart';
+import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/widgets/custom_widgets.dart';
 
 // --- Enums and Helpers ---
@@ -68,24 +69,29 @@ class Counter {
   String start;
   String end;
   String? error;
-  bool isDefective;
-  Counter(
-      {required this.id,
-      this.poste,
-      this.start = '',
-      this.end = '',
-      this.error,
-      this.isDefective = false});
+  bool startDefect;
+  bool endDefect;
+  Counter({
+    required this.id,
+    this.poste,
+    this.start = '',
+    this.end = '',
+    this.error,
+    this.startDefect = false,
+    this.endDefect = false,
+  });
 }
 
 class LiaisonCounter extends Counter {
-  LiaisonCounter(
-      {required super.id,
-      super.poste,
-      super.start,
-      super.end,
-      super.error,
-      super.isDefective = false}); // Pass isDefective
+  LiaisonCounter({
+    required super.id,
+    super.poste,
+    super.start,
+    super.end,
+    super.error,
+    super.startDefect,
+    super.endDefect,
+  });
 }
 
 class StockEntry {
@@ -229,26 +235,28 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     // Load vibrator counters
     if (data['vibrator Counters'] is List) {
       vibratorCounters = (data['vibrator Counters'] as List)
-          .map((c) => Counter(
-                id: c['id'] ?? const Uuid().v4(),
-                poste: _parsePosteFromString(c['poste']),
-                start: c['start'] ?? '',
-                end: c['end'] ?? '',
-                error: c['error'],
-                isDefective: (c['start'] == 'défaut' || c['end'] == 'défaut'),
+          .map((counter) => Counter(
+                id: counter['id'] ?? const Uuid().v4(),
+                poste: _parsePosteFromString(counter['poste']),
+                start: counter['start'] ?? '',
+                end: counter['end'] ?? '',
+                error: counter['error'],
+                startDefect: counter['startDefect'] ?? false,
+                endDefect: counter['endDefect'] ?? false,
               ))
           .toList();
     }
     // Load liaison counters
     if (data['liaison Counters'] is List) {
       liaisonCounters = (data['liaison Counters'] as List)
-          .map((c) => LiaisonCounter(
-                id: c['id'] ?? const Uuid().v4(),
-                poste: _parsePosteFromString(c['poste']),
-                start: c['start'] ?? '',
-                end: c['end'] ?? '',
-                error: c['error'],
-                isDefective: (c['start'] == 'défaut' || c['end'] == 'défaut'),
+          .map((counter) => LiaisonCounter(
+                id: counter['id'] ?? const Uuid().v4(),
+                poste: _parsePosteFromString(counter['poste']),
+                start: counter['start'] ?? '',
+                end: counter['end'] ?? '',
+                error: counter['error'],
+                startDefect: counter['startDefect'] ?? false,
+                endDefect: counter['endDefect'] ?? false,
               ))
           .toList();
     }
@@ -346,6 +354,9 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
   int calculateTotalCounterMinutes(List counters) {
     double totalHours = 0;
     for (var counter in counters) {
+      if (counter.startDefect || counter.endDefect) {
+        continue;
+      }
       var startVal = validateAndParseCounterValue(counter.start);
       var endVal = validateAndParseCounterValue(counter.end);
       if (startVal != null && endVal != null && endVal >= startVal) {
@@ -638,21 +649,30 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
 
   Widget _buildCounterList(List<Counter> list, Function(Counter) onAdd) {
     return Column(children: [
-      ...list.asMap().entries.map((e) => OCPCard(
-              child: ListTile(
-            title: Text("${posteToString(e.value.poste)} Poste"),
-            subtitle: Text("${e.value.start} -> ${e.value.end}"),
-            trailing: IconButton(
-                icon: const Icon(Icons.delete, color: AppColors.error),
-                onPressed: () {
-                  setState(() => list.removeAt(e.key));
-                  recalculateTimes();
-                }),
-          ))),
+      ...list.asMap().entries.map((e) {
+        final startText = e.value.startDefect
+            ? (AppLocalizations.of(context)?.defautLabel ?? 'Défaut')
+            : e.value.start;
+        final endText = e.value.endDefect
+            ? (AppLocalizations.of(context)?.defautLabel ?? 'Défaut')
+            : e.value.end;
+        return OCPCard(
+            child: ListTile(
+          title: Text("${posteToString(e.value.poste)} Poste"),
+          subtitle: Text("$startText -> $endText"),
+          trailing: IconButton(
+              icon: const Icon(Icons.delete, color: AppColors.error),
+              onPressed: () {
+                setState(() => list.removeAt(e.key));
+                recalculateTimes();
+              }),
+        ));
+      }),
       const SizedBox(height: 16),
       OCPButton(
           text: "Aj Compteur",
           icon: Icons.add,
+          isSecondary: true,
           onPressed: () => _showAddCounterDialog(onAdd))
     ]);
   }
@@ -661,10 +681,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     Poste? poste;
     String start = '';
     String end = '';
-    bool isDefective = false;
-    final TextEditingController startController = TextEditingController();
-    final TextEditingController endController = TextEditingController();
-
+    bool startDefect = false;
+    bool endDefect = false;
     showDialog(
         context: context,
         builder: (ctx) => StatefulBuilder(
@@ -678,42 +696,64 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                                 value: p, child: Text(posteToString(p))))
                             .toList(),
                         onChanged: (v) => setDs(() => poste = v)),
-                    CheckboxListTile(
-                      title: const Text("Compteur Défectueux"),
-                      value: isDefective,
-                      onChanged: (val) {
-                        setDs(() {
-                          isDefective = val ?? false;
-                          if (isDefective) {
-                            start = 'défaut';
-                            end = 'défaut';
-                            startController.text = 'défaut';
-                            endController.text = 'défaut';
-                          } else {
-                            start = '';
-                            end = '';
-                            startController.text = '';
-                            endController.text = '';
-                          }
-                        });
-                      },
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                              decoration:
+                                  const InputDecoration(labelText: "Début"),
+                              keyboardType: TextInputType.number,
+                              enabled: !startDefect,
+                              controller: startDefect
+                                  ? TextEditingController(text: 'Défaut')
+                                  : null,
+                              onChanged: (v) => start = v),
+                        ),
+                        Column(
+                          children: [
+                            Checkbox(
+                                value: startDefect,
+                                onChanged: (v) => setDs(() {
+                                      startDefect = v ?? false;
+                                      if (startDefect) start = '';
+                                    })),
+                            // Using a hardcoded string or a helper if l10n unavailable in State
+                            // Assuming 'Défaut' is okay or reusing existing label if possible.
+                            // The context here is ActivityScreenState, I can access context but maybe not l10n easily if it's not passed,
+                            // but I can try AppLocalizations.of(context).defautLabel
+                            const Text("Défaut",
+                                style: TextStyle(fontSize: 10)),
+                          ],
+                        )
+                      ],
                     ),
-                    TextField(
-                        decoration: const InputDecoration(labelText: "Début"),
-                        keyboardType: TextInputType.number,
-                        controller: startController,
-                        readOnly: isDefective,
-                        onChanged: (v) {
-                          if (!isDefective) start = v;
-                        }),
-                    TextField(
-                        decoration: const InputDecoration(labelText: "Fin"),
-                        keyboardType: TextInputType.number,
-                        controller: endController,
-                        readOnly: isDefective,
-                        onChanged: (v) {
-                          if (!isDefective) end = v;
-                        }),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                              decoration:
+                                  const InputDecoration(labelText: "Fin"),
+                              keyboardType: TextInputType.number,
+                              enabled: !endDefect,
+                              controller: endDefect
+                                  ? TextEditingController(text: 'Défaut')
+                                  : null,
+                              onChanged: (v) => end = v),
+                        ),
+                        Column(
+                          children: [
+                            Checkbox(
+                                value: endDefect,
+                                onChanged: (v) => setDs(() {
+                                      endDefect = v ?? false;
+                                      if (endDefect) end = '';
+                                    })),
+                            const Text("Défaut",
+                                style: TextStyle(fontSize: 10)),
+                          ],
+                        )
+                      ],
+                    ),
                   ]),
                   actions: [
                     TextButton(
@@ -727,7 +767,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                                     poste: poste,
                                     start: start,
                                     end: end,
-                                    isDefective: isDefective));
+                                    startDefect: startDefect,
+                                    endDefect: endDefect));
                                 recalculateTimes();
                                 Navigator.pop(context);
                               }

@@ -133,6 +133,16 @@
       }
     }
   },
+  "carryOver": "Carry-over",
+  "@carryOver": {},
+  "carriedOverFrom": "Carried over from {poste}",
+  "@carriedOverFrom": {
+    "placeholders": {
+      "poste": {
+        "type": "String"
+      }
+    }
+  },
   "errorsDetected": "Errors detected",
   "@errorsDetected": {},
   "vibratorCounterErrors": "• Errors in vibrator counters",
@@ -141,6 +151,8 @@
   "@liaisonCounterErrors": {},
   "stockEntryErrors": "• Errors in stock entries",
   "@stockEntryErrors": {},
+  "defautLabel": "Defect",
+  "@defautLabel": {},
   "addStop": "Add Stop",
   "@addStop": {},
   "predefinedNature": "Predefined nature",

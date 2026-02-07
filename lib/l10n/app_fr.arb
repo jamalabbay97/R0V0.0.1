@@ -133,6 +133,16 @@
       }
     }
   },
+  "carryOver": "Reporté",
+  "@carryOver": {},
+  "carriedOverFrom": "Reporté du poste {poste}",
+  "@carriedOverFrom": {
+    "placeholders": {
+      "poste": {
+        "type": "String"
+      }
+    }
+  },
   "errorsDetected": "Erreurs détectées",
   "@errorsDetected": {},
   "vibratorCounterErrors": "• Erreurs dans les compteurs vibreurs",
@@ -141,6 +151,8 @@
   "@liaisonCounterErrors": {},
   "stockEntryErrors": "• Erreurs dans les entrées stock",
   "@stockEntryErrors": {},
+  "defautLabel": "Défaut",
+  "@defautLabel": {},
   "addStop": "Ajouter un arrêt",
   "@addStop": {},
   "predefinedNature": "Nature prédéfinie",
