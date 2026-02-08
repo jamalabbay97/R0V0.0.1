@@ -150,6 +150,48 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
     return null;
   }
 
+  int _minutesFromDateTime(DateTime time) => time.hour * 60 + time.minute;
+
+  bool _isTripTimeWithinPoste(DateTime time, Poste poste) {
+    final minutes = _minutesFromDateTime(time);
+    const startThird = 22 * 60 + 30;
+    const endThird = 6 * 60 + 30;
+    const startFirst = 6 * 60 + 30;
+    const endFirst = 14 * 60 + 30;
+    const startSecond = 14 * 60 + 30;
+    const endSecond = 22 * 60 + 30;
+
+    switch (poste) {
+      case Poste.troisieme:
+        return minutes >= startThird || minutes < endThird;
+      case Poste.premier:
+        return minutes >= startFirst && minutes < endFirst;
+      case Poste.deuxieme:
+        return minutes >= startSecond && minutes < endSecond;
+    }
+  }
+
+  bool _areAllTripTimesWithinSelectedPoste() {
+    final poste = _selectedPoste;
+    if (poste == null) return false;
+    for (final truck in truckData) {
+      final counts = truck['counts'] as List?;
+      if (counts == null) continue;
+      for (final trip in counts) {
+        if (trip is! Map) continue;
+        final timeStr = trip['time']?.toString() ?? '';
+        final parts = timeStr.split(':');
+        if (parts.length != 2) return false;
+        final hour = int.tryParse(parts[0]);
+        final minute = int.tryParse(parts[1]);
+        if (hour == null || minute == null) return false;
+        final time = DateTime(2000, 1, 1, hour, minute);
+        if (!_isTripTimeWithinPoste(time, poste)) return false;
+      }
+    }
+    return true;
+  }
+
   QualiteType? _parseQualiteType(dynamic val) {
     if (val == null) return null;
     var str = val.toString();
@@ -530,6 +572,18 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                       child: Text(l10n.cancel)),
                   ElevatedButton(
                       onPressed: () {
+                        if (_selectedPoste == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(l10n.pleaseSelectPoste),
+                              backgroundColor: AppColors.error));
+                          return;
+                        }
+                        if (!_isTripTimeWithinPoste(time, _selectedPoste!)) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(l10n.invalidStopStartTimeForPoste),
+                              backgroundColor: AppColors.error));
+                          return;
+                        }
                         setState(() {
                           trip['time'] =
                               "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}";
@@ -588,6 +642,18 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                       child: Text(l10n.cancel)),
                   ElevatedButton(
                       onPressed: () {
+                        if (_selectedPoste == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(l10n.pleaseSelectPoste),
+                              backgroundColor: AppColors.error));
+                          return;
+                        }
+                        if (!_isTripTimeWithinPoste(time, _selectedPoste!)) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(l10n.invalidStopStartTimeForPoste),
+                              backgroundColor: AppColors.error));
+                          return;
+                        }
                         setState(() {
                           if (truck['counts'] == null) truck['counts'] = [];
                           truck['counts'].add({
@@ -784,6 +850,18 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
       ]));
 
   Future<void> _saveReport(AppLocalizations l10n) async {
+    if (_selectedPoste == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(l10n.pleaseSelectPoste),
+          backgroundColor: AppColors.error));
+      return;
+    }
+    if (!_areAllTripTimesWithinSelectedPoste()) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(l10n.invalidStopStartTimeForPoste),
+          backgroundColor: AppColors.error));
+      return;
+    }
     setState(() => _isSaving = true);
     int totalTrips = truckData.fold(
         0, (acc, t) => acc + ((t['counts'] as List?)?.length ?? 0));

@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 import 'package:uuid/uuid.dart';
 import 'package:r0/data/r0_arrets_data.dart';
+import 'package:r0/theme.dart';
 
 class _ShiftWindow {
   final String poste;
@@ -5748,6 +5749,50 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return DateTime(now.year, now.month, now.day, hour, minute);
   }
 
+  String? _normalizePosteKey(String? poste) {
+    if (poste == null || poste.isEmpty) return null;
+    final normalized = poste.toLowerCase();
+    if (normalized.contains('3')) return '3';
+    if (normalized.contains('1')) return '1';
+    if (normalized.contains('2')) return '2';
+    return null;
+  }
+
+  bool _isTripTimeWithinPoste(String? timeStr, String? posteKey) {
+    if (timeStr == null || timeStr.isEmpty || posteKey == null) return false;
+    final time = _parseTripTime(timeStr);
+    if (time == null) return false;
+    final minutes = time.hour * 60 + time.minute;
+    const startThird = 22 * 60 + 30;
+    const endThird = 6 * 60 + 30;
+    const startFirst = 6 * 60 + 30;
+    const endFirst = 14 * 60 + 30;
+    const startSecond = 14 * 60 + 30;
+    const endSecond = 22 * 60 + 30;
+
+    switch (posteKey) {
+      case '3':
+        return minutes >= startThird || minutes < endThird;
+      case '1':
+        return minutes >= startFirst && minutes < endFirst;
+      case '2':
+        return minutes >= startSecond && minutes < endSecond;
+      default:
+        return false;
+    }
+  }
+
+  bool _areAllTripTimesWithinPoste(
+      List<Map<String, dynamic>> trips, String? posteKey) {
+    if (posteKey == null) return false;
+    for (final trip in trips) {
+      if (!_isTripTimeWithinPoste(trip['time']?.toString(), posteKey)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   void _recalculateTruckSummary(
       Map<String, dynamic> data, AppLocalizations l10n) {
     final truckData =
@@ -7585,6 +7630,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       onPressed: () {
                         if (timeController.text.isNotEmpty &&
                             selectedEquipment != null) {
+                          final posteKey = _normalizePosteKey(
+                              data['selectedPoste'] ??
+                                  data['poste'] ??
+                                  data['posteSelected']);
+                          if (posteKey == null) {
+                            scaffoldMessenger.showSnackBar(SnackBar(
+                                content: Text(l10n.pleaseSelectPoste),
+                                backgroundColor: AppColors.error));
+                            return;
+                          }
+                          if (!_isTripTimeWithinPoste(
+                              timeController.text, posteKey)) {
+                            scaffoldMessenger.showSnackBar(SnackBar(
+                                content:
+                                    Text(l10n.invalidStopStartTimeForPoste),
+                                backgroundColor: AppColors.error));
+                            return;
+                          }
                           final updatedTrip = {
                             'time': timeController.text,
                             'equipment': selectedEquipment,
@@ -7802,6 +7865,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         ElevatedButton(
                           onPressed: () {
                             if (truckNumber.isNotEmpty && driver1.isNotEmpty) {
+                              final posteKey = _normalizePosteKey(
+                                  data['selectedPoste'] ??
+                                      data['poste'] ??
+                                      data['posteSelected']);
+                              if (posteKey == null) {
+                                scaffoldMessenger.showSnackBar(SnackBar(
+                                    content: Text(l10n.pleaseSelectPoste),
+                                    backgroundColor: AppColors.error));
+                                return;
+                              }
+                              if (!_areAllTripTimesWithinPoste(
+                                  counts, posteKey)) {
+                                scaffoldMessenger.showSnackBar(SnackBar(
+                                    content:
+                                        Text(l10n.invalidStopStartTimeForPoste),
+                                    backgroundColor: AppColors.error));
+                                return;
+                              }
                               final updatedData =
                                   Map<String, dynamic>.from(data);
                               if (updatedData['truckData'] == null) {
