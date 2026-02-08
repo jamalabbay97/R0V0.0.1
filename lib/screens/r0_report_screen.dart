@@ -29,12 +29,16 @@ class VentilationItem {
   String label;
   String duree;
   String note;
+  String originalStart;
+  String originalEnd;
   VentilationItem(
       {required this.code,
       this.category = '',
       required this.label,
       this.duree = '',
-      this.note = ''});
+      this.note = '',
+      this.originalStart = '',
+      this.originalEnd = ''});
 }
 
 class RepartitionItem {
@@ -325,8 +329,11 @@ class R0ReportState extends State<R0Report> {
                 code: 0,
                 category: a['Catégorie']?.toString() ?? '',
                 label: a['Arret']?.toString() ?? '',
-                duree: a['Début']?.toString() ?? '',
-                note: a['Fin']?.toString() ?? '',
+                duree: (a['OriginalStart'] ?? a['Début'])?.toString() ?? '',
+                note: (a['OriginalEnd'] ?? a['Fin'])?.toString() ?? '',
+                originalStart:
+                    (a['OriginalStart'] ?? a['Début'])?.toString() ?? '',
+                originalEnd: (a['OriginalEnd'] ?? a['Fin'])?.toString() ?? '',
               ))
           .toList();
     }
@@ -1188,6 +1195,10 @@ class R0ReportState extends State<R0Report> {
                               duree:
                                   "${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}",
                               note:
+                                  "${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}",
+                              originalStart:
+                                  "${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}",
+                              originalEnd:
                                   "${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}"));
                           _calculateHours();
                         });
@@ -1521,6 +1532,10 @@ class R0ReportState extends State<R0Report> {
             label: item.label,
             duree: _formatDateTimeToTimeString(effectiveStart),
             note: _formatDateTimeToTimeString(effectiveEnd),
+            originalStart:
+                item.originalStart.isNotEmpty ? item.originalStart : item.duree,
+            originalEnd:
+                item.originalEnd.isNotEmpty ? item.originalEnd : item.note,
           ));
         }
 
@@ -1553,8 +1568,11 @@ class R0ReportState extends State<R0Report> {
                 'Arret': item.label,
                 'Début': _formatDateTimeToTimeString(segmentStart),
                 'Fin': _formatDateTimeToTimeString(segmentEnd),
-                'OriginalStart': item.duree,
-                'OriginalEnd': item.note,
+                'OriginalStart': item.originalStart.isNotEmpty
+                    ? item.originalStart
+                    : item.duree,
+                'OriginalEnd':
+                    item.originalEnd.isNotEmpty ? item.originalEnd : item.note,
                 'CarryOver': true
               });
             }
@@ -1590,7 +1608,11 @@ class R0ReportState extends State<R0Report> {
                     'Catégorie': v.category,
                     'Arret': v.label,
                     'Début': v.duree,
-                    'Fin': v.note
+                    'Fin': v.note,
+                    'OriginalStart':
+                        v.originalStart.isNotEmpty ? v.originalStart : v.duree,
+                    'OriginalEnd':
+                        v.originalEnd.isNotEmpty ? v.originalEnd : v.note,
                   })
               .toList(),
           'exploitation': {

@@ -293,8 +293,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     for (final arret in arrets) {
       if (arret is! Map) continue;
-      final debut = arret['Début']?.toString() ?? '';
-      final fin = arret['Fin']?.toString() ?? '';
+      final debut =
+          (arret['OriginalStart'] ?? arret['Début'])?.toString() ?? '';
+      final fin = (arret['OriginalEnd'] ?? arret['Fin'])?.toString() ?? '';
       if (debut.isEmpty || fin.isEmpty) continue;
 
       DateTime arretStart =
@@ -376,8 +377,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     for (final arret in arrets) {
       if (arret is! Map) continue;
-      final debut = arret['Début']?.toString() ?? '';
-      final fin = arret['Fin']?.toString() ?? '';
+      final debut =
+          (arret['OriginalStart'] ?? arret['Début'])?.toString() ?? '';
+      final fin = (arret['OriginalEnd'] ?? arret['Fin'])?.toString() ?? '';
       if (debut.isEmpty || fin.isEmpty) continue;
 
       DateTime arretStart =
@@ -401,6 +403,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
           'Arret': arret['Arret'] ?? '',
           'Début': _formatDateTimeToTimeString(effectiveStart),
           'Fin': _formatDateTimeToTimeString(effectiveEnd),
+          'OriginalStart': arret['OriginalStart'] ?? debut,
+          'OriginalEnd': arret['OriginalEnd'] ?? fin,
         });
       }
 
@@ -8942,7 +8946,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
       if (data['Arrets'] == null) {
         data['Arrets'] = [];
       }
-      (data['Arrets'] as List).add(result);
+      (data['Arrets'] as List).add({
+        ...result,
+        'OriginalStart': result['Début'] ?? '',
+        'OriginalEnd': result['Fin'] ?? '',
+      });
 
       // Recalculate hours
       _recalculateR0Hours(data, report.date);
@@ -8974,8 +8982,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final initialItem = {
       'Catégorie': (arret['Catégorie'] ?? '').toString(),
       'Arret': (arret['Arret'] ?? '').toString(),
-      'Début': (arret['Début'] ?? '').toString(),
-      'Fin': (arret['Fin'] ?? '').toString(),
+      'Début': (arret['OriginalStart'] ?? arret['Début'] ?? '').toString(),
+      'Fin': (arret['OriginalEnd'] ?? arret['Fin'] ?? '').toString(),
     };
     final arretCategories = _arretsForReport(data);
 
@@ -8991,7 +8999,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
 
     if (result != null) {
-      (data['Arrets'] as List)[index] = result;
+      final updatedArret = Map<String, dynamic>.from(arret);
+      updatedArret['Catégorie'] = result['Catégorie'] ?? '';
+      updatedArret['Arret'] = result['Arret'] ?? '';
+      updatedArret['Début'] = result['Début'] ?? '';
+      updatedArret['Fin'] = result['Fin'] ?? '';
+      updatedArret['OriginalStart'] = result['Début'] ?? '';
+      updatedArret['OriginalEnd'] = result['Fin'] ?? '';
+      (data['Arrets'] as List)[index] = updatedArret;
 
       // Recalculate hours
       _recalculateR0Hours(data, report.date);
