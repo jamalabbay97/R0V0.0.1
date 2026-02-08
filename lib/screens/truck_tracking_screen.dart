@@ -60,6 +60,7 @@ class TruckTrackingScreen extends StatefulWidget {
 
 class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
   final DatabaseHelper _databaseHelper = DatabaseHelper();
+  final TextEditingController _distanceController = TextEditingController();
 
   // State
   DateTime _selectedDate = DateTime.now();
@@ -92,8 +93,8 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
   static const List<String> equipmentList = [
     'Chargeuse 992K',
     'Chargeuse 994H',
-    'Pelle Hy',
-    'Pelle B1'
+    'Pelle hydraulique',
+    'Pelle electrique B1'
   ];
   // Predefined lists (Localized via getters if static needed, but simpler to use instance)
   Map<String, String> _getOperationTypes(AppLocalizations l10n) => {
@@ -134,6 +135,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
     }
     _selectedSortie = data['sortie'];
     _selectedQualite = data['selectedQualite'];
+    _distanceController.text = data['distance']?.toString() ?? '';
     _selectedQualiteType = _parseQualiteType(data['selectedQualiteType']);
     _selectedOperationType = data['operationType'];
     _selectedPoste = _parsePoste(data['selectedPoste']);
@@ -161,6 +163,12 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
       return QualiteType.pb30;
     }
     return null;
+  }
+
+  @override
+  void dispose() {
+    _distanceController.dispose();
+    super.dispose();
   }
 
   @override
@@ -308,6 +316,11 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
               .toList(),
           onChanged: (v) => setState(() => _selectedPoste = v)),
       const SizedBox(height: 16),
+      OCPTextField(
+          label: l10n.distance,
+          controller: _distanceController,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+      const SizedBox(height: 16),
       OCPDropdown<String>(
           label: l10n.operation,
           value: _selectedOperationType,
@@ -433,7 +446,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                 children: ((truck['counts'] as List)
                     .map((trip) => ListTile(
                           title: Text(trip['time']),
-                          subtitle: Text(trip['equipment'] ?? ''),
+                          subtitle: Text(_buildTripSubtitle(trip, l10n)),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -473,6 +486,8 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
           int.parse(parts[1]));
     }
     String? eq = trip['equipment'];
+    final String? initialEquipment = equipmentList.contains(eq) ? eq : null;
+    QualiteType? tripQuality = _parseQualiteType(trip['productQualityType']);
 
     showDialog(
         context: context,
@@ -490,13 +505,24 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                                   fontSize: 24, color: Colors.black),
                               onTimeChange: (t) => time = t),
                           DropdownButtonFormField<String>(
-                              initialValue: eq,
+                              initialValue: initialEquipment,
                               hint: Text(l10n.equipment),
                               items: equipmentList
                                   .map((e) => DropdownMenuItem(
                                       value: e, child: Text(e)))
                                   .toList(),
-                              onChanged: (v) => setDs(() => eq = v))
+                              onChanged: (v) => setDs(() => eq = v)),
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<QualiteType>(
+                              initialValue: tripQuality,
+                              hint: Text(l10n.qualityLabel),
+                              items: QualiteType.values
+                                  .map((t) => DropdownMenuItem(
+                                      value: t,
+                                      child:
+                                          Text(qualiteTypeToString(t, l10n))))
+                                  .toList(),
+                              onChanged: (v) => setDs(() => tripQuality = v))
                         ])),
                 actions: [
                   TextButton(
@@ -508,6 +534,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                           trip['time'] =
                               "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}";
                           trip['equipment'] = eq;
+                          trip['productQualityType'] = tripQuality?.toString();
                         });
                         Navigator.pop(context);
                       },
@@ -518,6 +545,8 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
   void _addTrip(Map<String, dynamic> truck, AppLocalizations l10n) {
     DateTime time = DateTime.now();
     String? eq = _selectedQualite; // Default to equipment selected in Step 1
+    final String? initialEquipment = equipmentList.contains(eq) ? eq : null;
+    QualiteType? tripQuality = _selectedQualiteType;
 
     showDialog(
         context: context,
@@ -534,13 +563,24 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                                   fontSize: 24, color: Colors.black),
                               onTimeChange: (t) => time = t),
                           DropdownButtonFormField<String>(
-                              initialValue: eq,
+                              initialValue: initialEquipment,
                               hint: Text(l10n.equipment),
                               items: equipmentList
                                   .map((e) => DropdownMenuItem(
                                       value: e, child: Text(e)))
                                   .toList(),
-                              onChanged: (v) => setDs(() => eq = v))
+                              onChanged: (v) => setDs(() => eq = v)),
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<QualiteType>(
+                              initialValue: tripQuality,
+                              hint: Text(l10n.qualityLabel),
+                              items: QualiteType.values
+                                  .map((t) => DropdownMenuItem(
+                                      value: t,
+                                      child:
+                                          Text(qualiteTypeToString(t, l10n))))
+                                  .toList(),
+                              onChanged: (v) => setDs(() => tripQuality = v))
                         ])),
                 actions: [
                   TextButton(
@@ -553,7 +593,8 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                           truck['counts'].add({
                             'time':
                                 "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}",
-                            'equipment': eq
+                            'equipment': eq,
+                            'productQualityType': tripQuality?.toString()
                           });
                         });
                         Navigator.pop(context);
@@ -569,12 +610,34 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
 
     // Calculate trips per equipment
     Map<String, int> equipmentTrips = {};
+    Map<String, Map<String, int>> equipmentQualityTrips = {};
     for (var truck in truckData) {
       final counts = truck['counts'] as List?;
       if (counts != null) {
         for (var trip in counts) {
           String eq = trip['equipment'] ?? l10n.unknownLabel;
           equipmentTrips[eq] = (equipmentTrips[eq] ?? 0) + 1;
+          final quality = _parseQualiteType(trip['productQualityType']);
+          final qualityLabel = quality == null
+              ? l10n.unknownLabel
+              : qualiteTypeToString(quality, l10n);
+          equipmentQualityTrips.putIfAbsent(eq, () => {});
+          equipmentQualityTrips[eq]![qualityLabel] =
+              (equipmentQualityTrips[eq]![qualityLabel] ?? 0) + 1;
+        }
+      }
+    }
+
+    Map<String, int> qualityTrips = {};
+    for (var truck in truckData) {
+      final counts = truck['counts'] as List?;
+      if (counts != null) {
+        for (var trip in counts) {
+          final quality = _parseQualiteType(trip['productQualityType']);
+          final label = quality == null
+              ? l10n.unknownLabel
+              : qualiteTypeToString(quality, l10n);
+          qualityTrips[label] = (qualityTrips[label] ?? 0) + 1;
         }
       }
     }
@@ -597,6 +660,11 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
       _row(l10n.mineZoneLabel,
           "${_selectedMine?.name ?? '-'} / ${_selectedZone?.name ?? '-'}"),
       _row(l10n.type, qualiteTypeToString(_selectedQualiteType, l10n)),
+      _row(
+          l10n.distance,
+          _distanceController.text.trim().isEmpty
+              ? '-'
+              : _distanceController.text.trim()),
       _row(l10n.poste, posteToString(_selectedPoste, l10n)),
       _row(
           l10n.operation,
@@ -611,7 +679,32 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
 
       // Trips per Equipment
       _sectionHeader(l10n.tripsByEquipment),
-      ...equipmentTrips.entries.map((e) => _row(e.key, "${e.value}")),
+      ...equipmentTrips.entries.map((e) {
+        final qualityBreakdown = equipmentQualityTrips[e.key] ?? {};
+        return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: Text(e.key)),
+              const SizedBox(width: 8),
+              Text("${e.value}",
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(width: 16),
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: qualityBreakdown.entries
+                          .map((q) => Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text("${q.key} - ${q.value}",
+                                  textAlign: TextAlign.right)))
+                          .toList()))
+            ]));
+      }),
+
+      const SizedBox(height: 24),
+
+      _sectionHeader("${l10n.total} ${l10n.qualityLabel}"),
+      ...qualityTrips.entries.map((e) => _row(e.key, "${e.value}")),
 
       const SizedBox(height: 24),
 
@@ -629,21 +722,49 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
         if (counts == null || counts.isEmpty) return <Widget>[];
         return counts.map((trip) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  Text(trip['time'],
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(width: 8),
-                  Text(t['truckNumber'],
-                      style: const TextStyle(color: AppColors.primary)),
-                  const Spacer(),
-                  Text(trip['equipment'] ?? '',
-                      style: const TextStyle(fontStyle: FontStyle.italic)),
-                ],
-              ),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(trip['time'],
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 8),
+                        Text(t['truckNumber'],
+                            style: const TextStyle(color: AppColors.primary)),
+                        const Spacer(),
+                        Text(trip['equipment'] ?? '',
+                            style:
+                                const TextStyle(fontStyle: FontStyle.italic)),
+                      ],
+                    ),
+                    Text(_buildTripQualityLabel(trip, l10n),
+                        style: const TextStyle(color: Colors.black54))
+                  ]),
             ));
       }),
     ]);
+  }
+
+  String _buildTripQualityLabel(
+      Map<String, dynamic> trip, AppLocalizations l10n) {
+    final quality = _parseQualiteType(trip['productQualityType']);
+    return quality == null
+        ? "${l10n.qualityLabel}: -"
+        : "${l10n.qualityLabel}: ${qualiteTypeToString(quality, l10n)}";
+  }
+
+  String _buildTripSubtitle(Map<String, dynamic> trip, AppLocalizations l10n) {
+    final equipment = trip['equipment'] ?? '';
+    final quality = _parseQualiteType(trip['productQualityType']);
+    final qualityLabel = quality == null
+        ? "${l10n.qualityLabel}: -"
+        : "${l10n.qualityLabel}: ${qualiteTypeToString(quality, l10n)}";
+    if (equipment.toString().isEmpty) {
+      return qualityLabel;
+    }
+    return "$equipment • $qualityLabel";
   }
 
   Widget _sectionHeader(String title) => Padding(
@@ -698,6 +819,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
             'sortie': _selectedSortie,
             'selectedPoste': posteToString(_selectedPoste, l10n),
             'selectedQualite': _selectedQualite,
+            'distance': _distanceController.text.trim(),
             'selectedQualiteType':
                 qualiteTypeToString(_selectedQualiteType, l10n),
             'operationType': _selectedOperationType,

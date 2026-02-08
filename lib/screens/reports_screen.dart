@@ -4559,6 +4559,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
           .expand((truck) => (truck['counts'] is List) ? truck['counts'] : [])
           .toList();
       final Map<String, int> equipmentCounts = {};
+      final Map<String, Map<String, int>> equipmentQualityTrips = {};
+      final Map<String, int> qualityTrips = {};
 
       if (data['equipmentTrips'] != null && data['equipmentTrips'] is Map) {
         (data['equipmentTrips'] as Map).forEach((key, value) {
@@ -4569,6 +4571,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
           final eq = trip['equipment'] ?? '-';
           equipmentCounts[eq] = (equipmentCounts[eq] ?? 0) + 1;
         }
+      }
+      for (var trip in allTrips) {
+        final eq = trip['equipment'] ?? l10n.unknownLabel;
+        final qualityLabel =
+            _resolveQualityLabel(trip['productQualityType'], l10n);
+        equipmentQualityTrips.putIfAbsent(eq, () => {});
+        equipmentQualityTrips[eq]![qualityLabel] =
+            (equipmentQualityTrips[eq]![qualityLabel] ?? 0) + 1;
+        qualityTrips[qualityLabel] = (qualityTrips[qualityLabel] ?? 0) + 1;
       }
       final maxHeight = MediaQuery.of(context).size.height * 0.8;
 
@@ -4663,6 +4674,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 _buildInfoRow(l10n.zone, data['zone'] ?? '-'),
                                 _buildInfoRow(l10n.exit, data['sortie'] ?? '-'),
                                 _buildInfoRow(
+                                    l10n.distance, data['distance'] ?? '-'),
+                                _buildInfoRow(
                                     l10n.poste,
                                     data['poste'] ??
                                         data['selectedPoste'] ??
@@ -4739,6 +4752,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                 padding: const EdgeInsets.only(
                                                     left: 16, top: 4),
                                                 child: Row(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
                                                       'v${index + 1}: ',
@@ -4755,11 +4770,44 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                     const SizedBox(width: 12),
                                                     const Text('|'),
                                                     const SizedBox(width: 12),
-                                                    Text(
-                                                      count['equipment'] ?? '-',
-                                                      style: Theme.of(context)
-                                                          .textTheme
-                                                          .bodyMedium,
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Text(
+                                                            count['equipment'] ??
+                                                                '-',
+                                                            style: Theme.of(
+                                                                    context)
+                                                                .textTheme
+                                                                .bodyMedium,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                          if (count[
+                                                                  'productQualityType'] !=
+                                                              null)
+                                                            Text(
+                                                              _resolveQualityLabel(
+                                                                  count[
+                                                                      'productQualityType'],
+                                                                  l10n),
+                                                              style: Theme.of(
+                                                                      context)
+                                                                  .textTheme
+                                                                  .bodyMedium
+                                                                  ?.copyWith(
+                                                                      color: Colors
+                                                                          .black54),
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            ),
+                                                        ],
+                                                      ),
                                                     ),
                                                   ],
                                                 ),
@@ -4794,8 +4842,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       Text(
                                           'Total de voyages: ${data['totalTrips'] ?? allTrips.length}'),
                                       const SizedBox(height: 8),
-                                      ...equipmentCounts.entries.map((e) => Text(
-                                          'Total pour ${e.key}: ${e.value}')),
+                                      Text(l10n.tripsByEquipment,
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold)),
+                                      const SizedBox(height: 8),
+                                      ..._buildTripsPerEquipmentSummary(
+                                          equipmentCounts,
+                                          equipmentQualityTrips),
+                                      const SizedBox(height: 12),
+                                      Text('${l10n.total} ${l10n.qualityLabel}',
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold)),
+                                      const SizedBox(height: 8),
+                                      ...qualityTrips.entries.map(
+                                          (e) => Text('${e.key} - ${e.value}')),
                                     ],
                                   ),
                                 ),
@@ -5505,6 +5565,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 _buildInfoRowSimple('Sortie', data['sortie'] ?? '-'),
                 _buildInfoRowSimple(
                     'Poste', data['poste'] ?? data['selectedPoste'] ?? '-'),
+                _buildInfoRowSimple('Distance', data['distance'] ?? '-'),
                 _buildInfoRowSimple('Opération', data['operationType'] ?? '-'),
                 _buildInfoRowSimple('Equip',
                     data['equipment'] ?? data['selectedEquipment'] ?? '-'),
@@ -5548,13 +5609,35 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 padding:
                                     const EdgeInsets.only(left: 16, top: 4),
                                 child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(l10n.tripLabelWithIndex(index + 1)),
                                     Text(count['time'] ?? '-'),
                                     const SizedBox(width: 12),
                                     const Text('|'),
                                     const SizedBox(width: 12),
-                                    Text(count['equipment'] ?? '-'),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            count['equipment'] ?? '-',
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          if (count['productQualityType'] !=
+                                              null)
+                                            Text(
+                                              _resolveQualityLabel(
+                                                  count['productQualityType'],
+                                                  l10n),
+                                              style: const TextStyle(
+                                                  color: Colors.black54),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                        ],
+                                      ),
+                                    ),
                                   ],
                                 ),
                               );
@@ -5583,12 +5666,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     Text(
                         'Total de voyages: ${data['totalTrips'] ?? truckData.expand((truck) => (truck['counts'] is List) ? truck['counts'] : []).length}'),
                     const SizedBox(height: 8),
-                    ...(data['equipmentTrips'] != null &&
-                            data['equipmentTrips'] is Map)
-                        ? (data['equipmentTrips'] as Map).entries.map((e) =>
-                            Text(l10n.totalFor(
-                                e.key.toString(), e.value.toString())))
-                        : _buildEquipmentCounts(truckData, l10n),
+                    Text(l10n.tripsByEquipment,
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    ..._buildTripsPerEquipmentSummary(
+                        _buildEquipmentCountsMap(truckData, data),
+                        _buildEquipmentQualityTrips(truckData, l10n)),
+                    const SizedBox(height: 12),
+                    Text('${l10n.total} ${l10n.qualityLabel}',
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    ..._buildQualityTotals(truckData, l10n)
+                        .entries
+                        .map((e) => Text('${e.key} - ${e.value}')),
                   ],
                 ),
               ),
@@ -5598,18 +5688,126 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  List<Widget> _buildEquipmentCounts(List truckData, AppLocalizations l10n) {
+  Map<String, int> _buildEquipmentCountsMap(
+      List truckData, Map<String, dynamic> data) {
+    if (data['equipmentTrips'] != null && data['equipmentTrips'] is Map) {
+      return Map<String, int>.fromEntries((data['equipmentTrips'] as Map)
+          .entries
+          .map((e) => MapEntry(
+              e.key.toString(), int.tryParse(e.value.toString()) ?? 0)));
+    }
+    final Map<String, int> equipmentCounts = {};
     final allTrips = truckData
         .expand((truck) => (truck['counts'] is List) ? truck['counts'] : [])
         .toList();
-    final Map<String, int> equipmentCounts = {};
     for (var trip in allTrips) {
       final eq = trip['equipment'] ?? '-';
       equipmentCounts[eq] = (equipmentCounts[eq] ?? 0) + 1;
     }
-    return equipmentCounts.entries
-        .map((e) => Text(l10n.totalFor(e.key.toString(), e.value.toString())))
+    return equipmentCounts;
+  }
+
+  Map<String, Map<String, int>> _buildEquipmentQualityTrips(
+      List truckData, AppLocalizations l10n) {
+    final Map<String, Map<String, int>> equipmentQualityTrips = {};
+    final allTrips = truckData
+        .expand((truck) => (truck['counts'] is List) ? truck['counts'] : [])
         .toList();
+    for (var trip in allTrips) {
+      final eq = trip['equipment'] ?? l10n.unknownLabel;
+      final qualityLabel =
+          _resolveQualityLabel(trip['productQualityType'], l10n);
+      equipmentQualityTrips.putIfAbsent(eq, () => {});
+      equipmentQualityTrips[eq]![qualityLabel] =
+          (equipmentQualityTrips[eq]![qualityLabel] ?? 0) + 1;
+    }
+    return equipmentQualityTrips;
+  }
+
+  Map<String, int> _buildQualityTotals(List truckData, AppLocalizations l10n) {
+    final Map<String, int> qualityTrips = {};
+    final allTrips = truckData
+        .expand((truck) => (truck['counts'] is List) ? truck['counts'] : [])
+        .toList();
+    for (var trip in allTrips) {
+      final qualityLabel =
+          _resolveQualityLabel(trip['productQualityType'], l10n);
+      qualityTrips[qualityLabel] = (qualityTrips[qualityLabel] ?? 0) + 1;
+    }
+    return qualityTrips;
+  }
+
+  DateTime? _parseTripTime(String? value) {
+    if (value == null || value.isEmpty) return null;
+    final parts = value.split(':');
+    if (parts.length != 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return null;
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day, hour, minute);
+  }
+
+  void _recalculateTruckSummary(
+      Map<String, dynamic> data, AppLocalizations l10n) {
+    final truckData =
+        (data['truckData'] is List) ? List.from(data['truckData']) : [];
+    int totalTrips = 0;
+    final Map<String, int> equipmentTrips = {};
+    for (final truck in truckData) {
+      final counts = truck['counts'] as List?;
+      if (counts == null) continue;
+      totalTrips += counts.length;
+      for (final trip in counts) {
+        final eq = trip['equipment'] ?? l10n.unknownLabel;
+        equipmentTrips[eq] = (equipmentTrips[eq] ?? 0) + 1;
+      }
+    }
+    data['totalTrips'] = totalTrips;
+    data['camionsCount'] = truckData.length;
+    data['equipmentTrips'] = equipmentTrips;
+  }
+
+  List<Widget> _buildTripsPerEquipmentSummary(Map<String, int> equipmentCounts,
+      Map<String, Map<String, int>> equipmentQualityTrips) {
+    return equipmentCounts.entries.map((entry) {
+      final qualityBreakdown = equipmentQualityTrips[entry.key] ?? {};
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: Text(entry.key)),
+            const SizedBox(width: 8),
+            Text(entry.value.toString(),
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: qualityBreakdown.entries
+                    .map((q) => Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text('${q.key} - ${q.value}',
+                              textAlign: TextAlign.right),
+                        ))
+                    .toList(),
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList();
+  }
+
+  String _resolveQualityLabel(dynamic value, AppLocalizations l10n) {
+    final raw = value?.toString().trim();
+    if (raw == null || raw.isEmpty) return l10n.unknownLabel;
+    final normalized = raw.toUpperCase();
+    if (normalized.contains('NORMAL')) return l10n.normal;
+    if (normalized.contains('OCEANE')) return l10n.oceane;
+    if (normalized.contains('PB30')) return l10n.pb30;
+    return raw;
   }
 
   Widget _buildR0ReportAdditionalData(
@@ -7121,6 +7319,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         updatedReport, scaffoldMessenger, l10n);
                                   },
                                 ),
+                                const SizedBox(height: 8),
+                                _buildEditableField(
+                                  context: context,
+                                  label: l10n.distance,
+                                  value: data['distance'] ?? '',
+                                  isEditable: true,
+                                  onSave: (value) async {
+                                    final updatedData =
+                                        Map<String, dynamic>.from(data);
+                                    updatedData['distance'] = value;
+                                    final updatedReport = report.copyWith(
+                                      additionalData: updatedData,
+                                    );
+                                    await _saveReportUpdate(
+                                        updatedReport, scaffoldMessenger, l10n);
+                                  },
+                                ),
                               ],
                             ),
                           ),
@@ -7271,88 +7486,130 @@ class _ReportsScreenState extends State<ReportsScreen> {
       barrierDismissible: false,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
-          void addTrip() {
-            var timeController = TextEditingController();
-            String? selectedEquipment;
-            DateTime selectedTripTime = DateTime.now();
+          void showTripDialog({Map<String, dynamic>? trip, int? tripIndex}) {
+            final isEditingTrip = trip != null;
+            final timeController =
+                TextEditingController(text: trip?['time'] ?? '');
+            final initialTime = _parseTripTime(trip?['time']);
+            DateTime selectedTripTime = initialTime ?? DateTime.now();
+            String? selectedEquipment = trip?['equipment'];
+            String? selectedQuality = trip?['productQualityType'];
+            final qualityOptions = <String, String>{
+              'QualiteType.normal': l10n.normal,
+              'QualiteType.oceane': l10n.oceane,
+              'QualiteType.pb30': l10n.pb30,
+            };
 
             showDialog(
               context: context,
-              builder: (context) => AlertDialog(
-                title: Text(l10n.addButton),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(l10n.tripTime,
-                        style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    TimePickerSpinner(
-                      is24HourMode: true,
-                      isShowSeconds: false,
-                      normalTextStyle:
-                          const TextStyle(fontSize: 18, color: Colors.black54),
-                      highlightedTextStyle:
-                          const TextStyle(fontSize: 24, color: Colors.black),
-                      spacing: 50,
-                      itemHeight: 60,
-                      isForce2Digits: true,
-                      time: selectedTripTime,
-                      onTimeChange: (dateTime) {
-                        selectedTripTime = dateTime;
-                        timeController.text =
-                            '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedEquipment,
-                      decoration: const InputDecoration(
-                        labelText:
-                            'Heure', // This seems like a typo, should be l10n.equipmentLabel
-                        border: OutlineInputBorder(),
-                      ),
-                      items: [
-                        DropdownMenuItem(
-                            value: 'Chargeuse 992K',
-                            child: Text(l10n.loader992k)),
-                        DropdownMenuItem(
-                            value: 'Chargeuse 994H',
-                            child: Text(l10n.loader994h)),
-                        DropdownMenuItem(
-                            value: 'Pelle Hy',
-                            child: Text(l10n.hydraulicShovel)),
-                        DropdownMenuItem(
-                            value: 'Pelle B1',
-                            child: Text(l10n.electricShovelB1)),
+              builder: (context) => StatefulBuilder(
+                builder: (context, setTripState) => AlertDialog(
+                  title: Text(isEditingTrip
+                      ? l10n.editLabel(l10n.tripLabel)
+                      : l10n.addButton),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(l10n.tripTime,
+                            style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 8),
+                        TimePickerSpinner(
+                          is24HourMode: true,
+                          isShowSeconds: false,
+                          normalTextStyle: const TextStyle(
+                              fontSize: 18, color: Colors.black54),
+                          highlightedTextStyle: const TextStyle(
+                              fontSize: 24, color: Colors.black),
+                          spacing: 50,
+                          itemHeight: 60,
+                          isForce2Digits: true,
+                          time: selectedTripTime,
+                          onTimeChange: (dateTime) {
+                            selectedTripTime = dateTime;
+                            timeController.text =
+                                '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          initialValue: selectedEquipment,
+                          decoration: InputDecoration(
+                            labelText: l10n.equipmentLabel,
+                            border: const OutlineInputBorder(),
+                          ),
+                          items: [
+                            DropdownMenuItem(
+                                value: 'Chargeuse 992K',
+                                child: Text(l10n.loader992k)),
+                            DropdownMenuItem(
+                                value: 'Chargeuse 994H',
+                                child: Text(l10n.loader994h)),
+                            DropdownMenuItem(
+                                value: 'Pelle Hy',
+                                child: Text(l10n.hydraulicShovel)),
+                            DropdownMenuItem(
+                                value: 'Pelle B1',
+                                child: Text(l10n.electricShovelB1)),
+                          ],
+                          onChanged: (value) => setTripState(() {
+                            selectedEquipment = value;
+                          }),
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          initialValue: selectedQuality,
+                          decoration: InputDecoration(
+                            labelText: l10n.qualityLabel,
+                            border: const OutlineInputBorder(),
+                          ),
+                          items: qualityOptions.entries
+                              .map((entry) => DropdownMenuItem(
+                                    value: entry.key,
+                                    child: Text(entry.value),
+                                  ))
+                              .toList(),
+                          onChanged: (value) => setTripState(() {
+                            selectedQuality = value;
+                          }),
+                        ),
                       ],
-                      onChanged: (value) => selectedEquipment = value,
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(l10n.cancel),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (timeController.text.isNotEmpty &&
+                            selectedEquipment != null) {
+                          final updatedTrip = {
+                            'time': timeController.text,
+                            'equipment': selectedEquipment,
+                            if (selectedQuality != null)
+                              'productQualityType': selectedQuality,
+                          };
+                          setState(() {
+                            if (isEditingTrip && tripIndex != null) {
+                              counts[tripIndex] = updatedTrip;
+                            } else {
+                              counts.add(updatedTrip);
+                            }
+                          });
+                          Navigator.pop(context);
+                        }
+                      },
+                      child: Text(isEditingTrip ? l10n.save : l10n.addButton),
                     ),
                   ],
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(l10n.cancel),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (timeController.text.isNotEmpty &&
-                          selectedEquipment != null) {
-                        setState(() {
-                          counts.add({
-                            'time': timeController.text,
-                            'equipment': selectedEquipment,
-                          });
-                        });
-                        Navigator.pop(context);
-                      }
-                    },
-                    child: Text(l10n.addButton),
-                  ),
-                ],
               ),
             );
           }
+
+          void addTrip() => showTripDialog();
 
           void viewTrips() {
             showDialog(
@@ -7386,18 +7643,35 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                               '${l10n.tempsLabel}: ${trip['time']}'),
                                           Text(
                                               '${l10n.equipmentLabel}: ${trip['equipment'] ?? '-'}'),
+                                          if (trip['productQualityType'] !=
+                                              null)
+                                            Text(
+                                                '${l10n.qualityLabel}: ${_resolveQualityLabel(trip['productQualityType'], l10n)}'),
                                         ],
                                       ),
-                                      trailing: IconButton(
-                                        icon: const Icon(Icons.delete,
-                                            color: Colors.red),
-                                        onPressed: () {
-                                          setTripState(() {
-                                            counts.removeAt(i);
-                                          });
-                                          // Also update parent state to ensure sync
-                                          setState(() {});
-                                        },
+                                      trailing: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(Icons.edit,
+                                                size: 18),
+                                            onPressed: () {
+                                              Navigator.pop(context);
+                                              showTripDialog(
+                                                  trip: trip, tripIndex: i);
+                                            },
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.delete,
+                                                color: Colors.red),
+                                            onPressed: () {
+                                              setTripState(() {
+                                                counts.removeAt(i);
+                                              });
+                                              setState(() {});
+                                            },
+                                          ),
+                                        ],
                                       ),
                                     );
                                   },
@@ -7463,10 +7737,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             initialValue: predefinedTrucks.contains(truckNumber)
                                 ? truckNumber
                                 : null,
-                            decoration: const InputDecoration(
-                              labelText:
-                                  'Chauffeur', // This seems like a typo, should be l10n.truckLabel
-                              border: OutlineInputBorder(),
+                            decoration: InputDecoration(
+                              labelText: l10n.truckLabel,
+                              border: const OutlineInputBorder(),
                             ),
                             items: predefinedTrucks.map((String value) {
                               return DropdownMenuItem<String>(
@@ -7550,6 +7823,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     .add(newTruck);
                               }
 
+                              _recalculateTruckSummary(updatedData, l10n);
+
                               final updatedReport = Report(
                                 id: report.id,
                                 description: report.description,
@@ -7601,6 +7876,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             onPressed: () {
               final updatedData = Map<String, dynamic>.from(data);
               (updatedData['truckData'] as List).removeAt(index);
+              _recalculateTruckSummary(updatedData, l10n);
 
               final updatedReport = Report(
                 id: report.id,
