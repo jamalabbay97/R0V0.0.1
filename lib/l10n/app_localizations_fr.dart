@@ -118,6 +118,34 @@ class AppLocalizationsFr extends AppLocalizations {
   String get confirmDelete => 'Êtes-vous sûr de vouloir supprimer ce rapport ?';
 
   @override
+  String get confirm => 'Confirmer';
+
+  @override
+  String get sendToSheets => 'Envoyer';
+
+  @override
+  String get sendToSheetsTitle => 'Envoyer vers Google Sheets ?';
+
+  @override
+  String get sendToSheetsMessage =>
+      'Cela enregistrera le rapport dans Google Sheets et verrouillera sa modification sur cet appareil. Vous pouvez toujours le consulter, et sa suppression locale ne l\'effacera pas de Google Sheets.';
+
+  @override
+  String get reportSentToSheets => 'Rapport enregistré dans Google Sheets.';
+
+  @override
+  String get reportAlreadySentToSheets =>
+      'Ce rapport est déjà enregistré dans Google Sheets.';
+
+  @override
+  String get reportSendToSheetsFailed =>
+      'Impossible d\'enregistrer le rapport dans Google Sheets.';
+
+  @override
+  String get reportSentToSheetsReadOnly =>
+      'Ce rapport est en lecture seule après envoi dans Google Sheets.';
+
+  @override
   String get yes => 'Oui';
 
   @override

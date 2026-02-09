@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/models/report.dart';
 import 'package:r0/services/database_helper.dart';
@@ -643,6 +644,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final l10n = AppLocalizations.of(context)!;
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
+    if (report.isSentToSheets) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text(l10n.reportSentToSheetsReadOnly)),
+      );
+      return;
+    }
+
     // Close the details dialog if it's open
     if (Navigator.canPop(context)) {
       Navigator.pop(context);
@@ -695,6 +703,70 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final updated =
           _reports.firstWhere((r) => r.id == report.id, orElse: () => report);
       _showReportDetails(updated);
+    }
+  }
+
+  Future<void> _confirmSendToSheets(Report report) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.sendToSheetsTitle),
+        content: Text(l10n.sendToSheetsMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.confirm),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _sendReportToSheets(report);
+    }
+  }
+
+  Future<void> _sendReportToSheets(Report report) async {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    if (report.isSentToSheets) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text(l10n.reportAlreadySentToSheets)),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      await _databaseHelper.sendReportToSheets(report);
+      await _loadReports();
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(content: Text(l10n.reportSentToSheets)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(content: Text(l10n.reportSendToSheetsFailed)),
+        );
+      }
+    } finally {
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
     }
   }
 
@@ -6289,6 +6361,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               itemCount: _filteredReports.length,
                               itemBuilder: (context, index) {
                                 final report = _filteredReports[index];
+                                final isSentToSheets = report.isSentToSheets;
                                 // Logic to determine title
                                 String title = report.description;
                                 final typeLower = report.type.toLowerCase();
@@ -6306,115 +6379,161 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   title = l10n.r0Report;
                                 }
 
-                                return Card(
-                                  margin: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 8),
-                                  child: ListTile(
-                                    title: Text(title),
-                                    subtitle: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text('${l10n.type}: ${report.type}'),
-                                        Text(
-                                            '${l10n.date}: ${DateFormat('yyyy-MM-dd HH:mm').format(report.date)}'),
-                                        Text('${l10n.group}: ${report.group}'),
-                                        if (report.additionalData != null &&
-                                            (typeLower == 'suivi camion' ||
-                                                typeLower
-                                                    .contains('chargeuse') ||
-                                                typeLower.contains('pelle') ||
-                                                report.additionalData!
-                                                    .containsKey(
-                                                        'truckData'))) ...[
-                                          const SizedBox(height: 4),
-                                          if (report.additionalData!['mine'] !=
-                                              null)
-                                            Text(
-                                                '${l10n.mine}: ${report.additionalData!['mine']} ${report.additionalData!['zone'] ?? ''}'),
-                                          if (report.additionalData![
-                                                  'totalTrips'] !=
-                                              null)
-                                            Text(
-                                                '${l10n.totalVoyages}: ${report.additionalData!['totalTrips']}'),
-                                        ],
-                                      ],
-                                    ),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        // Popup menu for additional actions
-                                        PopupMenuButton<String>(
-                                          icon: const Icon(Icons.more_horiz,
-                                              size: 20),
-                                          padding: EdgeInsets.zero,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          position: PopupMenuPosition.under,
-                                          itemBuilder: (BuildContext context) =>
-                                              [
-                                            PopupMenuItem<String>(
-                                              value: 'delete',
-                                              height: 36,
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Icon(Icons.delete_outline,
-                                                      size: 18,
-                                                      color: Theme.of(context)
-                                                          .colorScheme
-                                                          .error),
-                                                  const SizedBox(width: 8),
-                                                  Text(
-                                                    l10n.delete,
-                                                    style: TextStyle(
-                                                      color: Theme.of(context)
-                                                          .colorScheme
-                                                          .error,
-                                                      fontSize: 14,
-                                                    ),
-                                                  ),
-                                                ],
+                                return Slidable(
+                                  key: ValueKey(report.id ?? index),
+                                  startActionPane: ActionPane(
+                                    motion: const DrawerMotion(),
+                                    extentRatio: 0.22,
+                                    children: [
+                                      SlidableAction(
+                                        onPressed: (_) {
+                                          if (isSentToSheets) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(l10n
+                                                    .reportAlreadySentToSheets),
                                               ),
+                                            );
+                                            return;
+                                          }
+                                          _confirmSendToSheets(report);
+                                        },
+                                        backgroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        foregroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .onPrimary,
+                                        icon: Icons.send,
+                                        label: l10n.sendToSheets,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Opacity(
+                                    opacity: isSentToSheets ? 0.6 : 1,
+                                    child: Card(
+                                      margin: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 8),
+                                      child: ListTile(
+                                        title: Text(title),
+                                        subtitle: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                                '${l10n.type}: ${report.type}'),
+                                            Text(
+                                                '${l10n.date}: ${DateFormat('yyyy-MM-dd HH:mm').format(report.date)}'),
+                                            Text(
+                                                '${l10n.group}: ${report.group}'),
+                                            if (report.additionalData != null &&
+                                                (typeLower == 'suivi camion' ||
+                                                    typeLower.contains(
+                                                        'chargeuse') ||
+                                                    typeLower
+                                                        .contains('pelle') ||
+                                                    report.additionalData!
+                                                        .containsKey(
+                                                            'truckData'))) ...[
+                                              const SizedBox(height: 4),
+                                              if (report.additionalData![
+                                                      'mine'] !=
+                                                  null)
+                                                Text(
+                                                    '${l10n.mine}: ${report.additionalData!['mine']} ${report.additionalData!['zone'] ?? ''}'),
+                                              if (report.additionalData![
+                                                      'totalTrips'] !=
+                                                  null)
+                                                Text(
+                                                    '${l10n.totalVoyages}: ${report.additionalData!['totalTrips']}'),
+                                            ],
+                                          ],
+                                        ),
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            // Popup menu for additional actions
+                                            PopupMenuButton<String>(
+                                              icon: const Icon(Icons.more_horiz,
+                                                  size: 20),
+                                              padding: EdgeInsets.zero,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              position: PopupMenuPosition.under,
+                                              itemBuilder:
+                                                  (BuildContext context) => [
+                                                PopupMenuItem<String>(
+                                                  value: 'delete',
+                                                  height: 36,
+                                                  child: Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Icon(Icons.delete_outline,
+                                                          size: 18,
+                                                          color:
+                                                              Theme.of(context)
+                                                                  .colorScheme
+                                                                  .error),
+                                                      const SizedBox(width: 8),
+                                                      Text(
+                                                        l10n.delete,
+                                                        style: TextStyle(
+                                                          color:
+                                                              Theme.of(context)
+                                                                  .colorScheme
+                                                                  .error,
+                                                          fontSize: 14,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                              onSelected: (String value) {
+                                                if (value == 'delete') {
+                                                  showDialog(
+                                                    context: context,
+                                                    builder: (context) =>
+                                                        AlertDialog(
+                                                      title: Text(
+                                                          l10n.confirmDelete),
+                                                      content: Text(
+                                                          l10n.confirmDelete),
+                                                      actions: [
+                                                        TextButton(
+                                                          onPressed: () =>
+                                                              Navigator.pop(
+                                                                  context),
+                                                          child:
+                                                              Text(l10n.cancel),
+                                                        ),
+                                                        TextButton(
+                                                          onPressed: () {
+                                                            Navigator.pop(
+                                                                context);
+                                                            _deleteReport(
+                                                                report);
+                                                          },
+                                                          child:
+                                                              Text(l10n.delete),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                }
+                                              },
                                             ),
                                           ],
-                                          onSelected: (String value) {
-                                            if (value == 'delete') {
-                                              showDialog(
-                                                context: context,
-                                                builder: (context) =>
-                                                    AlertDialog(
-                                                  title:
-                                                      Text(l10n.confirmDelete),
-                                                  content:
-                                                      Text(l10n.confirmDelete),
-                                                  actions: [
-                                                    TextButton(
-                                                      onPressed: () =>
-                                                          Navigator.pop(
-                                                              context),
-                                                      child: Text(l10n.cancel),
-                                                    ),
-                                                    TextButton(
-                                                      onPressed: () {
-                                                        Navigator.pop(context);
-                                                        _deleteReport(report);
-                                                      },
-                                                      child: Text(l10n.delete),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                            }
-                                          },
                                         ),
-                                      ],
+                                        onTap: () {
+                                          _showReportDetails(report);
+                                        },
+                                      ),
                                     ),
-                                    onTap: () {
-                                      _showReportDetails(report);
-                                    },
                                   ),
                                 );
                               },
@@ -6753,8 +6872,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         ),
                                       ),
                                     );
-                                  })
-                                else
+                                  }),
+                                if (!(data['stock'] is List &&
+                                    (data['stock'] as List).isNotEmpty))
                                   Text(l10n.noStockAdded,
                                       style:
                                           const TextStyle(color: Colors.grey)),

@@ -9,6 +9,7 @@ class Report {
   final String group;
   final String type;
   final Map<String, dynamic>? additionalData;
+  final bool isSentToSheets;
 
   Report({
     this.id,
@@ -18,6 +19,7 @@ class Report {
     required this.group,
     required this.type,
     this.additionalData,
+    this.isSentToSheets = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -28,7 +30,9 @@ class Report {
       'date': DateFormat('yyyy-MM-dd HH:mm:ss').format(date),
       'group_name': group,
       'type': type,
-      'additional_data': additionalData != null ? jsonEncode(additionalData) : null,
+      'additional_data':
+          additionalData != null ? jsonEncode(additionalData) : null,
+      'sheets_synced': isSentToSheets ? 1 : 0,
     };
   }
 
@@ -43,6 +47,7 @@ class Report {
       additionalData: map['additional_data'] != null
           ? Map<String, dynamic>.from(jsonDecode(map['additional_data']))
           : null,
+      isSentToSheets: (map['sheets_synced'] as int? ?? 0) == 1,
     );
   }
 
@@ -54,6 +59,7 @@ class Report {
     String? group,
     String? type,
     Map<String, dynamic>? additionalData,
+    bool? isSentToSheets,
   }) {
     return Report(
       id: id ?? this.id,
@@ -63,6 +69,7 @@ class Report {
       group: group ?? this.group,
       type: type ?? this.type,
       additionalData: additionalData ?? this.additionalData,
+      isSentToSheets: isSentToSheets ?? this.isSentToSheets,
     );
   }
-} 
+}

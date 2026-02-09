@@ -314,6 +314,54 @@ abstract class AppLocalizations {
   /// **'Are you sure you want to delete this report?'**
   String get confirmDelete;
 
+  /// No description provided for @confirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get confirm;
+
+  /// No description provided for @sendToSheets.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get sendToSheets;
+
+  /// No description provided for @sendToSheetsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to Google Sheets?'**
+  String get sendToSheetsTitle;
+
+  /// No description provided for @sendToSheetsMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This will save the report to Google Sheets and lock editing on this device. You can still view it, and deleting it locally will not remove it from Google Sheets.'**
+  String get sendToSheetsMessage;
+
+  /// No description provided for @reportSentToSheets.
+  ///
+  /// In en, this message translates to:
+  /// **'Report saved to Google Sheets.'**
+  String get reportSentToSheets;
+
+  /// No description provided for @reportAlreadySentToSheets.
+  ///
+  /// In en, this message translates to:
+  /// **'This report is already saved in Google Sheets.'**
+  String get reportAlreadySentToSheets;
+
+  /// No description provided for @reportSendToSheetsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to save the report to Google Sheets.'**
+  String get reportSendToSheetsFailed;
+
+  /// No description provided for @reportSentToSheetsReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'This report is read-only after being saved to Google Sheets.'**
+  String get reportSentToSheetsReadOnly;
+
   /// No description provided for @yes.
   ///
   /// In en, this message translates to:

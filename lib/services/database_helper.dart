@@ -24,7 +24,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'R0.db');
     return await openDatabase(
       path,
-      version: 3, // Incremented to add indexes for performance
+      version: 4, // Incremented to add indexes for performance
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -39,7 +39,8 @@ class DatabaseHelper {
         date TEXT NOT NULL,
         group_name TEXT NOT NULL,
         type TEXT NOT NULL,
-        additional_data TEXT
+        additional_data TEXT,
+        sheets_synced INTEGER NOT NULL DEFAULT 0
       )
     ''');
     await _createIndexes(db);
@@ -52,6 +53,10 @@ class DatabaseHelper {
     }
     if (oldVersion < 3) {
       await _createIndexes(db);
+    }
+    if (oldVersion < 4) {
+      await db.execute(
+          'ALTER TABLE reports ADD COLUMN sheets_synced INTEGER NOT NULL DEFAULT 0');
     }
   }
 
@@ -132,6 +137,17 @@ class DatabaseHelper {
     );
     unawaited(_recordSheetsSnapshot(report, 'update'));
     return updated;
+  }
+
+  Future<void> sendReportToSheets(Report report) async {
+    await _sheetsService.recordReportSnapshot(report, action: 'manual_send');
+    final db = await database;
+    await db.update(
+      'reports',
+      report.copyWith(isSentToSheets: true).toMap(),
+      where: 'id = ?',
+      whereArgs: [report.id],
+    );
   }
 
   Future<void> _recordSheetsSnapshot(Report report, String action) async {

@@ -117,6 +117,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmDelete => 'Are you sure you want to delete this report?';
 
   @override
+  String get confirm => 'Confirm';
+
+  @override
+  String get sendToSheets => 'Send';
+
+  @override
+  String get sendToSheetsTitle => 'Send to Google Sheets?';
+
+  @override
+  String get sendToSheetsMessage =>
+      'This will save the report to Google Sheets and lock editing on this device. You can still view it, and deleting it locally will not remove it from Google Sheets.';
+
+  @override
+  String get reportSentToSheets => 'Report saved to Google Sheets.';
+
+  @override
+  String get reportAlreadySentToSheets =>
+      'This report is already saved in Google Sheets.';
+
+  @override
+  String get reportSendToSheetsFailed =>
+      'Unable to save the report to Google Sheets.';
+
+  @override
+  String get reportSentToSheetsReadOnly =>
+      'This report is read-only after being saved to Google Sheets.';
+
+  @override
   String get yes => 'Yes';
 
   @override

@@ -33,6 +33,7 @@ dependencies:
   cloud_firestore: ^4.15.8
   googleapis: ^13.1.0
   googleapis_auth: ^1.4.2
+  flutter_slidable: ^3.1.0
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.4
