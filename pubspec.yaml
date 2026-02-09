@@ -31,6 +31,8 @@ dependencies:
   firebase_core: ^2.32.0
   firebase_auth: ^4.17.6
   cloud_firestore: ^4.15.8
+  googleapis: ^13.1.0
+  googleapis_auth: ^1.4.2
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.4
@@ -52,10 +54,10 @@ flutter:
         - asset: assets/fonts/NotoSans-Regular.ttf
 
   assets:
-
     - assets/images/
     - assets/fonts/
     - assets/fonts/NotoSans-Regular.ttf 
+    - assets/credentials/r0v01-5b577-67d9e9bae92b.json
 
 icons_launcher:
   image_path: "assets/images/logo.png"

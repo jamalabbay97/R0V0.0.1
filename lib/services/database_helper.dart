@@ -1,10 +1,12 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:r0/models/report.dart';
+import 'package:r0/services/google_sheets_service.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   static Database? _database;
+  final GoogleSheetsService _sheetsService = GoogleSheetsService();
 
   factory DatabaseHelper() => _instance;
 
@@ -68,7 +70,9 @@ class DatabaseHelper {
 
   Future<int> insertReport(Report report) async {
     final db = await database;
-    return await db.insert('reports', report.toMap());
+    final id = await db.insert('reports', report.toMap());
+    await _recordSheetsSnapshot(report.copyWith(id: id), 'create');
+    return id;
   }
 
   Future<List<Report>> getReports() async {
@@ -118,12 +122,22 @@ class DatabaseHelper {
 
   Future<int> updateReport(Report report) async {
     final db = await database;
-    return await db.update(
+    final updated = await db.update(
       'reports',
       report.toMap(),
       where: 'id = ?',
       whereArgs: [report.id],
     );
+    await _recordSheetsSnapshot(report, 'update');
+    return updated;
+  }
+
+  Future<void> _recordSheetsSnapshot(Report report, String action) async {
+    try {
+      await _sheetsService.recordReportSnapshot(report, action: action);
+    } catch (e) {
+      // Avoid blocking local persistence if Sheets sync fails.
+    }
   }
 
   Future<int> deleteReport(int id) async {
