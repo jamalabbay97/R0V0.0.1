@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:googleapis/sheets/v4.dart';
 import 'package:googleapis_auth/auth_io.dart';
+import 'package:intl/intl.dart';
 import 'package:r0/models/report.dart';
 
 class GoogleSheetsService {
@@ -202,20 +203,28 @@ class GoogleSheetsService {
   }) {
     final reportDateLocal = reportLocalDate.toIso8601String().split('T').first;
     final reportTimeLocal = reportLocalDate.toIso8601String().split('T').last;
+    final displayTitle = _resolveDisplayTitle(report);
+    final displayDate = _formatDisplayDate(reportLocalDate);
+    final data = report.additionalData ?? {};
+    final displayMineZone = _formatMineZone(data);
+    final displayTotalTrips = _formatTotalTrips(data);
     final baseRow = [
+      displayTitle,
+      report.type,
+      displayDate,
+      report.group,
+      displayMineZone,
+      displayTotalTrips,
+      report.description,
       savedAt,
       action,
       report.id?.toString() ?? '',
       report.firestoreId ?? '',
-      report.type,
-      report.group,
       reportDateIso,
       reportDateLocal,
       reportTimeLocal,
-      report.description,
     ];
 
-    final data = report.additionalData ?? {};
     final category = _categorizeReport(report, data);
 
     switch (category) {
@@ -893,6 +902,47 @@ class GoogleSheetsService {
   }
 }
 
+String _resolveDisplayTitle(Report report) {
+  final typeLower = report.type.toLowerCase();
+  if (typeLower == 'activity tnb') {
+    return 'Activity Report';
+  }
+  if (typeLower == 'daily tsud') {
+    return 'Daily Report';
+  }
+  if (typeLower == 'suivi camion') {
+    return 'Truck Tracking';
+  }
+  if (typeLower == 'machine/engin arrêtés') {
+    return 'Machines/Equipment Stopped';
+  }
+  if (typeLower == 'r0') {
+    return 'R0 Report';
+  }
+  return report.description;
+}
+
+String _formatDisplayDate(DateTime reportDate) {
+  return DateFormat('yyyy-MM-dd HH:mm').format(reportDate.toLocal());
+}
+
+String _formatMineZone(Map<String, dynamic> data) {
+  final mine = data['mine'];
+  if (mine == null) {
+    return '';
+  }
+  final zone = data['zone'];
+  if (zone == null || zone.toString().trim().isEmpty) {
+    return mine.toString();
+  }
+  return '${mine.toString()} ${zone.toString()}';
+}
+
+String _formatTotalTrips(Map<String, dynamic> data) {
+  final totalTrips = data['totalTrips'];
+  return totalTrips?.toString() ?? '';
+}
+
 enum _ReportCategory {
   activityTnb,
   dailyTsud,
@@ -903,16 +953,20 @@ enum _ReportCategory {
 }
 
 const List<String> _baseHeaders = [
-  'Saved At',
+  'Title (as shown in app)',
+  'Type (as shown in app)',
+  'Date (as shown in app)',
+  'Group (as shown in app)',
+  'Mine/Zone (as shown in app)',
+  'Total Trips (as shown in app)',
+  'Description',
+  'Saved At (ISO)',
   'Action',
   'Local ID',
   'Firestore ID',
-  'Type',
-  'Group',
   'Report Date (ISO)',
   'Report Date (Local)',
   'Report Time (Local)',
-  'Description',
 ];
 
 class _ReportPayload {
