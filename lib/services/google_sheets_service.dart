@@ -31,6 +31,12 @@ class GoogleSheetsService {
 
   static const String _genericReportsSheet = 'Reports';
   static const String _genericDetailsSheet = 'Report Details';
+  static const String _detailsSuffix = ' - Détails';
+  static const String _activitySheet = 'TNB';
+  static const String _dailySheet = 'TSUD';
+  static const String _truckSheet = 'Poser les camions';
+  static const String _machinesSheet = 'Machines et engins à l’arrêt';
+  static const String _r0Sheet = 'R0';
   static const List<String> _scopes = [SheetsApi.spreadsheetsScope];
 
   final String _spreadsheetId;
@@ -280,7 +286,7 @@ class GoogleSheetsService {
     String action,
     String reportDateIso,
   ) {
-    final sheetName = _sanitizeSheetTitle('Activity TNB');
+    final sheetName = _sanitizeSheetTitle(_activitySheet);
     final headers = [
       ..._baseHeaders,
       'T H.A (Downtime)',
@@ -306,10 +312,7 @@ class GoogleSheetsService {
     ];
 
     final detailsHeaders = [
-      'Saved At',
-      'Action',
-      'Local ID',
-      'Report Date (ISO)',
+      ..._detailsBaseHeaders,
       'Section',
       'Item Index',
       'Poste',
@@ -327,10 +330,7 @@ class GoogleSheetsService {
     for (var i = 0; i < stops.length; i++) {
       final stop = stops[i];
       detailsRows.add([
-        savedAt,
-        action,
-        report.id?.toString() ?? '',
-        reportDateIso,
+        ..._detailsBaseRow(savedAt, action, report, reportDateIso),
         'Arrêts',
         i + 1,
         '',
@@ -348,10 +348,7 @@ class GoogleSheetsService {
     for (var i = 0; i < vibratorCounters.length; i++) {
       final counter = vibratorCounters[i];
       detailsRows.add([
-        savedAt,
-        action,
-        report.id?.toString() ?? '',
-        reportDateIso,
+        ..._detailsBaseRow(savedAt, action, report, reportDateIso),
         'Vibrator Counters',
         i + 1,
         counter['poste'] ?? '',
@@ -369,10 +366,7 @@ class GoogleSheetsService {
     for (var i = 0; i < liaisonCounters.length; i++) {
       final counter = liaisonCounters[i];
       detailsRows.add([
-        savedAt,
-        action,
-        report.id?.toString() ?? '',
-        reportDateIso,
+        ..._detailsBaseRow(savedAt, action, report, reportDateIso),
         'Liaison Counters',
         i + 1,
         counter['poste'] ?? '',
@@ -390,10 +384,7 @@ class GoogleSheetsService {
     for (var i = 0; i < stock.length; i++) {
       final entry = stock[i];
       detailsRows.add([
-        savedAt,
-        action,
-        report.id?.toString() ?? '',
-        reportDateIso,
+        ..._detailsBaseRow(savedAt, action, report, reportDateIso),
         'Stock',
         i + 1,
         entry['poste'] ?? '',
@@ -411,7 +402,7 @@ class GoogleSheetsService {
       sheetName: sheetName,
       headers: headers,
       row: row,
-      detailsSheetName: _sanitizeSheetTitle('$sheetName - Détails'),
+      detailsSheetName: _sanitizeSheetTitle('$sheetName$_detailsSuffix'),
       detailsHeaders: detailsHeaders,
       detailsRows: detailsRows,
     );
@@ -425,7 +416,7 @@ class GoogleSheetsService {
     String action,
     String reportDateIso,
   ) {
-    final sheetName = _sanitizeSheetTitle('Daily TSUD');
+    final sheetName = _sanitizeSheetTitle(_dailySheet);
     final headers = [
       ..._baseHeaders,
       'T H.A1 (Downtime M1)',
@@ -451,10 +442,7 @@ class GoogleSheetsService {
     ];
 
     final detailsHeaders = [
-      'Saved At',
-      'Action',
-      'Local ID',
-      'Report Date (ISO)',
+      ..._detailsBaseHeaders,
       'Section',
       'Item Index',
       'Poste',
@@ -469,10 +457,7 @@ class GoogleSheetsService {
     for (var i = 0; i < module1Stops.length; i++) {
       final stop = module1Stops[i];
       detailsRows.add([
-        savedAt,
-        action,
-        report.id?.toString() ?? '',
-        reportDateIso,
+        ..._detailsBaseRow(savedAt, action, report, reportDateIso),
         'Arrêts M1',
         i + 1,
         '',
@@ -486,10 +471,7 @@ class GoogleSheetsService {
     for (var i = 0; i < module2Stops.length; i++) {
       final stop = module2Stops[i];
       detailsRows.add([
-        savedAt,
-        action,
-        report.id?.toString() ?? '',
-        reportDateIso,
+        ..._detailsBaseRow(savedAt, action, report, reportDateIso),
         'Arrêts M2',
         i + 1,
         '',
@@ -503,10 +485,7 @@ class GoogleSheetsService {
     for (var i = 0; i < stock.length; i++) {
       final entry = stock[i];
       detailsRows.add([
-        savedAt,
-        action,
-        report.id?.toString() ?? '',
-        reportDateIso,
+        ..._detailsBaseRow(savedAt, action, report, reportDateIso),
         'Stock',
         i + 1,
         entry['poste'] ?? '',
@@ -522,7 +501,7 @@ class GoogleSheetsService {
       sheetName: sheetName,
       headers: headers,
       row: row,
-      detailsSheetName: _sanitizeSheetTitle('$sheetName - Détails'),
+      detailsSheetName: _sanitizeSheetTitle('$sheetName$_detailsSuffix'),
       detailsHeaders: detailsHeaders,
       detailsRows: detailsRows,
     );
@@ -536,7 +515,7 @@ class GoogleSheetsService {
     String action,
     String reportDateIso,
   ) {
-    final sheetName = _sanitizeSheetTitle('Truck Tracking');
+    final sheetName = _sanitizeSheetTitle(_truckSheet);
     final headers = [
       ..._baseHeaders,
       'Mine',
@@ -566,10 +545,7 @@ class GoogleSheetsService {
     ];
 
     final detailsHeaders = [
-      'Saved At',
-      'Action',
-      'Local ID',
-      'Report Date (ISO)',
+      ..._detailsBaseHeaders,
       'Section',
       'Truck Number',
       'Driver',
@@ -582,10 +558,7 @@ class GoogleSheetsService {
     final trucks = _listOfMaps(data['truckData']);
     for (final truck in trucks) {
       detailsRows.add([
-        savedAt,
-        action,
-        report.id?.toString() ?? '',
-        reportDateIso,
+        ..._detailsBaseRow(savedAt, action, report, reportDateIso),
         'Truck',
         truck['truckNumber'] ?? '',
         truck['driver1'] ?? '',
@@ -597,10 +570,7 @@ class GoogleSheetsService {
       final trips = _listOfMaps(truck['counts']);
       for (final trip in trips) {
         detailsRows.add([
-          savedAt,
-          action,
-          report.id?.toString() ?? '',
-          reportDateIso,
+          ..._detailsBaseRow(savedAt, action, report, reportDateIso),
           'Trip',
           truck['truckNumber'] ?? '',
           truck['driver1'] ?? '',
@@ -615,7 +585,7 @@ class GoogleSheetsService {
       sheetName: sheetName,
       headers: headers,
       row: row,
-      detailsSheetName: _sanitizeSheetTitle('$sheetName - Détails'),
+      detailsSheetName: _sanitizeSheetTitle('$sheetName$_detailsSuffix'),
       detailsHeaders: detailsHeaders,
       detailsRows: detailsRows,
     );
@@ -629,7 +599,7 @@ class GoogleSheetsService {
     String action,
     String reportDateIso,
   ) {
-    final sheetName = _sanitizeSheetTitle('Machines & Engins arrêtés');
+    final sheetName = _sanitizeSheetTitle(_machinesSheet);
     final equipmentList = _listOfMaps(data['equipmentList']);
     final headers = [
       ..._baseHeaders,
@@ -642,10 +612,7 @@ class GoogleSheetsService {
     ];
 
     final detailsHeaders = [
-      'Saved At',
-      'Action',
-      'Local ID',
-      'Report Date (ISO)',
+      ..._detailsBaseHeaders,
       'Equipment Type',
       'Reason',
     ];
@@ -653,10 +620,7 @@ class GoogleSheetsService {
     final detailsRows = <List<Object?>>[];
     for (final entry in equipmentList) {
       detailsRows.add([
-        savedAt,
-        action,
-        report.id?.toString() ?? '',
-        reportDateIso,
+        ..._detailsBaseRow(savedAt, action, report, reportDateIso),
         entry['equipmentType'] ?? '',
         entry['Reason'] ?? '',
       ]);
@@ -666,7 +630,7 @@ class GoogleSheetsService {
       sheetName: sheetName,
       headers: headers,
       row: row,
-      detailsSheetName: _sanitizeSheetTitle('$sheetName - Détails'),
+      detailsSheetName: _sanitizeSheetTitle('$sheetName$_detailsSuffix'),
       detailsHeaders: detailsHeaders,
       detailsRows: detailsRows,
     );
@@ -680,7 +644,7 @@ class GoogleSheetsService {
     String action,
     String reportDateIso,
   ) {
-    final sheetName = _sanitizeSheetTitle('R0 Reports');
+    final sheetName = _sanitizeSheetTitle(_r0Sheet);
     final exploitation = _mapOfStringDynamic(data['exploitation']);
     final repartition = _mapOfStringDynamic(data['repartition']);
     final personnel = _mapOfStringDynamic(data['personnel']);
@@ -750,10 +714,7 @@ class GoogleSheetsService {
     ];
 
     final detailsHeaders = [
-      'Saved At',
-      'Action',
-      'Local ID',
-      'Report Date (ISO)',
+      ..._detailsBaseHeaders,
       'Category',
       'Arret',
       'Start',
@@ -766,10 +727,7 @@ class GoogleSheetsService {
     final detailsRows = <List<Object?>>[];
     for (final entry in arrets) {
       detailsRows.add([
-        savedAt,
-        action,
-        report.id?.toString() ?? '',
-        reportDateIso,
+        ..._detailsBaseRow(savedAt, action, report, reportDateIso),
         entry['Catégorie'] ?? '',
         entry['Arret'] ?? '',
         entry['Début'] ?? '',
@@ -828,8 +786,8 @@ class GoogleSheetsService {
       row: row,
       detailsSheetName: _genericDetailsSheet,
       detailsHeaders: const [
-        'Saved At',
-        'Action',
+        'Submitted At (ISO)',
+        'Submission Source',
         'Local ID',
         'Firestore ID',
         'Type',
@@ -905,19 +863,19 @@ class GoogleSheetsService {
 String _resolveDisplayTitle(Report report) {
   final typeLower = report.type.toLowerCase();
   if (typeLower == 'activity tnb') {
-    return 'Activity Report';
+    return 'TNB';
   }
   if (typeLower == 'daily tsud') {
-    return 'Daily Report';
+    return 'TSUD';
   }
   if (typeLower == 'suivi camion') {
-    return 'Truck Tracking';
+    return 'Poser les camions';
   }
   if (typeLower == 'machine/engin arrêtés') {
-    return 'Machines/Equipment Stopped';
+    return 'Machine et engins à l’arrêt';
   }
   if (typeLower == 'r0') {
-    return 'R0 Report';
+    return 'R0';
   }
   return report.description;
 }
@@ -960,14 +918,39 @@ const List<String> _baseHeaders = [
   'Mine/Zone (as shown in app)',
   'Total Trips (as shown in app)',
   'Description',
-  'Saved At (ISO)',
-  'Action',
+  'Submitted At (ISO)',
+  'Submission Source',
   'Local ID',
   'Firestore ID',
   'Report Date (ISO)',
   'Report Date (Local)',
   'Report Time (Local)',
 ];
+
+const List<String> _detailsBaseHeaders = [
+  'Submitted At (ISO)',
+  'Submission Source',
+  'Local ID',
+  'Report Date (ISO)',
+  'Report Type',
+  'Group',
+];
+
+List<Object?> _detailsBaseRow(
+  String savedAt,
+  String action,
+  Report report,
+  String reportDateIso,
+) {
+  return [
+    savedAt,
+    action,
+    report.id?.toString() ?? '',
+    reportDateIso,
+    report.type,
+    report.group,
+  ];
+}
 
 class _ReportPayload {
   const _ReportPayload({

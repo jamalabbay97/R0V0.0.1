@@ -137,7 +137,10 @@ class DatabaseHelper {
   }
 
   Future<void> sendReportToSheets(Report report) async {
-    await _sheetsService.recordReportSnapshot(report, action: 'manual_send');
+    await _sheetsService.recordReportSnapshot(
+      report,
+      action: 'explicit_submit',
+    );
     final db = await database;
     await db.update(
       'reports',
