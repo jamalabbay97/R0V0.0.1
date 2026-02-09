@@ -13,15 +13,20 @@ class GoogleSheetsService {
     String? credentialsAssetPath,
     DateTime Function()? nowProvider,
   })  : _spreadsheetId = spreadsheetId ??
-            const String.fromEnvironment(
-                '1WzdE8fl3BwatmMXw1mcIAebOndx41XvXWdahP7nEaVo'),
+            (const String.fromEnvironment('GOOGLE_SHEETS_SPREADSHEET_ID')
+                    .isEmpty
+                ? _hardcodedSpreadsheetId
+                : const String.fromEnvironment('GOOGLE_SHEETS_SPREADSHEET_ID')),
         _credentialsJson = credentialsJson ??
-            const String.fromEnvironment(
-                'assets/credentials/r0v01-5b577-67d9e9bae92b.json'),
+            const String.fromEnvironment('GOOGLE_SHEETS_CREDENTIALS_JSON'),
         _credentialsAssetPath = credentialsAssetPath ??
-            const String.fromEnvironment(
-                'assets/credentials/r0v01-5b577-67d9e9bae92b.json'),
+            const String.fromEnvironment('GOOGLE_SHEETS_CREDENTIALS_ASSET_PATH',
+                defaultValue:
+                    'assets/credentials/r0v01-5b577-67d9e9bae92b.json'),
         _nowProvider = nowProvider ?? DateTime.now;
+
+  static const String _hardcodedSpreadsheetId =
+      '1WzdE8fl3BwatmMXw1mcIAebOndx41XvXWdahP7nEaVo'; // Hardcoded ID
 
   static const String _reportsSheet = 'Reports';
   static const String _detailsSheet = 'Report Details';
@@ -41,9 +46,10 @@ class GoogleSheetsService {
     Report report, {
     required String action,
   }) async {
-    if (_spreadsheetId.isEmpty) {
+    if (_spreadsheetId.isEmpty ||
+        _spreadsheetId == 'ENTER_YOUR_SPREADSHEET_ID_HERE') {
       debugPrint(
-        'Google Sheets sync skipped: GOOGLE_SHEETS_SPREADSHEET_ID is missing.',
+        'Google Sheets sync skipped: GOOGLE_SHEETS_SPREADSHEET_ID is missing or set to placeholder.',
       );
       return;
     }
