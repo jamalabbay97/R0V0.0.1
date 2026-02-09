@@ -1070,8 +1070,12 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
           type: 'Activity TNB',
           additionalData: {
             'Arrets': stops
-                .map((s) =>
-                    {'id': s.id, 'duration': s.duration, 'nature': s.nature})
+                .map((s) => {
+                      'id': s.id,
+                      'duration': s.duration,
+                      'nature': s.nature,
+                      'Catégorie': '',
+                    })
                 .toList(),
             'vibrator Counters': vibratorCounters
                 .map((c) => {

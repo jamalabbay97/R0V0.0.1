@@ -575,12 +575,22 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
         type: 'daily TSUD',
         additionalData: {
           'module1Stops': module1Stops
-              .map((s) =>
-                  {'id': s.id, 'duration': s.duration, 'nature': s.nature})
+              .map((s) => {
+                    'id': s.id,
+                    'duration': s.duration,
+                    'nature': s.nature,
+                    'Catégorie': '',
+                    'CarryOver': false,
+                  })
               .toList(),
           'module2Stops': module2Stops
-              .map((s) =>
-                  {'id': s.id, 'duration': s.duration, 'nature': s.nature})
+              .map((s) => {
+                    'id': s.id,
+                    'duration': s.duration,
+                    'nature': s.nature,
+                    'Catégorie': '',
+                    'CarryOver': false,
+                  })
               .toList(),
           'T H.A1': module1TotalDowntime,
           'T H.M1': module1OperatingTime,

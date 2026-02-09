@@ -318,6 +318,7 @@ class GoogleSheetsService {
       'Poste',
       'Park',
       'Stock Type',
+      'Category',
       'Duration',
       'Nature',
       'Start',
@@ -336,6 +337,7 @@ class GoogleSheetsService {
         '',
         '',
         '',
+        stop['Catégorie'] ?? '',
         stop['duration'] ?? '',
         stop['nature'] ?? '',
         '',
@@ -352,6 +354,7 @@ class GoogleSheetsService {
         'Vibrator Counters',
         i + 1,
         counter['poste'] ?? '',
+        '',
         '',
         '',
         '',
@@ -374,6 +377,7 @@ class GoogleSheetsService {
         '',
         '',
         '',
+        '',
         counter['start'] ?? '',
         counter['end'] ?? '',
         '',
@@ -390,6 +394,7 @@ class GoogleSheetsService {
         entry['poste'] ?? '',
         entry['park'] ?? '',
         entry['type'] ?? '',
+        '',
         '',
         '',
         '',
@@ -448,9 +453,11 @@ class GoogleSheetsService {
       'Poste',
       'Park',
       'Stock Type',
+      'Category',
       'Duration',
       'Nature',
       'Quantity',
+      'Carry Over',
     ];
 
     final detailsRows = <List<Object?>>[];
@@ -463,9 +470,11 @@ class GoogleSheetsService {
         '',
         '',
         '',
+        stop['Catégorie'] ?? '',
         stop['duration'] ?? '',
         stop['nature'] ?? '',
         '',
+        stop['CarryOver'] ?? false,
       ]);
     }
     for (var i = 0; i < module2Stops.length; i++) {
@@ -477,9 +486,11 @@ class GoogleSheetsService {
         '',
         '',
         '',
+        stop['Catégorie'] ?? '',
         stop['duration'] ?? '',
         stop['nature'] ?? '',
         '',
+        stop['CarryOver'] ?? false,
       ]);
     }
     for (var i = 0; i < stock.length; i++) {
@@ -493,7 +504,9 @@ class GoogleSheetsService {
         entry['type'] ?? '',
         '',
         '',
+        '',
         entry['quantity'] ?? '',
+        '',
       ]);
     }
 
