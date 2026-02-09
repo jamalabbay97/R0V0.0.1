@@ -16,9 +16,11 @@ class GoogleSheetsService {
             const String.fromEnvironment(
                 '1WzdE8fl3BwatmMXw1mcIAebOndx41XvXWdahP7nEaVo'),
         _credentialsJson = credentialsJson ??
-            const String.fromEnvironment('GOOGLE_SHEETS_CREDENTIALS_JSON'),
+            const String.fromEnvironment(
+                'assets/credentials/r0v01-5b577-67d9e9bae92b.json'),
         _credentialsAssetPath = credentialsAssetPath ??
-            const String.fromEnvironment('GOOGLE_SHEETS_CREDENTIALS_ASSET'),
+            const String.fromEnvironment(
+                'assets/credentials/r0v01-5b577-67d9e9bae92b.json'),
         _nowProvider = nowProvider ?? DateTime.now;
 
   static const String _reportsSheet = 'Reports';
@@ -58,7 +60,9 @@ class GoogleSheetsService {
       'Firestore ID',
       'Type',
       'Group',
-      'Report Date',
+      'Report Date (ISO)',
+      'Report Date (Local)',
+      'Report Time (Local)',
       'Description',
       'Additional Data (JSON)',
     ]);
@@ -70,14 +74,16 @@ class GoogleSheetsService {
       'Firestore ID',
       'Type',
       'Group',
-      'Report Date',
+      'Report Date (ISO)',
       'Field Path',
       'Value',
       'Value Type',
     ]);
 
     final savedAt = _nowProvider().toIso8601String();
-    final reportDate = report.date.toIso8601String();
+    final reportDate = report.date;
+    final reportDateIso = reportDate.toIso8601String();
+    final reportLocalDate = reportDate.toLocal();
     final row = [
       savedAt,
       action,
@@ -85,7 +91,9 @@ class GoogleSheetsService {
       report.firestoreId ?? '',
       report.type,
       report.group,
-      reportDate,
+      reportDateIso,
+      reportLocalDate.toIso8601String().split('T').first,
+      reportLocalDate.toIso8601String().split('T').last,
       report.description,
       jsonEncode(report.additionalData ?? {}),
     ];
@@ -107,7 +115,7 @@ class GoogleSheetsService {
           report.firestoreId ?? '',
           report.type,
           report.group,
-          reportDate,
+          reportDateIso,
           entry.path,
           entry.value,
           entry.valueType,
@@ -247,7 +255,7 @@ class GoogleSheetsService {
       entries.add(
         _FlattenedEntry(
           path: path,
-          value: value?.toString() ?? '',
+          value: value,
           valueType: value == null ? 'null' : value.runtimeType.toString(),
         ),
       );
@@ -266,6 +274,6 @@ class _FlattenedEntry {
   });
 
   final String path;
-  final String value;
+  final Object? value;
   final String valueType;
 }

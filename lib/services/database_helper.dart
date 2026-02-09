@@ -1,7 +1,9 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+
 import 'package:r0/models/report.dart';
 import 'package:r0/services/google_sheets_service.dart';
+import 'dart:async';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -71,7 +73,7 @@ class DatabaseHelper {
   Future<int> insertReport(Report report) async {
     final db = await database;
     final id = await db.insert('reports', report.toMap());
-    await _recordSheetsSnapshot(report.copyWith(id: id), 'create');
+    unawaited(_recordSheetsSnapshot(report.copyWith(id: id), 'create'));
     return id;
   }
 
@@ -128,7 +130,7 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [report.id],
     );
-    await _recordSheetsSnapshot(report, 'update');
+    unawaited(_recordSheetsSnapshot(report, 'update'));
     return updated;
   }
 
