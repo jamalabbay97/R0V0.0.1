@@ -3,7 +3,6 @@ import 'package:path/path.dart';
 
 import 'package:r0/models/report.dart';
 import 'package:r0/services/google_sheets_service.dart';
-import 'dart:async';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -78,7 +77,6 @@ class DatabaseHelper {
   Future<int> insertReport(Report report) async {
     final db = await database;
     final id = await db.insert('reports', report.toMap());
-    unawaited(_recordSheetsSnapshot(report.copyWith(id: id), 'create'));
     return id;
   }
 
@@ -135,7 +133,6 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [report.id],
     );
-    unawaited(_recordSheetsSnapshot(report, 'update'));
     return updated;
   }
 
@@ -148,14 +145,6 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [report.id],
     );
-  }
-
-  Future<void> _recordSheetsSnapshot(Report report, String action) async {
-    try {
-      await _sheetsService.recordReportSnapshot(report, action: action);
-    } catch (e) {
-      // Avoid blocking local persistence if Sheets sync fails.
-    }
   }
 
   Future<int> deleteReport(int id) async {

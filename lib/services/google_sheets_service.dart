@@ -28,8 +28,8 @@ class GoogleSheetsService {
   static const String _hardcodedSpreadsheetId =
       '1WzdE8fl3BwatmMXw1mcIAebOndx41XvXWdahP7nEaVo'; // Hardcoded ID
 
-  static const String _reportsSheet = 'Reports';
-  static const String _detailsSheet = 'Report Details';
+  static const String _genericReportsSheet = 'Reports';
+  static const String _genericDetailsSheet = 'Report Details';
   static const List<String> _scopes = [SheetsApi.spreadsheetsScope];
 
   final String _spreadsheetId;
@@ -59,81 +59,39 @@ class GoogleSheetsService {
       return;
     }
 
-    await _ensureSheetWithHeaders(api, _reportsSheet, const [
-      'Saved At',
-      'Action',
-      'Local ID',
-      'Firestore ID',
-      'Type',
-      'Group',
-      'Report Date (ISO)',
-      'Report Date (Local)',
-      'Report Time (Local)',
-      'Description',
-      'Additional Data (JSON)',
-    ]);
-
-    await _ensureSheetWithHeaders(api, _detailsSheet, const [
-      'Saved At',
-      'Action',
-      'Local ID',
-      'Firestore ID',
-      'Type',
-      'Group',
-      'Report Date (ISO)',
-      'Field Path',
-      'Value',
-      'Value Type',
-    ]);
-
     final savedAt = _nowProvider().toIso8601String();
     final reportDate = report.date;
     final reportDateIso = reportDate.toIso8601String();
     final reportLocalDate = reportDate.toLocal();
-    final row = [
-      savedAt,
-      action,
-      report.id?.toString() ?? '',
-      report.firestoreId ?? '',
-      report.type,
-      report.group,
-      reportDateIso,
-      reportLocalDate.toIso8601String().split('T').first,
-      reportLocalDate.toIso8601String().split('T').last,
-      report.description,
-      jsonEncode(report.additionalData ?? {}),
-    ];
+    final payload = _buildPayload(
+      report,
+      savedAt: savedAt,
+      action: action,
+      reportDateIso: reportDateIso,
+      reportLocalDate: reportLocalDate,
+    );
 
+    await _ensureSheetWithHeaders(api, payload.sheetName, payload.headers);
     await api.spreadsheets.values.append(
-      ValueRange(values: [row]),
+      ValueRange(values: [payload.row]),
       _spreadsheetId,
-      '$_reportsSheet!A1',
+      '${payload.sheetName}!A1',
       valueInputOption: 'RAW',
       insertDataOption: 'INSERT_ROWS',
     );
 
-    final detailsRows = _flattenAdditionalData(report.additionalData).map(
-      (entry) {
-        return [
-          savedAt,
-          action,
-          report.id?.toString() ?? '',
-          report.firestoreId ?? '',
-          report.type,
-          report.group,
-          reportDateIso,
-          entry.path,
-          entry.value,
-          entry.valueType,
-        ];
-      },
-    ).toList();
-
-    if (detailsRows.isNotEmpty) {
+    if (payload.detailsRows.isNotEmpty &&
+        payload.detailsSheetName != null &&
+        payload.detailsHeaders != null) {
+      await _ensureSheetWithHeaders(
+        api,
+        payload.detailsSheetName!,
+        payload.detailsHeaders!,
+      );
       await api.spreadsheets.values.append(
-        ValueRange(values: detailsRows),
+        ValueRange(values: payload.detailsRows),
         _spreadsheetId,
-        '$_detailsSheet!A1',
+        '${payload.detailsSheetName}!A1',
         valueInputOption: 'RAW',
         insertDataOption: 'INSERT_ROWS',
       );
@@ -235,6 +193,647 @@ class GoogleSheetsService {
     _loadedSheets = true;
   }
 
+  _ReportPayload _buildPayload(
+    Report report, {
+    required String savedAt,
+    required String action,
+    required String reportDateIso,
+    required DateTime reportLocalDate,
+  }) {
+    final reportDateLocal = reportLocalDate.toIso8601String().split('T').first;
+    final reportTimeLocal = reportLocalDate.toIso8601String().split('T').last;
+    final baseRow = [
+      savedAt,
+      action,
+      report.id?.toString() ?? '',
+      report.firestoreId ?? '',
+      report.type,
+      report.group,
+      reportDateIso,
+      reportDateLocal,
+      reportTimeLocal,
+      report.description,
+    ];
+
+    final data = report.additionalData ?? {};
+    final category = _categorizeReport(report, data);
+
+    switch (category) {
+      case _ReportCategory.activityTnb:
+        return _activityPayload(
+            report, data, baseRow, savedAt, action, reportDateIso);
+      case _ReportCategory.dailyTsud:
+        return _dailyPayload(
+            report, data, baseRow, savedAt, action, reportDateIso);
+      case _ReportCategory.truckTracking:
+        return _truckTrackingPayload(
+            report, data, baseRow, savedAt, action, reportDateIso);
+      case _ReportCategory.machinesStopped:
+        return _machinesPayload(
+            report, data, baseRow, savedAt, action, reportDateIso);
+      case _ReportCategory.r0:
+        return _r0Payload(
+            report, data, baseRow, savedAt, action, reportDateIso);
+      case _ReportCategory.generic:
+        return _genericPayload(
+            report, data, baseRow, savedAt, action, reportDateIso);
+    }
+  }
+
+  _ReportCategory _categorizeReport(
+    Report report,
+    Map<String, dynamic> data,
+  ) {
+    final type = report.type.toLowerCase();
+    if (type == 'activity tnb' || data.containsKey('vibrator Counters')) {
+      return _ReportCategory.activityTnb;
+    }
+    if (type.contains('daily') || data.containsKey('module1Stops')) {
+      return _ReportCategory.dailyTsud;
+    }
+    if (data.containsKey('truckData')) {
+      return _ReportCategory.truckTracking;
+    }
+    if (data.containsKey('equipmentList')) {
+      return _ReportCategory.machinesStopped;
+    }
+    if (data.containsKey('exploitation') && data.containsKey('repartition')) {
+      return _ReportCategory.r0;
+    }
+    return _ReportCategory.generic;
+  }
+
+  _ReportPayload _activityPayload(
+    Report report,
+    Map<String, dynamic> data,
+    List<Object?> baseRow,
+    String savedAt,
+    String action,
+    String reportDateIso,
+  ) {
+    final sheetName = _sanitizeSheetTitle('Activity TNB');
+    final headers = [
+      ..._baseHeaders,
+      'T H.A (Downtime)',
+      'T H.M (Operating)',
+      'T H.V (Vibrator)',
+      'T H.L (Liaison)',
+      'T Nr.A (Stops)',
+      'T Nr.V (Vibrators)',
+      'T Nr.L (Liaisons)',
+      'T Nr.S (Stock)',
+    ];
+
+    final row = [
+      ...baseRow,
+      data['T H.A'] ?? '',
+      data['T H.M'] ?? '',
+      data['T H.V'] ?? '',
+      data['T H.L'] ?? '',
+      data['T Nr.A'] ?? '',
+      data['T Nr.V'] ?? '',
+      data['T Nr.L'] ?? '',
+      data['T Nr.S'] ?? '',
+    ];
+
+    final detailsHeaders = [
+      'Saved At',
+      'Action',
+      'Local ID',
+      'Report Date (ISO)',
+      'Section',
+      'Item Index',
+      'Poste',
+      'Park',
+      'Stock Type',
+      'Duration',
+      'Nature',
+      'Start',
+      'End',
+      'Quantity',
+    ];
+
+    final detailsRows = <List<Object?>>[];
+    final stops = _listOfMaps(data['Arrets']);
+    for (var i = 0; i < stops.length; i++) {
+      final stop = stops[i];
+      detailsRows.add([
+        savedAt,
+        action,
+        report.id?.toString() ?? '',
+        reportDateIso,
+        'Arrêts',
+        i + 1,
+        '',
+        '',
+        '',
+        stop['duration'] ?? '',
+        stop['nature'] ?? '',
+        '',
+        '',
+        '',
+      ]);
+    }
+
+    final vibratorCounters = _listOfMaps(data['vibrator Counters']);
+    for (var i = 0; i < vibratorCounters.length; i++) {
+      final counter = vibratorCounters[i];
+      detailsRows.add([
+        savedAt,
+        action,
+        report.id?.toString() ?? '',
+        reportDateIso,
+        'Vibrator Counters',
+        i + 1,
+        counter['poste'] ?? '',
+        '',
+        '',
+        '',
+        '',
+        counter['start'] ?? '',
+        counter['end'] ?? '',
+        '',
+      ]);
+    }
+
+    final liaisonCounters = _listOfMaps(data['liaison Counters']);
+    for (var i = 0; i < liaisonCounters.length; i++) {
+      final counter = liaisonCounters[i];
+      detailsRows.add([
+        savedAt,
+        action,
+        report.id?.toString() ?? '',
+        reportDateIso,
+        'Liaison Counters',
+        i + 1,
+        counter['poste'] ?? '',
+        '',
+        '',
+        '',
+        '',
+        counter['start'] ?? '',
+        counter['end'] ?? '',
+        '',
+      ]);
+    }
+
+    final stock = _listOfMaps(data['stock']);
+    for (var i = 0; i < stock.length; i++) {
+      final entry = stock[i];
+      detailsRows.add([
+        savedAt,
+        action,
+        report.id?.toString() ?? '',
+        reportDateIso,
+        'Stock',
+        i + 1,
+        entry['poste'] ?? '',
+        entry['park'] ?? '',
+        entry['type'] ?? '',
+        '',
+        '',
+        '',
+        '',
+        entry['quantity'] ?? '',
+      ]);
+    }
+
+    return _ReportPayload(
+      sheetName: sheetName,
+      headers: headers,
+      row: row,
+      detailsSheetName: _sanitizeSheetTitle('$sheetName - Détails'),
+      detailsHeaders: detailsHeaders,
+      detailsRows: detailsRows,
+    );
+  }
+
+  _ReportPayload _dailyPayload(
+    Report report,
+    Map<String, dynamic> data,
+    List<Object?> baseRow,
+    String savedAt,
+    String action,
+    String reportDateIso,
+  ) {
+    final sheetName = _sanitizeSheetTitle('Daily TSUD');
+    final headers = [
+      ..._baseHeaders,
+      'T H.A1 (Downtime M1)',
+      'T H.M1 (Operating M1)',
+      'T H.A2 (Downtime M2)',
+      'T H.M2 (Operating M2)',
+      'Module 1 Stops',
+      'Module 2 Stops',
+      'Stock Entries',
+    ];
+    final module1Stops = _listOfMaps(data['module1Stops']);
+    final module2Stops = _listOfMaps(data['module2Stops']);
+    final stock = _listOfMaps(data['stock']);
+    final row = [
+      ...baseRow,
+      data['T H.A1'] ?? '',
+      data['T H.M1'] ?? '',
+      data['T H.A2'] ?? '',
+      data['T H.M2'] ?? '',
+      module1Stops.length,
+      module2Stops.length,
+      stock.length,
+    ];
+
+    final detailsHeaders = [
+      'Saved At',
+      'Action',
+      'Local ID',
+      'Report Date (ISO)',
+      'Section',
+      'Item Index',
+      'Poste',
+      'Park',
+      'Stock Type',
+      'Duration',
+      'Nature',
+      'Quantity',
+    ];
+
+    final detailsRows = <List<Object?>>[];
+    for (var i = 0; i < module1Stops.length; i++) {
+      final stop = module1Stops[i];
+      detailsRows.add([
+        savedAt,
+        action,
+        report.id?.toString() ?? '',
+        reportDateIso,
+        'Arrêts M1',
+        i + 1,
+        '',
+        '',
+        '',
+        stop['duration'] ?? '',
+        stop['nature'] ?? '',
+        '',
+      ]);
+    }
+    for (var i = 0; i < module2Stops.length; i++) {
+      final stop = module2Stops[i];
+      detailsRows.add([
+        savedAt,
+        action,
+        report.id?.toString() ?? '',
+        reportDateIso,
+        'Arrêts M2',
+        i + 1,
+        '',
+        '',
+        '',
+        stop['duration'] ?? '',
+        stop['nature'] ?? '',
+        '',
+      ]);
+    }
+    for (var i = 0; i < stock.length; i++) {
+      final entry = stock[i];
+      detailsRows.add([
+        savedAt,
+        action,
+        report.id?.toString() ?? '',
+        reportDateIso,
+        'Stock',
+        i + 1,
+        entry['poste'] ?? '',
+        entry['park'] ?? '',
+        entry['type'] ?? '',
+        '',
+        '',
+        entry['quantity'] ?? '',
+      ]);
+    }
+
+    return _ReportPayload(
+      sheetName: sheetName,
+      headers: headers,
+      row: row,
+      detailsSheetName: _sanitizeSheetTitle('$sheetName - Détails'),
+      detailsHeaders: detailsHeaders,
+      detailsRows: detailsRows,
+    );
+  }
+
+  _ReportPayload _truckTrackingPayload(
+    Report report,
+    Map<String, dynamic> data,
+    List<Object?> baseRow,
+    String savedAt,
+    String action,
+    String reportDateIso,
+  ) {
+    final sheetName = _sanitizeSheetTitle('Truck Tracking');
+    final headers = [
+      ..._baseHeaders,
+      'Mine',
+      'Zone',
+      'Sortie',
+      'Poste',
+      'Qualité',
+      'Qualité Type',
+      'Operation Type',
+      'Distance',
+      'Total Trips',
+      'Camions',
+    ];
+
+    final row = [
+      ...baseRow,
+      data['mine'] ?? '',
+      data['zone'] ?? '',
+      data['sortie'] ?? '',
+      data['selectedPoste'] ?? '',
+      data['selectedQualite'] ?? '',
+      data['selectedQualiteType'] ?? '',
+      data['operationType'] ?? '',
+      data['distance'] ?? '',
+      data['totalTrips'] ?? '',
+      data['camionsCount'] ?? '',
+    ];
+
+    final detailsHeaders = [
+      'Saved At',
+      'Action',
+      'Local ID',
+      'Report Date (ISO)',
+      'Section',
+      'Truck Number',
+      'Driver',
+      'Trip Time',
+      'Equipment',
+      'Quality Type',
+    ];
+
+    final detailsRows = <List<Object?>>[];
+    final trucks = _listOfMaps(data['truckData']);
+    for (final truck in trucks) {
+      detailsRows.add([
+        savedAt,
+        action,
+        report.id?.toString() ?? '',
+        reportDateIso,
+        'Truck',
+        truck['truckNumber'] ?? '',
+        truck['driver1'] ?? '',
+        '',
+        '',
+        '',
+      ]);
+
+      final trips = _listOfMaps(truck['counts']);
+      for (final trip in trips) {
+        detailsRows.add([
+          savedAt,
+          action,
+          report.id?.toString() ?? '',
+          reportDateIso,
+          'Trip',
+          truck['truckNumber'] ?? '',
+          truck['driver1'] ?? '',
+          trip['time'] ?? '',
+          trip['equipment'] ?? '',
+          trip['productQualityType'] ?? '',
+        ]);
+      }
+    }
+
+    return _ReportPayload(
+      sheetName: sheetName,
+      headers: headers,
+      row: row,
+      detailsSheetName: _sanitizeSheetTitle('$sheetName - Détails'),
+      detailsHeaders: detailsHeaders,
+      detailsRows: detailsRows,
+    );
+  }
+
+  _ReportPayload _machinesPayload(
+    Report report,
+    Map<String, dynamic> data,
+    List<Object?> baseRow,
+    String savedAt,
+    String action,
+    String reportDateIso,
+  ) {
+    final sheetName = _sanitizeSheetTitle('Machines & Engins arrêtés');
+    final equipmentList = _listOfMaps(data['equipmentList']);
+    final headers = [
+      ..._baseHeaders,
+      'Equipment Count',
+    ];
+
+    final row = [
+      ...baseRow,
+      equipmentList.length,
+    ];
+
+    final detailsHeaders = [
+      'Saved At',
+      'Action',
+      'Local ID',
+      'Report Date (ISO)',
+      'Equipment Type',
+      'Reason',
+    ];
+
+    final detailsRows = <List<Object?>>[];
+    for (final entry in equipmentList) {
+      detailsRows.add([
+        savedAt,
+        action,
+        report.id?.toString() ?? '',
+        reportDateIso,
+        entry['equipmentType'] ?? '',
+        entry['Reason'] ?? '',
+      ]);
+    }
+
+    return _ReportPayload(
+      sheetName: sheetName,
+      headers: headers,
+      row: row,
+      detailsSheetName: _sanitizeSheetTitle('$sheetName - Détails'),
+      detailsHeaders: detailsHeaders,
+      detailsRows: detailsRows,
+    );
+  }
+
+  _ReportPayload _r0Payload(
+    Report report,
+    Map<String, dynamic> data,
+    List<Object?> baseRow,
+    String savedAt,
+    String action,
+    String reportDateIso,
+  ) {
+    final sheetName = _sanitizeSheetTitle('R0 Reports');
+    final exploitation = _mapOfStringDynamic(data['exploitation']);
+    final repartition = _mapOfStringDynamic(data['repartition']);
+    final personnel = _mapOfStringDynamic(data['personnel']);
+    final consommation = _mapOfStringDynamic(data['consommation']);
+    final compteurs = _mapOfStringDynamic(data['Compteurs']);
+    final arrets = _listOfMaps(data['Arrets']);
+    final headers = [
+      ..._baseHeaders,
+      'Mine',
+      'Zone',
+      'Sortie',
+      'Poste',
+      'Category',
+      'Type',
+      'Model',
+      'Compteurs Durée',
+      'Compteurs Note',
+      'H.M',
+      'H.A',
+      'Tonnage',
+      'Métrage foré',
+      'Nr de Trous Forés',
+      'Nr de Voyages',
+      'M³ Décapages',
+      'Nombre T.K.U',
+      'Rendement %',
+      'Chantier',
+      'Temps',
+      'Imputation',
+      'Conducteur',
+      'Graisseur',
+      'Matricules',
+      'Tricone',
+      'Gasoil',
+      'Arrêts Count',
+    ];
+
+    final row = [
+      ...baseRow,
+      data['mine'] ?? '',
+      data['zone'] ?? '',
+      data['sortie'] ?? '',
+      data['selectedPoste'] ?? '',
+      data['Category'] ?? '',
+      data['Type'] ?? '',
+      data['Model'] ?? '',
+      compteurs['duree'] ?? '',
+      compteurs['note'] ?? '',
+      exploitation['H.M'] ?? '',
+      exploitation['H.A'] ?? '',
+      exploitation['Tonnage'] ?? '',
+      exploitation['metrage fore'] ?? '',
+      exploitation['Nr de Trous Fores'] ?? '',
+      exploitation['Nr de Voyages'] ?? '',
+      exploitation['M³ Decapages'] ?? '',
+      exploitation['Nombre T.K.U'] ?? '',
+      exploitation['Rendement %'] ?? exploitation['Rendeme'] ?? '',
+      repartition['Chantier'] ?? '',
+      repartition['Temps'] ?? '',
+      repartition['Imputation'] ?? '',
+      personnel['conductr'] ?? '',
+      personnel['graisseur'] ?? '',
+      personnel['matricules'] ?? '',
+      consommation['tricone'] ?? '',
+      consommation['gasoil'] ?? '',
+      arrets.length,
+    ];
+
+    final detailsHeaders = [
+      'Saved At',
+      'Action',
+      'Local ID',
+      'Report Date (ISO)',
+      'Category',
+      'Arret',
+      'Start',
+      'End',
+      'Original Start',
+      'Original End',
+      'Carry Over',
+    ];
+
+    final detailsRows = <List<Object?>>[];
+    for (final entry in arrets) {
+      detailsRows.add([
+        savedAt,
+        action,
+        report.id?.toString() ?? '',
+        reportDateIso,
+        entry['Catégorie'] ?? '',
+        entry['Arret'] ?? '',
+        entry['Début'] ?? '',
+        entry['Fin'] ?? '',
+        entry['OriginalStart'] ?? '',
+        entry['OriginalEnd'] ?? '',
+        entry['CarryOver'] ?? '',
+      ]);
+    }
+
+    return _ReportPayload(
+      sheetName: sheetName,
+      headers: headers,
+      row: row,
+      detailsSheetName: _sanitizeSheetTitle('$sheetName - Arrêts'),
+      detailsHeaders: detailsHeaders,
+      detailsRows: detailsRows,
+    );
+  }
+
+  _ReportPayload _genericPayload(
+    Report report,
+    Map<String, dynamic> data,
+    List<Object?> baseRow,
+    String savedAt,
+    String action,
+    String reportDateIso,
+  ) {
+    final row = [
+      ...baseRow,
+      jsonEncode(data),
+    ];
+    final headers = [
+      ..._baseHeaders,
+      'Additional Data (JSON)',
+    ];
+
+    final detailsRows = _flattenAdditionalData(data).map((entry) {
+      return [
+        savedAt,
+        action,
+        report.id?.toString() ?? '',
+        report.firestoreId ?? '',
+        report.type,
+        report.group,
+        reportDateIso,
+        entry.path,
+        entry.value,
+        entry.valueType,
+      ];
+    }).toList();
+
+    return _ReportPayload(
+      sheetName: _genericReportsSheet,
+      headers: headers,
+      row: row,
+      detailsSheetName: _genericDetailsSheet,
+      detailsHeaders: const [
+        'Saved At',
+        'Action',
+        'Local ID',
+        'Firestore ID',
+        'Type',
+        'Group',
+        'Report Date (ISO)',
+        'Field Path',
+        'Value',
+        'Value Type',
+      ],
+      detailsRows: detailsRows,
+    );
+  }
+
   List<_FlattenedEntry> _flattenAdditionalData(Map<String, dynamic>? data) {
     if (data == null) {
       return [];
@@ -270,6 +869,68 @@ class GoogleSheetsService {
     visit(data, '');
     return entries;
   }
+
+  List<Map<String, dynamic>> _listOfMaps(dynamic value) {
+    if (value is List) {
+      return value
+          .whereType<Map>()
+          .map((entry) => Map<String, dynamic>.from(entry))
+          .toList();
+    }
+    return [];
+  }
+
+  Map<String, dynamic> _mapOfStringDynamic(dynamic value) {
+    if (value is Map) {
+      return Map<String, dynamic>.from(value);
+    }
+    return {};
+  }
+
+  String _sanitizeSheetTitle(String title) {
+    final sanitized = title.replaceAll('/', '-').trim();
+    return sanitized.length > 90 ? sanitized.substring(0, 90) : sanitized;
+  }
+}
+
+enum _ReportCategory {
+  activityTnb,
+  dailyTsud,
+  truckTracking,
+  machinesStopped,
+  r0,
+  generic,
+}
+
+const List<String> _baseHeaders = [
+  'Saved At',
+  'Action',
+  'Local ID',
+  'Firestore ID',
+  'Type',
+  'Group',
+  'Report Date (ISO)',
+  'Report Date (Local)',
+  'Report Time (Local)',
+  'Description',
+];
+
+class _ReportPayload {
+  const _ReportPayload({
+    required this.sheetName,
+    required this.headers,
+    required this.row,
+    this.detailsSheetName,
+    this.detailsHeaders,
+    this.detailsRows = const [],
+  });
+
+  final String sheetName;
+  final List<String> headers;
+  final List<Object?> row;
+  final String? detailsSheetName;
+  final List<String>? detailsHeaders;
+  final List<List<Object?>> detailsRows;
 }
 
 class _FlattenedEntry {
