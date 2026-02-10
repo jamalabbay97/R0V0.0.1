@@ -78,6 +78,12 @@ class GoogleSheetsService {
       reportLocalDate: reportLocalDate,
     );
 
+    final templateRows = _buildTemplateRows(report, reportLocalDate);
+    if (templateRows != null) {
+      await _appendRowsToTemplate(api, templateRows);
+      return;
+    }
+
     await _ensureSheetWithHeaders(api, payload.sheetName, payload.headers);
     await api.spreadsheets.values.append(
       ValueRange(values: [payload.row]),
@@ -103,6 +109,373 @@ class GoogleSheetsService {
         insertDataOption: 'INSERT_ROWS',
       );
     }
+  }
+
+  Future<void> _appendRowsToTemplate(
+    SheetsApi api,
+    _TemplateRows templateRows,
+  ) async {
+    await _loadSheetNames(api);
+    if (!_knownSheets.contains(templateRows.sheetName)) {
+      await api.spreadsheets.batchUpdate(
+        BatchUpdateSpreadsheetRequest(
+          requests: [
+            Request(
+              addSheet: AddSheetRequest(
+                properties: SheetProperties(title: templateRows.sheetName),
+              ),
+            ),
+          ],
+        ),
+        _spreadsheetId,
+      );
+      _knownSheets.add(templateRows.sheetName);
+    }
+
+    if (templateRows.rows.isEmpty) {
+      return;
+    }
+
+    await api.spreadsheets.values.append(
+      ValueRange(values: templateRows.rows),
+      _spreadsheetId,
+      '${templateRows.sheetName}!A7',
+      valueInputOption: 'RAW',
+      insertDataOption: 'INSERT_ROWS',
+    );
+  }
+
+  _TemplateRows? _buildTemplateRows(Report report, DateTime reportDateLocal) {
+    final data = report.additionalData ?? {};
+    final category = _categorizeReport(report, data);
+    final date = DateFormat('yyyy-MM-dd').format(reportDateLocal);
+
+    switch (category) {
+      case _ReportCategory.dailyTsud:
+        final rows = <List<Object?>>[];
+        final module1Stops = _listOfMaps(data['module1Stops']);
+        final module2Stops = _listOfMaps(data['module2Stops']);
+
+        for (final stop in module1Stops) {
+          rows.add([
+            date,
+            'Module 1',
+            stop['nature'] ?? '',
+            stop['duration'] ?? '',
+            data['T H.A1'] ?? '',
+            data['T H.M1'] ?? '',
+          ]);
+        }
+        for (final stop in module2Stops) {
+          rows.add([
+            date,
+            'Module 2',
+            stop['nature'] ?? '',
+            stop['duration'] ?? '',
+            data['T H.A2'] ?? '',
+            data['T H.M2'] ?? '',
+          ]);
+        }
+
+        if (rows.isEmpty) {
+          rows.add(
+              [date, '', '', '', data['T H.A1'] ?? '', data['T H.M1'] ?? '']);
+        }
+
+        return _TemplateRows(sheetName: _dailySheet, rows: rows);
+      case _ReportCategory.activityTnb:
+        final rows = <List<Object?>>[];
+        final stops = _listOfMaps(data['Arrets']);
+        final vibratorCounters = _listOfMaps(data['vibrator Counters']);
+        final liaisonCounters = _listOfMaps(data['liaison Counters']);
+        final stock = _listOfMaps(data['stock']);
+
+        for (final stop in stops) {
+          rows.add([
+            date,
+            stop['nature'] ?? '',
+            stop['duration'] ?? '',
+            data['T H.A'] ?? '',
+            data['T H.M'] ?? '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+          ]);
+        }
+        for (final counter in vibratorCounters) {
+          rows.add([
+            date,
+            '',
+            '',
+            data['T H.A'] ?? '',
+            data['T H.M'] ?? '',
+            _posteLabel(counter['poste']),
+            counter['start'] ?? '',
+            counter['end'] ?? '',
+            '',
+            data['T H.V'] ?? '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+          ]);
+        }
+        for (final counter in liaisonCounters) {
+          rows.add([
+            date,
+            '',
+            '',
+            data['T H.A'] ?? '',
+            data['T H.M'] ?? '',
+            _posteLabel(counter['poste']),
+            '',
+            '',
+            '',
+            '',
+            counter['start'] ?? '',
+            counter['end'] ?? '',
+            '',
+            data['T H.L'] ?? '',
+            '',
+            '',
+          ]);
+        }
+        for (final entry in stock) {
+          rows.add([
+            date,
+            '',
+            '',
+            data['T H.A'] ?? '',
+            data['T H.M'] ?? '',
+            _posteLabel(entry['poste']),
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            _stockTypeLabel(entry['type']),
+            _parkLabel(entry['park']),
+          ]);
+        }
+        if (rows.isEmpty) {
+          rows.add([
+            date,
+            '',
+            '',
+            data['T H.A'] ?? '',
+            data['T H.M'] ?? '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            ''
+          ]);
+        }
+
+        return _TemplateRows(sheetName: _activitySheet, rows: rows);
+      case _ReportCategory.r0:
+        final rows = <List<Object?>>[];
+        final exploitation = _mapOfStringDynamic(data['exploitation']);
+        final repartition = _mapOfStringDynamic(data['repartition']);
+        final personnel = _mapOfStringDynamic(data['personnel']);
+        final consommation = _mapOfStringDynamic(data['consommation']);
+        final compteurs = _mapOfStringDynamic(data['Compteurs']);
+        final arrets = _listOfMaps(data['Arrets']);
+
+        if (arrets.isEmpty) {
+          rows.add([
+            date,
+            data['mine'] ?? '',
+            data['sortie'] ?? '',
+            data['Model'] ?? '',
+            data['selectedPoste'] ?? '',
+            compteurs['duree'] ?? '',
+            compteurs['note'] ?? '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            exploitation['Tonnage'] ?? '',
+            exploitation['Rendement %'] ?? exploitation['Rendeme'] ?? '',
+            repartition['Chantier'] ?? '',
+            repartition['Temps'] ?? '',
+            repartition['Imputation'] ?? '',
+            personnel['conductr'] ?? '',
+            personnel['graisseur'] ?? '',
+            personnel['matricules'] ?? '',
+            consommation['tricone'] ?? '',
+            consommation['gasoil'] ?? '',
+          ]);
+        }
+
+        for (final arret in arrets) {
+          rows.add([
+            date,
+            data['mine'] ?? '',
+            data['sortie'] ?? '',
+            data['Model'] ?? '',
+            data['selectedPoste'] ?? '',
+            compteurs['duree'] ?? '',
+            compteurs['note'] ?? '',
+            '',
+            arret['Catégorie'] ?? '',
+            arret['Arret'] ?? '',
+            arret['Début'] ?? '',
+            arret['Fin'] ?? '',
+            exploitation['Tonnage'] ?? '',
+            exploitation['Rendement %'] ?? exploitation['Rendeme'] ?? '',
+            repartition['Chantier'] ?? '',
+            repartition['Temps'] ?? '',
+            repartition['Imputation'] ?? '',
+            personnel['conductr'] ?? '',
+            personnel['graisseur'] ?? '',
+            personnel['matricules'] ?? '',
+            consommation['tricone'] ?? '',
+            consommation['gasoil'] ?? '',
+          ]);
+        }
+        return _TemplateRows(sheetName: _r0Sheet, rows: rows);
+      case _ReportCategory.truckTracking:
+        final rows = <List<Object?>>[];
+        final trucks = _listOfMaps(data['truckData']);
+        for (final truck in trucks) {
+          final trips = _listOfMaps(truck['counts']);
+          final tripTimes =
+              trips.map((e) => e['time']?.toString() ?? '').toList();
+          while (tripTimes.length < 16) {
+            tripTimes.add('');
+          }
+          rows.add([
+            date,
+            data['mine'] ?? '',
+            data['sortie'] ?? '',
+            data['selectedQualite'] ?? '',
+            data['distance'] ?? '',
+            data['selectedQualiteType'] ?? '',
+            data['operationType'] ?? '',
+            '',
+            data['selectedPoste'] ?? '',
+            truck['truckNumber'] ?? '',
+            truck['driver1'] ?? '',
+            ...tripTimes.take(16),
+            '',
+            _equipmentTripsLabel(data['equipmentTrips']),
+            trips.length,
+          ]);
+        }
+        if (rows.isEmpty) {
+          rows.add([
+            date,
+            data['mine'] ?? '',
+            data['sortie'] ?? '',
+            data['selectedQualite'] ?? '',
+            data['distance'] ?? '',
+            data['selectedQualiteType'] ?? '',
+            data['operationType'] ?? '',
+            '',
+            data['selectedPoste'] ?? '',
+            '',
+            '',
+            ...List.filled(16, ''),
+            '',
+            _equipmentTripsLabel(data['equipmentTrips']),
+            data['totalTrips'] ?? '',
+          ]);
+        }
+        return _TemplateRows(sheetName: _truckSheet, rows: rows);
+      case _ReportCategory.machinesStopped:
+        final equipmentList = _listOfMaps(data['equipmentList']);
+        final rows = equipmentList
+            .map((entry) => [
+                  date,
+                  '',
+                  '',
+                  entry['equipmentType'] ?? '',
+                  entry['Reason'] ?? '',
+                ])
+            .toList();
+        if (rows.isEmpty) {
+          rows.add([date, '', '', '', '']);
+        }
+        return _TemplateRows(sheetName: _machinesSheet, rows: rows);
+      case _ReportCategory.generic:
+        return null;
+    }
+  }
+
+  String _posteLabel(dynamic value) {
+    if (value == null) return '';
+    if (value is String) return value;
+    if (value is num) {
+      switch (value.toInt()) {
+        case 0:
+          return '3ème';
+        case 1:
+          return '1er';
+        case 2:
+          return '2ème';
+      }
+    }
+    return value.toString();
+  }
+
+  String _parkLabel(dynamic value) {
+    if (value == null) return '';
+    if (value is String) return value;
+    if (value is num) {
+      switch (value.toInt()) {
+        case 0:
+          return 'PARK 1';
+        case 1:
+          return 'PARK 2';
+        case 2:
+          return 'PARK 3';
+      }
+    }
+    return value.toString();
+  }
+
+  String _stockTypeLabel(dynamic value) {
+    if (value == null) return '';
+    if (value is String) return value;
+    if (value is num) {
+      switch (value.toInt()) {
+        case 0:
+          return 'NORMAL';
+        case 1:
+          return 'OCEANE';
+        case 2:
+          return 'PB30';
+      }
+    }
+    return value.toString();
+  }
+
+  String _equipmentTripsLabel(dynamic value) {
+    if (value is! Map) return '';
+    final map = Map<String, dynamic>.from(value);
+    if (map.isEmpty) return '';
+    return map.entries.map((e) => '${e.key}:${e.value}').join(', ');
   }
 
   Future<SheetsApi?> _getSheetsApi() async {
@@ -993,4 +1366,14 @@ class _FlattenedEntry {
   final String path;
   final Object? value;
   final String valueType;
+}
+
+class _TemplateRows {
+  const _TemplateRows({
+    required this.sheetName,
+    required this.rows,
+  });
+
+  final String sheetName;
+  final List<List<Object?>> rows;
 }
