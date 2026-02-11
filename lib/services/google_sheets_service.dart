@@ -156,9 +156,10 @@ class GoogleSheetsService {
         final module1Stops = _listOfMaps(data['module1Stops']);
         final module2Stops = _listOfMaps(data['module2Stops']);
 
-        for (final stop in module1Stops) {
+        for (var i = 0; i < module1Stops.length; i++) {
+          final stop = module1Stops[i];
           rows.add([
-            date,
+            i == 0 ? date : '',
             'Module 1',
             stop['nature'] ?? '',
             stop['duration'] ?? '',
@@ -166,9 +167,10 @@ class GoogleSheetsService {
             data['T H.M1'] ?? '',
           ]);
         }
-        for (final stop in module2Stops) {
+        for (var i = 0; i < module2Stops.length; i++) {
+          final stop = module2Stops[i];
           rows.add([
-            date,
+            i == 0 ? date : '',
             'Module 2',
             stop['nature'] ?? '',
             stop['duration'] ?? '',
@@ -184,61 +186,41 @@ class GoogleSheetsService {
 
         return _TemplateRows(sheetName: _dailySheet, rows: rows);
       case _ReportCategory.activityTnb:
-        final rows = <List<Object?>>[];
         final stops = _listOfMaps(data['Arrets']);
         final vibratorCounters = _listOfMaps(data['vibrator Counters']);
         final liaisonCounters = _listOfMaps(data['liaison Counters']);
         final stock = _listOfMaps(data['stock']);
 
-        for (final stop in stops) {
-          rows.add(_buildTnbRow(
-            date: date,
-            totalHa: data['T H.A'] ?? '',
-            totalHm: data['T H.M'] ?? '',
-            natureArret: stop['nature'] ?? '',
-            dureeArret: stop['duration'] ?? '',
-          ));
-        }
-        for (final counter in vibratorCounters) {
-          rows.add(_buildTnbRow(
-            date: date,
-            totalHa: data['T H.A'] ?? '',
-            totalHm: data['T H.M'] ?? '',
-            poste: _posteLabel(counter['poste']),
-            debutV: counter['start'] ?? '',
-            finV: counter['end'] ?? '',
-            totalHmPoste: counter['totalHmPoste'] ?? '',
-            totalHmVibreur: data['T H.V'] ?? '',
-          ));
-        }
-        for (final counter in liaisonCounters) {
-          rows.add(_buildTnbRow(
-            date: date,
-            totalHa: data['T H.A'] ?? '',
-            totalHm: data['T H.M'] ?? '',
-            poste: _posteLabel(counter['poste']),
-            debutL: counter['start'] ?? '',
-            finL: counter['end'] ?? '',
-            totalHmPoste: counter['totalHmPoste'] ?? '',
-            totalHmLiaison: data['T H.L'] ?? '',
-          ));
-        }
-        for (final entry in stock) {
-          rows.add(_buildTnbRow(
-            date: date,
-            totalHa: data['T H.A'] ?? '',
-            totalHm: data['T H.M'] ?? '',
-            poste: _posteLabel(entry['poste']),
-            qualityProduit: _stockTypeLabel(entry['type']),
-            parkStock: _parkLabel(entry['park']),
-          ));
-        }
-        if (rows.isEmpty) {
-          rows.add(_buildTnbRow(
-            date: date,
-            totalHa: data['T H.A'] ?? '',
-            totalHm: data['T H.M'] ?? '',
-          ));
+        final maxRows = [
+          stops.length,
+          vibratorCounters.length,
+          liaisonCounters.length,
+          stock.length,
+          1,
+        ].reduce((a, b) => a > b ? a : b);
+
+        final rows = <List<Object?>>[];
+        for (var i = 0; i < maxRows; i++) {
+          final stop = i < stops.length ? stops[i] : null;
+          final vibrator =
+              i < vibratorCounters.length ? vibratorCounters[i] : null;
+          final liaison =
+              i < liaisonCounters.length ? liaisonCounters[i] : null;
+          final stockEntry = i < stock.length ? stock[i] : null;
+
+          rows.add([
+            i == 0 ? date : '',
+            stop?['nature'] ?? '',
+            _formatDuration(stop?['duration']),
+            i == 0 ? _formatDuration(data['T H.A']) : '',
+            i == 0 ? _formatDuration(data['T H.M']) : '',
+            _formatCounterEntry(vibrator),
+            i == 0 ? _formatDuration(data['T H.V']) : '',
+            _formatCounterEntry(liaison),
+            i == 0 ? _formatDuration(data['T H.L']) : '',
+            _formatStockEntry(stockEntry),
+            i == 0 ? _extractCreatorName(data) : '',
+          ]);
         }
 
         return _TemplateRows(sheetName: _activitySheet, rows: rows);
@@ -311,13 +293,23 @@ class GoogleSheetsService {
       case _ReportCategory.truckTracking:
         final rows = <List<Object?>>[];
         final trucks = _listOfMaps(data['truckData']);
+        final totalTrips = _resolveTotalTrips(data, trucks);
+        final equipmentSummary = _formatEquipmentTripsForTemplate(trucks);
+
         for (final truck in trucks) {
           final trips = _listOfMaps(truck['counts']);
-          final tripTimes =
-              trips.map((e) => e['time']?.toString() ?? '').toList();
-          while (tripTimes.length < 16) {
-            tripTimes.add('');
+          final tripCells = trips
+              .map((trip) => _formatTruckTripCell(
+                    time: trip['time']?.toString() ?? '',
+                    equipment: trip['equipment']?.toString() ?? '',
+                    quality: trip['productQualityType'],
+                  ))
+              .toList();
+
+          while (tripCells.length < 12) {
+            tripCells.add('');
           }
+
           rows.add([
             date,
             data['mine'] ?? '',
@@ -330,9 +322,10 @@ class GoogleSheetsService {
             data['selectedPoste'] ?? '',
             truck['truckNumber'] ?? '',
             truck['driver1'] ?? '',
-            ...tripTimes.take(16),
-            '',
-            _equipmentTripsLabel(data['equipmentTrips']),
+            ...tripCells.take(12),
+            trips.length,
+            equipmentSummary,
+            totalTrips,
             trips.length,
           ]);
         }
@@ -349,10 +342,11 @@ class GoogleSheetsService {
             data['selectedPoste'] ?? '',
             '',
             '',
-            ...List.filled(16, ''),
-            '',
-            _equipmentTripsLabel(data['equipmentTrips']),
-            data['totalTrips'] ?? '',
+            0,
+            ...List.filled(12, ''),
+            0,
+            equipmentSummary,
+            totalTrips,
           ]);
         }
         return _TemplateRows(sheetName: _truckSheet, rows: rows);
@@ -376,42 +370,74 @@ class GoogleSheetsService {
     }
   }
 
-  List<Object?> _buildTnbRow({
-    required String date,
-    required Object? totalHa,
-    required Object? totalHm,
-    Object? natureArret,
-    Object? dureeArret,
-    Object? poste,
-    Object? debutV,
-    Object? finV,
-    Object? totalHmPoste,
-    Object? totalHmVibreur,
-    Object? debutL,
-    Object? finL,
-    Object? totalHmPoste4,
-    Object? totalHmLiaison,
-    Object? qualityProduit,
-    Object? parkStock,
-  }) {
-    return [
-      date,
-      natureArret ?? '',
-      dureeArret ?? '',
-      totalHa,
-      totalHm,
-      poste ?? '',
-      debutV ?? '',
-      finV ?? '',
-      totalHmPoste ?? '',
-      totalHmVibreur ?? '',
-      debutL ?? '',
-      finL ?? '',
-      totalHmPoste4 ?? '',
-      totalHmLiaison ?? '',
-      qualityProduit ?? '',
-      parkStock ?? '',
-    ];
+  String _formatCounterEntry(Map<String, dynamic>? counter) {
+    if (counter == null) {
+      return '';
+    }
+    final poste = _posteLabel(counter['poste']);
+    final start = counter['start']?.toString().trim() ?? '';
+    final end = counter['end']?.toString().trim() ?? '';
+
+    if (start.isEmpty && end.isEmpty) {
+      return poste;
+    }
+    if (poste.isEmpty) {
+      return '$start -> $end'.trim();
+    }
+    return '$poste / $start -> $end';
+  }
+
+  String _formatStockEntry(Map<String, dynamic>? stockEntry) {
+    if (stockEntry == null) {
+      return '';
+    }
+    final poste = _posteLabel(stockEntry['poste']);
+    final park = _parkLabel(stockEntry['park']);
+    final type = _stockTypeLabel(stockEntry['type']);
+    return [poste, park, type].where((part) => part.isNotEmpty).join(' / ');
+  }
+
+  String _formatDuration(dynamic value) {
+    if (value == null) {
+      return '';
+    }
+
+    if (value is num) {
+      final minutes = value.toInt();
+      final hours = minutes ~/ 60;
+      final remainingMinutes = minutes % 60;
+      return '${hours}h ${remainingMinutes.toString().padLeft(2, '0')}m';
+    }
+
+    final asString = value.toString().trim();
+    if (asString.isEmpty) {
+      return '';
+    }
+
+    final parsedMinutes = int.tryParse(asString);
+    if (parsedMinutes != null) {
+      final hours = parsedMinutes ~/ 60;
+      final remainingMinutes = parsedMinutes % 60;
+      return '${hours}h ${remainingMinutes.toString().padLeft(2, '0')}m';
+    }
+
+    return asString;
+  }
+
+  String _extractCreatorName(Map<String, dynamic> data) {
+    for (final key in const [
+      'createdBy',
+      'created_by',
+      'createdByName',
+      'userName',
+      'author',
+    ]) {
+      final value = data[key];
+      if (value != null && value.toString().trim().isNotEmpty) {
+        return value.toString().trim();
+      }
+    }
+    return '';
   }
 
   String _posteLabel(dynamic value) {
@@ -462,11 +488,128 @@ class GoogleSheetsService {
     return value.toString();
   }
 
-  String _equipmentTripsLabel(dynamic value) {
-    if (value is! Map) return '';
-    final map = Map<String, dynamic>.from(value);
-    if (map.isEmpty) return '';
-    return map.entries.map((e) => '${e.key}:${e.value}').join(', ');
+  int _resolveTotalTrips(
+      Map<String, dynamic> data, List<Map<String, dynamic>> trucks) {
+    final fromPayload = data['totalTrips'];
+    if (fromPayload is num) {
+      return fromPayload.toInt();
+    }
+    if (fromPayload is String) {
+      final parsed = int.tryParse(fromPayload);
+      if (parsed != null) {
+        return parsed;
+      }
+    }
+    return trucks.fold<int>(
+      0,
+      (sum, truck) => sum + _listOfMaps(truck['counts']).length,
+    );
+  }
+
+  String _formatTruckTripCell({
+    required String time,
+    required String equipment,
+    required dynamic quality,
+  }) {
+    final normalizedTime = time.trim();
+    final normalizedEquipment = equipment.trim();
+    final normalizedQuality = _normalizeTruckQualityLabel(quality);
+    return [normalizedTime, normalizedEquipment, normalizedQuality]
+        .where((value) => value.isNotEmpty)
+        .join('\n');
+  }
+
+  String _formatEquipmentTripsForTemplate(List<Map<String, dynamic>> trucks) {
+    final Map<String, int> equipmentTotals = {};
+    final Map<String, Map<String, int>> qualityBreakdowns = {};
+
+    for (final truck in trucks) {
+      for (final trip in _listOfMaps(truck['counts'])) {
+        final equipment = (trip['equipment']?.toString() ?? '').trim();
+        if (equipment.isEmpty) {
+          continue;
+        }
+        final quality = _normalizeTruckQualityLabel(trip['productQualityType']);
+
+        equipmentTotals[equipment] = (equipmentTotals[equipment] ?? 0) + 1;
+        qualityBreakdowns.putIfAbsent(equipment, () => {});
+        if (quality.isNotEmpty) {
+          qualityBreakdowns[equipment]![quality] =
+              (qualityBreakdowns[equipment]![quality] ?? 0) + 1;
+        }
+      }
+    }
+
+    if (equipmentTotals.isEmpty) {
+      return '';
+    }
+
+    final lines = <String>[];
+    final sortedEquipment = equipmentTotals.keys.toList()..sort();
+    for (final equipment in sortedEquipment) {
+      final total = equipmentTotals[equipment] ?? 0;
+      final qualityMap = qualityBreakdowns[equipment] ?? const {};
+      if (qualityMap.isEmpty) {
+        lines.add('$equipment ($total)');
+        continue;
+      }
+
+      final qualityParts = <String>[];
+      for (final quality in _qualityDisplayOrder) {
+        final count = qualityMap[quality];
+        if (count != null && count > 0) {
+          qualityParts.add('$count ${_qualityAbbreviation(quality)}');
+        }
+      }
+      qualityMap.forEach((quality, count) {
+        if (count > 0 && !_qualityDisplayOrder.contains(quality)) {
+          qualityParts.add('$count ${_qualityAbbreviation(quality)}');
+        }
+      });
+
+      final breakdown = qualityParts.join(' + ');
+      lines.add('$equipment ($total = $breakdown)');
+    }
+    return lines.join('\n');
+  }
+
+  static const List<String> _qualityDisplayOrder = [
+    'NORMAL',
+    'OCEANE',
+    'PB30',
+  ];
+
+  String _qualityAbbreviation(String quality) {
+    switch (quality) {
+      case 'NORMAL':
+        return 'Nor';
+      case 'OCEANE':
+        return 'OC';
+      case 'PB30':
+        return 'PB30';
+      default:
+        return quality;
+    }
+  }
+
+  String _normalizeTruckQualityLabel(dynamic quality) {
+    if (quality == null) {
+      return '';
+    }
+    final normalized = quality.toString().trim().toUpperCase();
+    if (normalized.isEmpty) {
+      return '';
+    }
+    if (normalized.contains('PB30')) {
+      return 'PB30';
+    }
+    if (normalized.contains('OCEANE')) {
+      return 'OCEANE';
+    }
+    if (normalized.contains('NORMAL')) {
+      return 'NORMAL';
+    }
+    return quality.toString().trim();
   }
 
   Future<SheetsApi?> _getSheetsApi() async {
