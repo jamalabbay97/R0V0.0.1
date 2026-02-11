@@ -155,6 +155,7 @@ class GoogleSheetsService {
         final rows = <List<Object?>>[];
         final module1Stops = _listOfMaps(data['module1Stops']);
         final module2Stops = _listOfMaps(data['module2Stops']);
+        final creator = _extractCreatorName(data);
 
         for (var i = 0; i < module1Stops.length; i++) {
           final stop = module1Stops[i];
@@ -165,6 +166,7 @@ class GoogleSheetsService {
             stop['duration'] ?? '',
             data['T H.A1'] ?? '',
             data['T H.M1'] ?? '',
+            i == 0 ? creator : '',
           ]);
         }
         for (var i = 0; i < module2Stops.length; i++) {
@@ -176,12 +178,20 @@ class GoogleSheetsService {
             stop['duration'] ?? '',
             data['T H.A2'] ?? '',
             data['T H.M2'] ?? '',
+            i == 0 ? creator : '',
           ]);
         }
 
         if (rows.isEmpty) {
-          rows.add(
-              [date, '', '', '', data['T H.A1'] ?? '', data['T H.M1'] ?? '']);
+          rows.add([
+            date,
+            '',
+            '',
+            '',
+            data['T H.A1'] ?? '',
+            data['T H.M1'] ?? '',
+            creator,
+          ]);
         }
 
         return _TemplateRows(sheetName: _dailySheet, rows: rows);
@@ -352,17 +362,23 @@ class GoogleSheetsService {
         return _TemplateRows(sheetName: _truckSheet, rows: rows);
       case _ReportCategory.machinesStopped:
         final equipmentList = _listOfMaps(data['equipmentList']);
-        final rows = equipmentList
-            .map((entry) => [
-                  date,
-                  '',
-                  '',
-                  entry['equipmentType'] ?? '',
-                  entry['Reason'] ?? '',
-                ])
-            .toList();
+        final creator = _extractCreatorName(data);
+        final rows = equipmentList.asMap().entries.map((item) {
+          final index = item.key;
+          final entry = item.value;
+          final equipmentParts =
+              _splitEquipmentType(entry['equipmentType']?.toString());
+          return [
+            index == 0 ? date : '',
+            equipmentParts.mainCategory,
+            equipmentParts.subCategory,
+            equipmentParts.equipment,
+            entry['Reason'] ?? '',
+            index == 0 ? creator : '',
+          ];
+        }).toList();
         if (rows.isEmpty) {
-          rows.add([date, '', '', '', '']);
+          rows.add([date, '', '', '', '', creator]);
         }
         return _TemplateRows(sheetName: _machinesSheet, rows: rows);
       case _ReportCategory.generic:
@@ -610,6 +626,35 @@ class GoogleSheetsService {
       return 'NORMAL';
     }
     return quality.toString().trim();
+  }
+
+  _EquipmentTypeParts _splitEquipmentType(String? rawValue) {
+    final normalized = (rawValue ?? '').trim();
+    if (normalized.isEmpty) {
+      return const _EquipmentTypeParts();
+    }
+
+    final parts = normalized
+        .split(RegExp(r'\s*-\s*'))
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+
+    if (parts.length >= 3) {
+      return _EquipmentTypeParts(
+        mainCategory: parts[0],
+        subCategory: parts[1],
+        equipment: parts.sublist(2).join(' - '),
+      );
+    }
+    if (parts.length == 2) {
+      return _EquipmentTypeParts(
+        mainCategory: parts[0],
+        equipment: parts[1],
+      );
+    }
+
+    return _EquipmentTypeParts(equipment: normalized);
   }
 
   Future<SheetsApi?> _getSheetsApi() async {
@@ -1419,6 +1464,18 @@ String _formatMineZone(Map<String, dynamic> data) {
 String _formatTotalTrips(Map<String, dynamic> data) {
   final totalTrips = data['totalTrips'];
   return totalTrips?.toString() ?? '';
+}
+
+class _EquipmentTypeParts {
+  const _EquipmentTypeParts({
+    this.mainCategory = '',
+    this.subCategory = '',
+    this.equipment = '',
+  });
+
+  final String mainCategory;
+  final String subCategory;
+  final String equipment;
 }
 
 enum _ReportCategory {
