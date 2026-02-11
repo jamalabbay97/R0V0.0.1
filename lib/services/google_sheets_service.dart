@@ -191,104 +191,54 @@ class GoogleSheetsService {
         final stock = _listOfMaps(data['stock']);
 
         for (final stop in stops) {
-          rows.add([
-            date,
-            stop['nature'] ?? '',
-            stop['duration'] ?? '',
-            data['T H.A'] ?? '',
-            data['T H.M'] ?? '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-          ]);
+          rows.add(_buildTnbRow(
+            date: date,
+            totalHa: data['T H.A'] ?? '',
+            totalHm: data['T H.M'] ?? '',
+            natureArret: stop['nature'] ?? '',
+            dureeArret: stop['duration'] ?? '',
+          ));
         }
         for (final counter in vibratorCounters) {
-          rows.add([
-            date,
-            '',
-            '',
-            data['T H.A'] ?? '',
-            data['T H.M'] ?? '',
-            _posteLabel(counter['poste']),
-            counter['start'] ?? '',
-            counter['end'] ?? '',
-            '',
-            data['T H.V'] ?? '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-          ]);
+          rows.add(_buildTnbRow(
+            date: date,
+            totalHa: data['T H.A'] ?? '',
+            totalHm: data['T H.M'] ?? '',
+            poste: _posteLabel(counter['poste']),
+            debutV: counter['start'] ?? '',
+            finV: counter['end'] ?? '',
+            totalHmPoste: counter['totalHmPoste'] ?? '',
+            totalHmVibreur: data['T H.V'] ?? '',
+          ));
         }
         for (final counter in liaisonCounters) {
-          rows.add([
-            date,
-            '',
-            '',
-            data['T H.A'] ?? '',
-            data['T H.M'] ?? '',
-            _posteLabel(counter['poste']),
-            '',
-            '',
-            '',
-            '',
-            counter['start'] ?? '',
-            counter['end'] ?? '',
-            '',
-            data['T H.L'] ?? '',
-            '',
-            '',
-          ]);
+          rows.add(_buildTnbRow(
+            date: date,
+            totalHa: data['T H.A'] ?? '',
+            totalHm: data['T H.M'] ?? '',
+            poste: _posteLabel(counter['poste']),
+            debutL: counter['start'] ?? '',
+            finL: counter['end'] ?? '',
+            totalHmPoste: counter['totalHmPoste'] ?? '',
+            totalHmLiaison: data['T H.L'] ?? '',
+          ));
         }
         for (final entry in stock) {
-          rows.add([
-            date,
-            '',
-            '',
-            data['T H.A'] ?? '',
-            data['T H.M'] ?? '',
-            _posteLabel(entry['poste']),
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            _stockTypeLabel(entry['type']),
-            _parkLabel(entry['park']),
-          ]);
+          rows.add(_buildTnbRow(
+            date: date,
+            totalHa: data['T H.A'] ?? '',
+            totalHm: data['T H.M'] ?? '',
+            poste: _posteLabel(entry['poste']),
+            qualityProduit: _stockTypeLabel(entry['type']),
+            parkStock: _parkLabel(entry['park']),
+          ));
         }
         if (rows.isEmpty) {
-          rows.add([
-            date,
-            '',
-            '',
-            data['T H.A'] ?? '',
-            data['T H.M'] ?? '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            ''
-          ]);
+          rows.add(_buildTnbRow(
+            date: date,
+            totalHa: data['T H.A'] ?? '',
+            totalHm: data['T H.M'] ?? '',
+          ));
         }
 
         return _TemplateRows(sheetName: _activitySheet, rows: rows);
@@ -310,11 +260,13 @@ class GoogleSheetsService {
             data['selectedPoste'] ?? '',
             compteurs['duree'] ?? '',
             compteurs['note'] ?? '',
+            exploitation['H.M'] ??
+                ''
+                    '',
             '',
             '',
             '',
-            '',
-            '',
+            exploitation['H.A'] ?? '',
             exploitation['Tonnage'] ?? '',
             exploitation['Rendement %'] ?? exploitation['Rendeme'] ?? '',
             repartition['Chantier'] ?? '',
@@ -337,11 +289,12 @@ class GoogleSheetsService {
             data['selectedPoste'] ?? '',
             compteurs['duree'] ?? '',
             compteurs['note'] ?? '',
-            '',
+            exploitation['H.M'] ?? '',
             arret['Catégorie'] ?? '',
             arret['Arret'] ?? '',
             arret['Début'] ?? '',
             arret['Fin'] ?? '',
+            arret['Durée'] ?? arret['duration'] ?? '',
             exploitation['Tonnage'] ?? '',
             exploitation['Rendement %'] ?? exploitation['Rendeme'] ?? '',
             repartition['Chantier'] ?? '',
@@ -369,7 +322,7 @@ class GoogleSheetsService {
             date,
             data['mine'] ?? '',
             data['sortie'] ?? '',
-            data['selectedQualite'] ?? '',
+            data['equipment'] ?? data['selectedQualite'] ?? '',
             data['distance'] ?? '',
             data['selectedQualiteType'] ?? '',
             data['operationType'] ?? '',
@@ -388,7 +341,7 @@ class GoogleSheetsService {
             date,
             data['mine'] ?? '',
             data['sortie'] ?? '',
-            data['selectedQualite'] ?? '',
+            data['equipment'] ?? data['selectedQualite'] ?? '',
             data['distance'] ?? '',
             data['selectedQualiteType'] ?? '',
             data['operationType'] ?? '',
@@ -421,6 +374,44 @@ class GoogleSheetsService {
       case _ReportCategory.generic:
         return null;
     }
+  }
+
+  List<Object?> _buildTnbRow({
+    required String date,
+    required Object? totalHa,
+    required Object? totalHm,
+    Object? natureArret,
+    Object? dureeArret,
+    Object? poste,
+    Object? debutV,
+    Object? finV,
+    Object? totalHmPoste,
+    Object? totalHmVibreur,
+    Object? debutL,
+    Object? finL,
+    Object? totalHmPoste4,
+    Object? totalHmLiaison,
+    Object? qualityProduit,
+    Object? parkStock,
+  }) {
+    return [
+      date,
+      natureArret ?? '',
+      dureeArret ?? '',
+      totalHa,
+      totalHm,
+      poste ?? '',
+      debutV ?? '',
+      finV ?? '',
+      totalHmPoste ?? '',
+      totalHmVibreur ?? '',
+      debutL ?? '',
+      finL ?? '',
+      totalHmPoste4 ?? '',
+      totalHmLiaison ?? '',
+      qualityProduit ?? '',
+      parkStock ?? '',
+    ];
   }
 
   String _posteLabel(dynamic value) {
