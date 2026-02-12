@@ -48,6 +48,7 @@ class GoogleSheetsService {
   AutoRefreshingAuthClient? _authClient;
   bool _loadedSheets = false;
   final Set<String> _knownSheets = {};
+  final Map<String, int> _sheetIdsByName = {};
 
   Future<void> recordReportSnapshot(
     Report report, {
@@ -130,18 +131,81 @@ class GoogleSheetsService {
         _spreadsheetId,
       );
       _knownSheets.add(templateRows.sheetName);
+      _loadedSheets = false;
+      await _loadSheetNames(api);
     }
 
     if (templateRows.rows.isEmpty) {
       return;
     }
 
-    await api.spreadsheets.values.append(
+    final appendResponse = await api.spreadsheets.values.append(
       ValueRange(values: templateRows.rows),
       _spreadsheetId,
       '${templateRows.sheetName}!A7',
       valueInputOption: 'RAW',
       insertDataOption: 'INSERT_ROWS',
+    );
+
+    if (templateRows.mergeRanges.isEmpty) {
+      return;
+    }
+
+    final rowBounds = _extractRowBounds(appendResponse.updates?.updatedRange);
+    if (rowBounds == null) {
+      return;
+    }
+
+    final sheetId = _sheetIdsByName[templateRows.sheetName];
+    if (sheetId == null) {
+      return;
+    }
+
+    final requests = templateRows.mergeRanges.map((mergeRange) {
+      return Request(
+        mergeCells: MergeCellsRequest(
+          range: GridRange(
+            sheetId: sheetId,
+            startRowIndex: rowBounds.startRowIndex,
+            endRowIndex: rowBounds.endRowIndex,
+            startColumnIndex: mergeRange.startColumnIndex,
+            endColumnIndex: mergeRange.endColumnIndex,
+          ),
+          mergeType: 'MERGE_ALL',
+        ),
+      );
+    }).toList();
+
+    if (requests.isEmpty) {
+      return;
+    }
+
+    await api.spreadsheets.batchUpdate(
+      BatchUpdateSpreadsheetRequest(requests: requests),
+      _spreadsheetId,
+    );
+  }
+
+  _RowBounds? _extractRowBounds(String? updatedRange) {
+    if (updatedRange == null || updatedRange.isEmpty) {
+      return null;
+    }
+
+    final rowMatch =
+        RegExp(r'![A-Z]+(\d+):[A-Z]+(\d+)').firstMatch(updatedRange);
+    if (rowMatch == null) {
+      return null;
+    }
+
+    final startRow = int.tryParse(rowMatch.group(1) ?? '');
+    final endRow = int.tryParse(rowMatch.group(2) ?? '');
+    if (startRow == null || endRow == null) {
+      return null;
+    }
+
+    return _RowBounds(
+      startRowIndex: startRow - 1,
+      endRowIndex: endRow,
     );
   }
 
@@ -309,7 +373,21 @@ class GoogleSheetsService {
             ...sharedSuffix(includeValues: includeSharedValues),
           ]);
         }
-        return _TemplateRows(sheetName: _r0Sheet, rows: rows);
+
+        final mergeRanges = <_TemplateMergeRange>[];
+        if (rows.length > 1) {
+          mergeRanges.addAll([
+            const _TemplateMergeRange(startColumnIndex: 0, endColumnIndex: 8),
+            const _TemplateMergeRange(startColumnIndex: 12, endColumnIndex: 15),
+            const _TemplateMergeRange(startColumnIndex: 18, endColumnIndex: 23),
+          ]);
+        }
+
+        return _TemplateRows(
+          sheetName: _r0Sheet,
+          rows: rows,
+          mergeRanges: mergeRanges,
+        );
       case _ReportCategory.truckTracking:
         final rows = <List<Object?>>[];
         final trucks = _listOfMaps(data['truckData']);
@@ -794,8 +872,12 @@ class GoogleSheetsService {
     final sheets = spreadsheet.sheets ?? [];
     for (final sheet in sheets) {
       final title = sheet.properties?.title;
+      final sheetId = sheet.properties?.sheetId;
       if (title != null) {
         _knownSheets.add(title);
+        if (sheetId != null) {
+          _sheetIdsByName[title] = sheetId;
+        }
       }
     }
     _loadedSheets = true;
@@ -1612,8 +1694,30 @@ class _TemplateRows {
   const _TemplateRows({
     required this.sheetName,
     required this.rows,
+    this.mergeRanges = const [],
   });
 
   final String sheetName;
   final List<List<Object?>> rows;
+  final List<_TemplateMergeRange> mergeRanges;
+}
+
+class _TemplateMergeRange {
+  const _TemplateMergeRange({
+    required this.startColumnIndex,
+    required this.endColumnIndex,
+  });
+
+  final int startColumnIndex;
+  final int endColumnIndex;
+}
+
+class _RowBounds {
+  const _RowBounds({
+    required this.startRowIndex,
+    required this.endRowIndex,
+  });
+
+  final int startRowIndex;
+  final int endRowIndex;
 }
