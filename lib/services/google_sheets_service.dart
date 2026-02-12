@@ -161,20 +161,27 @@ class GoogleSheetsService {
       return;
     }
 
-    final requests = templateRows.mergeRanges.map((mergeRange) {
-      return Request(
-        mergeCells: MergeCellsRequest(
-          range: GridRange(
-            sheetId: sheetId,
-            startRowIndex: rowBounds.startRowIndex,
-            endRowIndex: rowBounds.endRowIndex,
-            startColumnIndex: mergeRange.startColumnIndex,
-            endColumnIndex: mergeRange.endColumnIndex,
+    final requests = <Request>[];
+    for (final mergeRange in templateRows.mergeRanges) {
+      for (var columnIndex = mergeRange.startColumnIndex;
+          columnIndex < mergeRange.endColumnIndex;
+          columnIndex++) {
+        requests.add(
+          Request(
+            mergeCells: MergeCellsRequest(
+              range: GridRange(
+                sheetId: sheetId,
+                startRowIndex: rowBounds.startRowIndex,
+                endRowIndex: rowBounds.endRowIndex,
+                startColumnIndex: columnIndex,
+                endColumnIndex: columnIndex + 1,
+              ),
+              mergeType: 'MERGE_ALL',
+            ),
           ),
-          mergeType: 'MERGE_ALL',
-        ),
-      );
-    }).toList();
+        );
+      }
+    }
 
     if (requests.isEmpty) {
       return;
@@ -262,18 +269,33 @@ class GoogleSheetsService {
           final stopRow =
               i < stopRows.length ? stopRows[i] : <Object?>['', '', '', '', ''];
           final stockEntry = i < stockEntries.length ? stockEntries[i] : null;
+          final includeSharedValues = i == 0;
 
           rows.add([
-            i == 0 ? date : '',
+            includeSharedValues ? date : '',
             ...stopRow,
-            i == 0 ? creator : '',
+            includeSharedValues ? creator : '',
             '',
-            i == 0 ? date : '',
+            includeSharedValues ? date : '',
             _formatStockEntry(stockEntry),
           ]);
         }
 
-        return _TemplateRows(sheetName: _dailySheet, rows: rows);
+        final mergeRanges = <_TemplateMergeRange>[];
+        if (rows.length > 1) {
+          mergeRanges.addAll([
+            const _TemplateMergeRange(startColumnIndex: 0, endColumnIndex: 1),
+            const _TemplateMergeRange(startColumnIndex: 4, endColumnIndex: 6),
+            const _TemplateMergeRange(startColumnIndex: 6, endColumnIndex: 7),
+            const _TemplateMergeRange(startColumnIndex: 8, endColumnIndex: 9),
+          ]);
+        }
+
+        return _TemplateRows(
+          sheetName: _dailySheet,
+          rows: rows,
+          mergeRanges: mergeRanges,
+        );
       case _ReportCategory.activityTnb:
         final stops = _listOfMaps(data['Arrets']);
         final vibratorCounters = _listOfMaps(data['vibrator Counters']);
@@ -296,23 +318,41 @@ class GoogleSheetsService {
           final liaison =
               i < liaisonCounters.length ? liaisonCounters[i] : null;
           final stockEntry = i < stock.length ? stock[i] : null;
+          final includeSharedValues = i == 0;
 
           rows.add([
-            i == 0 ? date : '',
+            includeSharedValues ? date : '',
             stop?['nature'] ?? '',
             _formatDuration(stop?['duration']),
-            i == 0 ? _formatDuration(data['T H.A']) : '',
-            i == 0 ? _formatDuration(data['T H.M']) : '',
+            includeSharedValues ? _formatDuration(data['T H.A']) : '',
+            includeSharedValues ? _formatDuration(data['T H.M']) : '',
+            includeSharedValues ? _extractCreatorName(data) : '',
+            '',
+            includeSharedValues ? date : '',
             _formatCounterEntry(vibrator),
-            i == 0 ? _formatDuration(data['T H.V']) : '',
+            includeSharedValues ? _formatDuration(data['T H.V']) : '',
             _formatCounterEntry(liaison),
-            i == 0 ? _formatDuration(data['T H.L']) : '',
+            includeSharedValues ? _formatDuration(data['T H.L']) : '',
             _formatStockEntry(stockEntry),
-            i == 0 ? _extractCreatorName(data) : '',
           ]);
         }
 
-        return _TemplateRows(sheetName: _activitySheet, rows: rows);
+        final mergeRanges = <_TemplateMergeRange>[];
+        if (rows.length > 1) {
+          mergeRanges.addAll([
+            const _TemplateMergeRange(startColumnIndex: 0, endColumnIndex: 1),
+            const _TemplateMergeRange(startColumnIndex: 3, endColumnIndex: 6),
+            const _TemplateMergeRange(startColumnIndex: 7, endColumnIndex: 8),
+            const _TemplateMergeRange(startColumnIndex: 9, endColumnIndex: 10),
+            const _TemplateMergeRange(startColumnIndex: 11, endColumnIndex: 12),
+          ]);
+        }
+
+        return _TemplateRows(
+          sheetName: _activitySheet,
+          rows: rows,
+          mergeRanges: mergeRanges,
+        );
       case _ReportCategory.r0:
         final rows = <List<Object?>>[];
         final exploitation = _mapOfStringDynamic(data['exploitation']);
@@ -393,8 +433,11 @@ class GoogleSheetsService {
         final trucks = _listOfMaps(data['truckData']);
         final totalTrips = _resolveTotalTrips(data, trucks);
         final equipmentSummary = _formatEquipmentTripsForTemplate(trucks);
+        final creator = _extractCreatorName(data);
 
-        for (final truck in trucks) {
+        for (var i = 0; i < trucks.length; i++) {
+          final truck = trucks[i];
+          final includeSharedValues = i == 0;
           final trips = _listOfMaps(truck['counts']);
           final tripCells = trips
               .map((trip) => _formatTruckTripCell(
@@ -409,22 +452,24 @@ class GoogleSheetsService {
           }
 
           rows.add([
-            date,
-            data['mine'] ?? '',
-            data['sortie'] ?? '',
-            data['equipment'] ?? data['selectedQualite'] ?? '',
-            data['distance'] ?? '',
-            data['selectedQualiteType'] ?? '',
-            data['operationType'] ?? '',
+            includeSharedValues ? date : '',
+            includeSharedValues ? data['mine'] ?? '' : '',
+            includeSharedValues ? data['sortie'] ?? '' : '',
+            includeSharedValues
+                ? data['equipment'] ?? data['selectedQualite'] ?? ''
+                : '',
+            includeSharedValues ? data['distance'] ?? '' : '',
+            includeSharedValues ? data['selectedQualiteType'] ?? '' : '',
+            includeSharedValues ? data['operationType'] ?? '' : '',
             '',
-            data['selectedPoste'] ?? '',
+            includeSharedValues ? data['selectedPoste'] ?? '' : '',
             truck['truckNumber'] ?? '',
             truck['driver1'] ?? '',
             ...tripCells.take(12),
             trips.length,
-            equipmentSummary,
-            totalTrips,
-            trips.length,
+            includeSharedValues ? equipmentSummary : '',
+            includeSharedValues ? totalTrips : '',
+            includeSharedValues ? creator : '',
           ]);
         }
         if (rows.isEmpty) {
@@ -440,14 +485,25 @@ class GoogleSheetsService {
             data['selectedPoste'] ?? '',
             '',
             '',
-            0,
             ...List.filled(12, ''),
             0,
             equipmentSummary,
             totalTrips,
+            creator,
           ]);
         }
-        return _TemplateRows(sheetName: _truckSheet, rows: rows);
+        final mergeRanges = <_TemplateMergeRange>[];
+        if (rows.length > 1) {
+          mergeRanges.addAll([
+            const _TemplateMergeRange(startColumnIndex: 0, endColumnIndex: 9),
+            const _TemplateMergeRange(startColumnIndex: 24, endColumnIndex: 27),
+          ]);
+        }
+        return _TemplateRows(
+          sheetName: _truckSheet,
+          rows: rows,
+          mergeRanges: mergeRanges,
+        );
       case _ReportCategory.machinesStopped:
         final equipmentList = _listOfMaps(data['equipmentList']);
         final creator = _extractCreatorName(data);
@@ -468,7 +524,18 @@ class GoogleSheetsService {
         if (rows.isEmpty) {
           rows.add([date, '', '', '', '', creator]);
         }
-        return _TemplateRows(sheetName: _machinesSheet, rows: rows);
+        final mergeRanges = <_TemplateMergeRange>[];
+        if (rows.length > 1) {
+          mergeRanges.addAll([
+            const _TemplateMergeRange(startColumnIndex: 0, endColumnIndex: 1),
+            const _TemplateMergeRange(startColumnIndex: 5, endColumnIndex: 6),
+          ]);
+        }
+        return _TemplateRows(
+          sheetName: _machinesSheet,
+          rows: rows,
+          mergeRanges: mergeRanges,
+        );
       case _ReportCategory.generic:
         return null;
     }
@@ -1153,8 +1220,8 @@ class GoogleSheetsService {
         '',
         '',
         '',
-        stop['Catégorie'] ?? '',
-        stop['duration'] ?? '',
+        stop['Catégorie'] ?? 'Module 1',
+        _formatDuration(stop['duration']),
         stop['nature'] ?? '',
         '',
         stop['CarryOver'] ?? false,
@@ -1169,8 +1236,8 @@ class GoogleSheetsService {
         '',
         '',
         '',
-        stop['Catégorie'] ?? '',
-        stop['duration'] ?? '',
+        stop['Catégorie'] ?? 'Module 2',
+        _formatDuration(stop['duration']),
         stop['nature'] ?? '',
         '',
         stop['CarryOver'] ?? false,
