@@ -78,6 +78,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
   List<Report> _filteredReports = [];
   bool _isLoading = true;
   String? _selectedPosteFilter;
+  bool _isSelectionMode = false;
+  final Set<int> _selectedReportIds = <int>{};
 
   // Selection state management
 
@@ -638,6 +640,94 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
+  void _toggleSelectionMode() {
+    setState(() {
+      _isSelectionMode = !_isSelectionMode;
+      if (!_isSelectionMode) {
+        _selectedReportIds.clear();
+      }
+    });
+  }
+
+  void _toggleReportSelection(Report report) {
+    final reportId = report.id;
+    if (reportId == null) return;
+
+    setState(() {
+      if (_selectedReportIds.contains(reportId)) {
+        _selectedReportIds.remove(reportId);
+      } else {
+        _selectedReportIds.add(reportId);
+      }
+    });
+  }
+
+  void _selectAllFilteredReports() {
+    final selectableIds =
+        _filteredReports.map((report) => report.id).whereType<int>().toSet();
+
+    setState(() {
+      if (_selectedReportIds.length == selectableIds.length) {
+        _selectedReportIds.clear();
+      } else {
+        _selectedReportIds
+          ..clear()
+          ..addAll(selectableIds);
+      }
+    });
+  }
+
+  Future<void> _deleteSelectedReports() async {
+    if (_selectedReportIds.isEmpty || !mounted) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    final count = _selectedReportIds.length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.delete),
+        content: Text('Delete $count selected report(s)?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      for (final reportId in _selectedReportIds) {
+        await _databaseHelper.deleteReport(reportId);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _isSelectionMode = false;
+        _selectedReportIds.clear();
+      });
+      await _loadReports();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$count report(s) deleted successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.errorDeletingReport)),
+        );
+      }
+    }
+  }
+
   Future<void> _editReport(Report report) async {
     if (!mounted) return;
     final context = this.context;
@@ -703,31 +793,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final updated =
           _reports.firstWhere((r) => r.id == report.id, orElse: () => report);
       _showReportDetails(updated);
-    }
-  }
-
-  Future<void> _confirmSendToSheets(Report report) async {
-    final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.sendToSheetsTitle),
-        content: Text(l10n.sendToSheetsMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.cancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l10n.confirm),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      await _sendReportToSheets(report);
     }
   }
 
@@ -6249,47 +6314,75 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_selectedPosteFilter != null
-            ? '${l10n.reports} - $_selectedPosteFilter'
-            : l10n.reports),
+        title: Text(
+          _isSelectionMode
+              ? '${_selectedReportIds.length} selected'
+              : _selectedPosteFilter != null
+                  ? '${l10n.reports} - $_selectedPosteFilter'
+                  : l10n.reports,
+        ),
         actions: [
-          // Poste Filter Dropdown
-          Container(
-            margin: const EdgeInsets.only(right: 8),
-            child: DropdownButton<String>(
-              value: _selectedPosteFilter,
-              hint: Text(l10n.allPostes,
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.onPrimary)),
-              dropdownColor: Theme.of(context).colorScheme.surface,
-              underline: Container(),
-              icon: Icon(Icons.filter_list,
-                  color: Theme.of(context).colorScheme.onPrimary),
-              items: [
-                DropdownMenuItem<String>(
-                  value: null,
-                  child: Text(l10n.allPostes),
-                ),
-                ..._availablePostes.map((poste) => DropdownMenuItem<String>(
-                      value: poste,
-                      child: Text(poste),
-                    )),
-              ],
-              onChanged: _onPosteFilterChanged,
-            ),
-          ),
-          // Clear filter button when filter is active
-          if (_selectedPosteFilter != null)
+          if (_isSelectionMode) ...[
             IconButton(
-              icon: const Icon(Icons.clear),
-              onPressed: () => _onPosteFilterChanged(null),
-              tooltip: l10n.clearFilter,
+              icon: const Icon(Icons.select_all),
+              onPressed: _selectAllFilteredReports,
+              tooltip: 'Select all',
             ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadReports,
-            tooltip: l10n.refresh,
-          ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed:
+                  _selectedReportIds.isEmpty ? null : _deleteSelectedReports,
+              tooltip: l10n.delete,
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: _toggleSelectionMode,
+              tooltip: l10n.cancel,
+            ),
+          ] else ...[
+            // Poste Filter Dropdown
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              child: DropdownButton<String>(
+                value: _selectedPosteFilter,
+                hint: Text(l10n.allPostes,
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimary)),
+                dropdownColor: Theme.of(context).colorScheme.surface,
+                underline: Container(),
+                icon: Icon(Icons.filter_list,
+                    color: Theme.of(context).colorScheme.onPrimary),
+                items: [
+                  DropdownMenuItem<String>(
+                    value: null,
+                    child: Text(l10n.allPostes),
+                  ),
+                  ..._availablePostes.map((poste) => DropdownMenuItem<String>(
+                        value: poste,
+                        child: Text(poste),
+                      )),
+                ],
+                onChanged: _onPosteFilterChanged,
+              ),
+            ),
+            // Clear filter button when filter is active
+            if (_selectedPosteFilter != null)
+              IconButton(
+                icon: const Icon(Icons.clear),
+                onPressed: () => _onPosteFilterChanged(null),
+                tooltip: l10n.clearFilter,
+              ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _loadReports,
+              tooltip: l10n.refresh,
+            ),
+            IconButton(
+              icon: const Icon(Icons.checklist),
+              onPressed: _toggleSelectionMode,
+              tooltip: 'Select reports',
+            ),
+          ],
         ],
       ),
       body: Center(
@@ -6397,7 +6490,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                             );
                                             return;
                                           }
-                                          _confirmSendToSheets(report);
+                                          _sendReportToSheets(report);
                                         },
                                         backgroundColor: Theme.of(context)
                                             .colorScheme
@@ -6453,83 +6546,102 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         trailing: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            // Popup menu for additional actions
-                                            PopupMenuButton<String>(
-                                              icon: const Icon(Icons.more_horiz,
-                                                  size: 20),
-                                              padding: EdgeInsets.zero,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
+                                            if (_isSelectionMode)
+                                              Checkbox(
+                                                value: report.id != null &&
+                                                    _selectedReportIds
+                                                        .contains(report.id),
+                                                onChanged: (_) =>
+                                                    _toggleReportSelection(
+                                                        report),
                                               ),
-                                              position: PopupMenuPosition.under,
-                                              itemBuilder:
-                                                  (BuildContext context) => [
-                                                PopupMenuItem<String>(
-                                                  value: 'delete',
-                                                  height: 36,
-                                                  child: Row(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      Icon(Icons.delete_outline,
-                                                          size: 18,
-                                                          color:
-                                                              Theme.of(context)
-                                                                  .colorScheme
-                                                                  .error),
-                                                      const SizedBox(width: 8),
-                                                      Text(
-                                                        l10n.delete,
-                                                        style: TextStyle(
-                                                          color:
-                                                              Theme.of(context)
-                                                                  .colorScheme
-                                                                  .error,
-                                                          fontSize: 14,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
+                                            // Popup menu for additional actions
+                                            if (!_isSelectionMode)
+                                              PopupMenuButton<String>(
+                                                icon: const Icon(
+                                                    Icons.more_horiz,
+                                                    size: 20),
+                                                padding: EdgeInsets.zero,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
                                                 ),
-                                              ],
-                                              onSelected: (String value) {
-                                                if (value == 'delete') {
-                                                  showDialog(
-                                                    context: context,
-                                                    builder: (context) =>
-                                                        AlertDialog(
-                                                      title: Text(
-                                                          l10n.confirmDelete),
-                                                      content: Text(
-                                                          l10n.confirmDelete),
-                                                      actions: [
-                                                        TextButton(
-                                                          onPressed: () =>
-                                                              Navigator.pop(
-                                                                  context),
-                                                          child:
-                                                              Text(l10n.cancel),
-                                                        ),
-                                                        TextButton(
-                                                          onPressed: () {
-                                                            Navigator.pop(
-                                                                context);
-                                                            _deleteReport(
-                                                                report);
-                                                          },
-                                                          child:
-                                                              Text(l10n.delete),
+                                                position:
+                                                    PopupMenuPosition.under,
+                                                itemBuilder:
+                                                    (BuildContext context) => [
+                                                  PopupMenuItem<String>(
+                                                    value: 'delete',
+                                                    height: 36,
+                                                    child: Row(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        Icon(
+                                                            Icons
+                                                                .delete_outline,
+                                                            size: 18,
+                                                            color: Theme.of(
+                                                                    context)
+                                                                .colorScheme
+                                                                .error),
+                                                        const SizedBox(
+                                                            width: 8),
+                                                        Text(
+                                                          l10n.delete,
+                                                          style: TextStyle(
+                                                            color: Theme.of(
+                                                                    context)
+                                                                .colorScheme
+                                                                .error,
+                                                            fontSize: 14,
+                                                          ),
                                                         ),
                                                       ],
                                                     ),
-                                                  );
-                                                }
-                                              },
-                                            ),
+                                                  ),
+                                                ],
+                                                onSelected: (String value) {
+                                                  if (value == 'delete') {
+                                                    showDialog(
+                                                      context: context,
+                                                      builder: (context) =>
+                                                          AlertDialog(
+                                                        title: Text(
+                                                            l10n.confirmDelete),
+                                                        content: Text(
+                                                            l10n.confirmDelete),
+                                                        actions: [
+                                                          TextButton(
+                                                            onPressed: () =>
+                                                                Navigator.pop(
+                                                                    context),
+                                                            child: Text(
+                                                                l10n.cancel),
+                                                          ),
+                                                          TextButton(
+                                                            onPressed: () {
+                                                              Navigator.pop(
+                                                                  context);
+                                                              _deleteReport(
+                                                                  report);
+                                                            },
+                                                            child: Text(
+                                                                l10n.delete),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    );
+                                                  }
+                                                },
+                                              ),
                                           ],
                                         ),
                                         onTap: () {
+                                          if (_isSelectionMode) {
+                                            _toggleReportSelection(report);
+                                            return;
+                                          }
                                           _showReportDetails(report);
                                         },
                                       ),
