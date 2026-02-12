@@ -155,42 +155,57 @@ class GoogleSheetsService {
         final rows = <List<Object?>>[];
         final module1Stops = _listOfMaps(data['module1Stops']);
         final module2Stops = _listOfMaps(data['module2Stops']);
+        final stockEntries = _listOfMaps(data['stock']);
         final creator = _extractCreatorName(data);
+
+        final stopRows = <List<Object?>>[];
 
         for (var i = 0; i < module1Stops.length; i++) {
           final stop = module1Stops[i];
-          rows.add([
-            i == 0 ? date : '',
+          stopRows.add([
             'Module 1',
             stop['nature'] ?? '',
-            stop['duration'] ?? '',
-            data['T H.A1'] ?? '',
-            data['T H.M1'] ?? '',
-            i == 0 ? creator : '',
+            _formatDuration(stop['duration']),
+            i == 0 ? _formatDuration(data['T H.A1']) : '',
+            i == 0 ? _formatDuration(data['T H.M1']) : '',
           ]);
         }
         for (var i = 0; i < module2Stops.length; i++) {
           final stop = module2Stops[i];
-          rows.add([
-            i == 0 ? date : '',
+          stopRows.add([
             'Module 2',
             stop['nature'] ?? '',
-            stop['duration'] ?? '',
-            data['T H.A2'] ?? '',
-            data['T H.M2'] ?? '',
-            i == 0 ? creator : '',
+            _formatDuration(stop['duration']),
+            i == 0 ? _formatDuration(data['T H.A2']) : '',
+            i == 0 ? _formatDuration(data['T H.M2']) : '',
           ]);
         }
 
-        if (rows.isEmpty) {
+        if (stopRows.isEmpty) {
+          stopRows.add([
+            '',
+            '',
+            '',
+            _formatDuration(data['T H.A1']),
+            _formatDuration(data['T H.M1']),
+          ]);
+        }
+
+        final maxRows = [stopRows.length, stockEntries.length, 1]
+            .reduce((a, b) => a > b ? a : b);
+
+        for (var i = 0; i < maxRows; i++) {
+          final stopRow =
+              i < stopRows.length ? stopRows[i] : <Object?>['', '', '', '', ''];
+          final stockEntry = i < stockEntries.length ? stockEntries[i] : null;
+
           rows.add([
-            date,
+            i == 0 ? date : '',
+            ...stopRow,
+            i == 0 ? creator : '',
             '',
-            '',
-            '',
-            data['T H.A1'] ?? '',
-            data['T H.M1'] ?? '',
-            creator,
+            i == 0 ? date : '',
+            _formatStockEntry(stockEntry),
           ]);
         }
 
@@ -414,30 +429,69 @@ class GoogleSheetsService {
   }
 
   String _formatDuration(dynamic value) {
+    final minutes = _durationToMinutes(value);
+    if (minutes == null) {
+      final asString = value?.toString().trim() ?? '';
+      return asString;
+    }
+    return _minutesToHourMinuteLabel(minutes);
+  }
+
+  int? _durationToMinutes(dynamic value) {
     if (value == null) {
-      return '';
+      return null;
     }
 
     if (value is num) {
-      final minutes = value.toInt();
-      final hours = minutes ~/ 60;
-      final remainingMinutes = minutes % 60;
-      return '${hours}h ${remainingMinutes.toString().padLeft(2, '0')}m';
+      return value.toInt();
     }
 
     final asString = value.toString().trim();
     if (asString.isEmpty) {
-      return '';
+      return null;
     }
 
     final parsedMinutes = int.tryParse(asString);
     if (parsedMinutes != null) {
-      final hours = parsedMinutes ~/ 60;
-      final remainingMinutes = parsedMinutes % 60;
-      return '${hours}h ${remainingMinutes.toString().padLeft(2, '0')}m';
+      return parsedMinutes;
     }
 
-    return asString;
+    final normalized = asString
+        .toLowerCase()
+        .replaceAll(',', ' ')
+        .replaceAll('min', 'm')
+        .replaceAll('mn', 'm')
+        .replaceAll('heure', 'h')
+        .replaceAll('heures', 'h')
+        .replaceAll(RegExp(r'\s+'), '');
+
+    final hhmmMatch = RegExp(r'^(\d+):(\d{1,2})$').firstMatch(normalized);
+    if (hhmmMatch != null) {
+      final hours = int.parse(hhmmMatch.group(1)!);
+      final minutes = int.parse(hhmmMatch.group(2)!);
+      return hours * 60 + minutes;
+    }
+
+    final hmMatch = RegExp(r'^(\d+)h(?:(\d{1,2})m?)?$').firstMatch(normalized);
+    if (hmMatch != null) {
+      final hours = int.parse(hmMatch.group(1)!);
+      final minutes = int.tryParse(hmMatch.group(2) ?? '0') ?? 0;
+      return hours * 60 + minutes;
+    }
+
+    final onlyMinutesMatch = RegExp(r'^(\d{1,4})m$').firstMatch(normalized);
+    if (onlyMinutesMatch != null) {
+      return int.parse(onlyMinutesMatch.group(1)!);
+    }
+
+    return null;
+  }
+
+  String _minutesToHourMinuteLabel(int totalMinutes) {
+    final minutes = totalMinutes < 0 ? 0 : totalMinutes;
+    final hours = minutes ~/ 60;
+    final remainingMinutes = minutes % 60;
+    return '${hours}h ${remainingMinutes.toString().padLeft(2, '0')}m';
   }
 
   String _extractCreatorName(Map<String, dynamic> data) {
