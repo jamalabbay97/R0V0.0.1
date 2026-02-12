@@ -258,60 +258,55 @@ class GoogleSheetsService {
         final compteurs = _mapOfStringDynamic(data['Compteurs']);
         final arrets = _listOfMaps(data['Arrets']);
 
+        List<Object?> sharedPrefix({required bool includeValues}) => [
+              includeValues ? date : '',
+              includeValues ? data['mine'] ?? '' : '',
+              includeValues ? data['sortie'] ?? '' : '',
+              includeValues ? data['Model'] ?? '' : '',
+              includeValues ? data['selectedPoste'] ?? '' : '',
+              includeValues ? compteurs['duree'] ?? '' : '',
+              includeValues ? compteurs['note'] ?? '' : '',
+              includeValues ? exploitation['H.M'] ?? '' : '',
+            ];
+
+        List<Object?> sharedSuffix({required bool includeValues}) => [
+              includeValues ? exploitation['Tonnage'] ?? '' : '',
+              includeValues
+                  ? exploitation['Rendement %'] ?? exploitation['Rendeme'] ?? ''
+                  : '',
+              includeValues ? repartition['Chantier'] ?? '' : '',
+              includeValues ? repartition['Temps'] ?? '' : '',
+              includeValues ? repartition['Imputation'] ?? '' : '',
+              includeValues ? personnel['conductr'] ?? '' : '',
+              includeValues ? personnel['graisseur'] ?? '' : '',
+              includeValues ? personnel['matricules'] ?? '' : '',
+              includeValues ? consommation['tricone'] ?? '' : '',
+              includeValues ? consommation['gasoil'] ?? '' : '',
+            ];
+
         if (arrets.isEmpty) {
           rows.add([
-            date,
-            data['mine'] ?? '',
-            data['sortie'] ?? '',
-            data['Model'] ?? '',
-            data['selectedPoste'] ?? '',
-            compteurs['duree'] ?? '',
-            compteurs['note'] ?? '',
-            exploitation['H.M'] ??
-                ''
-                    '',
+            ...sharedPrefix(includeValues: true),
             '',
             '',
             '',
             exploitation['H.A'] ?? '',
-            exploitation['Tonnage'] ?? '',
-            exploitation['Rendement %'] ?? exploitation['Rendeme'] ?? '',
-            repartition['Chantier'] ?? '',
-            repartition['Temps'] ?? '',
-            repartition['Imputation'] ?? '',
-            personnel['conductr'] ?? '',
-            personnel['graisseur'] ?? '',
-            personnel['matricules'] ?? '',
-            consommation['tricone'] ?? '',
-            consommation['gasoil'] ?? '',
+            ...sharedSuffix(includeValues: true),
           ]);
         }
 
-        for (final arret in arrets) {
+        for (var i = 0; i < arrets.length; i++) {
+          final arret = arrets[i];
+          final includeSharedValues = i == 0;
+
           rows.add([
-            date,
-            data['mine'] ?? '',
-            data['sortie'] ?? '',
-            data['Model'] ?? '',
-            data['selectedPoste'] ?? '',
-            compteurs['duree'] ?? '',
-            compteurs['note'] ?? '',
-            exploitation['H.M'] ?? '',
+            ...sharedPrefix(includeValues: includeSharedValues),
             arret['Catégorie'] ?? '',
             arret['Arret'] ?? '',
             arret['Début'] ?? '',
             arret['Fin'] ?? '',
             arret['Durée'] ?? arret['duration'] ?? '',
-            exploitation['Tonnage'] ?? '',
-            exploitation['Rendement %'] ?? exploitation['Rendeme'] ?? '',
-            repartition['Chantier'] ?? '',
-            repartition['Temps'] ?? '',
-            repartition['Imputation'] ?? '',
-            personnel['conductr'] ?? '',
-            personnel['graisseur'] ?? '',
-            personnel['matricules'] ?? '',
-            consommation['tricone'] ?? '',
-            consommation['gasoil'] ?? '',
+            ...sharedSuffix(includeValues: includeSharedValues),
           ]);
         }
         return _TemplateRows(sheetName: _r0Sheet, rows: rows);
