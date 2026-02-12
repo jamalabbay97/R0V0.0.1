@@ -369,7 +369,7 @@ class GoogleSheetsService {
             arret['Arret'] ?? '',
             arret['Début'] ?? '',
             arret['Fin'] ?? '',
-            arret['Durée'] ?? arret['duration'] ?? '',
+            includeSharedValues ? exploitation['H.A'] ?? '' : '',
             ...sharedSuffix(includeValues: includeSharedValues),
           ]);
         }
