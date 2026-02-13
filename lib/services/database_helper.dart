@@ -137,10 +137,15 @@ class DatabaseHelper {
   }
 
   Future<void> sendReportToSheets(Report report) async {
-    await _sheetsService.recordReportSnapshot(
+    final sent = await _sheetsService.recordReportSnapshot(
       report,
       action: 'explicit_submit',
     );
+
+    if (!sent) {
+      throw Exception('Failed to save report to Google Sheets');
+    }
+
     final db = await database;
     await db.update(
       'reports',

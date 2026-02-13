@@ -50,65 +50,73 @@ class GoogleSheetsService {
   final Set<String> _knownSheets = {};
   final Map<String, int> _sheetIdsByName = {};
 
-  Future<void> recordReportSnapshot(
+  Future<bool> recordReportSnapshot(
     Report report, {
     required String action,
   }) async {
-    if (_spreadsheetId.isEmpty ||
-        _spreadsheetId == 'ENTER_YOUR_SPREADSHEET_ID_HERE') {
-      debugPrint(
-        'Google Sheets sync skipped: GOOGLE_SHEETS_SPREADSHEET_ID is missing or set to placeholder.',
+    try {
+      if (_spreadsheetId.isEmpty ||
+          _spreadsheetId == 'ENTER_YOUR_SPREADSHEET_ID_HERE') {
+        debugPrint(
+          'Google Sheets sync skipped: GOOGLE_SHEETS_SPREADSHEET_ID is missing or set to placeholder.',
+        );
+        return false;
+      }
+
+      final api = await _getSheetsApi();
+      if (api == null) {
+        return false;
+      }
+
+      final savedAt = _nowProvider().toIso8601String();
+      final reportDate = report.date;
+      final reportDateIso = reportDate.toIso8601String();
+      final reportLocalDate = reportDate.toLocal();
+      final payload = _buildPayload(
+        report,
+        savedAt: savedAt,
+        action: action,
+        reportDateIso: reportDateIso,
+        reportLocalDate: reportLocalDate,
       );
-      return;
-    }
 
-    final api = await _getSheetsApi();
-    if (api == null) {
-      return;
-    }
+      final templateRows = _buildTemplateRows(report, reportLocalDate);
+      if (templateRows != null) {
+        await _appendRowsToTemplate(api, templateRows);
+        return true;
+      }
 
-    final savedAt = _nowProvider().toIso8601String();
-    final reportDate = report.date;
-    final reportDateIso = reportDate.toIso8601String();
-    final reportLocalDate = reportDate.toLocal();
-    final payload = _buildPayload(
-      report,
-      savedAt: savedAt,
-      action: action,
-      reportDateIso: reportDateIso,
-      reportLocalDate: reportLocalDate,
-    );
-
-    final templateRows = _buildTemplateRows(report, reportLocalDate);
-    if (templateRows != null) {
-      await _appendRowsToTemplate(api, templateRows);
-      return;
-    }
-
-    await _ensureSheetWithHeaders(api, payload.sheetName, payload.headers);
-    await api.spreadsheets.values.append(
-      ValueRange(values: [payload.row]),
-      _spreadsheetId,
-      '${payload.sheetName}!A1',
-      valueInputOption: 'RAW',
-      insertDataOption: 'INSERT_ROWS',
-    );
-
-    if (payload.detailsRows.isNotEmpty &&
-        payload.detailsSheetName != null &&
-        payload.detailsHeaders != null) {
-      await _ensureSheetWithHeaders(
-        api,
-        payload.detailsSheetName!,
-        payload.detailsHeaders!,
-      );
+      await _ensureSheetWithHeaders(api, payload.sheetName, payload.headers);
       await api.spreadsheets.values.append(
-        ValueRange(values: payload.detailsRows),
+        ValueRange(values: [payload.row]),
         _spreadsheetId,
-        '${payload.detailsSheetName}!A1',
+        '${payload.sheetName}!A1',
         valueInputOption: 'RAW',
         insertDataOption: 'INSERT_ROWS',
       );
+
+      if (payload.detailsRows.isNotEmpty &&
+          payload.detailsSheetName != null &&
+          payload.detailsHeaders != null) {
+        await _ensureSheetWithHeaders(
+          api,
+          payload.detailsSheetName!,
+          payload.detailsHeaders!,
+        );
+        await api.spreadsheets.values.append(
+          ValueRange(values: payload.detailsRows),
+          _spreadsheetId,
+          '${payload.detailsSheetName}!A1',
+          valueInputOption: 'RAW',
+          insertDataOption: 'INSERT_ROWS',
+        );
+      }
+
+      return true;
+    } catch (error, stackTrace) {
+      debugPrint('Google Sheets sync failed for report ${report.id}: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      return false;
     }
   }
 
@@ -356,7 +364,7 @@ class GoogleSheetsService {
       case _ReportCategory.r0:
         final rows = <List<Object?>>[];
         final exploitation = _mapOfStringDynamic(data['exploitation']);
-        final repartition = _mapOfStringDynamic(data['repartition']);
+        final repartition = _resolveR0Repartition(data);
         final personnel = _mapOfStringDynamic(data['personnel']);
         final consommation = _mapOfStringDynamic(data['consommation']);
         final compteurs = _mapOfStringDynamic(data['Compteurs']);
@@ -1009,7 +1017,7 @@ class GoogleSheetsService {
     Report report,
     Map<String, dynamic> data,
   ) {
-    final type = report.type.toLowerCase();
+    final type = report.type.trim().toLowerCase();
     if (type == 'activity tnb' || data.containsKey('vibrator Counters')) {
       return _ReportCategory.activityTnb;
     }
@@ -1022,10 +1030,64 @@ class GoogleSheetsService {
     if (data.containsKey('equipmentList')) {
       return _ReportCategory.machinesStopped;
     }
-    if (data.containsKey('exploitation') && data.containsKey('repartition')) {
+    final hasR0CoreFields = data.containsKey('exploitation') &&
+        (data.containsKey('repartition') ||
+            data.containsKey('Répartition Travail'));
+    final isR0ByType =
+        type == 'r0' || type.contains('rapport r0') || type.contains('r0');
+    if (hasR0CoreFields || isR0ByType) {
       return _ReportCategory.r0;
     }
     return _ReportCategory.generic;
+  }
+
+  Map<String, dynamic> _resolveR0Repartition(Map<String, dynamic> data) {
+    final repartition = _mapOfStringDynamic(data['repartition']);
+    final repartitionTravail = _listOfMaps(data['Répartition Travail'])
+        .map(_mapOfStringDynamic)
+        .where((entry) => entry.isNotEmpty)
+        .toList();
+
+    if (repartition.isNotEmpty && repartitionTravail.isEmpty) {
+      return repartition;
+    }
+
+    if (repartitionTravail.isEmpty) {
+      return repartition;
+    }
+
+    final chantierValues = repartitionTravail
+        .map((entry) => entry['Chantier'] ?? entry['chantier'] ?? '')
+        .where((value) => value.toString().trim().isNotEmpty)
+        .map((value) => value.toString().trim())
+        .toSet()
+        .join(' | ');
+
+    final tempsValues = repartitionTravail
+        .map((entry) => entry['Temps'] ?? entry['temps'] ?? '')
+        .where((value) => value.toString().trim().isNotEmpty)
+        .map((value) => value.toString().trim())
+        .toSet()
+        .join(' | ');
+
+    final imputationValues = repartitionTravail
+        .map((entry) => entry['Imputation'] ?? entry['imputation'] ?? '')
+        .where((value) => value.toString().trim().isNotEmpty)
+        .map((value) => value.toString().trim())
+        .toSet()
+        .join(' | ');
+
+    return {
+      ...repartition,
+      'Chantier': chantierValues.isNotEmpty
+          ? chantierValues
+          : (repartition['Chantier'] ?? ''),
+      'Temps':
+          tempsValues.isNotEmpty ? tempsValues : (repartition['Temps'] ?? ''),
+      'Imputation': imputationValues.isNotEmpty
+          ? imputationValues
+          : (repartition['Imputation'] ?? ''),
+    };
   }
 
   _ReportPayload _activityPayload(
@@ -1409,7 +1471,7 @@ class GoogleSheetsService {
   ) {
     final sheetName = _sanitizeSheetTitle(_r0Sheet);
     final exploitation = _mapOfStringDynamic(data['exploitation']);
-    final repartition = _mapOfStringDynamic(data['repartition']);
+    final repartition = _resolveR0Repartition(data);
     final personnel = _mapOfStringDynamic(data['personnel']);
     final consommation = _mapOfStringDynamic(data['consommation']);
     final compteurs = _mapOfStringDynamic(data['Compteurs']);
