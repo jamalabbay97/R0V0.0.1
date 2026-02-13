@@ -147,8 +147,13 @@ class GoogleSheetsService {
       return;
     }
 
+    final rowsToAppend = <List<Object?>>[
+      ...templateRows.rows,
+      _buildSpacerRow(templateRows.rows),
+    ];
+
     final appendResponse = await api.spreadsheets.values.append(
-      ValueRange(values: templateRows.rows),
+      ValueRange(values: rowsToAppend),
       _spreadsheetId,
       '${templateRows.sheetName}!A7',
       valueInputOption: 'RAW',
@@ -161,6 +166,11 @@ class GoogleSheetsService {
 
     final rowBounds = _extractRowBounds(appendResponse.updates?.updatedRange);
     if (rowBounds == null) {
+      return;
+    }
+
+    final contentBounds = rowBounds.withoutTrailingRows(1);
+    if (contentBounds == null) {
       return;
     }
 
@@ -179,8 +189,8 @@ class GoogleSheetsService {
             mergeCells: MergeCellsRequest(
               range: GridRange(
                 sheetId: sheetId,
-                startRowIndex: rowBounds.startRowIndex,
-                endRowIndex: rowBounds.endRowIndex,
+                startRowIndex: contentBounds.startRowIndex,
+                endRowIndex: contentBounds.endRowIndex,
                 startColumnIndex: columnIndex,
                 endColumnIndex: columnIndex + 1,
               ),
@@ -199,6 +209,16 @@ class GoogleSheetsService {
       BatchUpdateSpreadsheetRequest(requests: requests),
       _spreadsheetId,
     );
+  }
+
+  List<Object?> _buildSpacerRow(List<List<Object?>> rows) {
+    final maxColumnCount = rows
+        .map((row) => row.length)
+        .fold<int>(0, (max, count) => count > max ? count : max);
+    if (maxColumnCount == 0) {
+      return const [];
+    }
+    return List<Object?>.filled(maxColumnCount, '');
   }
 
   _RowBounds? _extractRowBounds(String? updatedRange) {
@@ -1849,4 +1869,20 @@ class _RowBounds {
 
   final int startRowIndex;
   final int endRowIndex;
+
+  _RowBounds? withoutTrailingRows(int trailingRowCount) {
+    if (trailingRowCount <= 0) {
+      return this;
+    }
+
+    final adjustedEnd = endRowIndex - trailingRowCount;
+    if (adjustedEnd <= startRowIndex) {
+      return null;
+    }
+
+    return _RowBounds(
+      startRowIndex: startRowIndex,
+      endRowIndex: adjustedEnd,
+    );
+  }
 }
