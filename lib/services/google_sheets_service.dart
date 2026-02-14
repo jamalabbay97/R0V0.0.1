@@ -201,6 +201,23 @@ class GoogleSheetsService {
       }
     }
 
+    for (final merge in templateRows.customMerges) {
+      requests.add(
+        Request(
+          mergeCells: MergeCellsRequest(
+            range: GridRange(
+              sheetId: sheetId,
+              startRowIndex: contentBounds.startRowIndex + merge.startRowOffset,
+              endRowIndex: contentBounds.startRowIndex + merge.endRowOffset,
+              startColumnIndex: merge.startColumnIndex,
+              endColumnIndex: merge.endColumnIndex,
+            ),
+            mergeType: 'MERGE_ALL',
+          ),
+        ),
+      );
+    }
+
     if (requests.isEmpty) {
       return;
     }
@@ -258,38 +275,71 @@ class GoogleSheetsService {
         final creator = _extractCreatorName(data);
 
         final stopRows = <List<Object?>>[];
+        final customMerges = <_TemplateCustomMerge>[];
 
-        for (var i = 0; i < module1Stops.length; i++) {
-          final stop = module1Stops[i];
-          stopRows.add([
-            'Module 1',
-            stop['nature'] ?? '',
-            _formatDuration(stop['duration']),
-            i == 0 ? _formatDuration(data['T H.A1']) : '',
-            i == 0 ? _formatDuration(data['T H.M1']) : '',
-          ]);
-        }
-        for (var i = 0; i < module2Stops.length; i++) {
-          final stop = module2Stops[i];
-          stopRows.add([
-            'Module 2',
-            stop['nature'] ?? '',
-            _formatDuration(stop['duration']),
-            i == 0 ? _formatDuration(data['T H.A2']) : '',
-            i == 0 ? _formatDuration(data['T H.M2']) : '',
-          ]);
+        String durationOrZero(Object? value) {
+          final formatted = _formatDuration(value);
+          return formatted.isEmpty ? '0h 00m' : formatted;
         }
 
-        if (stopRows.isEmpty) {
-          stopRows.add([
-            '',
-            '',
-            '',
-            _formatDuration(data['T H.A1']),
-            _formatDuration(data['T H.M1']),
-          ]);
+        void addModuleRows(
+          String moduleLabel,
+          List<Map<String, dynamic>> stops,
+          Object? totalDowntime,
+          Object? totalOperating,
+        ) {
+          final moduleStartRow = stopRows.length;
+
+          if (stops.isEmpty) {
+            stopRows.add([
+              moduleLabel,
+              '',
+              '0h 00m',
+              durationOrZero(totalDowntime),
+              durationOrZero(totalOperating),
+            ]);
+            return;
+          }
+
+          for (final stop in stops) {
+            stopRows.add([
+              moduleLabel,
+              stop['nature'] ?? '',
+              _formatDuration(stop['duration']),
+              '',
+              '',
+            ]);
+          }
+
+          stopRows[moduleStartRow][3] = durationOrZero(totalDowntime);
+          stopRows[moduleStartRow][4] = durationOrZero(totalOperating);
+
+          if (stops.length > 1) {
+            customMerges.addAll([
+              _TemplateCustomMerge(
+                startRowOffset: moduleStartRow,
+                endRowOffset: moduleStartRow + stops.length,
+                startColumnIndex: 1,
+                endColumnIndex: 2,
+              ),
+              _TemplateCustomMerge(
+                startRowOffset: moduleStartRow,
+                endRowOffset: moduleStartRow + stops.length,
+                startColumnIndex: 4,
+                endColumnIndex: 5,
+              ),
+              _TemplateCustomMerge(
+                startRowOffset: moduleStartRow,
+                endRowOffset: moduleStartRow + stops.length,
+                startColumnIndex: 5,
+                endColumnIndex: 6,
+              ),
+            ]);
+          }
         }
 
+        addModuleRows('Module 1', module1Stops, data['T H.A1'], data['T H.M1']);
+        addModuleRows('Module 2', module2Stops, data['T H.A2'], data['T H.M2']);
         final maxRows = [stopRows.length, stockEntries.length, 1]
             .reduce((a, b) => a > b ? a : b);
 
@@ -313,7 +363,6 @@ class GoogleSheetsService {
         if (rows.length > 1) {
           mergeRanges.addAll([
             const _TemplateMergeRange(startColumnIndex: 0, endColumnIndex: 1),
-            const _TemplateMergeRange(startColumnIndex: 4, endColumnIndex: 6),
             const _TemplateMergeRange(startColumnIndex: 6, endColumnIndex: 7),
             const _TemplateMergeRange(startColumnIndex: 8, endColumnIndex: 9),
           ]);
@@ -323,6 +372,7 @@ class GoogleSheetsService {
           sheetName: _dailySheet,
           rows: rows,
           mergeRanges: mergeRanges,
+          customMerges: customMerges,
         );
       case _ReportCategory.activityTnb:
         final stops = _listOfMaps(data['Arrets']);
@@ -389,6 +439,7 @@ class GoogleSheetsService {
         final consommation = _mapOfStringDynamic(data['consommation']);
         final compteurs = _mapOfStringDynamic(data['Compteurs']);
         final arrets = _listOfMaps(data['Arrets']);
+        final creator = _extractCreatorName(data);
 
         List<Object?> sharedPrefix({required bool includeValues}) => [
               includeValues ? date : '',
@@ -414,6 +465,8 @@ class GoogleSheetsService {
               includeValues ? personnel['matricules'] ?? '' : '',
               includeValues ? consommation['tricone'] ?? '' : '',
               includeValues ? consommation['gasoil'] ?? '' : '',
+              includeValues ? creator : '',
+              includeValues ? date : '',
             ];
 
         if (arrets.isEmpty) {
@@ -447,7 +500,8 @@ class GoogleSheetsService {
           mergeRanges.addAll([
             const _TemplateMergeRange(startColumnIndex: 0, endColumnIndex: 8),
             const _TemplateMergeRange(startColumnIndex: 12, endColumnIndex: 15),
-            const _TemplateMergeRange(startColumnIndex: 18, endColumnIndex: 23),
+            const _TemplateMergeRange(startColumnIndex: 15, endColumnIndex: 18),
+            const _TemplateMergeRange(startColumnIndex: 18, endColumnIndex: 25),
           ]);
         }
 
@@ -1068,45 +1122,70 @@ class GoogleSheetsService {
         .where((entry) => entry.isNotEmpty)
         .toList();
 
-    if (repartition.isNotEmpty && repartitionTravail.isEmpty) {
-      return repartition;
+    String joinDistinctValues(
+      List<Map<String, dynamic>> entries,
+      List<String> keys,
+    ) {
+      return entries
+          .map((entry) {
+            for (final key in keys) {
+              final value = entry[key];
+              if (value != null && value.toString().trim().isNotEmpty) {
+                return value.toString().trim();
+              }
+            }
+            return '';
+          })
+          .where((value) => value.isNotEmpty)
+          .toSet()
+          .join(' | ');
     }
 
-    if (repartitionTravail.isEmpty) {
-      return repartition;
-    }
+    final chantierValues = joinDistinctValues(
+      repartitionTravail,
+      const ['Chantier', 'chantier'],
+    );
+    final tempsValues = joinDistinctValues(
+      repartitionTravail,
+      const ['Temps', 'temps'],
+    );
+    final imputationValues = joinDistinctValues(
+      repartitionTravail,
+      const ['Imputation', 'imputation'],
+    );
 
-    final chantierValues = repartitionTravail
-        .map((entry) => entry['Chantier'] ?? entry['chantier'] ?? '')
-        .where((value) => value.toString().trim().isNotEmpty)
-        .map((value) => value.toString().trim())
-        .toSet()
-        .join(' | ');
-
-    final tempsValues = repartitionTravail
-        .map((entry) => entry['Temps'] ?? entry['temps'] ?? '')
-        .where((value) => value.toString().trim().isNotEmpty)
-        .map((value) => value.toString().trim())
-        .toSet()
-        .join(' | ');
-
-    final imputationValues = repartitionTravail
-        .map((entry) => entry['Imputation'] ?? entry['imputation'] ?? '')
-        .where((value) => value.toString().trim().isNotEmpty)
-        .map((value) => value.toString().trim())
-        .toSet()
-        .join(' | ');
+    final arrets =
+        _listOfMaps(data['Arrets']).map(_mapOfStringDynamic).toList();
+    final chantierFromArrets = joinDistinctValues(
+      arrets,
+      const ['Arret', 'Arrêt', 'arret', 'arrêt', 'Chantier', 'chantier'],
+    );
+    final tempsFromArrets = joinDistinctValues(
+      arrets,
+      const ['Début', 'debut', 'Debut', 'Temps', 'temps'],
+    );
+    final imputationFromArrets = joinDistinctValues(
+      arrets,
+      const ['Fin', 'fin', 'Imputation', 'imputation'],
+    );
 
     return {
       ...repartition,
       'Chantier': chantierValues.isNotEmpty
           ? chantierValues
-          : (repartition['Chantier'] ?? ''),
-      'Temps':
-          tempsValues.isNotEmpty ? tempsValues : (repartition['Temps'] ?? ''),
+          : (chantierFromArrets.isNotEmpty
+              ? chantierFromArrets
+              : (repartition['Chantier'] ?? '')),
+      'Temps': tempsValues.isNotEmpty
+          ? tempsValues
+          : (tempsFromArrets.isNotEmpty
+              ? tempsFromArrets
+              : (repartition['Temps'] ?? '')),
       'Imputation': imputationValues.isNotEmpty
           ? imputationValues
-          : (repartition['Imputation'] ?? ''),
+          : (imputationFromArrets.isNotEmpty
+              ? imputationFromArrets
+              : (repartition['Imputation'] ?? '')),
     };
   }
 
@@ -1844,11 +1923,13 @@ class _TemplateRows {
     required this.sheetName,
     required this.rows,
     this.mergeRanges = const [],
+    this.customMerges = const [],
   });
 
   final String sheetName;
   final List<List<Object?>> rows;
   final List<_TemplateMergeRange> mergeRanges;
+  final List<_TemplateCustomMerge> customMerges;
 }
 
 class _TemplateMergeRange {
@@ -1857,6 +1938,20 @@ class _TemplateMergeRange {
     required this.endColumnIndex,
   });
 
+  final int startColumnIndex;
+  final int endColumnIndex;
+}
+
+class _TemplateCustomMerge {
+  const _TemplateCustomMerge({
+    required this.startRowOffset,
+    required this.endRowOffset,
+    required this.startColumnIndex,
+    required this.endColumnIndex,
+  });
+
+  final int startRowOffset;
+  final int endRowOffset;
   final int startColumnIndex;
   final int endColumnIndex;
 }
