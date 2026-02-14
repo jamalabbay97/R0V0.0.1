@@ -1104,9 +1104,14 @@ class GoogleSheetsService {
     if (data.containsKey('equipmentList')) {
       return _ReportCategory.machinesStopped;
     }
-    final hasR0CoreFields = data.containsKey('exploitation') &&
-        (data.containsKey('repartition') ||
-            data.containsKey('Répartition Travail'));
+    final hasR0CoreFields = data.containsKey('exploitation') ||
+        data.containsKey('Compteurs') ||
+        data.containsKey('Arrets') ||
+        data.containsKey('selectedPoste') ||
+        data.containsKey('mine') ||
+        data.containsKey('zone') ||
+        data.containsKey('repartition') ||
+        data.containsKey('Répartition Travail');
     final isR0ByType =
         type == 'r0' || type.contains('rapport r0') || type.contains('r0');
     if (hasR0CoreFields || isR0ByType) {
