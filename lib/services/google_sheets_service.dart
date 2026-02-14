@@ -235,7 +235,11 @@ class GoogleSheetsService {
     if (maxColumnCount == 0) {
       return const [];
     }
-    return List<Object?>.filled(maxColumnCount, '');
+    final spacerRow = List<Object?>.filled(maxColumnCount, '');
+    // Keep one invisible value so Google Sheets preserves this spacer row
+    // between two appended report blocks.
+    spacerRow[maxColumnCount - 1] = '\u200B';
+    return spacerRow;
   }
 
   _RowBounds? _extractRowBounds(String? updatedRange) {
@@ -293,8 +297,8 @@ class GoogleSheetsService {
           if (stops.isEmpty) {
             stopRows.add([
               moduleLabel,
+              '------------------------------',
               '',
-              '0h 00m',
               durationOrZero(totalDowntime),
               durationOrZero(totalOperating),
             ]);
