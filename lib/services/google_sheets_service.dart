@@ -167,6 +167,35 @@ class GoogleSheetsService {
     }
 
     final requests = <Request>[];
+
+    final formattedColumnCount = templateRows.rows
+        .map((row) => row.length)
+        .fold<int>(0, (max, count) => count > max ? count : max);
+    if (formattedColumnCount > 0) {
+      requests.add(
+        Request(
+          copyPaste: CopyPasteRequest(
+            source: GridRange(
+              sheetId: sheetId,
+              startRowIndex: 6,
+              endRowIndex: 7,
+              startColumnIndex: 0,
+              endColumnIndex: formattedColumnCount,
+            ),
+            destination: GridRange(
+              sheetId: sheetId,
+              startRowIndex: rowBounds.startRowIndex,
+              endRowIndex: rowBounds.endRowIndex,
+              startColumnIndex: 0,
+              endColumnIndex: formattedColumnCount,
+            ),
+            pasteType: 'PASTE_FORMAT',
+            pasteOrientation: 'NORMAL',
+          ),
+        ),
+      );
+    }
+
     for (final mergeRange in templateRows.mergeRanges) {
       for (var columnIndex = mergeRange.startColumnIndex;
           columnIndex < mergeRange.endColumnIndex;
@@ -205,9 +234,7 @@ class GoogleSheetsService {
       );
     }
 
-    final rowColumnCount = templateRows.rows
-        .map((row) => row.length)
-        .fold<int>(0, (max, count) => count > max ? count : max);
+    final rowColumnCount = formattedColumnCount;
     final mergeColumnCount = templateRows.mergeRanges
         .map((range) => range.endColumnIndex)
         .fold<int>(0, (max, count) => count > max ? count : max);
@@ -1172,38 +1199,27 @@ class GoogleSheetsService {
       const ['Imputation', 'imputation'],
     );
 
-    final arrets =
-        _listOfMaps(data['Arrets']).map(_mapOfStringDynamic).toList();
-    final chantierFromArrets = joinDistinctValues(
-      arrets,
-      const ['Arret', 'Arrêt', 'arret', 'arrêt', 'Chantier', 'chantier'],
-    );
-    final tempsFromArrets = joinDistinctValues(
-      arrets,
-      const ['Début', 'debut', 'Debut', 'Temps', 'temps'],
-    );
-    final imputationFromArrets = joinDistinctValues(
-      arrets,
-      const ['Fin', 'fin', 'Imputation', 'imputation'],
-    );
+    String mapValue(Map<String, dynamic> map, List<String> keys) {
+      for (final key in keys) {
+        final value = map[key];
+        if (value != null && value.toString().trim().isNotEmpty) {
+          return value.toString().trim();
+        }
+      }
+      return '';
+    }
 
     return {
       ...repartition,
       'Chantier': chantierValues.isNotEmpty
           ? chantierValues
-          : (chantierFromArrets.isNotEmpty
-              ? chantierFromArrets
-              : (repartition['Chantier'] ?? '')),
+          : mapValue(repartition, const ['Chantier', 'chantier']),
       'Temps': tempsValues.isNotEmpty
           ? tempsValues
-          : (tempsFromArrets.isNotEmpty
-              ? tempsFromArrets
-              : (repartition['Temps'] ?? '')),
+          : mapValue(repartition, const ['Temps', 'temps']),
       'Imputation': imputationValues.isNotEmpty
           ? imputationValues
-          : (imputationFromArrets.isNotEmpty
-              ? imputationFromArrets
-              : (repartition['Imputation'] ?? '')),
+          : mapValue(repartition, const ['Imputation', 'imputation']),
     };
   }
 
