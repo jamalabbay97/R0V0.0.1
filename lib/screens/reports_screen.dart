@@ -4602,7 +4602,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                       ['temps'] ??
                                                   '-'),
                                           _buildInfoRow(
-                                              'Imputat',
+                                              'Imputation',
                                               data['repartition']
                                                       ['Imputation'] ??
                                                   data['repartition']
@@ -5437,7 +5437,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 80,
+            width: 130,
             child: Text(
               '$label:',
               style: const TextStyle(fontWeight: FontWeight.bold),

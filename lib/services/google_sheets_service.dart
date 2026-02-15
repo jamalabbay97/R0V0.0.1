@@ -515,6 +515,7 @@ class GoogleSheetsService {
             '',
             '',
             '',
+            '',
             exploitation['H.A'] ?? '',
             ...sharedSuffix(includeValues: true),
           ]);
