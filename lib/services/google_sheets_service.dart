@@ -484,9 +484,12 @@ class GoogleSheetsService {
         List<Object?> sharedPrefix({required bool includeValues}) => [
               includeValues ? date : '',
               includeValues ? data['mine'] ?? '' : '',
+              includeValues ? data['zone'] ?? '' : '',
               includeValues ? data['sortie'] ?? '' : '',
-              includeValues ? data['Model'] ?? '' : '',
               includeValues ? data['selectedPoste'] ?? '' : '',
+              includeValues ? data['Category'] ?? '' : '',
+              includeValues ? data['Type'] ?? '' : '',
+              includeValues ? data['Model'] ?? '' : '',
               includeValues ? compteurs['duree'] ?? '' : '',
               includeValues ? compteurs['note'] ?? '' : '',
               includeValues ? exploitation['H.M'] ?? '' : '',
@@ -494,6 +497,11 @@ class GoogleSheetsService {
 
         List<Object?> sharedSuffix({required bool includeValues}) => [
               includeValues ? exploitation['Tonnage'] ?? '' : '',
+              includeValues ? exploitation['metrage fore'] ?? '' : '',
+              includeValues ? exploitation['Nr de Trous Fores'] ?? '' : '',
+              includeValues ? exploitation['Nr de Voyages'] ?? '' : '',
+              includeValues ? exploitation['M³ Decapages'] ?? '' : '',
+              includeValues ? exploitation['Nombre T.K.U'] ?? '' : '',
               includeValues
                   ? exploitation['Rendement %'] ?? exploitation['Rendeme'] ?? ''
                   : '',
@@ -539,10 +547,10 @@ class GoogleSheetsService {
         final mergeRanges = <_TemplateMergeRange>[];
         if (rows.length > 1) {
           mergeRanges.addAll([
-            const _TemplateMergeRange(startColumnIndex: 0, endColumnIndex: 8),
-            const _TemplateMergeRange(startColumnIndex: 12, endColumnIndex: 15),
-            const _TemplateMergeRange(startColumnIndex: 15, endColumnIndex: 18),
-            const _TemplateMergeRange(startColumnIndex: 18, endColumnIndex: 25),
+            const _TemplateMergeRange(startColumnIndex: 0, endColumnIndex: 11),
+            const _TemplateMergeRange(startColumnIndex: 16, endColumnIndex: 26),
+            const _TemplateMergeRange(startColumnIndex: 26, endColumnIndex: 29),
+            const _TemplateMergeRange(startColumnIndex: 29, endColumnIndex: 33),
           ]);
         }
 
