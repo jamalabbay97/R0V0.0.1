@@ -147,35 +147,22 @@ class GoogleSheetsService {
       return;
     }
 
-    final rowsToAppend = <List<Object?>>[
-      ...templateRows.rows,
-      _buildSpacerRow(templateRows.rows),
-    ];
-
     final appendResponse = await api.spreadsheets.values.append(
-      ValueRange(values: rowsToAppend),
+      ValueRange(values: templateRows.rows),
       _spreadsheetId,
       '${templateRows.sheetName}!A7',
       valueInputOption: 'RAW',
       insertDataOption: 'INSERT_ROWS',
     );
 
-    if (templateRows.mergeRanges.isEmpty) {
-      return;
-    }
-
     final rowBounds = _extractRowBounds(appendResponse.updates?.updatedRange);
     if (rowBounds == null) {
       return;
     }
 
-    final contentBounds = rowBounds.withoutTrailingRows(1);
-    if (contentBounds == null) {
-      return;
-    }
-
     final sheetId = _sheetIdsByName[templateRows.sheetName];
     if (sheetId == null) {
+      debugPrint('Sheet ID for "${templateRows.sheetName}" not found.');
       return;
     }
 
@@ -189,8 +176,8 @@ class GoogleSheetsService {
             mergeCells: MergeCellsRequest(
               range: GridRange(
                 sheetId: sheetId,
-                startRowIndex: contentBounds.startRowIndex,
-                endRowIndex: contentBounds.endRowIndex,
+                startRowIndex: rowBounds.startRowIndex,
+                endRowIndex: rowBounds.endRowIndex,
                 startColumnIndex: columnIndex,
                 endColumnIndex: columnIndex + 1,
               ),
@@ -207,12 +194,48 @@ class GoogleSheetsService {
           mergeCells: MergeCellsRequest(
             range: GridRange(
               sheetId: sheetId,
-              startRowIndex: contentBounds.startRowIndex + merge.startRowOffset,
-              endRowIndex: contentBounds.startRowIndex + merge.endRowOffset,
+              startRowIndex: rowBounds.startRowIndex + merge.startRowOffset,
+              endRowIndex: rowBounds.startRowIndex + merge.endRowOffset,
               startColumnIndex: merge.startColumnIndex,
               endColumnIndex: merge.endColumnIndex,
             ),
             mergeType: 'MERGE_ALL',
+          ),
+        ),
+      );
+    }
+
+    final rowColumnCount = templateRows.rows
+        .map((row) => row.length)
+        .fold<int>(0, (max, count) => count > max ? count : max);
+    final mergeColumnCount = templateRows.mergeRanges
+        .map((range) => range.endColumnIndex)
+        .fold<int>(0, (max, count) => count > max ? count : max);
+    final customMergeColumnCount = templateRows.customMerges
+        .map((range) => range.endColumnIndex)
+        .fold<int>(0, (max, count) => count > max ? count : max);
+    final separatorEndColumn = [
+      rowColumnCount,
+      mergeColumnCount,
+      customMergeColumnCount,
+    ].fold<int>(0, (max, count) => count > max ? count : max);
+
+    if (separatorEndColumn > 0) {
+      final lastRowStart = rowBounds.endRowIndex - 1;
+      requests.add(
+        Request(
+          updateBorders: UpdateBordersRequest(
+            range: GridRange(
+              sheetId: sheetId,
+              startRowIndex: lastRowStart,
+              endRowIndex: rowBounds.endRowIndex,
+              startColumnIndex: 0,
+              endColumnIndex: separatorEndColumn,
+            ),
+            bottom: Border(
+              style: 'SOLID_THICK',
+              color: Color(red: 0, green: 0, blue: 0),
+            ),
           ),
         ),
       );
@@ -226,20 +249,6 @@ class GoogleSheetsService {
       BatchUpdateSpreadsheetRequest(requests: requests),
       _spreadsheetId,
     );
-  }
-
-  List<Object?> _buildSpacerRow(List<List<Object?>> rows) {
-    final maxColumnCount = rows
-        .map((row) => row.length)
-        .fold<int>(0, (max, count) => count > max ? count : max);
-    if (maxColumnCount == 0) {
-      return const [];
-    }
-    final spacerRow = List<Object?>.filled(maxColumnCount, '');
-    // Keep one invisible value so Google Sheets preserves this spacer row
-    // between two appended report blocks.
-    spacerRow[maxColumnCount - 1] = '\u200B';
-    return spacerRow;
   }
 
   _RowBounds? _extractRowBounds(String? updatedRange) {
@@ -1973,20 +1982,4 @@ class _RowBounds {
 
   final int startRowIndex;
   final int endRowIndex;
-
-  _RowBounds? withoutTrailingRows(int trailingRowCount) {
-    if (trailingRowCount <= 0) {
-      return this;
-    }
-
-    final adjustedEnd = endRowIndex - trailingRowCount;
-    if (adjustedEnd <= startRowIndex) {
-      return null;
-    }
-
-    return _RowBounds(
-      startRowIndex: startRowIndex,
-      endRowIndex: adjustedEnd,
-    );
-  }
 }
