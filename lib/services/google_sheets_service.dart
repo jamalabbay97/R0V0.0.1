@@ -167,6 +167,10 @@ class GoogleSheetsService {
     }
 
     final requests = <Request>[];
+    final colorTheme = _selectColorTheme(
+      sheetName: templateRows.sheetName,
+      startRowIndex: rowBounds.startRowIndex,
+    );
 
     final formattedColumnCount = templateRows.rows
         .map((row) => row.length)
@@ -268,6 +272,91 @@ class GoogleSheetsService {
       );
     }
 
+    if (formattedColumnCount > 0) {
+      requests.add(
+        Request(
+          repeatCell: RepeatCellRequest(
+            range: GridRange(
+              sheetId: sheetId,
+              startRowIndex: rowBounds.startRowIndex,
+              endRowIndex: rowBounds.endRowIndex,
+              startColumnIndex: 0,
+              endColumnIndex: formattedColumnCount,
+            ),
+            cell: CellData(
+              userEnteredFormat: CellFormat(
+                backgroundColor: colorTheme.primary,
+              ),
+            ),
+            fields: 'userEnteredFormat.backgroundColor',
+          ),
+        ),
+      );
+    }
+
+    for (final section in templateRows.colorSections) {
+      requests.add(
+        Request(
+          repeatCell: RepeatCellRequest(
+            range: GridRange(
+              sheetId: sheetId,
+              startRowIndex: rowBounds.startRowIndex,
+              endRowIndex: rowBounds.endRowIndex,
+              startColumnIndex: section.startColumnIndex,
+              endColumnIndex: section.endColumnIndex,
+            ),
+            cell: CellData(
+              userEnteredFormat: CellFormat(
+                backgroundColor: colorTheme.secondary,
+              ),
+            ),
+            fields: 'userEnteredFormat.backgroundColor',
+          ),
+        ),
+      );
+    }
+
+    for (final separatorColumnIndex in templateRows.separatorColumnIndexes) {
+      requests.add(
+        Request(
+          repeatCell: RepeatCellRequest(
+            range: GridRange(
+              sheetId: sheetId,
+              startRowIndex: rowBounds.startRowIndex,
+              endRowIndex: rowBounds.endRowIndex,
+              startColumnIndex: separatorColumnIndex,
+              endColumnIndex: separatorColumnIndex + 1,
+            ),
+            cell: CellData(
+              userEnteredFormat: CellFormat(
+                backgroundColor: Color(red: 1, green: 1, blue: 1),
+              ),
+            ),
+            fields: 'userEnteredFormat.backgroundColor',
+          ),
+        ),
+      );
+      requests.add(
+        Request(
+          updateBorders: UpdateBordersRequest(
+            range: GridRange(
+              sheetId: sheetId,
+              startRowIndex: rowBounds.startRowIndex,
+              endRowIndex: rowBounds.endRowIndex,
+              startColumnIndex: separatorColumnIndex,
+              endColumnIndex: separatorColumnIndex + 1,
+            ),
+            top: Border(style: 'NONE'),
+            bottom: Border(style: 'NONE'),
+            left: Border(style: 'NONE'),
+            right: Border(style: 'NONE'),
+            innerHorizontal: Border(style: 'NONE'),
+            innerVertical: Border(style: 'NONE'),
+          ),
+        ),
+      );
+    }
+
     if (requests.isEmpty) {
       return;
     }
@@ -277,6 +366,39 @@ class GoogleSheetsService {
       _spreadsheetId,
     );
   }
+
+  _ReportColorTheme _selectColorTheme({
+    required String sheetName,
+    required int startRowIndex,
+  }) {
+    final seed =
+        sheetName.codeUnits.fold<int>(0, (sum, c) => sum + c) + startRowIndex;
+    final paletteIndex = seed % _reportColorThemes.length;
+    return _reportColorThemes[paletteIndex];
+  }
+
+  static final List<_ReportColorTheme> _reportColorThemes = [
+    _ReportColorTheme(
+      primary: Color(red: 0.97, green: 0.95, blue: 0.90),
+      secondary: Color(red: 0.93, green: 0.96, blue: 0.98),
+    ),
+    _ReportColorTheme(
+      primary: Color(red: 0.95, green: 0.92, blue: 0.96),
+      secondary: Color(red: 0.90, green: 0.95, blue: 0.92),
+    ),
+    _ReportColorTheme(
+      primary: Color(red: 0.94, green: 0.97, blue: 0.93),
+      secondary: Color(red: 0.97, green: 0.94, blue: 0.90),
+    ),
+    _ReportColorTheme(
+      primary: Color(red: 0.92, green: 0.95, blue: 0.98),
+      secondary: Color(red: 0.96, green: 0.93, blue: 0.95),
+    ),
+    _ReportColorTheme(
+      primary: Color(red: 0.96, green: 0.94, blue: 0.92),
+      secondary: Color(red: 0.92, green: 0.96, blue: 0.94),
+    ),
+  ];
 
   _RowBounds? _extractRowBounds(String? updatedRange) {
     if (updatedRange == null || updatedRange.isEmpty) {
@@ -413,6 +535,11 @@ class GoogleSheetsService {
           rows: rows,
           mergeRanges: mergeRanges,
           customMerges: customMerges,
+          separatorColumnIndexes: const [7],
+          colorSections: const [
+            _TemplateColorSection(startColumnIndex: 0, endColumnIndex: 7),
+            _TemplateColorSection(startColumnIndex: 8, endColumnIndex: 10),
+          ],
         );
       case _ReportCategory.activityTnb:
         final stops = _listOfMaps(data['Arrets']);
@@ -470,6 +597,11 @@ class GoogleSheetsService {
           sheetName: _activitySheet,
           rows: rows,
           mergeRanges: mergeRanges,
+          separatorColumnIndexes: const [6],
+          colorSections: const [
+            _TemplateColorSection(startColumnIndex: 0, endColumnIndex: 6),
+            _TemplateColorSection(startColumnIndex: 7, endColumnIndex: 13),
+          ],
         );
       case _ReportCategory.r0:
         final rows = <List<Object?>>[];
@@ -548,6 +680,7 @@ class GoogleSheetsService {
         if (rows.length > 1) {
           mergeRanges.addAll([
             const _TemplateMergeRange(startColumnIndex: 0, endColumnIndex: 11),
+            const _TemplateMergeRange(startColumnIndex: 15, endColumnIndex: 16),
             const _TemplateMergeRange(startColumnIndex: 16, endColumnIndex: 26),
             const _TemplateMergeRange(startColumnIndex: 26, endColumnIndex: 29),
             const _TemplateMergeRange(startColumnIndex: 29, endColumnIndex: 33),
@@ -1967,12 +2100,36 @@ class _TemplateRows {
     required this.rows,
     this.mergeRanges = const [],
     this.customMerges = const [],
+    this.separatorColumnIndexes = const [],
+    this.colorSections = const [],
   });
 
   final String sheetName;
   final List<List<Object?>> rows;
   final List<_TemplateMergeRange> mergeRanges;
   final List<_TemplateCustomMerge> customMerges;
+  final List<int> separatorColumnIndexes;
+  final List<_TemplateColorSection> colorSections;
+}
+
+class _TemplateColorSection {
+  const _TemplateColorSection({
+    required this.startColumnIndex,
+    required this.endColumnIndex,
+  });
+
+  final int startColumnIndex;
+  final int endColumnIndex;
+}
+
+class _ReportColorTheme {
+  const _ReportColorTheme({
+    required this.primary,
+    required this.secondary,
+  });
+
+  final Color primary;
+  final Color secondary;
 }
 
 class _TemplateMergeRange {
