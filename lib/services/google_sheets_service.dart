@@ -397,40 +397,6 @@ class GoogleSheetsService {
       );
     }
 
-    final rowColumnCount = formattedColumnCount;
-    final mergeColumnCount = templateRows.mergeRanges
-        .map((range) => range.endColumnIndex)
-        .fold<int>(0, (max, count) => count > max ? count : max);
-    final customMergeColumnCount = templateRows.customMerges
-        .map((range) => range.endColumnIndex)
-        .fold<int>(0, (max, count) => count > max ? count : max);
-    final separatorEndColumn = [
-      rowColumnCount,
-      mergeColumnCount,
-      customMergeColumnCount,
-    ].fold<int>(0, (max, count) => count > max ? count : max);
-
-    if (separatorEndColumn > 0) {
-      final lastRowStart = rowBounds.endRowIndex - 1;
-      requests.add(
-        Request(
-          updateBorders: UpdateBordersRequest(
-            range: GridRange(
-              sheetId: sheetId,
-              startRowIndex: lastRowStart,
-              endRowIndex: rowBounds.endRowIndex,
-              startColumnIndex: 0,
-              endColumnIndex: separatorEndColumn,
-            ),
-            bottom: Border(
-              style: 'SOLID_THICK',
-              color: Color(red: 0, green: 0, blue: 0),
-            ),
-          ),
-        ),
-      );
-    }
-
     if (formattedColumnCount > 0) {
       requests.add(
         Request(
@@ -2138,8 +2104,12 @@ class GoogleSheetsService {
     const acceptedPatterns = [
       'yyyy-MM-dd',
       'yyyy-MM-dd HH:mm',
+      'dd-MM-yyyy',
+      'dd-MM-yyyy HH:mm',
       'dd/MM/yyyy',
       'dd/MM/yyyy HH:mm',
+      'd/M/yyyy',
+      'd/M/yyyy HH:mm',
     ];
 
     for (final pattern in acceptedPatterns) {
