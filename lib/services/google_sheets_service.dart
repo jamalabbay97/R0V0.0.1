@@ -1768,7 +1768,7 @@ class GoogleSheetsService {
       data['mine'] ?? '',
       data['zone'] ?? '',
       data['sortie'] ?? '',
-      data['selectedPoste'] ?? '',
+      _toFrenchPosteLabel(data['selectedPoste']),
       data['selectedQualite'] ?? '',
       data['selectedQualiteType'] ?? '',
       data['operationType'] ?? '',
@@ -2155,14 +2155,21 @@ class GoogleSheetsService {
       return '';
     }
 
-    if (RegExp(r'^(3|3e|3eme|3ème|troisieme|troisième)$')
-        .hasMatch(normalized)) {
+    final compact = normalized
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(RegExp(r'\b(shift|poste)\b'), '')
+        .replaceAll(RegExp(r'\s+'), '')
+        .trim();
+
+    if (RegExp(r'^(3|3e|3eme|3ème|3rd|troisieme|troisième)$')
+        .hasMatch(compact)) {
       return '3ème';
     }
-    if (RegExp(r'^(1|1er|premier)$').hasMatch(normalized)) {
+    if (RegExp(r'^(1|1er|1st|premier)$').hasMatch(compact)) {
       return '1er';
     }
-    if (RegExp(r'^(2|2e|2eme|2ème|deuxieme|deuxième)$').hasMatch(normalized)) {
+    if (RegExp(r'^(2|2e|2eme|2ème|2nd|2rd|deuxieme|deuxième)$')
+        .hasMatch(compact)) {
       return '2ème';
     }
 
