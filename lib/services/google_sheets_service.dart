@@ -255,7 +255,7 @@ class GoogleSheetsService {
 
     final targetDate =
         DateFormat('yyyy-MM-dd', _frenchLocale).format(reportDateLocal);
-    final targetPoste = poste.trim().toLowerCase();
+    final targetPoste = _normalizePosteValue(poste);
 
     final response = await api.spreadsheets.values.get(
       _spreadsheetId,
@@ -269,7 +269,7 @@ class GoogleSheetsService {
       }
 
       final rowDate = row[0]?.toString().trim() ?? '';
-      final rowPoste = row[8]?.toString().trim().toLowerCase() ?? '';
+      final rowPoste = _normalizePosteValue(row[8]);
 
       if (_isSameReportDate(rowDate, targetDate) && rowPoste == targetPoste) {
         return true;
@@ -824,6 +824,13 @@ class GoogleSheetsService {
         final totalTrips = _resolveTotalTrips(data, trucks);
         final equipmentSummary = _formatEquipmentTripsForTemplate(trucks);
         final creator = _extractCreatorName(data);
+        final truckDate =
+            DateFormat('dd/MM/yyyy', _frenchLocale).format(reportDateLocal);
+        final frenchPoste = _toFrenchPosteLabel(data['selectedPoste']);
+        final frenchQualityType =
+            _toFrenchQualityTypeLabel(data['selectedQualiteType']);
+        final frenchOperationType =
+            _toFrenchOperationTypeLabel(data['operationType']);
 
         for (var i = 0; i < trucks.length; i++) {
           final truck = trucks[i];
@@ -842,17 +849,17 @@ class GoogleSheetsService {
           }
 
           rows.add([
-            includeSharedValues ? date : '',
+            includeSharedValues ? truckDate : '',
             includeSharedValues ? data['mine'] ?? '' : '',
             includeSharedValues ? data['sortie'] ?? '' : '',
             includeSharedValues
                 ? data['equipment'] ?? data['selectedQualite'] ?? ''
                 : '',
             includeSharedValues ? data['distance'] ?? '' : '',
-            includeSharedValues ? data['selectedQualiteType'] ?? '' : '',
-            includeSharedValues ? data['operationType'] ?? '' : '',
+            includeSharedValues ? frenchQualityType : '',
+            includeSharedValues ? frenchOperationType : '',
             '',
-            includeSharedValues ? data['selectedPoste'] ?? '' : '',
+            includeSharedValues ? frenchPoste : '',
             truck['truckNumber'] ?? '',
             truck['driver1'] ?? '',
             ...tripCells.take(12),
@@ -864,15 +871,15 @@ class GoogleSheetsService {
         }
         if (rows.isEmpty) {
           rows.add([
-            date,
+            truckDate,
             data['mine'] ?? '',
             data['sortie'] ?? '',
             data['equipment'] ?? data['selectedQualite'] ?? '',
             data['distance'] ?? '',
-            data['selectedQualiteType'] ?? '',
-            data['operationType'] ?? '',
+            frenchQualityType,
+            frenchOperationType,
             '',
-            data['selectedPoste'] ?? '',
+            frenchPoste,
             '',
             '',
             ...List.filled(12, ''),
@@ -2101,28 +2108,108 @@ class GoogleSheetsService {
       return '';
     }
 
+    final normalized = trimmed.replaceAll(RegExp(r'\s+'), ' ');
+
+    final asSpreadsheetSerial =
+        double.tryParse(normalized.replaceAll(',', '.'));
+    if (asSpreadsheetSerial != null) {
+      final excelEpoch = DateTime.utc(1899, 12, 30);
+      final parsed =
+          excelEpoch.add(Duration(days: asSpreadsheetSerial.floor()));
+      return DateFormat('yyyy-MM-dd', _frenchLocale).format(parsed.toLocal());
+    }
+
     const acceptedPatterns = [
       'yyyy-MM-dd',
       'yyyy-MM-dd HH:mm',
+      'yyyy-MM-dd HH:mm:ss',
       'dd-MM-yyyy',
       'dd-MM-yyyy HH:mm',
+      'dd/MM/yyyy HH:mm:ss',
       'dd/MM/yyyy',
       'dd/MM/yyyy HH:mm',
       'd/M/yyyy',
       'd/M/yyyy HH:mm',
+      'd MMM yyyy',
+      'd MMMM yyyy',
+      'd MMM yyyy HH:mm',
+      'd MMMM yyyy HH:mm',
     ];
 
     for (final pattern in acceptedPatterns) {
       try {
-        final parsed = DateFormat(pattern, _frenchLocale).parseStrict(trimmed);
+        final parsed =
+            DateFormat(pattern, _frenchLocale).parseStrict(normalized);
         return DateFormat('yyyy-MM-dd', _frenchLocale).format(parsed);
       } catch (_) {
         // Keep trying with the next pattern.
       }
     }
 
-    return trimmed;
+    return normalized;
   }
+
+  String _normalizePosteValue(Object? value) {
+    final normalized = value?.toString().trim().toLowerCase() ?? '';
+    if (normalized.isEmpty) {
+      return '';
+    }
+
+    if (RegExp(r'^(3|3e|3eme|3ème|troisieme|troisième)$')
+        .hasMatch(normalized)) {
+      return '3ème';
+    }
+    if (RegExp(r'^(1|1er|premier)$').hasMatch(normalized)) {
+      return '1er';
+    }
+    if (RegExp(r'^(2|2e|2eme|2ème|deuxieme|deuxième)$').hasMatch(normalized)) {
+      return '2ème';
+    }
+
+    return normalized;
+  }
+
+  String _toFrenchPosteLabel(Object? value) => _normalizePosteValue(value);
+
+  String _toFrenchQualityTypeLabel(Object? value) {
+    final normalized = value?.toString().trim().toLowerCase() ?? '';
+    if (normalized.isEmpty) {
+      return '';
+    }
+    if (normalized == 'normal') {
+      return 'NORMAL';
+    }
+    if (normalized == 'oceane' || normalized == 'océane') {
+      return 'OCEANE';
+    }
+    if (normalized == 'pb30') {
+      return 'PB30';
+    }
+    return value.toString();
+  }
+
+  String _toFrenchOperationTypeLabel(Object? value) {
+    final normalized = value?.toString().trim().toLowerCase() ?? '';
+    if (normalized.isEmpty) {
+      return '';
+    }
+    if (normalized == 'defeuitage' || normalized == 'défeuitage') {
+      return 'Défeuitage';
+    }
+    if (normalized == 'reprise') {
+      return 'Reprise';
+    }
+    if (normalized == 'sterile' || normalized == 'stérile') {
+      return 'Stérile';
+    }
+    return value.toString();
+  }
+
+  @visibleForTesting
+  String normalizeSheetDateForTest(String value) => _normalizeSheetDate(value);
+
+  @visibleForTesting
+  String normalizePosteForTest(Object? value) => _normalizePosteValue(value);
 }
 
 String _resolveDisplayTitle(Report report) {
