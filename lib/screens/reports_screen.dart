@@ -4,6 +4,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/models/report.dart';
 import 'package:r0/services/database_helper.dart';
+import 'package:r0/services/google_sheets_service.dart';
 import 'package:r0/services/time_calculation_service.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
@@ -824,8 +825,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final duplicateMessage = e is DuplicateReportDateException
+            ? e.message
+            : l10n.reportSendToSheetsFailed;
         scaffoldMessenger.showSnackBar(
-          SnackBar(content: Text(l10n.reportSendToSheetsFailed)),
+          SnackBar(content: Text(duplicateMessage)),
         );
       }
     } finally {

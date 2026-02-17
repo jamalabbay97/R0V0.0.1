@@ -82,6 +82,24 @@ class GoogleSheetsService {
 
       final templateRows = _buildTemplateRows(report, reportLocalDate);
       if (templateRows != null) {
+        final shouldCheckForDuplicateDate =
+            templateRows.sheetName == _activitySheet ||
+                templateRows.sheetName == _dailySheet ||
+                templateRows.sheetName == _machinesSheet;
+        if (shouldCheckForDuplicateDate) {
+          final hasDuplicateDate = await _sheetHasExistingTemplateDate(
+            api,
+            sheetName: templateRows.sheetName,
+            reportDateLocal: reportLocalDate,
+          );
+          if (hasDuplicateDate) {
+            final formattedDate =
+                DateFormat('yyyy-MM-dd').format(reportLocalDate);
+            throw DuplicateReportDateException(
+              'Un rapport avec la date du jour existe déjà dans ${templateRows.sheetName} ($formattedDate).',
+            );
+          }
+        }
         await _appendRowsToTemplate(api, templateRows);
         return true;
       }
@@ -113,11 +131,43 @@ class GoogleSheetsService {
       }
 
       return true;
+    } on DuplicateReportDateException {
+      rethrow;
     } catch (error, stackTrace) {
       debugPrint('Google Sheets sync failed for report ${report.id}: $error');
       debugPrintStack(stackTrace: stackTrace);
       return false;
     }
+  }
+
+  Future<bool> _sheetHasExistingTemplateDate(
+    SheetsApi api, {
+    required String sheetName,
+    required DateTime reportDateLocal,
+  }) async {
+    await _loadSheetNames(api);
+    if (!_knownSheets.contains(sheetName)) {
+      return false;
+    }
+
+    final targetDate = DateFormat('yyyy-MM-dd').format(reportDateLocal);
+    final response = await api.spreadsheets.values.get(
+      _spreadsheetId,
+      '$sheetName!A7:A',
+    );
+    final values = response.values ?? const [];
+
+    for (final row in values) {
+      if (row.isEmpty) {
+        continue;
+      }
+      final rawDate = row.first?.toString().trim() ?? '';
+      if (rawDate == targetDate) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   Future<void> _appendRowsToTemplate(
@@ -2110,6 +2160,15 @@ class _TemplateRows {
   final List<_TemplateCustomMerge> customMerges;
   final List<int> separatorColumnIndexes;
   final List<_TemplateColorSection> colorSections;
+}
+
+class DuplicateReportDateException implements Exception {
+  DuplicateReportDateException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }
 
 class _TemplateColorSection {
