@@ -37,6 +37,7 @@ class GoogleSheetsService {
   static const String _truckSheet = 'Poser les camions';
   static const String _machinesSheet = 'Machines et engins à l’arrêt';
   static const String _r0Sheet = 'R0';
+  static const String _frenchLocale = 'fr_FR';
   static const List<String> _scopes = [SheetsApi.spreadsheetsScope];
 
   final String _spreadsheetId;
@@ -94,7 +95,7 @@ class GoogleSheetsService {
           );
           if (hasDuplicateDate) {
             final formattedDate =
-                DateFormat('yyyy-MM-dd').format(reportLocalDate);
+                DateFormat('yyyy-MM-dd', _frenchLocale).format(reportLocalDate);
             throw DuplicateReportDateException(
               'Un rapport avec la date du jour existe déjà dans ${templateRows.sheetName} ($formattedDate).',
             );
@@ -180,7 +181,8 @@ class GoogleSheetsService {
       return false;
     }
 
-    final targetDate = DateFormat('yyyy-MM-dd').format(reportDateLocal);
+    final targetDate =
+        DateFormat('yyyy-MM-dd', _frenchLocale).format(reportDateLocal);
     final response = await api.spreadsheets.values.get(
       _spreadsheetId,
       '$sheetName!A7:A',
@@ -192,7 +194,7 @@ class GoogleSheetsService {
         continue;
       }
       final rawDate = row.first?.toString().trim() ?? '';
-      if (rawDate == targetDate) {
+      if (_isSameReportDate(rawDate, targetDate)) {
         return true;
       }
     }
@@ -211,7 +213,8 @@ class GoogleSheetsService {
       return false;
     }
 
-    final targetDate = DateFormat('yyyy-MM-dd').format(reportDateLocal);
+    final targetDate =
+        DateFormat('yyyy-MM-dd', _frenchLocale).format(reportDateLocal);
     final targetPoste = poste.trim().toLowerCase();
     final targetModule = module.trim().toLowerCase();
 
@@ -230,7 +233,7 @@ class GoogleSheetsService {
       final rowPoste = row[4]?.toString().trim().toLowerCase() ?? '';
       final rowModule = row[7]?.toString().trim().toLowerCase() ?? '';
 
-      if (rowDate == targetDate &&
+      if (_isSameReportDate(rowDate, targetDate) &&
           rowPoste == targetPoste &&
           rowModule == targetModule) {
         return true;
@@ -250,7 +253,8 @@ class GoogleSheetsService {
       return false;
     }
 
-    final targetDate = DateFormat('yyyy-MM-dd').format(reportDateLocal);
+    final targetDate =
+        DateFormat('yyyy-MM-dd', _frenchLocale).format(reportDateLocal);
     final targetPoste = poste.trim().toLowerCase();
 
     final response = await api.spreadsheets.values.get(
@@ -267,7 +271,7 @@ class GoogleSheetsService {
       final rowDate = row[0]?.toString().trim() ?? '';
       final rowPoste = row[8]?.toString().trim().toLowerCase() ?? '';
 
-      if (rowDate == targetDate && rowPoste == targetPoste) {
+      if (_isSameReportDate(rowDate, targetDate) && rowPoste == targetPoste) {
         return true;
       }
     }
@@ -581,7 +585,8 @@ class GoogleSheetsService {
   _TemplateRows? _buildTemplateRows(Report report, DateTime reportDateLocal) {
     final data = report.additionalData ?? {};
     final category = _categorizeReport(report, data);
-    final date = DateFormat('yyyy-MM-dd').format(reportDateLocal);
+    final date =
+        DateFormat('yyyy-MM-dd', _frenchLocale).format(reportDateLocal);
 
     switch (category) {
       case _ReportCategory.dailyTsud:
@@ -2112,6 +2117,41 @@ class GoogleSheetsService {
   String _sanitizeSheetTitle(String title) {
     final sanitized = title.replaceAll('/', '-').trim();
     return sanitized.length > 90 ? sanitized.substring(0, 90) : sanitized;
+  }
+
+  bool _isSameReportDate(String rawDate, String targetDate) {
+    if (rawDate == targetDate) {
+      return true;
+    }
+
+    final parsedRawDate = _normalizeSheetDate(rawDate);
+    final parsedTargetDate = _normalizeSheetDate(targetDate);
+    return parsedRawDate.isNotEmpty && parsedRawDate == parsedTargetDate;
+  }
+
+  String _normalizeSheetDate(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return '';
+    }
+
+    const acceptedPatterns = [
+      'yyyy-MM-dd',
+      'yyyy-MM-dd HH:mm',
+      'dd/MM/yyyy',
+      'dd/MM/yyyy HH:mm',
+    ];
+
+    for (final pattern in acceptedPatterns) {
+      try {
+        final parsed = DateFormat(pattern, _frenchLocale).parseStrict(trimmed);
+        return DateFormat('yyyy-MM-dd', _frenchLocale).format(parsed);
+      } catch (_) {
+        // Keep trying with the next pattern.
+      }
+    }
+
+    return trimmed;
   }
 }
 
