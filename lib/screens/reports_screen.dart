@@ -4942,8 +4942,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                                   .textTheme
                                                                   .bodyMedium
                                                                   ?.copyWith(
-                                                                      color: Colors
-                                                                          .black54),
+                                                                    color: Theme.of(
+                                                                            context)
+                                                                        .colorScheme
+                                                                        .onSurfaceVariant,
+                                                                  ),
                                                               overflow:
                                                                   TextOverflow
                                                                       .ellipsis,
@@ -4970,7 +4973,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             return Padding(
                               padding: const EdgeInsets.only(top: 8.0),
                               child: Card(
-                                color: Colors.grey[100],
+                                color: Theme.of(context).colorScheme.surface,
                                 child: Padding(
                                   padding: const EdgeInsets.all(16.0),
                                   child: Column(

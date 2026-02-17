@@ -541,10 +541,16 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                           TimePickerSpinner(
                               is24HourMode: true,
                               time: time,
-                              normalTextStyle: const TextStyle(
-                                  fontSize: 18, color: Colors.grey),
-                              highlightedTextStyle: const TextStyle(
-                                  fontSize: 24, color: Colors.black),
+                              normalTextStyle: TextStyle(
+                                fontSize: 18,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                              highlightedTextStyle: TextStyle(
+                                fontSize: 24,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
                               onTimeChange: (t) => time = t),
                           DropdownButtonFormField<String>(
                               initialValue: initialEquipment,
@@ -611,10 +617,16 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                         Column(mainAxisSize: MainAxisSize.min, children: [
                           TimePickerSpinner(
                               is24HourMode: true,
-                              normalTextStyle: const TextStyle(
-                                  fontSize: 18, color: Colors.grey),
-                              highlightedTextStyle: const TextStyle(
-                                  fontSize: 24, color: Colors.black),
+                              normalTextStyle: TextStyle(
+                                fontSize: 18,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                              highlightedTextStyle: TextStyle(
+                                fontSize: 24,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
                               onTimeChange: (t) => time = t),
                           DropdownButtonFormField<String>(
                               initialValue: initialEquipment,
@@ -805,8 +817,12 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                                 const TextStyle(fontStyle: FontStyle.italic)),
                       ],
                     ),
-                    Text(_buildTripQualityLabel(trip, l10n),
-                        style: const TextStyle(color: Colors.black54))
+                    Text(
+                      _buildTripQualityLabel(trip, l10n),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    )
                   ]),
             ));
       }),
