@@ -361,7 +361,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
       OCPTextField(
           label: l10n.distance,
           controller: _distanceController,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+          keyboardType: TextInputType.text),
       const SizedBox(height: 16),
       OCPDropdown<String>(
           label: l10n.operation,
