@@ -100,6 +100,36 @@ class GoogleSheetsService {
             );
           }
         }
+
+        final data = report.additionalData ?? {};
+
+        if (templateRows.sheetName == _r0Sheet) {
+          final hasDuplicateR0Report = await _sheetHasExistingR0Report(
+            api,
+            reportDateLocal: reportLocalDate,
+            poste: data['selectedPoste']?.toString() ?? '',
+            module: data['Model']?.toString() ?? '',
+          );
+          if (hasDuplicateR0Report) {
+            throw DuplicateReportDateException(
+              "Un rapport avec la date d'aujourd'hui existe déjà pour ce poste et ce module.",
+            );
+          }
+        }
+
+        if (templateRows.sheetName == _truckSheet) {
+          final hasDuplicateTruckReport = await _sheetHasExistingTruckReport(
+            api,
+            reportDateLocal: reportLocalDate,
+            poste: data['selectedPoste']?.toString() ?? '',
+          );
+          if (hasDuplicateTruckReport) {
+            throw DuplicateReportDateException(
+              "Un rapport avec la date d'aujourd'hui existe déjà pour ce poste.",
+            );
+          }
+        }
+
         await _appendRowsToTemplate(api, templateRows);
         return true;
       }
@@ -163,6 +193,81 @@ class GoogleSheetsService {
       }
       final rawDate = row.first?.toString().trim() ?? '';
       if (rawDate == targetDate) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  Future<bool> _sheetHasExistingR0Report(
+    SheetsApi api, {
+    required DateTime reportDateLocal,
+    required String poste,
+    required String module,
+  }) async {
+    await _loadSheetNames(api);
+    if (!_knownSheets.contains(_r0Sheet)) {
+      return false;
+    }
+
+    final targetDate = DateFormat('yyyy-MM-dd').format(reportDateLocal);
+    final targetPoste = poste.trim().toLowerCase();
+    final targetModule = module.trim().toLowerCase();
+
+    final response = await api.spreadsheets.values.get(
+      _spreadsheetId,
+      '$_r0Sheet!A7:H',
+    );
+    final values = response.values ?? const [];
+
+    for (final row in values) {
+      if (row.length < 8) {
+        continue;
+      }
+
+      final rowDate = row[0]?.toString().trim() ?? '';
+      final rowPoste = row[4]?.toString().trim().toLowerCase() ?? '';
+      final rowModule = row[7]?.toString().trim().toLowerCase() ?? '';
+
+      if (rowDate == targetDate &&
+          rowPoste == targetPoste &&
+          rowModule == targetModule) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  Future<bool> _sheetHasExistingTruckReport(
+    SheetsApi api, {
+    required DateTime reportDateLocal,
+    required String poste,
+  }) async {
+    await _loadSheetNames(api);
+    if (!_knownSheets.contains(_truckSheet)) {
+      return false;
+    }
+
+    final targetDate = DateFormat('yyyy-MM-dd').format(reportDateLocal);
+    final targetPoste = poste.trim().toLowerCase();
+
+    final response = await api.spreadsheets.values.get(
+      _spreadsheetId,
+      '$_truckSheet!A7:I',
+    );
+    final values = response.values ?? const [];
+
+    for (final row in values) {
+      if (row.length < 9) {
+        continue;
+      }
+
+      final rowDate = row[0]?.toString().trim() ?? '';
+      final rowPoste = row[8]?.toString().trim().toLowerCase() ?? '';
+
+      if (rowDate == targetDate && rowPoste == targetPoste) {
         return true;
       }
     }
