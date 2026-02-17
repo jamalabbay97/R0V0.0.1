@@ -2146,7 +2146,8 @@ String _resolveDisplayTitle(Report report) {
 }
 
 String _formatDisplayDate(DateTime reportDate) {
-  return DateFormat('yyyy-MM-dd HH:mm').format(reportDate.toLocal());
+  return DateFormat('dd/MM/yyyy HH:mm', GoogleSheetsService._frenchLocale)
+      .format(reportDate.toLocal());
 }
 
 String _formatMineZone(Map<String, dynamic> data) {
