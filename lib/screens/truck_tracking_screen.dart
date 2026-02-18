@@ -866,9 +866,15 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
       ]));
 
   Future<void> _saveReport(AppLocalizations l10n) async {
-    if (_selectedPoste == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(l10n.pleaseSelectPoste),
+    final hasDate = _selectedDate.year > 0;
+    final hasPoste = _selectedPoste != null;
+    final hasMachineOrEngin =
+        _selectedQualite != null && _selectedQualite!.trim().isNotEmpty;
+
+    if (!hasDate || !hasPoste || !hasMachineOrEngin) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'La date, le poste et la machine/engin sont obligatoires pour enregistrer le rapport.'),
           backgroundColor: AppColors.error));
       return;
     }

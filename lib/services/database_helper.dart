@@ -74,6 +74,9 @@ class DatabaseHelper {
     );
   }
 
+  static const String _reportsOrderBy =
+      "date DESC, CASE group_name WHEN '3ème' THEN 1 WHEN '1er' THEN 2 WHEN '2ème' THEN 3 ELSE 4 END ASC";
+
   Future<int> insertReport(Report report) async {
     final db = await database;
     final id = await db.insert('reports', report.toMap());
@@ -84,7 +87,7 @@ class DatabaseHelper {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'reports',
-      orderBy: 'date DESC',
+      orderBy: _reportsOrderBy,
     );
     return List.generate(maps.length, (i) => Report.fromMap(maps[i]));
   }
@@ -96,7 +99,7 @@ class DatabaseHelper {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'reports',
-      orderBy: 'date DESC',
+      orderBy: _reportsOrderBy,
       limit: limit,
       offset: offset,
     );
@@ -109,7 +112,7 @@ class DatabaseHelper {
       'reports',
       where: 'type = ?',
       whereArgs: [type],
-      orderBy: 'date DESC',
+      orderBy: _reportsOrderBy,
     );
     return List.generate(maps.length, (i) => Report.fromMap(maps[i]));
   }

@@ -623,8 +623,9 @@ class R0ReportState extends State<R0Report> {
       if (formData.selectedMine.isEmpty ||
           formData.selectedPoste.isEmpty ||
           formData.selectedModel.isEmpty) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(l10n.selectPosteMessage)));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'La date, le modèle et le poste sont obligatoires pour enregistrer le rapport R0.')));
         return;
       }
     }
@@ -1497,6 +1498,17 @@ class R0ReportState extends State<R0Report> {
   }
 
   Future<void> _saveReport(AppLocalizations l10n) async {
+    final hasDate = _selectedDate.year > 0;
+    final hasModel = formData.selectedModel.trim().isNotEmpty;
+    final hasPoste = formData.selectedPoste.trim().isNotEmpty;
+
+    if (!hasDate || !hasModel || !hasPoste) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'La date, le modèle et le poste sont obligatoires pour enregistrer le rapport R0.'),
+          backgroundColor: AppColors.error));
+      return;
+    }
     setState(() => _isLoading = true);
     try {
       final currentShift = _shiftWindow(formData.selectedPoste, _selectedDate);
