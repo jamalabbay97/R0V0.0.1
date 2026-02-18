@@ -2074,8 +2074,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ElevatedButton(
               onPressed: () {
                 if (selectedPoste != null &&
-                    startController.text.isNotEmpty &&
-                    endController.text.isNotEmpty) {
+                    (startDefect || startController.text.isNotEmpty) &&
+                    (endDefect || endController.text.isNotEmpty)) {
                   final updatedData = Map<String, dynamic>.from(data);
                   (updatedData['vibrator Counters'] as List)[index] = {
                     'id': counter['id'],
@@ -2265,8 +2265,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ElevatedButton(
               onPressed: () {
                 if (selectedPoste != null &&
-                    startIndex.isNotEmpty &&
-                    endIndex.isNotEmpty) {
+                    (startDefect || startIndex.isNotEmpty) &&
+                    (endDefect || endIndex.isNotEmpty)) {
                   final updatedData = Map<String, dynamic>.from(data);
                   if (updatedData['liaison Counters'] == null) {
                     updatedData['liaison Counters'] = [];
@@ -2428,8 +2428,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ElevatedButton(
               onPressed: () {
                 if (selectedPoste != null &&
-                    startController.text.isNotEmpty &&
-                    endController.text.isNotEmpty) {
+                    (startDefect || startController.text.isNotEmpty) &&
+                    (endDefect || endController.text.isNotEmpty)) {
                   final updatedData = Map<String, dynamic>.from(data);
                   (updatedData['liaison Counters'] as List)[index] = {
                     'id': counter['id'],
