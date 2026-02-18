@@ -306,15 +306,7 @@ class GoogleSheetsService {
       return;
     }
 
-    final appendResponse = await api.spreadsheets.values.append(
-      ValueRange(values: templateRows.rows),
-      _spreadsheetId,
-      '${templateRows.sheetName}!A7',
-      valueInputOption: 'RAW',
-      insertDataOption: 'INSERT_ROWS',
-    );
-
-    final rowBounds = _extractRowBounds(appendResponse.updates?.updatedRange);
+    final rowBounds = await _insertTemplateRows(api, templateRows);
     if (rowBounds == null) {
       return;
     }
@@ -490,6 +482,134 @@ class GoogleSheetsService {
       BatchUpdateSpreadsheetRequest(requests: requests),
       _spreadsheetId,
     );
+  }
+
+  Future<_RowBounds?> _insertTemplateRows(
+    SheetsApi api,
+    _TemplateRows templateRows,
+  ) async {
+    if (templateRows.sheetName == _truckSheet) {
+      return _insertTruckTemplateRowsSorted(api, templateRows);
+    }
+
+    final appendResponse = await api.spreadsheets.values.append(
+      ValueRange(values: templateRows.rows),
+      _spreadsheetId,
+      '${templateRows.sheetName}!A7',
+      valueInputOption: 'RAW',
+      insertDataOption: 'INSERT_ROWS',
+    );
+
+    return _extractRowBounds(appendResponse.updates?.updatedRange);
+  }
+
+  Future<_RowBounds?> _insertTruckTemplateRowsSorted(
+    SheetsApi api,
+    _TemplateRows templateRows,
+  ) async {
+    if (templateRows.rows.isEmpty) {
+      return null;
+    }
+
+    final firstRow = templateRows.rows.first;
+    final newDate = firstRow.isNotEmpty ? firstRow.first : null;
+    final newPoste = firstRow.length > 8 ? firstRow[8] : null;
+    final insertStartRowNumber = await _resolveTruckInsertRowNumber(
+      api,
+      reportDateValue: newDate,
+      posteValue: newPoste,
+    );
+
+    final rowCount = templateRows.rows.length;
+    final startRowIndex = insertStartRowNumber - 1;
+    final endRowIndex = startRowIndex + rowCount;
+
+    await api.spreadsheets.batchUpdate(
+      BatchUpdateSpreadsheetRequest(
+        requests: [
+          Request(
+            insertDimension: InsertDimensionRequest(
+              range: DimensionRange(
+                sheetId: _sheetIdsByName[_truckSheet],
+                dimension: 'ROWS',
+                startIndex: startRowIndex,
+                endIndex: endRowIndex,
+              ),
+              inheritFromBefore: startRowIndex > 6,
+            ),
+          ),
+        ],
+      ),
+      _spreadsheetId,
+    );
+
+    final updatedRange = '${templateRows.sheetName}!A$insertStartRowNumber';
+    await api.spreadsheets.values.update(
+      ValueRange(values: templateRows.rows),
+      _spreadsheetId,
+      updatedRange,
+      valueInputOption: 'RAW',
+    );
+
+    return _RowBounds(startRowIndex: startRowIndex, endRowIndex: endRowIndex);
+  }
+
+  Future<int> _resolveTruckInsertRowNumber(
+    SheetsApi api, {
+    required Object? reportDateValue,
+    required Object? posteValue,
+  }) async {
+    final targetDate = _normalizeSheetDate(reportDateValue?.toString() ?? '');
+    final targetPoste = _normalizePosteValue(posteValue);
+    final response = await api.spreadsheets.values.get(
+      _spreadsheetId,
+      '$_truckSheet!A7:I',
+    );
+    final values = response.values ?? const [];
+
+    var fallbackInsertRow = values.length + 7;
+    for (var index = 0; index < values.length; index++) {
+      final row = values[index];
+      if (row.isEmpty) {
+        continue;
+      }
+
+      final currentDate = _normalizeSheetDate(row.first?.toString() ?? '');
+      if (currentDate.isEmpty) {
+        continue;
+      }
+
+      fallbackInsertRow = index + 7;
+      final dateComparison = targetDate.compareTo(currentDate);
+      if (dateComparison > 0) {
+        return index + 7;
+      }
+      if (dateComparison < 0) {
+        continue;
+      }
+
+      final currentPoste = row.length > 8 ? _normalizePosteValue(row[8]) : '';
+      final posteComparison =
+          _posteSortRank(targetPoste).compareTo(_posteSortRank(currentPoste));
+      if (posteComparison < 0) {
+        return index + 7;
+      }
+    }
+
+    return fallbackInsertRow;
+  }
+
+  int _posteSortRank(String poste) {
+    switch (_normalizePosteValue(poste)) {
+      case '2ème':
+        return 0;
+      case '1er':
+        return 1;
+      case '3ème':
+        return 2;
+      default:
+        return 99;
+    }
   }
 
   _ReportColorTheme _selectColorTheme({
@@ -825,7 +945,7 @@ class GoogleSheetsService {
         final equipmentSummary = _formatEquipmentTripsForTemplate(trucks);
         final creator = _extractCreatorName(data);
         final truckDate =
-            DateFormat('dd/MM/yyyy', _frenchLocale).format(reportDateLocal);
+            DateFormat('dd-MM-yyyy', _frenchLocale).format(reportDateLocal);
         final frenchPoste = _toFrenchPosteLabel(data['selectedPoste']);
         final frenchQualityType =
             _toFrenchQualityTypeLabel(data['selectedQualiteType']);

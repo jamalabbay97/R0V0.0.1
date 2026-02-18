@@ -1613,7 +1613,9 @@ class R0ReportState extends State<R0Report> {
           'Model': formData.selectedModel,
           'Compteurs': {
             'duree': formData.indexCompteurs.duree,
-            'note': formData.indexCompteurs.note
+            'note': formData.indexCompteurs.note,
+            'dureeDefaut': formData.indexCompteurs.dureeDefaut,
+            'noteDefaut': formData.indexCompteurs.noteDefaut,
           },
           'Arrets': currentShiftArrets
               .map((v) => {
@@ -1682,7 +1684,12 @@ class R0ReportState extends State<R0Report> {
                 'Category': formData.selectedCategory,
                 'Type': formData.selectedType,
                 'Model': formData.selectedModel,
-                'Compteurs': {'duree': '', 'note': ''},
+                'Compteurs': {
+                  'duree': '',
+                  'note': '',
+                  'dureeDefaut': false,
+                  'noteDefaut': false,
+                },
                 'Arrets': shiftArrets,
                 'exploitation': {
                   'H.M': '0.00',
