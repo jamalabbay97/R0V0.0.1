@@ -2973,6 +2973,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Future<void> _showMachinesEquipmentStoppedEditor(Report report,
       ScaffoldMessengerState scaffoldMessenger, AppLocalizations l10n) async {
     final data = report.additionalData ?? {};
+    Report editableReport = report;
     final maxHeight = MediaQuery.of(context).size.height * 0.9;
 
     // Equipment data structure matching machines_equipment_stopped_screen.dart
@@ -3082,9 +3083,51 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
-                                Text(
-                                  '${report.date.day.toString().padLeft(2, '0')}/${report.date.month.toString().padLeft(2, '0')}/${report.date.year}',
-                                  style: const TextStyle(fontSize: 16),
+                                ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(
+                                    '${editableReport.date.day.toString().padLeft(2, '0')}/${editableReport.date.month.toString().padLeft(2, '0')}/${editableReport.date.year}',
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.calendar_today),
+                                    onPressed: () async {
+                                      final pickedDate = await showDatePicker(
+                                        context: dialogContext,
+                                        initialDate: editableReport.date,
+                                        firstDate: DateTime(2000),
+                                        lastDate: DateTime.now(),
+                                      );
+
+                                      if (pickedDate == null) return;
+
+                                      final updatedDate = DateTime(
+                                        pickedDate.year,
+                                        pickedDate.month,
+                                        pickedDate.day,
+                                        editableReport.date.hour,
+                                        editableReport.date.minute,
+                                        editableReport.date.second,
+                                        editableReport.date.millisecond,
+                                        editableReport.date.microsecond,
+                                      );
+
+                                      final updatedReport =
+                                          editableReport.copyWith(
+                                        date: updatedDate,
+                                        additionalData: data,
+                                      );
+
+                                      await _saveReportUpdate(updatedReport,
+                                          scaffoldMessenger, l10n);
+
+                                      if (!mounted) return;
+                                      setDialogState(() {
+                                        editableReport = updatedReport;
+                                      });
+                                    },
+                                    tooltip: l10n.dateLabel,
+                                  ),
                                 ),
                               ],
                             ),
@@ -3116,7 +3159,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       icon: const Icon(Icons.add),
                                       onPressed: () =>
                                           _showAddMachineEquipmentDialog(
-                                              report,
+                                              editableReport,
                                               data,
                                               equipmentData,
                                               setDialogState,
@@ -3210,7 +3253,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                             onSelected: (value) {
                                               if (value == 'edit') {
                                                 _showEditMachineEquipmentDialog(
-                                                    report,
+                                                    editableReport,
                                                     data,
                                                     index,
                                                     equipmentData,
@@ -3219,7 +3262,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                     l10n);
                                               } else if (value == 'delete') {
                                                 _showDeleteMachineEquipmentDialog(
-                                                    report,
+                                                    editableReport,
                                                     data,
                                                     index,
                                                     setDialogState,
@@ -5776,8 +5819,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                               _resolveQualityLabel(
                                                   count['productQualityType'],
                                                   l10n),
-                                              style: const TextStyle(
-                                                  color: Colors.black54),
+                                              style: TextStyle(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                         ],
@@ -7801,10 +7847,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         TimePickerSpinner(
                           is24HourMode: true,
                           isShowSeconds: false,
-                          normalTextStyle: const TextStyle(
-                              fontSize: 18, color: Colors.black54),
-                          highlightedTextStyle: const TextStyle(
-                              fontSize: 24, color: Colors.black),
+                          normalTextStyle: TextStyle(
+                            fontSize: 18,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                          highlightedTextStyle: TextStyle(
+                            fontSize: 24,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                           spacing: 50,
                           itemHeight: 60,
                           isForce2Digits: true,
@@ -9365,10 +9416,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             is24HourMode: true,
                             isShowSeconds: false,
                             minutesInterval: 1,
-                            normalTextStyle: const TextStyle(
-                                fontSize: 18, color: Colors.black54),
-                            highlightedTextStyle: const TextStyle(
-                                fontSize: 24, color: Colors.black),
+                            normalTextStyle: TextStyle(
+                              fontSize: 18,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                            highlightedTextStyle: TextStyle(
+                              fontSize: 24,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
                             spacing: 50,
                             itemHeight: 60,
                             isForce2Digits: true,
@@ -9420,10 +9477,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             is24HourMode: true,
                             isShowSeconds: false,
                             minutesInterval: 1,
-                            normalTextStyle: const TextStyle(
-                                fontSize: 18, color: Colors.black54),
-                            highlightedTextStyle: const TextStyle(
-                                fontSize: 24, color: Colors.black),
+                            normalTextStyle: TextStyle(
+                              fontSize: 18,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                            highlightedTextStyle: TextStyle(
+                              fontSize: 24,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
                             spacing: 50,
                             itemHeight: 60,
                             isForce2Digits: true,
