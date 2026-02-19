@@ -35,7 +35,7 @@ class GoogleSheetsService {
   static const String _activitySheet = 'TNB';
   static const String _dailySheet = 'TSUD';
   static const String _truckSheet = 'Poser les camions';
-  static const String _machinesSheet = 'Machines et engins à l’arrêt';
+  static const String _machinesSheet = 'Machines et engins à l\'arrêt';
   static const String _r0Sheet = 'R0';
   static const String _frenchLocale = 'fr_FR';
   static const List<String> _scopes = [SheetsApi.spreadsheetsScope];
@@ -50,6 +50,8 @@ class GoogleSheetsService {
   bool _loadedSheets = false;
   final Set<String> _knownSheets = {};
   final Map<String, int> _sheetIdsByName = {};
+  List<GoogleSheetRecord>? _recordsCache;
+  DateTime? _recordsCacheAt;
 
   Future<bool> recordReportSnapshot(
     Report report, {
@@ -2337,48 +2339,329 @@ class GoogleSheetsService {
 
   @visibleForTesting
   String normalizePosteForTest(Object? value) => _normalizePosteValue(value);
+
+  /// Reads all sheets from Google Sheets and returns normalized searchable rows.
+  ///
+  /// This is used by the in-app explorer page to browse everything recorded,
+  /// including template sheets and detailed rows.
+  Future<List<GoogleSheetRecord>> fetchAllRecords({
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh && _recordsCache != null && _recordsCacheAt != null) {
+      final age = DateTime.now().difference(_recordsCacheAt!);
+      if (age < const Duration(minutes: 2)) {
+        return List<GoogleSheetRecord>.from(_recordsCache!);
+      }
+    }
+
+    final api = await _getSheetsApi();
+    if (api == null) {
+      return [];
+    }
+
+    final spreadsheet = await api.spreadsheets.get(_spreadsheetId);
+    final sheets = spreadsheet.sheets ?? const [];
+    final List<GoogleSheetRecord> records = [];
+
+    for (final sheet in sheets) {
+      final sheetName = sheet.properties?.title;
+      if (sheetName == null || sheetName.trim().isEmpty) {
+        continue;
+      }
+
+      final response = await api.spreadsheets.values.get(
+        _spreadsheetId,
+        '$sheetName!A1:AZ',
+      );
+
+      final rows = response.values ?? const [];
+      if (rows.isEmpty) {
+        continue;
+      }
+
+      final headerIndex = _detectHeaderRowIndex(rows);
+      if (headerIndex < 0 || headerIndex >= rows.length) {
+        continue;
+      }
+
+      final headers = _normalizeHeaders(rows[headerIndex]);
+      for (var rowIndex = headerIndex + 1; rowIndex < rows.length; rowIndex++) {
+        final row = rows[rowIndex];
+        if (!_hasContent(row)) {
+          continue;
+        }
+
+        final details = <String, String>{};
+        for (var i = 0; i < headers.length; i++) {
+          final value = i < row.length ? row[i]?.toString().trim() ?? '' : '';
+          details[headers[i]] = value;
+        }
+
+        records.add(
+          GoogleSheetRecord.fromRaw(
+            sheetName: sheetName,
+            rowNumber: rowIndex + 1,
+            details: details,
+          ),
+        );
+      }
+    }
+
+    _recordsCache = records;
+    _recordsCacheAt = DateTime.now();
+    return List<GoogleSheetRecord>.from(records);
+  }
+
+  int _detectHeaderRowIndex(List<List<Object?>> rows) {
+    final candidates = rows.take(10).toList();
+    var bestIndex = -1;
+    var bestScore = 0;
+
+    for (var i = 0; i < candidates.length; i++) {
+      final row = candidates[i];
+      var score = 0;
+      for (final cell in row) {
+        final text = cell?.toString().trim() ?? '';
+        if (text.isEmpty) {
+          continue;
+        }
+        score += 1;
+        if (RegExp(r'[A-Za-zÀ-ÿ]').hasMatch(text)) {
+          score += 1;
+        }
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = i;
+      }
+    }
+
+    return bestIndex;
+  }
+
+  bool _hasContent(List<Object?> row) {
+    for (final cell in row) {
+      if ((cell?.toString().trim() ?? '').isNotEmpty) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  List<String> _normalizeHeaders(List<Object?> rawHeaders) {
+    final headers = <String>[];
+    final usedHeaders = <String, int>{};
+
+    for (var i = 0; i < rawHeaders.length; i++) {
+      var header = rawHeaders[i]?.toString().trim() ?? '';
+      if (header.isEmpty) {
+        header = 'Column ${i + 1}';
+      }
+
+      final existing = usedHeaders[header] ?? 0;
+      usedHeaders[header] = existing + 1;
+      if (existing > 0) {
+        header = '$header (${existing + 1})';
+      }
+
+      headers.add(header);
+    }
+
+    return headers;
+  }
+
+  String _resolveDisplayTitle(Report report) {
+    final typeLower = report.type.toLowerCase();
+    if (typeLower == 'activity tnb') {
+      return 'TNB';
+    }
+    if (typeLower == 'daily tsud') {
+      return 'TSUD';
+    }
+    if (typeLower == 'suivi camion') {
+      return 'Poser les camions';
+    }
+    if (typeLower == 'machine/engin arrêtés') {
+      return 'Machine et engins à l\'arrêt';
+    }
+    if (typeLower == 'r0') {
+      return 'R0';
+    }
+    return report.description;
+  }
+
+  String _formatDisplayDate(DateTime reportDate) {
+    return DateFormat('dd/MM/yyyy HH:mm', _frenchLocale)
+        .format(reportDate.toLocal());
+  }
+
+  String _formatMineZone(Map<String, dynamic> data) {
+    final mine = data['mine'];
+    if (mine == null) {
+      return '';
+    }
+    final zone = data['zone'];
+    if (zone == null || zone.toString().trim().isEmpty) {
+      return mine.toString();
+    }
+    return '${mine.toString()} ${zone.toString()}';
+  }
+
+  String _formatTotalTrips(Map<String, dynamic> data) {
+    final totalTrips = data['totalTrips'];
+    return totalTrips?.toString() ?? '';
+  }
+
+  static const List<String> _baseHeaders = [
+    'Title (as shown in app)',
+    'Type (as shown in app)',
+    'Date (as shown in app)',
+    'Group (as shown in app)',
+    'Mine/Zone (as shown in app)',
+    'Total Trips (as shown in app)',
+    'Description',
+    'Submitted At (ISO)',
+    'Submission Source',
+    'Local ID',
+    'Firestore ID',
+    'Report Date (ISO)',
+    'Report Date (Local)',
+    'Report Time (Local)',
+  ];
+
+  static const List<String> _detailsBaseHeaders = [
+    'Submitted At (ISO)',
+    'Submission Source',
+    'Local ID',
+    'Report Date (ISO)',
+    'Report Type',
+    'Group',
+  ];
+
+  static List<Object?> _detailsBaseRow(
+    String savedAt,
+    String action,
+    Report report,
+    String reportDateIso,
+  ) {
+    return [
+      savedAt,
+      action,
+      report.id?.toString() ?? '',
+      reportDateIso,
+      report.type,
+      report.group,
+    ];
+  }
 }
 
-String _resolveDisplayTitle(Report report) {
-  final typeLower = report.type.toLowerCase();
-  if (typeLower == 'activity tnb') {
-    return 'TNB';
-  }
-  if (typeLower == 'daily tsud') {
-    return 'TSUD';
-  }
-  if (typeLower == 'suivi camion') {
-    return 'Poser les camions';
-  }
-  if (typeLower == 'machine/engin arrêtés') {
-    return 'Machine et engins à l’arrêt';
-  }
-  if (typeLower == 'r0') {
-    return 'R0';
-  }
-  return report.description;
-}
+class GoogleSheetRecord {
+  GoogleSheetRecord({
+    required this.sheetName,
+    required this.rowNumber,
+    required this.details,
+    required this.date,
+    required this.dateLabel,
+    required this.title,
+    required this.searchableText,
+  });
 
-String _formatDisplayDate(DateTime reportDate) {
-  return DateFormat('dd/MM/yyyy HH:mm', GoogleSheetsService._frenchLocale)
-      .format(reportDate.toLocal());
-}
+  factory GoogleSheetRecord.fromRaw({
+    required String sheetName,
+    required int rowNumber,
+    required Map<String, String> details,
+  }) {
+    final title = _resolveTitle(details);
+    final date = _resolveDate(details);
 
-String _formatMineZone(Map<String, dynamic> data) {
-  final mine = data['mine'];
-  if (mine == null) {
-    return '';
+    return GoogleSheetRecord(
+      sheetName: sheetName,
+      rowNumber: rowNumber,
+      details: details,
+      date: date,
+      dateLabel:
+          date == null ? 'Unknown date' : DateFormat('yyyy-MM-dd').format(date),
+      title: title,
+      searchableText: _buildSearchableText(sheetName, details, title, date),
+    );
   }
-  final zone = data['zone'];
-  if (zone == null || zone.toString().trim().isEmpty) {
-    return mine.toString();
-  }
-  return '${mine.toString()} ${zone.toString()}';
-}
 
-String _formatTotalTrips(Map<String, dynamic> data) {
-  final totalTrips = data['totalTrips'];
-  return totalTrips?.toString() ?? '';
+  final String sheetName;
+  final int rowNumber;
+  final Map<String, String> details;
+  final DateTime? date;
+  final String dateLabel;
+  final String title;
+  final String searchableText;
+
+  static String _resolveTitle(Map<String, String> details) {
+    const titleCandidates = [
+      'Title (as shown in app)',
+      'Type (as shown in app)',
+      'Description',
+      'Type',
+      'Rapport',
+      'Report',
+    ];
+
+    for (final key in titleCandidates) {
+      final value = details[key]?.trim() ?? '';
+      if (value.isNotEmpty) {
+        return value;
+      }
+    }
+
+    for (final entry in details.entries) {
+      if (entry.value.trim().isNotEmpty) {
+        return entry.value.trim();
+      }
+    }
+
+    return 'Untitled report';
+  }
+
+  static DateTime? _resolveDate(Map<String, String> details) {
+    for (final entry in details.entries) {
+      if (entry.key.toLowerCase().contains('date')) {
+        final parsed = DateTime.tryParse(entry.value);
+        if (parsed != null) {
+          return parsed;
+        }
+
+        for (final pattern in [
+          'yyyy-MM-dd',
+          'dd/MM/yyyy',
+          'dd/MM/yyyy HH:mm'
+        ]) {
+          try {
+            return DateFormat(pattern).parse(entry.value);
+          } catch (_) {
+            continue;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  static String _buildSearchableText(
+    String sheetName,
+    Map<String, String> details,
+    String title,
+    DateTime? date,
+  ) {
+    final parts = <String>[sheetName, title];
+    parts.addAll(details.keys);
+    parts.addAll(details.values);
+    if (date != null) {
+      parts.add(DateFormat('yyyy-MM-dd').format(date));
+      parts.add(DateFormat('dd/MM/yyyy').format(date));
+    }
+
+    return parts.join(' ').toLowerCase();
+  }
 }
 
 class _EquipmentTypeParts {
@@ -2400,48 +2683,6 @@ enum _ReportCategory {
   machinesStopped,
   r0,
   generic,
-}
-
-const List<String> _baseHeaders = [
-  'Title (as shown in app)',
-  'Type (as shown in app)',
-  'Date (as shown in app)',
-  'Group (as shown in app)',
-  'Mine/Zone (as shown in app)',
-  'Total Trips (as shown in app)',
-  'Description',
-  'Submitted At (ISO)',
-  'Submission Source',
-  'Local ID',
-  'Firestore ID',
-  'Report Date (ISO)',
-  'Report Date (Local)',
-  'Report Time (Local)',
-];
-
-const List<String> _detailsBaseHeaders = [
-  'Submitted At (ISO)',
-  'Submission Source',
-  'Local ID',
-  'Report Date (ISO)',
-  'Report Type',
-  'Group',
-];
-
-List<Object?> _detailsBaseRow(
-  String savedAt,
-  String action,
-  Report report,
-  String reportDateIso,
-) {
-  return [
-    savedAt,
-    action,
-    report.id?.toString() ?? '',
-    reportDateIso,
-    report.type,
-    report.group,
-  ];
 }
 
 class _ReportPayload {

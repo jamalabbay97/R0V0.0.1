@@ -1,72 +1,226 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:r0/l10n/app_localizations.dart';
-import 'package:r0/screens/r0_report_screen.dart';
 import 'package:r0/screens/activity_report_screen.dart';
 import 'package:r0/screens/daily_report_screen.dart';
-import 'package:r0/screens/truck_tracking_screen.dart';
+import 'package:r0/screens/google_sheets_reports_screen.dart';
 import 'package:r0/screens/machines_equipment_stopped_screen.dart';
+import 'package:r0/screens/r0_report_screen.dart';
 import 'package:r0/screens/reports_screen.dart';
 import 'package:r0/screens/settings_screen.dart';
+import 'package:r0/screens/truck_tracking_screen.dart';
 import 'package:r0/widgets/custom_widgets.dart';
 import 'package:r0/widgets/logo_widget.dart';
 import 'package:r0/theme.dart';
 
-/// Home Dashboard Screen
+/// Home Dashboard Screen with horizontal swipe navigation.
 ///
 /// Displays the main dashboard with navigation cards to different report types
 /// and the reports archive. Follows the OCP Reports UI Design Specification.
-class HomeScreen extends StatelessWidget {
+/// Swipe left on the main dashboard to open Google Sheets reports explorer.
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+
+  Future<void> _jumpToPage(int page) async {
+    if (_currentPage == page) {
+      return;
+    }
+    await _pageController.animateToPage(
+      page,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-
-    // Get current date for display
-    final now = DateTime.now();
-    final dateStr = "${now.day}/${now.month}/${now.year}";
-
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: SafeArea(
-        child: Center(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 1200),
-            child: Column(
-              children: [
-                // Header with OCP Logo and Title
-                _buildHeader(context, theme, dateStr, l10n),
+      body: Stack(
+        children: [
+          ScrollConfiguration(
+            behavior: const MaterialScrollBehavior().copyWith(
+              dragDevices: {
+                PointerDeviceKind.touch,
+                PointerDeviceKind.mouse,
+                PointerDeviceKind.stylus,
+              },
+            ),
+            child: PageView(
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentPage = index;
+                });
+              },
+              children: const [
+                _HomeDashboardPage(),
+                GoogleSheetsReportsScreen(),
+              ],
+            ),
+          ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: _PageSwitcher(
+                  currentPage: _currentPage,
+                  onSelectPage: _jumpToPage,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-                // Scrollable report cards grid
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.availableReports,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.7),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildReportCardsGrid(context, l10n, theme),
-                      ],
-                    ),
+class _PageSwitcher extends StatelessWidget {
+  const _PageSwitcher({
+    required this.currentPage,
+    required this.onSelectPage,
+  });
+
+  final int currentPage;
+  final ValueChanged<int> onSelectPage;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final segments = ['Dashboard', 'Sheets'];
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(
+          segments.length,
+          (index) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(999),
+              onTap: () => onSelectPage(index),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  color: index == currentPage
+                      ? theme.colorScheme.primary
+                      : Colors.transparent,
+                ),
+                child: Text(
+                  segments[index],
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: index == currentPage
+                        ? theme.colorScheme.onPrimary
+                        : theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),
       ),
     );
   }
+}
 
-  /// Builds the header section with logo and title
+class _HomeDashboardPage extends StatelessWidget {
+  const _HomeDashboardPage();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    final now = DateTime.now();
+    final dateStr = "${now.day}/${now.month}/${now.year}";
+
+    return SafeArea(
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: Column(
+            children: [
+              _buildHeader(context, theme, dateStr, l10n),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.availableReports,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.7),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.swipe_left_alt_rounded,
+                            size: 18,
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.6),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Swipe left (or tap Sheets above) to open Google Sheets reports',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _buildReportCardsGrid(context, l10n, theme),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildHeader(BuildContext context, ThemeData theme, String date,
       AppLocalizations l10n) {
     return Container(
@@ -85,71 +239,60 @@ class HomeScreen extends StatelessWidget {
           bottomRight: Radius.circular(24),
         ),
       ),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              // OCP Logo
-              Container(
-                width: 58,
-                height: 58,
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: AppColors.backgroundLight,
-                  borderRadius: BorderRadius.circular(14),
+          Container(
+            width: 58,
+            height: 58,
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: AppColors.backgroundLight,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const OcpLogo(size: 48),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.ocpReports,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                child: const OcpLogo(size: 48),
-              ),
-              const SizedBox(width: 12),
-
-              // Title and Date
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.ocpReports,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: theme.colorScheme.onSurface,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      date,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color:
-                            theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
+                Text(
+                  date,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
                 ),
-              ),
-
-              // Settings button
-              IconButton(
-                icon: const Icon(Icons.settings_outlined),
-                style: IconButton.styleFrom(
-                  backgroundColor: AppColors.backgroundLight,
-                  foregroundColor: theme.colorScheme.primary,
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            style: IconButton.styleFrom(
+              backgroundColor: AppColors.backgroundLight,
+              foregroundColor: theme.colorScheme.primary,
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
                 ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SettingsScreen(),
-                    ),
-                  );
-                },
-                tooltip: l10n.settingsTooltip,
-              ),
-            ],
+              );
+            },
+            tooltip: l10n.settingsTooltip,
           ),
         ],
       ),
     );
   }
 
-  /// Builds the grid of report cards
   Widget _buildReportCardsGrid(
     BuildContext context,
     AppLocalizations l10n,
@@ -181,7 +324,7 @@ class HomeScreen extends StatelessWidget {
         title: l10n.truckTracking,
         description: l10n.truckTrackingDescription,
         icon: Icons.local_shipping_outlined,
-        color: const Color(0xFF1976D2), // Blue
+        color: const Color(0xFF1976D2),
         onTap: () => _navigateToTruckTracking(context),
       ),
       _ReportCardData(
@@ -195,12 +338,11 @@ class HomeScreen extends StatelessWidget {
         title: l10n.reportsArchive,
         description: l10n.reportsArchiveDescription,
         icon: Icons.archive_outlined,
-        color: const Color(0xFF757575), // Grey
+        color: const Color(0xFF757575),
         onTap: () => _navigateToReportsArchive(context),
       ),
     ];
 
-    // Responsive grid layout calculation
     final screenWidth = MediaQuery.of(context).size.width;
     int crossAxisCount = 2;
     double childAspectRatio = 0.85;
@@ -232,7 +374,6 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  /// Builds a single report card
   Widget _buildReportCard(
     BuildContext context,
     _ReportCardData cardData,
@@ -244,7 +385,6 @@ class HomeScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Icon with colored background
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -258,8 +398,6 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           const Spacer(),
-
-          // Title
           Text(
             cardData.title,
             style: theme.textTheme.titleMedium?.copyWith(
@@ -269,8 +407,6 @@ class HomeScreen extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
-
-          // Description
           Text(
             cardData.description,
             style: theme.textTheme.bodySmall?.copyWith(
@@ -284,7 +420,6 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // Navigation methods
   void _navigateToR0Report(BuildContext context) {
     Navigator.push(
       context,
@@ -342,7 +477,6 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-/// Data class for report card configuration
 class _ReportCardData {
   final String title;
   final String description;
