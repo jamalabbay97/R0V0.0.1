@@ -49,6 +49,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = MediaQuery.of(context).size.width < 640;
+
     return Scaffold(
       body: Stack(
         children: [
@@ -81,6 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: _PageSwitcher(
                   currentPage: _currentPage,
                   onSelectPage: _jumpToPage,
+                  compact: isCompact,
                 ),
               ),
             ),
@@ -95,14 +98,58 @@ class _PageSwitcher extends StatelessWidget {
   const _PageSwitcher({
     required this.currentPage,
     required this.onSelectPage,
+    required this.compact,
   });
 
   final int currentPage;
   final ValueChanged<int> onSelectPage;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    if (compact) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface.withValues(alpha: 0.72),
+          borderRadius: BorderRadius.circular(999),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(2, (index) {
+            final isSelected = index == currentPage;
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: GestureDetector(
+                onTap: () => onSelectPage(index),
+                behavior: HitTestBehavior.opaque,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  width: isSelected ? 34 : 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurface.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+      );
+    }
+
     final segments = ['Dashboard', 'Sheets'];
 
     return Container(
