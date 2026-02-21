@@ -150,7 +150,7 @@ class _PageSwitcher extends StatelessWidget {
       );
     }
 
-    final segments = ['Dashboard', 'Sheets'];
+    final segments = ['Dashboard', 'Archive'];
 
     return Container(
       padding: const EdgeInsets.all(4),

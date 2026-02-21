@@ -966,6 +966,8 @@ class R0ReportState extends State<R0Report> {
     DateTime startTime = DateTime.now();
     DateTime endTime = DateTime.now();
     final arretCategories = _currentArretCategories();
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final spinnerTextColor = isDarkMode ? Colors.white : Colors.black;
 
     showDialog(
       context: context,
@@ -1025,12 +1027,10 @@ class R0ReportState extends State<R0Report> {
                               is24HourMode: true,
                               isShowSeconds: false,
                               minutesInterval: 1,
-                              normalTextStyle: const TextStyle(
-                                  fontSize: 18,
-                                  color: Color.fromARGB(255, 0, 0, 0)),
-                              highlightedTextStyle: const TextStyle(
-                                  fontSize: 24,
-                                  color: Color.fromARGB(255, 0, 0, 0)),
+                              normalTextStyle: TextStyle(
+                                  fontSize: 18, color: spinnerTextColor),
+                              highlightedTextStyle: TextStyle(
+                                  fontSize: 24, color: spinnerTextColor),
                               spacing: 50,
                               itemHeight: 60,
                               isForce2Digits: true,
@@ -1083,12 +1083,10 @@ class R0ReportState extends State<R0Report> {
                               is24HourMode: true,
                               isShowSeconds: false,
                               minutesInterval: 1,
-                              normalTextStyle: const TextStyle(
-                                  fontSize: 18,
-                                  color: Color.fromARGB(255, 0, 0, 0)),
-                              highlightedTextStyle: const TextStyle(
-                                  fontSize: 24,
-                                  color: Color.fromARGB(255, 0, 0, 0)),
+                              normalTextStyle: TextStyle(
+                                  fontSize: 18, color: spinnerTextColor),
+                              highlightedTextStyle: TextStyle(
+                                  fontSize: 24, color: spinnerTextColor),
                               spacing: 50,
                               itemHeight: 60,
                               isForce2Digits: true,
