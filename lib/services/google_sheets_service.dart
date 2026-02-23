@@ -2385,6 +2385,19 @@ class GoogleSheetsService {
       }
 
       final headers = _normalizeHeaders(rows[headerIndex]);
+
+      if (_isTemplateGroupedSheet(headers)) {
+        records.addAll(
+          _buildGroupedTemplateRecords(
+            sheetName: sheetName,
+            rows: rows,
+            headerIndex: headerIndex,
+            headers: headers,
+          ),
+        );
+        continue;
+      }
+
       for (var rowIndex = headerIndex + 1; rowIndex < rows.length; rowIndex++) {
         final row = rows[rowIndex];
         if (!_hasContent(row)) {
@@ -2410,6 +2423,92 @@ class GoogleSheetsService {
     _recordsCache = records;
     _recordsCacheAt = DateTime.now();
     return List<GoogleSheetRecord>.from(records);
+  }
+
+  bool _isTemplateGroupedSheet(List<String> headers) {
+    final normalized = headers.map(_normalizeHeaderKey).toSet();
+    return normalized.contains('date') &&
+        normalized.contains('arret') &&
+        normalized.contains('debutdarret') &&
+        normalized.contains('findarret');
+  }
+
+  List<GoogleSheetRecord> _buildGroupedTemplateRecords({
+    required String sheetName,
+    required List<List<Object?>> rows,
+    required int headerIndex,
+    required List<String> headers,
+  }) {
+    final records = <GoogleSheetRecord>[];
+    _TemplateGroupedRecordBuilder? current;
+
+    for (var rowIndex = headerIndex + 1; rowIndex < rows.length; rowIndex++) {
+      final row = rows[rowIndex];
+      if (!_hasContent(row)) {
+        continue;
+      }
+
+      final details = <String, String>{};
+      for (var i = 0; i < headers.length; i++) {
+        final value = i < row.length ? row[i]?.toString().trim() ?? '' : '';
+        details[headers[i]] = value;
+      }
+
+      final isNewGroup = _isTemplateGroupStart(details);
+      if (isNewGroup) {
+        if (current != null) {
+          records.add(current.build(sheetName: sheetName));
+        }
+        current = _TemplateGroupedRecordBuilder(
+          anchorRowNumber: rowIndex + 1,
+          baseDetails: Map<String, String>.from(details),
+        );
+      }
+
+      if (current == null) {
+        continue;
+      }
+
+      current.addRow(details);
+    }
+
+    if (current != null) {
+      records.add(current.build(sheetName: sheetName));
+    }
+
+    return records;
+  }
+
+  bool _isTemplateGroupStart(Map<String, String> details) {
+    const startCandidateHeaders = [
+      'Date',
+      'Mine',
+      'Zone',
+      'Sortie',
+      'Poste',
+      'Machine/Engins',
+      'Model',
+    ];
+
+    for (final key in startCandidateHeaders) {
+      if ((details[key] ?? '').trim().isNotEmpty) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  String _normalizeHeaderKey(String value) {
+    final lower = value.toLowerCase();
+    final normalized = lower
+        .replaceAll('é', 'e')
+        .replaceAll('è', 'e')
+        .replaceAll('ê', 'e')
+        .replaceAll('à', 'a')
+        .replaceAll('ù', 'u')
+        .replaceAll('ô', 'o')
+        .replaceAll('ï', 'i');
+    return normalized.replaceAll(RegExp(r"[^a-z0-9]"), '');
   }
 
   int _detectHeaderRowIndex(List<List<Object?>> rows) {
@@ -2661,6 +2760,88 @@ class GoogleSheetRecord {
     }
 
     return parts.join(' ').toLowerCase();
+  }
+}
+
+class _TemplateGroupedRecordBuilder {
+  _TemplateGroupedRecordBuilder({
+    required this.anchorRowNumber,
+    required Map<String, String> baseDetails,
+  }) : _details = Map<String, String>.from(baseDetails);
+
+  final int anchorRowNumber;
+  final Map<String, String> _details;
+  final List<String> _stopReasons = [];
+  final List<String> _stopTimes = [];
+
+  void addRow(Map<String, String> rowDetails) {
+    const inheritKeys = [
+      'Date',
+      'Mine',
+      'Zone',
+      'Sortie',
+      'Poste',
+      'Machine/Engins',
+      'Catégorie',
+      'Model',
+      'Début Compteur',
+      'Fin Compteur',
+      'H.M',
+      'H.A',
+      'Tonnage',
+      'Metrage Fore',
+      'Ir de Trous Fore',
+      'Nr Voyages',
+      'M Decapages',
+      'Nr T.K.U',
+      'Rendment',
+      'Chantier',
+      'Temps',
+      'Imputation',
+      'Conducteur',
+      'Graisseur',
+      'Matricules',
+      'Tricone',
+      'Gasoil',
+      'Cree par',
+      'Cree en',
+    ];
+
+    for (final key in inheritKeys) {
+      final value = (rowDetails[key] ?? '').trim();
+      if (value.isNotEmpty) {
+        _details[key] = value;
+      }
+    }
+
+    final stopReason = (rowDetails['Arrêt'] ?? '').trim();
+    final stopStart = (rowDetails["Début d'Arrêt"] ?? '').trim();
+    final stopEnd = (rowDetails["Fin d'Arrêt"] ?? '').trim();
+    if (stopReason.isNotEmpty || stopStart.isNotEmpty || stopEnd.isNotEmpty) {
+      if (stopReason.isNotEmpty) {
+        _stopReasons.add(stopReason);
+      }
+      if (stopStart.isNotEmpty || stopEnd.isNotEmpty) {
+        final separator =
+            (stopStart.isNotEmpty && stopEnd.isNotEmpty) ? ' - ' : '';
+        _stopTimes.add('$stopStart$separator$stopEnd'.trim());
+      }
+    }
+  }
+
+  GoogleSheetRecord build({required String sheetName}) {
+    if (_stopReasons.isNotEmpty) {
+      _details['Stops Details'] = _stopReasons.join('\n');
+    }
+    if (_stopTimes.isNotEmpty) {
+      _details['Stop Times'] = _stopTimes.join('\n');
+    }
+
+    return GoogleSheetRecord.fromRaw(
+      sheetName: sheetName,
+      rowNumber: anchorRowNumber,
+      details: _details,
+    );
   }
 }
 

@@ -149,7 +149,7 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Google Sheets Reports',
+                    'Reports',
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
