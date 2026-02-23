@@ -2389,6 +2389,7 @@ class GoogleSheetsService {
       }
 
       final headers = _normalizeHeaders(rows[headerIndex]);
+      DateTime? inheritedDate;
 
       if (_isTemplateGroupedSheet(headers)) {
         records.addAll(
@@ -2414,11 +2415,21 @@ class GoogleSheetsService {
           details[headers[i]] = value;
         }
 
+        final explicitDate = GoogleSheetRecord.resolveDateFromDetails(details);
+        if (explicitDate != null) {
+          inheritedDate = explicitDate;
+        }
+
+        if (explicitDate == null && inheritedDate != null) {
+          _injectInheritedDate(details, inheritedDate);
+        }
+
         records.add(
           GoogleSheetRecord.fromRaw(
             sheetName: sheetName,
             rowNumber: rowIndex + 1,
             details: details,
+            fallbackDate: inheritedDate,
           ),
         );
       }
@@ -2612,6 +2623,16 @@ class GoogleSheetsService {
     return headers;
   }
 
+  void _injectInheritedDate(Map<String, String> details, DateTime date) {
+    for (final entry in details.entries) {
+      if (entry.key.toLowerCase().contains('date') &&
+          entry.value.trim().isEmpty) {
+        details[entry.key] = DateFormat('yyyy-MM-dd').format(date);
+        return;
+      }
+    }
+  }
+
   String _resolveDisplayTitle(Report report) {
     final typeLower = report.type.toLowerCase();
     if (typeLower == 'activity tnb') {
@@ -2712,9 +2733,10 @@ class GoogleSheetRecord {
     required String sheetName,
     required int rowNumber,
     required Map<String, String> details,
+    DateTime? fallbackDate,
   }) {
     final title = _resolveTitle(details);
-    final date = _resolveDate(details);
+    final date = resolveDateFromDetails(details) ?? fallbackDate;
 
     return GoogleSheetRecord(
       sheetName: sheetName,
@@ -2762,7 +2784,7 @@ class GoogleSheetRecord {
     return 'Untitled report';
   }
 
-  static DateTime? _resolveDate(Map<String, String> details) {
+  static DateTime? resolveDateFromDetails(Map<String, String> details) {
     for (final entry in details.entries) {
       if (entry.key.toLowerCase().contains('date')) {
         final parsed = DateTime.tryParse(entry.value);

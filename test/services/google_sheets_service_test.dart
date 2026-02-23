@@ -67,4 +67,41 @@ void main() {
       expect(service.detectHeaderRowIndexForTest(rows), 2);
     });
   });
+
+  group('GoogleSheetRecord date inheritance', () {
+    test('uses fallback date when row date is blank', () {
+      final inherited = DateTime(2026, 2, 14);
+      final record = GoogleSheetRecord.fromRaw(
+        sheetName: 'TSUD',
+        rowNumber: 8,
+        details: {
+          'Date': '',
+          'Arrêt': 'Panne hydraulique',
+        },
+        fallbackDate: inherited,
+      );
+
+      expect(record.date, inherited);
+      expect(record.dateLabel, '2026-02-14');
+      expect(record.searchableText, contains('2026-02-14'));
+    });
+
+    test('keeps explicit row date when available', () {
+      final fallback = DateTime(2026, 2, 14);
+      final record = GoogleSheetRecord.fromRaw(
+        sheetName: 'TSUD',
+        rowNumber: 9,
+        details: {
+          'Date': '2026-02-15',
+          'Arrêt': 'Stand-by',
+        },
+        fallbackDate: fallback,
+      );
+
+      expect(record.date, DateTime(2026, 2, 15));
+      expect(record.dateLabel, '2026-02-15');
+      expect(record.searchableText, contains('2026-02-15'));
+      expect(record.searchableText, isNot(contains('2026-02-14')));
+    });
+  });
 }
