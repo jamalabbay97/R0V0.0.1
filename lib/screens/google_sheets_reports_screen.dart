@@ -353,36 +353,204 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
                 ),
                 const Divider(height: 24),
                 Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                    itemCount: record.details.length,
-                    itemBuilder: (context, index) {
-                      final entry = record.details.entries.elementAt(index);
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              entry.key,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelMedium
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(entry.value.isEmpty ? '-' : entry.value),
-                          ],
+                  child: _isR0Record(record)
+                      ? _buildR0DetailsView(context, record)
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                          itemCount: record.details.length,
+                          itemBuilder: (context, index) {
+                            final entry =
+                                record.details.entries.elementAt(index);
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 14),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    entry.key,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(entry.value.isEmpty ? '-' : entry.value),
+                                ],
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
                 ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  bool _isR0Record(GoogleSheetRecord record) =>
+      record.sheetName.toLowerCase().contains('r0');
+
+  Widget _buildR0DetailsView(BuildContext context, GoogleSheetRecord record) {
+    final details = record.details;
+    final date = _field(details, ['Date', 'Date (as shown in app)']);
+    final mine = _field(details, ['Mine']);
+    final sortie = _field(details, ['Sortie']);
+    final engine = _field(details, ['Machine/Engins', 'Category']);
+    final type = _field(details, ['Type']);
+    final model = _field(details, ['Model']);
+    final shift = _field(details, ['Poste']);
+    final counterStart = _field(details, ['Début compteur', 'Compteurs Durée']);
+    final counterEnd = _field(details, ['Fin compteur', 'Compteurs Note']);
+
+    final stopReasons = _extractStopReasons(details);
+    final stopTimes = _extractStopTimes(details);
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      children: [
+        _r0Row('Date', date),
+        _r0Row('Mine/Exit', '$mine / $sortie'),
+        _r0Row('Engine', '$engine - $type $model'.trim()),
+        _r0Row('Shift', shift),
+        _r0Row('Counter', '$counterStart -> $counterEnd'),
+        const Divider(height: 24),
+        Center(
+          child: Text('Stops Details',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(height: 8),
+        ..._buildStopsRows(stopReasons, stopTimes),
+        const Divider(height: 24),
+        _r0Row('H.M', _field(details, ['H.M'])),
+        _r0Row('H.A', _field(details, ['H.A'])),
+        const Divider(height: 24),
+        _r0Row('Drilling m', _field(details, ['Métrage foré'])),
+        _r0Row('Nr Drilled', _field(details, ['Nr de Trous Forés'])),
+        _r0Row('Nr Trips', _field(details, ['Nr de Voyages'])),
+        _r0Row('M³ Strippe', _field(details, ['M³ Décapages'])),
+        _r0Row('Tonnage', _field(details, ['Tonnage'])),
+        _r0Row('Nr T.K.U', _field(details, ['Nr T.K.U', 'Nombre T.K.U'])),
+        _r0Row('Efficiency', _field(details, ['Rendement', 'Rendement %'])),
+        const Divider(height: 24),
+        _r0Row('Conductor', _field(details, ['Conducteur'])),
+        _r0Row('Greaser', _field(details, ['Graisseur'])),
+        _r0Row('Serial Numbers', _field(details, ['Matricules'])),
+        const Divider(height: 24),
+        _r0Row('Worksite', _field(details, ['Chantier'])),
+        _r0Row('Duration', _field(details, ['Temps'])),
+        _r0Row('Imputation', _field(details, ['Imputation'])),
+        const Divider(height: 24),
+        _r0Row('Tricone', _field(details, ['Tricone'])),
+        _r0Row('Diesel', _field(details, ['Gasoil'])),
+      ],
+    );
+  }
+
+  List<Widget> _buildStopsRows(List<String> reasons, List<String> times) {
+    final rows = <Widget>[];
+    final itemCount =
+        reasons.length > times.length ? reasons.length : times.length;
+    if (itemCount == 0) {
+      return [_r0Row('-', '-')];
+    }
+    for (var i = 0; i < itemCount; i++) {
+      final reason = i < reasons.length ? reasons[i] : '-';
+      final time = i < times.length ? times[i] : '-';
+      rows.add(_r0Row(reason, time));
+    }
+    return rows;
+  }
+
+  List<String> _extractStopReasons(Map<String, String> details) {
+    final grouped = _field(details, ['Stops Details']);
+    if (grouped != '-') {
+      return grouped
+          .split('\n')
+          .map((line) => line.trim())
+          .where((line) => line.isNotEmpty)
+          .toList();
+    }
+
+    final reason = _field(details, ['Arrêt', 'Arret']);
+    if (reason == '-') return const [];
+    final category = _field(details, ['Catégorie d\'arrêt', 'Category']);
+    if (category == '-') {
+      return [reason];
+    }
+    return ['$category / $reason'];
+  }
+
+  List<String> _extractStopTimes(Map<String, String> details) {
+    final grouped = _field(details, ['Stop Times']);
+    if (grouped != '-') {
+      return grouped
+          .split('\n')
+          .map((line) => line.trim())
+          .where((line) => line.isNotEmpty)
+          .toList();
+    }
+
+    final start = _field(details, ['Début d\'arrêt', 'Start']);
+    final end = _field(details, ['Fin d\'arrêt', 'End']);
+    if (start == '-' && end == '-') {
+      return const [];
+    }
+    if (start != '-' && end != '-') {
+      return ['$start - $end'];
+    }
+    return [start != '-' ? start : end];
+  }
+
+  String _field(Map<String, String> details, List<String> keys) {
+    for (final expected in keys) {
+      final expectedNorm = _normalizeKey(expected);
+      for (final entry in details.entries) {
+        if (_normalizeKey(entry.key) == expectedNorm) {
+          final value = entry.value.trim();
+          if (value.isNotEmpty) {
+            return value;
+          }
+        }
+      }
+    }
+    return '-';
+  }
+
+  String _normalizeKey(String key) => key
+      .toLowerCase()
+      .replaceAll('é', 'e')
+      .replaceAll('è', 'e')
+      .replaceAll('ê', 'e')
+      .replaceAll('à', 'a')
+      .replaceAll('ù', 'u')
+      .replaceAll('ô', 'o')
+      .replaceAll('ï', 'i')
+      .replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+  Widget _r0Row(String label, String value) {
+    final normalizedValue = value.trim().isEmpty ? '-' : value;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: Text(label)),
+          const SizedBox(width: 16),
+          Flexible(
+            child: Text(
+              normalizedValue,
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
