@@ -2373,6 +2373,17 @@ class GoogleSheetsService {
         continue;
       }
 
+      final templateHeaders = _templateHeadersForSheet(sheetName);
+      if (templateHeaders != null) {
+        final templateRecords = await _fetchTemplateSheetRecords(
+          api,
+          sheetName: sheetName,
+          headers: templateHeaders,
+        );
+        records.addAll(templateRecords);
+        continue;
+      }
+
       final response = await api.spreadsheets.values.get(
         _spreadsheetId,
         '$sheetName!A1:AZ',
@@ -2440,6 +2451,139 @@ class GoogleSheetsService {
     return List<GoogleSheetRecord>.from(records);
   }
 
+  Future<List<GoogleSheetRecord>> _fetchTemplateSheetRecords(
+    SheetsApi api, {
+    required String sheetName,
+    required List<String> headers,
+  }) async {
+    final response = await api.spreadsheets.values.get(
+      _spreadsheetId,
+      '$sheetName!A7:AZ',
+    );
+
+    final rows = response.values ?? const [];
+    if (rows.isEmpty) {
+      return const [];
+    }
+
+    return _buildGroupedTemplateRecords(
+      sheetName: sheetName,
+      rows: rows,
+      headerIndex: -1,
+      headers: headers,
+      rowOffset: 7,
+    );
+  }
+
+  List<String>? _templateHeadersForSheet(String sheetName) {
+    switch (sheetName) {
+      case _activitySheet:
+        return const [
+          'Date',
+          'Arrêt',
+          'Durée d\'arrêt',
+          'T H.A',
+          'T H.M',
+          'Créé par',
+          'Separator',
+          'Date Counter',
+          'Compteur Vibrateur',
+          'T H.V',
+          'Compteur Liaison',
+          'T H.L',
+          'Stock',
+        ];
+      case _dailySheet:
+        return const [
+          'Date',
+          'Module',
+          'Nature',
+          'Durée d\'arrêt',
+          'Durée marche',
+          'Créé par',
+          'Separator',
+          'Date Stock',
+          'Stock',
+        ];
+      case _r0Sheet:
+        return const [
+          'Date',
+          'Mine',
+          'Zone',
+          'Sortie',
+          'Poste',
+          'Machine/Engins',
+          'Type',
+          'Model',
+          'Début compteur',
+          'Fin compteur',
+          'H.M',
+          'Catégorie d\'arrêt',
+          'Arrêt',
+          'Début d\'arrêt',
+          'Fin d\'arrêt',
+          'H.A',
+          'Tonnage',
+          'Métrage foré',
+          'Nr de Trous Forés',
+          'Nr de Voyages',
+          'M³ Décapages',
+          'Nr T.K.U',
+          'Rendement',
+          'Chantier',
+          'Temps',
+          'Imputation',
+          'Conducteur',
+          'Graisseur',
+          'Matricules',
+          'Gasoil',
+          'Cree par',
+        ];
+      case _truckSheet:
+        return const [
+          'Date',
+          'Mine',
+          'Sortie',
+          'Machine/Engins',
+          'Distance',
+          'Qualité',
+          'Opération',
+          'P pointeur',
+          'Poste',
+          'Camions',
+          'Conducteur',
+          'Voyage 1',
+          'Voyage 2',
+          'Voyage 3',
+          'Voyage 4',
+          'Voyage 5',
+          'Voyage 6',
+          'Voyage 7',
+          'Voyage 8',
+          'Voyage 9',
+          'Voyage 10',
+          'Voyage 11',
+          'Voyage 12',
+          'Total de Voyages Camions',
+          'Total de Voyages par Equipment',
+          'Total de Voyages',
+          'Créé par',
+          'Crée en',
+        ];
+      case _machinesSheet:
+        return const [
+          'Date',
+          'Catégorie',
+          'Sous-catégorie',
+          'Équipement',
+          'Raison',
+          'Créé par',
+        ];
+      default:
+        return null;
+    }
+  }
+
   bool _isTemplateGroupedSheet(List<String> headers) {
     final normalized = headers.map(_normalizeHeaderKey).toSet();
     return normalized.contains('date') &&
@@ -2453,6 +2597,7 @@ class GoogleSheetsService {
     required List<List<Object?>> rows,
     required int headerIndex,
     required List<String> headers,
+    int rowOffset = 1,
   }) {
     final records = <GoogleSheetRecord>[];
     _TemplateGroupedRecordBuilder? current;
@@ -2475,7 +2620,7 @@ class GoogleSheetsService {
           records.add(current.build(sheetName: sheetName));
         }
         current = _TemplateGroupedRecordBuilder(
-          anchorRowNumber: rowIndex + 1,
+          anchorRowNumber: rowIndex + rowOffset,
           baseDetails: Map<String, String>.from(details),
         );
       }
