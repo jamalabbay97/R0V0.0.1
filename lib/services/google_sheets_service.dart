@@ -2340,6 +2340,10 @@ class GoogleSheetsService {
   @visibleForTesting
   String normalizePosteForTest(Object? value) => _normalizePosteValue(value);
 
+  @visibleForTesting
+  int detectHeaderRowIndexForTest(List<List<Object?>> rows) =>
+      _detectHeaderRowIndex(rows);
+
   /// Reads all sheets from Google Sheets and returns normalized searchable rows.
   ///
   /// This is used by the in-app explorer page to browse everything recorded,
@@ -2513,22 +2517,60 @@ class GoogleSheetsService {
 
   int _detectHeaderRowIndex(List<List<Object?>> rows) {
     final candidates = rows.take(10).toList();
+    const headerKeywords = {
+      'date',
+      'mine',
+      'zone',
+      'sortie',
+      'poste',
+      'machineengins',
+      'model',
+      'debutcompteur',
+      'fincompteur',
+      'hm',
+      'categoriedarret',
+      'arret',
+      'debutdarret',
+      'findarret',
+      'ha',
+      'tonnage',
+      'nrvoyages',
+      'nrtku',
+      'imputation',
+      'conducteur',
+      'graisseur',
+      'matricules',
+      'gasoil',
+      'creepar',
+      'creen',
+    };
+
     var bestIndex = -1;
     var bestScore = 0;
 
     for (var i = 0; i < candidates.length; i++) {
       final row = candidates[i];
-      var score = 0;
+      var nonEmptyCells = 0;
+      var alphaCells = 0;
+      var headerMatches = 0;
+
       for (final cell in row) {
         final text = cell?.toString().trim() ?? '';
         if (text.isEmpty) {
           continue;
         }
-        score += 1;
+        nonEmptyCells += 1;
         if (RegExp(r'[A-Za-zÀ-ÿ]').hasMatch(text)) {
-          score += 1;
+          alphaCells += 1;
+        }
+
+        final normalized = _normalizeHeaderKey(text);
+        if (headerKeywords.contains(normalized)) {
+          headerMatches += 1;
         }
       }
+
+      final score = (headerMatches * 100) + (alphaCells * 2) + nonEmptyCells;
 
       if (score > bestScore) {
         bestScore = score;

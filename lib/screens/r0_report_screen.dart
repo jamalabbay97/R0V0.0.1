@@ -1356,6 +1356,8 @@ class R0ReportState extends State<R0Report> {
         Text(l10n.summary,
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 24),
+        _row("Date",
+            "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}"),
         _row(l10n.mineSortie,
             "${formData.selectedMine} / ${formData.selectedSortie}"),
         _row(l10n.engin,

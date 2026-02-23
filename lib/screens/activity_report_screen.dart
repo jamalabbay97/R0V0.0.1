@@ -873,6 +873,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
         const Text("Récapitulatif",
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 24),
+        _row("Date",
+            "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}"),
         Card(
           margin: EdgeInsets.zero,
           child: Padding(
@@ -885,18 +887,16 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const Divider(height: 16),
-                _buildSummaryRow(
-                    'T H.A:', formatMinutesToHoursMinutes(totalDowntime)),
-                _buildSummaryRow(
-                    'T H.M:', formatMinutesToHoursMinutes(operatingTime)),
-                _buildSummaryRow('T H.V:',
+                _row('T H.A:', formatMinutesToHoursMinutes(totalDowntime)),
+                _row('T H.M:', formatMinutesToHoursMinutes(operatingTime)),
+                _row('T H.V:',
                     formatMinutesToHoursMinutes(totalVibratorMinutes)),
-                _buildSummaryRow(
+                _row(
                     'T H.L:', formatMinutesToHoursMinutes(totalLiaisonMinutes)),
                 const SizedBox(height: 8),
-                _buildSummaryRow('T Nr.A:', stops.length.toString()),
-                _buildSummaryRow('T Nr.V:', vibratorCounters.length.toString()),
-                _buildSummaryRow('T Nr.L:', liaisonCounters.length.toString()),
+                _row('T Nr.A:', stops.length.toString()),
+                _row('T Nr.V:', vibratorCounters.length.toString()),
+                _row('T Nr.L:', liaisonCounters.length.toString()),
               ],
             ),
           ),
@@ -1045,7 +1045,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     );
   }
 
-  Widget _buildSummaryRow(String label, String value) {
+  Widget _row(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
