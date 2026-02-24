@@ -246,11 +246,13 @@ class _HomeDashboardPage extends StatelessWidget {
                                 .withValues(alpha: 0.6),
                           ),
                           const SizedBox(width: 6),
-                          Text(
-                            'Swipe left (or tap Sheets above) to open Google Sheets reports',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.6),
+                          Expanded(
+                            child: Text(
+                              'Swipe left (or tap Sheets above) to open reports',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.6),
+                              ),
                             ),
                           ),
                         ],

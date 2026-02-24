@@ -259,24 +259,31 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
     if (_error != null) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 34),
+              Icon(
+                Icons.cloud_off_rounded,
+                size: 64,
+                color: theme.colorScheme.error.withValues(alpha: 0.5),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Connection Error',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: theme.colorScheme.error,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 8),
               Text(
-                'Failed to load records from Google Sheets.',
-                style: theme.textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 4),
-              Text(
                 _error!,
-                style: theme.textTheme.bodySmall,
+                style: theme.textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: () => _loadRecords(forceRefresh: true),
                 icon: const Icon(Icons.refresh_rounded),
@@ -289,38 +296,147 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
     }
 
     if (_filteredRecords.isEmpty) {
-      return const Center(
-        child: Text('No records match your filters.'),
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.search_off_rounded,
+              size: 64,
+              color: theme.disabledColor.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No records found',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.disabledColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Try adjusting your filters',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.disabledColor,
+              ),
+            ),
+          ],
+        ),
       );
     }
 
     return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 20),
       itemCount: _filteredRecords.length,
       itemBuilder: (context, index) {
         final record = _filteredRecords[index];
+        final typeInfo = _getRecordTypeInfo(record);
+
         return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: theme.dividerColor.withValues(alpha: 0.05),
+              width: 1,
+            ),
+          ),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           child: ListTile(
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            title: Text(
-              record.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '${record.sheetName} • ${record.dateLabel} • Row ${record.rowNumber}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            leading: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: typeInfo.color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                typeInfo.icon,
+                color: typeInfo.color,
+                size: 24,
               ),
             ),
-            trailing: const Icon(Icons.chevron_right_rounded),
+            title: Text(
+              record.title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 4),
+                Text(
+                  '${record.sheetName} • Row ${record.rowNumber}',
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      size: 12,
+                      color: theme.colorScheme.primary.withValues(alpha: 0.6),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      record.dateLabel,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            trailing: Icon(
+              Icons.chevron_right_rounded,
+              color: theme.disabledColor.withValues(alpha: 0.3),
+            ),
             onTap: () => _showRecordDetails(record),
           ),
         );
       },
+    );
+  }
+
+  _RecordTypeInfo _getRecordTypeInfo(GoogleSheetRecord record) {
+    if (_isR0Record(record)) {
+      return const _RecordTypeInfo(
+        icon: Icons.precision_manufacturing_rounded,
+        color: Colors.blue,
+      );
+    }
+    if (_isActivityRecord(record)) {
+      return const _RecordTypeInfo(
+        icon: Icons.pending_actions_rounded,
+        color: Colors.orange,
+      );
+    }
+    if (_isDailyRecord(record)) {
+      return const _RecordTypeInfo(
+        icon: Icons.summarize_rounded,
+        color: Colors.green,
+      );
+    }
+    if (_isTruckRecord(record)) {
+      return const _RecordTypeInfo(
+        icon: Icons.local_shipping_rounded,
+        color: Colors.deepPurple,
+      );
+    }
+    if (_isMachinesRecord(record)) {
+      return const _RecordTypeInfo(
+        icon: Icons.settings_rounded,
+        color: Colors.red,
+      );
+    }
+    return const _RecordTypeInfo(
+      icon: Icons.description_rounded,
+      color: Colors.grey,
     );
   }
 
@@ -336,50 +452,52 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Row(
                     children: [
-                      Text(
-                        record.title,
-                        style: Theme.of(context).textTheme.titleLarge,
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: _getRecordTypeInfo(record)
+                              .color
+                              .withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Icon(
+                          _getRecordTypeInfo(record).icon,
+                          color: _getRecordTypeInfo(record).color,
+                          size: 32,
+                        ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '${record.sheetName} • ${record.dateLabel} • Row ${record.rowNumber}',
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              record.title,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${record.sheetName} • ${record.dateLabel} • Row ${record.rowNumber}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
                 const Divider(height: 24),
                 Expanded(
-                  child: _isR0Record(record)
-                      ? _buildR0DetailsView(context, record)
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                          itemCount: record.details.length,
-                          itemBuilder: (context, index) {
-                            final entry =
-                                record.details.entries.elementAt(index);
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 14),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    entry.key,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelMedium
-                                        ?.copyWith(fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(entry.value.isEmpty ? '-' : entry.value),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+                  child: _buildDetailsView(context, record),
                 ),
               ],
             ),
@@ -389,8 +507,47 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
     );
   }
 
+  Widget _buildDetailsView(BuildContext context, GoogleSheetRecord record) {
+    if (_isR0Record(record)) {
+      return _buildR0DetailsView(context, record);
+    }
+    if (_isActivityRecord(record)) {
+      return _buildActivityDetailsView(context, record);
+    }
+    if (_isDailyRecord(record)) {
+      return _buildDailyDetailsView(context, record);
+    }
+    if (_isTruckRecord(record)) {
+      return _buildTruckDetailsView(context, record);
+    }
+    if (_isMachinesRecord(record)) {
+      return _buildMachinesDetailsView(context, record);
+    }
+    return _buildGenericFormattedDetailsView(record);
+  }
+
   bool _isR0Record(GoogleSheetRecord record) =>
       record.sheetName.toLowerCase().contains('r0');
+
+  bool _isActivityRecord(GoogleSheetRecord record) {
+    final name = record.sheetName.toLowerCase();
+    return name.contains('activity') || name.contains('tnb');
+  }
+
+  bool _isDailyRecord(GoogleSheetRecord record) {
+    final name = record.sheetName.toLowerCase();
+    return name.contains('daily') || name.contains('tsud');
+  }
+
+  bool _isTruckRecord(GoogleSheetRecord record) {
+    final name = record.sheetName.toLowerCase();
+    return name.contains('camion') || name.contains('truck');
+  }
+
+  bool _isMachinesRecord(GoogleSheetRecord record) {
+    final name = record.sheetName.toLowerCase();
+    return name.contains('engin') || name.contains('machine');
+  }
 
   Widget _buildR0DetailsView(BuildContext context, GoogleSheetRecord record) {
     final details = record.details;
@@ -416,14 +573,7 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
         _r0Row('Shift', shift),
         _r0Row('Counter', '$counterStart -> $counterEnd'),
         const Divider(height: 24),
-        Center(
-          child: Text('Stops Details',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold)),
-        ),
-        const SizedBox(height: 8),
+        _sectionTitle(context, 'Stops Details'),
         ..._buildStopsRows(stopReasons, stopTimes),
         const Divider(height: 24),
         _r0Row('H.M', _field(details, ['H.M'])),
@@ -448,6 +598,114 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
         _r0Row('Tricone', _field(details, ['Tricone'])),
         _r0Row('Diesel', _field(details, ['Gasoil'])),
       ],
+    );
+  }
+
+  Widget _buildActivityDetailsView(
+    BuildContext context,
+    GoogleSheetRecord record,
+  ) {
+    final details = record.details;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      children: [
+        _sectionTitle(context, 'Activity TNB Details'),
+        _r0Row('Date', _field(details, ['Date'])),
+        _r0Row('Stop', _field(details, ['Arrêt', 'Nature'])),
+        _r0Row('Duration', _field(details, ['Durée d\'arrêt', 'Duration'])),
+        const Divider(height: 24),
+        _r0Row('T H.A', _field(details, ['T H.A'])),
+        _r0Row('T H.M', _field(details, ['T H.M'])),
+        _r0Row('T H.V', _field(details, ['T H.V'])),
+        _r0Row('T H.L', _field(details, ['T H.L'])),
+        _r0Row('Stock', _field(details, ['Stock'])),
+      ],
+    );
+  }
+
+  Widget _buildDailyDetailsView(
+      BuildContext context, GoogleSheetRecord record) {
+    final details = record.details;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      children: [
+        _sectionTitle(context, 'Daily TSUD Details'),
+        _r0Row('Date', _field(details, ['Date'])),
+        _r0Row('Module', _field(details, ['Module'])),
+        _r0Row('Nature', _field(details, ['Nature'])),
+        _r0Row('Downtime', _field(details, ['Durée d\'arrêt'])),
+        _r0Row('Operating', _field(details, ['Durée marche'])),
+        _r0Row('Stock', _field(details, ['Stock'])),
+      ],
+    );
+  }
+
+  Widget _buildTruckDetailsView(
+      BuildContext context, GoogleSheetRecord record) {
+    final details = record.details;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      children: [
+        _sectionTitle(context, 'Truck Tracking Details'),
+        _r0Row('Date', _field(details, ['Date'])),
+        _r0Row('Mine/Exit',
+            '${_field(details, ['Mine'])} / ${_field(details, ['Sortie'])}'),
+        _r0Row('Equipment', _field(details, ['Machine/Engins'])),
+        _r0Row('Distance', _field(details, ['Distance'])),
+        _r0Row('Operation', _field(details, ['Opération', 'Operation'])),
+        _r0Row('Shift', _field(details, ['Poste'])),
+        _r0Row('Driver', _field(details, ['Conducteur'])),
+        _r0Row('Total Trips',
+            _field(details, ['Total de Voyages', 'Total de Voyages Camions'])),
+      ],
+    );
+  }
+
+  Widget _buildMachinesDetailsView(
+    BuildContext context,
+    GoogleSheetRecord record,
+  ) {
+    final details = record.details;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      children: [
+        _sectionTitle(context, 'Machines/Engins Details'),
+        _r0Row('Date', _field(details, ['Date'])),
+        _r0Row('Category', _field(details, ['Catégorie', 'Category'])),
+        _r0Row('Sub-category',
+            _field(details, ['Sous-catégorie', 'Sub Category'])),
+        _r0Row('Equipment', _field(details, ['Équipement', 'Equipment'])),
+        _r0Row('Reason', _field(details, ['Raison', 'Reason'])),
+      ],
+    );
+  }
+
+  Widget _buildGenericFormattedDetailsView(GoogleSheetRecord record) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      children: [
+        ...record.details.entries.map(
+          (entry) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _r0Row(entry.key, entry.value.isEmpty ? '-' : entry.value),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _sectionTitle(BuildContext context, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Center(
+        child: Text(
+          title,
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(fontWeight: FontWeight.bold),
+        ),
+      ),
     );
   }
 
@@ -535,22 +793,43 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
   Widget _r0Row(String label, String value) {
     final normalizedValue = value.trim().isEmpty ? '-' : value;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: Text(label)),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 13,
+              ),
+            ),
+          ),
           const SizedBox(width: 16),
           Flexible(
             child: Text(
               normalizedValue,
               textAlign: TextAlign.right,
-              style: const TextStyle(fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+class _RecordTypeInfo {
+  final IconData icon;
+  final Color color;
+
+  const _RecordTypeInfo({
+    required this.icon,
+    required this.color,
+  });
 }
