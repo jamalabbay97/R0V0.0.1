@@ -2614,6 +2614,9 @@ class GoogleSheetsService {
   }) {
     final records = <GoogleSheetRecord>[];
     _TemplateGroupedRecordBuilder? current;
+    String? currentDailyDateKey;
+    final isDailyTemplate =
+        _normalizeHeaderKey(sheetName) == _normalizeHeaderKey(_dailySheet);
 
     for (var rowIndex = headerIndex + 1; rowIndex < rows.length; rowIndex++) {
       final row = rows[rowIndex];
@@ -2627,7 +2630,28 @@ class GoogleSheetsService {
         details[headers[i]] = value;
       }
 
-      final isNewGroup = _isTemplateGroupStart(details);
+      bool isNewGroup;
+      if (isDailyTemplate) {
+        final explicitDate = GoogleSheetRecord.resolveDateFromDetails(details);
+        final nextDateKey = explicitDate == null
+            ? null
+            : DateFormat('yyyy-MM-dd').format(explicitDate);
+
+        if (current == null) {
+          isNewGroup = nextDateKey != null;
+        } else if (nextDateKey == null) {
+          isNewGroup = false;
+        } else {
+          isNewGroup = nextDateKey != currentDailyDateKey;
+        }
+
+        if (isNewGroup) {
+          currentDailyDateKey = nextDateKey;
+        }
+      } else {
+        isNewGroup = _isTemplateGroupStart(details);
+      }
+
       if (isNewGroup) {
         if (current != null) {
           records.add(current.build(sheetName: sheetName));
@@ -3052,6 +3076,13 @@ class _TemplateGroupedRecordBuilder {
   final List<String> _activityVibratorCounters = [];
   final List<String> _activityLiaisonCounters = [];
   final List<String> _activityStocks = [];
+  final List<String> _dailyModule1Natures = [];
+  final List<String> _dailyModule1Downtimes = [];
+  final List<String> _dailyModule2Natures = [];
+  final List<String> _dailyModule2Downtimes = [];
+  final List<String> _dailyStocks = [];
+  String _dailyModule1Operating = '';
+  String _dailyModule2Operating = '';
 
   void addRow(Map<String, String> rowDetails) {
     const inheritKeys = [
@@ -3098,6 +3129,9 @@ class _TemplateGroupedRecordBuilder {
     final vibratorCounter = (rowDetails['Compteur Vibrateur'] ?? '').trim();
     final liaisonCounter = (rowDetails['Compteur Liaison'] ?? '').trim();
     final stock = (rowDetails['Stock'] ?? '').trim();
+    final module = (rowDetails['Module'] ?? '').trim();
+    final nature = (rowDetails['Nature'] ?? '').trim();
+    final operatingDuration = (rowDetails['Durée marche'] ?? '').trim();
     final stopStart = (rowDetails["Début d'Arrêt"] ?? '').trim();
     final stopEnd = (rowDetails["Fin d'Arrêt"] ?? '').trim();
 
@@ -3115,6 +3149,33 @@ class _TemplateGroupedRecordBuilder {
     }
     if (stock.isNotEmpty) {
       _activityStocks.add(stock);
+    }
+
+    final normalizedModule = module.toLowerCase();
+    if (normalizedModule == 'module 1') {
+      if (nature.isNotEmpty) {
+        _dailyModule1Natures.add(nature);
+      }
+      if (stopDuration.isNotEmpty) {
+        _dailyModule1Downtimes.add(stopDuration);
+      }
+      if (operatingDuration.isNotEmpty) {
+        _dailyModule1Operating = operatingDuration;
+      }
+    } else if (normalizedModule == 'module 2') {
+      if (nature.isNotEmpty) {
+        _dailyModule2Natures.add(nature);
+      }
+      if (stopDuration.isNotEmpty) {
+        _dailyModule2Downtimes.add(stopDuration);
+      }
+      if (operatingDuration.isNotEmpty) {
+        _dailyModule2Operating = operatingDuration;
+      }
+    }
+
+    if (stock.isNotEmpty) {
+      _dailyStocks.add(stock);
     }
 
     if (stopReason.isNotEmpty || stopStart.isNotEmpty || stopEnd.isNotEmpty) {
@@ -3150,6 +3211,27 @@ class _TemplateGroupedRecordBuilder {
     }
     if (_activityStocks.isNotEmpty) {
       _details['Stocks'] = _activityStocks.join('\n');
+    }
+    if (_dailyModule1Natures.isNotEmpty) {
+      _details['Détails Arrêts M1'] = _dailyModule1Natures.join('\n');
+    }
+    if (_dailyModule1Downtimes.isNotEmpty) {
+      _details['Durées Arrêts M1'] = _dailyModule1Downtimes.join('\n');
+    }
+    if (_dailyModule2Natures.isNotEmpty) {
+      _details['Détails Arrêts M2'] = _dailyModule2Natures.join('\n');
+    }
+    if (_dailyModule2Downtimes.isNotEmpty) {
+      _details['Durées Arrêts M2'] = _dailyModule2Downtimes.join('\n');
+    }
+    if (_dailyModule1Operating.isNotEmpty) {
+      _details['Durée Marche M1'] = _dailyModule1Operating;
+    }
+    if (_dailyModule2Operating.isNotEmpty) {
+      _details['Durée Marche M2'] = _dailyModule2Operating;
+    }
+    if (_dailyStocks.isNotEmpty) {
+      _details['Détails Stock'] = _dailyStocks.join('\n');
     }
 
     return GoogleSheetRecord.fromRaw(

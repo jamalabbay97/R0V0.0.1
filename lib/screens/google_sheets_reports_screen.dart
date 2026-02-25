@@ -693,16 +693,65 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
   Widget _buildDailyDetailsView(
       BuildContext context, GoogleSheetRecord record) {
     final details = record.details;
+
+    final module1Stops = _splitFieldValues(
+      _field(details, ['Détails Arrêts M1', 'Arrêts M1', 'Module 1 Stops']),
+    );
+    final module1Durations = _splitFieldValues(
+      _field(details, ['Durées Arrêts M1', 'Durée Arrêts M1']),
+    );
+    final module2Stops = _splitFieldValues(
+      _field(details, ['Détails Arrêts M2', 'Arrêts M2', 'Module 2 Stops']),
+    );
+    final module2Durations = _splitFieldValues(
+      _field(details, ['Durées Arrêts M2', 'Durée Arrêts M2']),
+    );
+    final stockRows = _splitFieldValues(
+      _field(details, ['Détails Stock', 'Stocks', 'Stock Entries', 'Stock']),
+    );
+
+    final module1Operating =
+        _field(details, ['Durée Marche M1', 'T H.M1 (Operating M1)']);
+    final module1Downtime =
+        _field(details, ['T H.A1 (Downtime M1)', 'Durée Arrêts Totale M1']);
+    final module2Operating =
+        _field(details, ['Durée Marche M2', 'T H.M2 (Operating M2)']);
+    final module2Downtime =
+        _field(details, ['T H.A2 (Downtime M2)', 'Durée Arrêts Totale M2']);
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       children: [
-        _sectionTitle(context, 'Daily TSUD Details'),
         _r0Row('Date', _field(details, ['Date'])),
-        _r0Row('Module', _field(details, ['Module'])),
-        _r0Row('Nature', _field(details, ['Nature'])),
-        _r0Row('Downtime', _field(details, ['Durée d\'arrêt'])),
-        _r0Row('Operating', _field(details, ['Durée marche'])),
-        _r0Row('Stock', _field(details, ['Stock'])),
+        const Divider(height: 24),
+        _sectionTitle(context, 'Détails Arrêts M1'),
+        ..._buildStopsRows(module1Stops, module1Durations),
+        const Divider(height: 24),
+        _sectionTitle(context, 'Détails Arrêts M2'),
+        ..._buildStopsRows(module2Stops, module2Durations),
+        const SizedBox(height: 12),
+        _activitySectionCard(
+          context,
+          title: 'Synthèse Module 1',
+          children: [
+            _r0Row('Fonctionnement', module1Operating),
+            _r0Row('Arrêts', module1Downtime),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _activitySectionCard(
+          context,
+          title: 'Synthèse Module 2',
+          children: [
+            _r0Row('Fonctionnement', module2Operating),
+            _r0Row('Arrêts', module2Downtime),
+          ],
+        ),
+        const Divider(height: 24),
+        _sectionTitle(context, 'Détails Stock'),
+        ...(stockRows.isEmpty
+            ? [_r0Row('-', '-')]
+            : stockRows.map((entry) => _r0Row('Poste / Park / Type', entry))),
       ],
     );
   }
