@@ -2414,6 +2414,19 @@ class GoogleSheetsService {
         continue;
       }
 
+      if (_normalizeHeaderKey(sheetName) ==
+          _normalizeHeaderKey(_machinesSheet)) {
+        records.addAll(
+          _buildGroupedMachinesRecords(
+            sheetName: sheetName,
+            rows: rows,
+            headerIndex: headerIndex,
+            headers: headers,
+          ),
+        );
+        continue;
+      }
+
       for (var rowIndex = headerIndex + 1; rowIndex < rows.length; rowIndex++) {
         final row = rows[rowIndex];
         if (!_hasContent(row)) {
@@ -2637,6 +2650,58 @@ class GoogleSheetsService {
     }
 
     return records;
+  }
+
+  List<GoogleSheetRecord> _buildGroupedMachinesRecords({
+    required String sheetName,
+    required List<List<Object?>> rows,
+    required int headerIndex,
+    required List<String> headers,
+  }) {
+    final grouped = <String, _MachinesGroupedRecordBuilder>{};
+    DateTime? inheritedDate;
+
+    for (var rowIndex = headerIndex + 1; rowIndex < rows.length; rowIndex++) {
+      final row = rows[rowIndex];
+      if (!_hasContent(row)) {
+        continue;
+      }
+
+      final details = <String, String>{};
+      for (var i = 0; i < headers.length; i++) {
+        final value = i < row.length ? row[i]?.toString().trim() ?? '' : '';
+        details[headers[i]] = value;
+      }
+
+      final explicitDate = GoogleSheetRecord.resolveDateFromDetails(details);
+      if (explicitDate != null) {
+        inheritedDate = explicitDate;
+      }
+
+      if (explicitDate == null && inheritedDate != null) {
+        _injectInheritedDate(details, inheritedDate);
+      }
+
+      final effectiveDate =
+          GoogleSheetRecord.resolveDateFromDetails(details) ?? inheritedDate;
+      if (effectiveDate == null) {
+        continue;
+      }
+
+      final dateKey = DateFormat('yyyy-MM-dd').format(effectiveDate);
+      final builder = grouped.putIfAbsent(
+        dateKey,
+        () => _MachinesGroupedRecordBuilder(
+          anchorRowNumber: rowIndex + 1,
+          date: effectiveDate,
+        ),
+      );
+      builder.addRow(details);
+    }
+
+    return grouped.values
+        .map((builder) => builder.build(sheetName: sheetName))
+        .toList();
   }
 
   bool _isTemplateGroupStart(Map<String, String> details) {
@@ -3051,6 +3116,91 @@ class _TemplateGroupedRecordBuilder {
       rowNumber: anchorRowNumber,
       details: _details,
     );
+  }
+}
+
+class _MachinesGroupedRecordBuilder {
+  _MachinesGroupedRecordBuilder({
+    required this.anchorRowNumber,
+    required this.date,
+  });
+
+  final int anchorRowNumber;
+  final DateTime date;
+  final List<String> _categories = [];
+  final List<String> _subCategories = [];
+  final List<String> _equipments = [];
+  final List<String> _reasons = [];
+  String _createdBy = '';
+
+  void addRow(Map<String, String> rowDetails) {
+    final category = _firstValue(rowDetails, const [
+      'Catégorie',
+      'Catégorie principale',
+      'Category',
+    ]);
+    final subCategory = _firstValue(rowDetails, const [
+      'Sous-catégorie',
+      'Sous-Catégorie',
+      'Sub Category',
+    ]);
+    final equipment = _firstValue(rowDetails, const [
+      'Équipement',
+      'Equipement',
+      'Equipement ',
+      'Equipment',
+    ]);
+    final reason = _firstValue(rowDetails, const [
+      'Raison',
+      "Raison De l'Arret",
+      'Raison De l\'Arret',
+      'Reason',
+    ]);
+
+    if (category.isNotEmpty) {
+      _categories.add(category);
+    }
+    if (subCategory.isNotEmpty) {
+      _subCategories.add(subCategory);
+    }
+    if (equipment.isNotEmpty) {
+      _equipments.add(equipment);
+    }
+    if (reason.isNotEmpty) {
+      _reasons.add(reason);
+    }
+
+    if (_createdBy.isEmpty) {
+      _createdBy = _firstValue(rowDetails, const ['Créé par', 'Cree par']);
+    }
+  }
+
+  GoogleSheetRecord build({required String sheetName}) {
+    final details = <String, String>{
+      'Date': DateFormat('yyyy-MM-dd').format(date),
+      'Catégorie': _categories.join('\n'),
+      'Sous-catégorie': _subCategories.join('\n'),
+      'Équipement': _equipments.join('\n'),
+      'Raison': _reasons.join('\n'),
+      if (_createdBy.isNotEmpty) 'Créé par': _createdBy,
+    };
+
+    return GoogleSheetRecord.fromRaw(
+      sheetName: sheetName,
+      rowNumber: anchorRowNumber,
+      details: details,
+      fallbackDate: date,
+    );
+  }
+
+  String _firstValue(Map<String, String> rowDetails, List<String> keys) {
+    for (final key in keys) {
+      final value = rowDetails[key]?.trim() ?? '';
+      if (value.isNotEmpty) {
+        return value;
+      }
+    }
+    return '';
   }
 }
 

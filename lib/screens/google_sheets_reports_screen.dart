@@ -666,18 +666,89 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
     GoogleSheetRecord record,
   ) {
     final details = record.details;
+    final categories = _splitFieldValues(
+        _field(details, ['Catégorie', 'Catégorie principale', 'Category']));
+    final subCategories = _splitFieldValues(
+        _field(details, ['Sous-catégorie', 'Sous-Catégorie', 'Sub Category']));
+    final equipments = _splitFieldValues(
+        _field(details, ['Équipement', 'Equipement', 'Equipment']));
+    final reasons = _splitFieldValues(_field(details,
+        ['Raison', "Raison De l'Arret", 'Raison De l\'Arret', 'Reason']));
+
+    final count = [
+      categories.length,
+      subCategories.length,
+      equipments.length,
+      reasons.length,
+    ].reduce((a, b) => a > b ? a : b);
+
+    List<Widget> buildEquipmentCards() {
+      if (count == 0) {
+        return [_r0Row('-', '-')];
+      }
+
+      final cards = <Widget>[];
+      for (var i = 0; i < count; i++) {
+        final category = i < categories.length ? categories[i] : '-';
+        final subCategory = i < subCategories.length ? subCategories[i] : '-';
+        final equipment = i < equipments.length ? equipments[i] : '-';
+        final reason = i < reasons.length ? reasons[i] : '-';
+
+        final titleParts = [category, subCategory, equipment]
+            .where((value) => value != '-' && value.trim().isNotEmpty)
+            .toList();
+
+        cards.add(
+          Card(
+            elevation: 0,
+            margin: const EdgeInsets.only(bottom: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
+              ),
+            ),
+            child: ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              leading: const Icon(Icons.build_rounded, color: Colors.green),
+              title: Text(
+                titleParts.isEmpty ? '-' : titleParts.join(' - '),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(reason),
+              ),
+            ),
+          ),
+        );
+      }
+
+      return cards;
+    }
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       children: [
         _sectionTitle(context, 'Machines/Engins Details'),
         _r0Row('Date', _field(details, ['Date'])),
-        _r0Row('Category', _field(details, ['Catégorie', 'Category'])),
-        _r0Row('Sub-category',
-            _field(details, ['Sous-catégorie', 'Sub Category'])),
-        _r0Row('Equipment', _field(details, ['Équipement', 'Equipment'])),
-        _r0Row('Reason', _field(details, ['Raison', 'Reason'])),
+        const SizedBox(height: 12),
+        _sectionTitle(context, 'Équipements Arrêtés'),
+        ...buildEquipmentCards(),
       ],
     );
+  }
+
+  List<String> _splitFieldValues(String value) {
+    if (value.trim().isEmpty || value == '-') {
+      return const [];
+    }
+    return value
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList();
   }
 
   Widget _buildGenericFormattedDetailsView(GoogleSheetRecord record) {
