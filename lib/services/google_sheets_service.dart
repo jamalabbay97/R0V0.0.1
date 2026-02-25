@@ -3047,6 +3047,11 @@ class _TemplateGroupedRecordBuilder {
   final Map<String, String> _details;
   final List<String> _stopReasons = [];
   final List<String> _stopTimes = [];
+  final List<String> _activityStops = [];
+  final List<String> _activityStopDurations = [];
+  final List<String> _activityVibratorCounters = [];
+  final List<String> _activityLiaisonCounters = [];
+  final List<String> _activityStocks = [];
 
   void addRow(Map<String, String> rowDetails) {
     const inheritKeys = [
@@ -3089,8 +3094,29 @@ class _TemplateGroupedRecordBuilder {
     }
 
     final stopReason = (rowDetails['Arrêt'] ?? '').trim();
+    final stopDuration = (rowDetails['Durée d\'arrêt'] ?? '').trim();
+    final vibratorCounter = (rowDetails['Compteur Vibrateur'] ?? '').trim();
+    final liaisonCounter = (rowDetails['Compteur Liaison'] ?? '').trim();
+    final stock = (rowDetails['Stock'] ?? '').trim();
     final stopStart = (rowDetails["Début d'Arrêt"] ?? '').trim();
     final stopEnd = (rowDetails["Fin d'Arrêt"] ?? '').trim();
+
+    if (stopReason.isNotEmpty) {
+      _activityStops.add(stopReason);
+    }
+    if (stopDuration.isNotEmpty) {
+      _activityStopDurations.add(stopDuration);
+    }
+    if (vibratorCounter.isNotEmpty) {
+      _activityVibratorCounters.add(vibratorCounter);
+    }
+    if (liaisonCounter.isNotEmpty) {
+      _activityLiaisonCounters.add(liaisonCounter);
+    }
+    if (stock.isNotEmpty) {
+      _activityStocks.add(stock);
+    }
+
     if (stopReason.isNotEmpty || stopStart.isNotEmpty || stopEnd.isNotEmpty) {
       if (stopReason.isNotEmpty) {
         _stopReasons.add(stopReason);
@@ -3109,6 +3135,21 @@ class _TemplateGroupedRecordBuilder {
     }
     if (_stopTimes.isNotEmpty) {
       _details['Stop Times'] = _stopTimes.join('\n');
+    }
+    if (_activityStops.isNotEmpty) {
+      _details['Arrêts'] = _activityStops.join('\n');
+    }
+    if (_activityStopDurations.isNotEmpty) {
+      _details['Durées d\'arrêt'] = _activityStopDurations.join('\n');
+    }
+    if (_activityVibratorCounters.isNotEmpty) {
+      _details['Compteurs Vibreurs'] = _activityVibratorCounters.join('\n');
+    }
+    if (_activityLiaisonCounters.isNotEmpty) {
+      _details['Compteurs Liaison'] = _activityLiaisonCounters.join('\n');
+    }
+    if (_activityStocks.isNotEmpty) {
+      _details['Stocks'] = _activityStocks.join('\n');
     }
 
     return GoogleSheetRecord.fromRaw(

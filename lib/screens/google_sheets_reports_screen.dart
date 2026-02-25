@@ -606,19 +606,86 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
     GoogleSheetRecord record,
   ) {
     final details = record.details;
+
+    final stops = _splitFieldValues(
+      _field(details, ['Arrêts', 'Arrêt', 'Nature']),
+    );
+    final stopDurations = _splitFieldValues(
+      _field(details, ['Durées d\'arrêt', 'Durée d\'arrêt', 'Duration']),
+    );
+    final vibratorCounters = _splitFieldValues(
+      _field(details, ['Compteurs Vibreurs', 'Compteur Vibrateur']),
+    );
+    final liaisonCounters = _splitFieldValues(
+      _field(details, ['Compteurs Liaison', 'Compteur Liaison']),
+    );
+    final stocks = _splitFieldValues(
+      _field(details, ['Stocks', 'Stock']),
+    );
+
+    final stopRows = _buildStopsRows(stops, stopDurations);
+
+    List<Widget> buildCounterRows(List<String> counters) {
+      if (counters.isEmpty) {
+        return [_r0Row('-', '-')];
+      }
+      return counters
+          .map((counter) => _r0Row('Poste / Début / Fin', counter))
+          .toList();
+    }
+
+    List<Widget> buildStockRows(List<String> values) {
+      if (values.isEmpty) {
+        return [_r0Row('-', '-')];
+      }
+      return values
+          .map((stock) => _r0Row('Poste / Park / Type / Qte', stock))
+          .toList();
+    }
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       children: [
-        _sectionTitle(context, 'Activity TNB Details'),
         _r0Row('Date', _field(details, ['Date'])),
-        _r0Row('Stop', _field(details, ['Arrêt', 'Nature'])),
-        _r0Row('Duration', _field(details, ['Durée d\'arrêt', 'Duration'])),
-        const Divider(height: 24),
-        _r0Row('T H.A', _field(details, ['T H.A'])),
-        _r0Row('T H.M', _field(details, ['T H.M'])),
-        _r0Row('T H.V', _field(details, ['T H.V'])),
-        _r0Row('T H.L', _field(details, ['T H.L'])),
-        _r0Row('Stock', _field(details, ['Stock'])),
+        const SizedBox(height: 8),
+        _activitySectionCard(
+          context,
+          title: 'Résumé des données',
+          children: [
+            _r0Row('T H.A', _field(details, ['T H.A'])),
+            _r0Row('T H.M', _field(details, ['T H.M'])),
+            _r0Row('T H.V', _field(details, ['T H.V'])),
+            _r0Row('T H.L', _field(details, ['T H.L'])),
+            const SizedBox(height: 6),
+            _r0Row('T Nr.A', stops.length.toString()),
+            _r0Row('T Nr.V', vibratorCounters.length.toString()),
+            _r0Row('T Nr.L', liaisonCounters.length.toString()),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _activitySectionCard(
+          context,
+          title: 'Arrêts',
+          children: stopRows,
+        ),
+        const SizedBox(height: 12),
+        _activitySectionCard(
+          context,
+          title: 'Compteurs Vibreurs',
+          children: buildCounterRows(vibratorCounters),
+        ),
+        const SizedBox(height: 12),
+        _activitySectionCard(
+          context,
+          title: 'Compteurs Liaison',
+          children: buildCounterRows(liaisonCounters),
+        ),
+        const SizedBox(height: 12),
+        _activitySectionCard(
+          context,
+          title: 'Stocks',
+          children: buildStockRows(stocks),
+        ),
       ],
     );
   }
@@ -762,6 +829,39 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _activitySectionCard(
+    BuildContext context, {
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const Divider(height: 16),
+            ...children,
+          ],
+        ),
+      ),
     );
   }
 
