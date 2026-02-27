@@ -50,6 +50,7 @@ class GoogleSheetsService {
   bool _loadedSheets = false;
   final Set<String> _knownSheets = {};
   final Map<String, int> _sheetIdsByName = {};
+  final Map<String, String> _sheetNamesByNormalizedKey = {};
   List<GoogleSheetRecord>? _recordsCache;
   DateTime? _recordsCacheAt;
 
@@ -179,7 +180,8 @@ class GoogleSheetsService {
     required DateTime reportDateLocal,
   }) async {
     await _loadSheetNames(api);
-    if (!_knownSheets.contains(sheetName)) {
+    final resolvedSheetName = _resolveSheetName(sheetName);
+    if (resolvedSheetName == null) {
       return false;
     }
 
@@ -187,7 +189,7 @@ class GoogleSheetsService {
         DateFormat('yyyy-MM-dd', _frenchLocale).format(reportDateLocal);
     final response = await api.spreadsheets.values.get(
       _spreadsheetId,
-      '$sheetName!A7:A',
+      '$resolvedSheetName!A7:A',
     );
     final values = response.values ?? const [];
 
@@ -211,7 +213,8 @@ class GoogleSheetsService {
     required String module,
   }) async {
     await _loadSheetNames(api);
-    if (!_knownSheets.contains(_r0Sheet)) {
+    final resolvedSheetName = _resolveSheetName(_r0Sheet);
+    if (resolvedSheetName == null) {
       return false;
     }
 
@@ -222,7 +225,7 @@ class GoogleSheetsService {
 
     final response = await api.spreadsheets.values.get(
       _spreadsheetId,
-      '$_r0Sheet!A7:H',
+      '$resolvedSheetName!A7:H',
     );
     final values = response.values ?? const [];
 
@@ -251,7 +254,8 @@ class GoogleSheetsService {
     required String poste,
   }) async {
     await _loadSheetNames(api);
-    if (!_knownSheets.contains(_truckSheet)) {
+    final resolvedSheetName = _resolveSheetName(_truckSheet);
+    if (resolvedSheetName == null) {
       return false;
     }
 
@@ -261,7 +265,7 @@ class GoogleSheetsService {
 
     final response = await api.spreadsheets.values.get(
       _spreadsheetId,
-      '$_truckSheet!A7:I',
+      '$resolvedSheetName!A7:I',
     );
     final values = response.values ?? const [];
 
@@ -286,7 +290,8 @@ class GoogleSheetsService {
     _TemplateRows templateRows,
   ) async {
     await _loadSheetNames(api);
-    if (!_knownSheets.contains(templateRows.sheetName)) {
+    var targetSheetName = _resolveSheetName(templateRows.sheetName);
+    if (targetSheetName == null) {
       await api.spreadsheets.batchUpdate(
         BatchUpdateSpreadsheetRequest(
           requests: [
@@ -302,26 +307,35 @@ class GoogleSheetsService {
       _knownSheets.add(templateRows.sheetName);
       _loadedSheets = false;
       await _loadSheetNames(api);
+      targetSheetName = _resolveSheetName(templateRows.sheetName);
+      if (targetSheetName == null) {
+        debugPrint(
+            'Failed to resolve target sheet for ${templateRows.sheetName}.');
+        return;
+      }
     }
 
     if (templateRows.rows.isEmpty) {
       return;
     }
 
-    final rowBounds = await _insertTemplateRows(api, templateRows);
+    final rowBounds = await _insertTemplateRows(
+      api,
+      templateRows.copyWith(sheetName: targetSheetName),
+    );
     if (rowBounds == null) {
       return;
     }
 
-    final sheetId = _sheetIdsByName[templateRows.sheetName];
+    final sheetId = _sheetIdsByName[targetSheetName];
     if (sheetId == null) {
-      debugPrint('Sheet ID for "${templateRows.sheetName}" not found.');
+      debugPrint('Sheet ID for "$targetSheetName" not found.');
       return;
     }
 
     final requests = <Request>[];
     final colorTheme = _selectColorTheme(
-      sheetName: templateRows.sheetName,
+      sheetName: targetSheetName,
       startRowIndex: rowBounds.startRowIndex,
     );
 
@@ -490,7 +504,8 @@ class GoogleSheetsService {
     SheetsApi api,
     _TemplateRows templateRows,
   ) async {
-    if (templateRows.sheetName == _truckSheet) {
+    if (_normalizeHeaderKey(templateRows.sheetName) ==
+        _normalizeHeaderKey(_truckSheet)) {
       return _insertTruckTemplateRowsSorted(api, templateRows);
     }
 
@@ -518,6 +533,7 @@ class GoogleSheetsService {
     final newPoste = firstRow.length > 8 ? firstRow[8] : null;
     final insertStartRowNumber = await _resolveTruckInsertRowNumber(
       api,
+      sheetName: templateRows.sheetName,
       reportDateValue: newDate,
       posteValue: newPoste,
     );
@@ -532,7 +548,7 @@ class GoogleSheetsService {
           Request(
             insertDimension: InsertDimensionRequest(
               range: DimensionRange(
-                sheetId: _sheetIdsByName[_truckSheet],
+                sheetId: _sheetIdsByName[templateRows.sheetName],
                 dimension: 'ROWS',
                 startIndex: startRowIndex,
                 endIndex: endRowIndex,
@@ -558,6 +574,7 @@ class GoogleSheetsService {
 
   Future<int> _resolveTruckInsertRowNumber(
     SheetsApi api, {
+    required String sheetName,
     required Object? reportDateValue,
     required Object? posteValue,
   }) async {
@@ -565,7 +582,7 @@ class GoogleSheetsService {
     final targetPoste = _normalizePosteValue(posteValue);
     final response = await api.spreadsheets.values.get(
       _spreadsheetId,
-      '$_truckSheet!A7:I',
+      '$sheetName!A7:I',
     );
     final values = response.values ?? const [];
 
@@ -1419,7 +1436,8 @@ class GoogleSheetsService {
   ) async {
     await _loadSheetNames(api);
 
-    if (!_knownSheets.contains(sheetName)) {
+    var targetSheetName = _resolveSheetName(sheetName);
+    if (targetSheetName == null) {
       await api.spreadsheets.batchUpdate(
         BatchUpdateSpreadsheetRequest(
           requests: [
@@ -1433,17 +1451,20 @@ class GoogleSheetsService {
         _spreadsheetId,
       );
       _knownSheets.add(sheetName);
+      _loadedSheets = false;
+      await _loadSheetNames(api);
+      targetSheetName = _resolveSheetName(sheetName) ?? sheetName;
     }
 
     final headerRange = await api.spreadsheets.values.get(
       _spreadsheetId,
-      '$sheetName!1:1',
+      '$targetSheetName!1:1',
     );
     if (headerRange.values == null || headerRange.values!.isEmpty) {
       await api.spreadsheets.values.update(
         ValueRange(values: [headers]),
         _spreadsheetId,
-        '$sheetName!1:1',
+        '$targetSheetName!1:1',
         valueInputOption: 'RAW',
       );
     }
@@ -1456,17 +1477,29 @@ class GoogleSheetsService {
 
     final spreadsheet = await api.spreadsheets.get(_spreadsheetId);
     final sheets = spreadsheet.sheets ?? [];
+    _knownSheets.clear();
+    _sheetIdsByName.clear();
+    _sheetNamesByNormalizedKey.clear();
     for (final sheet in sheets) {
       final title = sheet.properties?.title;
       final sheetId = sheet.properties?.sheetId;
       if (title != null) {
         _knownSheets.add(title);
+        _sheetNamesByNormalizedKey[_normalizeHeaderKey(title)] = title;
         if (sheetId != null) {
           _sheetIdsByName[title] = sheetId;
         }
       }
     }
     _loadedSheets = true;
+  }
+
+  String? _resolveSheetName(String candidate) {
+    if (_knownSheets.contains(candidate)) {
+      return candidate;
+    }
+
+    return _sheetNamesByNormalizedKey[_normalizeHeaderKey(candidate)];
   }
 
   _ReportPayload _buildPayload(
@@ -3081,6 +3114,7 @@ class _TemplateGroupedRecordBuilder {
   final List<String> _dailyModule2Natures = [];
   final List<String> _dailyModule2Downtimes = [];
   final List<String> _dailyStocks = [];
+  final List<_TruckTemplateRow> _truckRows = [];
   String _dailyModule1Operating = '';
   String _dailyModule2Operating = '';
 
@@ -3188,6 +3222,43 @@ class _TemplateGroupedRecordBuilder {
         _stopTimes.add('$stopStart$separator$stopEnd'.trim());
       }
     }
+    _addTruckRow(rowDetails);
+  }
+
+  void _addTruckRow(Map<String, String> rowDetails) {
+    final truckNumber = (rowDetails['Camions'] ?? '').trim();
+    final driver = (rowDetails['Conducteur'] ?? '').trim();
+    final trips = <_TruckTemplateTrip>[];
+
+    for (var i = 1; i <= 12; i++) {
+      final rawTrip = (rowDetails['Voyage $i'] ?? '').trim();
+      if (rawTrip.isEmpty) continue;
+      final parts = rawTrip
+          .split('\n')
+          .map((entry) => entry.trim())
+          .where((entry) => entry.isNotEmpty)
+          .toList();
+      if (parts.isEmpty) continue;
+      trips.add(
+        _TruckTemplateTrip(
+          time: parts.first,
+          equipment: parts.length > 1 ? parts[1] : '',
+          quality: parts.length > 2 ? parts[2] : '',
+        ),
+      );
+    }
+
+    if (truckNumber.isEmpty && driver.isEmpty && trips.isEmpty) {
+      return;
+    }
+
+    _truckRows.add(
+      _TruckTemplateRow(
+        truckNumber: truckNumber,
+        driver: driver,
+        trips: trips,
+      ),
+    );
   }
 
   GoogleSheetRecord build({required String sheetName}) {
@@ -3233,6 +3304,26 @@ class _TemplateGroupedRecordBuilder {
     if (_dailyStocks.isNotEmpty) {
       _details['Détails Stock'] = _dailyStocks.join('\n');
     }
+    if (_truckRows.isNotEmpty) {
+      _details['Camions List'] = _truckRows
+          .map((row) => row.truckNumber)
+          .where((value) => value.isNotEmpty)
+          .join('\n');
+      _details['Conducteurs List'] = _truckRows
+          .map((row) => row.driver)
+          .where((value) => value.isNotEmpty)
+          .join('\n');
+      _details['Trips per Truck'] = _truckRows
+          .map((row) => '${row.truckNumber}: ${row.trips.length}')
+          .join('\n');
+      _details['Trip Details'] = _truckRows
+          .expand((row) => row.trips.map((trip) {
+                final qualityPart =
+                    trip.quality.isEmpty ? '' : ' | ${trip.quality}';
+                return '${trip.time} | ${row.truckNumber} | ${trip.equipment}$qualityPart';
+              }))
+          .join('\n');
+    }
 
     return GoogleSheetRecord.fromRaw(
       sheetName: sheetName,
@@ -3240,6 +3331,30 @@ class _TemplateGroupedRecordBuilder {
       details: _details,
     );
   }
+}
+
+class _TruckTemplateRow {
+  const _TruckTemplateRow({
+    required this.truckNumber,
+    required this.driver,
+    required this.trips,
+  });
+
+  final String truckNumber;
+  final String driver;
+  final List<_TruckTemplateTrip> trips;
+}
+
+class _TruckTemplateTrip {
+  const _TruckTemplateTrip({
+    required this.time,
+    required this.equipment,
+    required this.quality,
+  });
+
+  final String time;
+  final String equipment;
+  final String quality;
 }
 
 class _MachinesGroupedRecordBuilder {
@@ -3394,6 +3509,25 @@ class _TemplateRows {
   final List<_TemplateCustomMerge> customMerges;
   final List<int> separatorColumnIndexes;
   final List<_TemplateColorSection> colorSections;
+
+  _TemplateRows copyWith({
+    String? sheetName,
+    List<List<Object?>>? rows,
+    List<_TemplateMergeRange>? mergeRanges,
+    List<_TemplateCustomMerge>? customMerges,
+    List<int>? separatorColumnIndexes,
+    List<_TemplateColorSection>? colorSections,
+  }) {
+    return _TemplateRows(
+      sheetName: sheetName ?? this.sheetName,
+      rows: rows ?? this.rows,
+      mergeRanges: mergeRanges ?? this.mergeRanges,
+      customMerges: customMerges ?? this.customMerges,
+      separatorColumnIndexes:
+          separatorColumnIndexes ?? this.separatorColumnIndexes,
+      colorSections: colorSections ?? this.colorSections,
+    );
+  }
 }
 
 class DuplicateReportDateException implements Exception {

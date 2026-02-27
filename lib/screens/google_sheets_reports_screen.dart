@@ -719,46 +719,166 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
     final module2Downtime =
         _field(details, ['T H.A2 (Downtime M2)', 'Durée Arrêts Totale M2']);
 
+    final module1Rows =
+        _buildDurationReasonRows(module1Durations, module1Stops).toList();
+    final module2Rows =
+        _buildDurationReasonRows(module2Durations, module2Stops).toList();
+
+    final stockEntries = stockRows
+        .map(_parseDailyStockEntry)
+        .where((entry) => entry.isNotEmpty)
+        .toList();
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       children: [
         _r0Row('Date', _field(details, ['Date'])),
         const Divider(height: 24),
-        _sectionTitle(context, 'Détails Arrêts M1'),
-        ..._buildStopsRows(module1Stops, module1Durations),
-        const Divider(height: 24),
-        _sectionTitle(context, 'Détails Arrêts M2'),
-        ..._buildStopsRows(module2Stops, module2Durations),
-        const SizedBox(height: 12),
-        _activitySectionCard(
+        _dailyDetailsCard(
           context,
-          title: 'Synthèse Module 1',
+          title: 'Module 1',
           children: [
-            _r0Row('Fonctionnement', module1Operating),
-            _r0Row('Arrêts', module1Downtime),
+            _dailyInfoLine('Operating Time', module1Operating),
+            const SizedBox(height: 4),
+            _dailyInfoLine('Stop Time', module1Downtime),
+            const SizedBox(height: 12),
+            Text(
+              'Stops:',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            ...(module1Rows.isEmpty
+                ? [const Text('-')]
+                : module1Rows.map((row) => Text('  $row'))),
           ],
         ),
-        const SizedBox(height: 12),
-        _activitySectionCard(
+        _dailyDetailsCard(
           context,
-          title: 'Synthèse Module 2',
+          title: 'Module 2',
           children: [
-            _r0Row('Fonctionnement', module2Operating),
-            _r0Row('Arrêts', module2Downtime),
+            _dailyInfoLine('Operating Time', module2Operating),
+            const SizedBox(height: 4),
+            _dailyInfoLine('Stop Time', module2Downtime),
+            const SizedBox(height: 12),
+            Text(
+              'Stops',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            ...(module2Rows.isEmpty
+                ? [const Text('-')]
+                : module2Rows.map((row) => Text('  $row'))),
           ],
         ),
-        const Divider(height: 24),
-        _sectionTitle(context, 'Détails Stock'),
-        ...(stockRows.isEmpty
-            ? [_r0Row('-', '-')]
-            : stockRows.map((entry) => _r0Row('Poste / Park / Type', entry))),
+        _dailyDetailsCard(
+          context,
+          title: 'Stock',
+          children: [
+            ...(stockEntries.isEmpty
+                ? [const Text('-')]
+                : stockEntries.map(
+                    (stock) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        'Shift: ${stock.shift} | Park: ${stock.park} | Type: ${stock.type} | Qty: ${stock.qty}',
+                      ),
+                    ),
+                  )),
+          ],
+        ),
       ],
+    );
+  }
+
+  Iterable<String> _buildDurationReasonRows(
+    List<String> durations,
+    List<String> reasons,
+  ) sync* {
+    final itemCount =
+        durations.length > reasons.length ? durations.length : reasons.length;
+    for (var i = 0; i < itemCount; i++) {
+      final duration = i < durations.length ? durations[i] : '-';
+      final reason = i < reasons.length ? reasons[i] : '-';
+      yield '$duration - $reason';
+    }
+  }
+
+  Widget _dailyDetailsCard(
+    BuildContext context, {
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Card(
+      color: const Color(0xFFF1F2F1),
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _dailyInfoLine(String label, String value) {
+    return Text('$label: $value');
+  }
+
+  _DailyStockEntry _parseDailyStockEntry(String raw) {
+    if (raw.trim().isEmpty || raw == '-') {
+      return const _DailyStockEntry();
+    }
+
+    final segments = raw
+        .split('/')
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+
+    if (segments.isEmpty) {
+      return const _DailyStockEntry();
+    }
+
+    return _DailyStockEntry(
+      shift: segments.isNotEmpty ? segments[0] : '',
+      park: segments.length > 1 ? segments[1] : '',
+      type: segments.length > 2 ? segments[2] : '',
+      qty: segments.length > 3 ? segments[3] : '',
     );
   }
 
   Widget _buildTruckDetailsView(
       BuildContext context, GoogleSheetRecord record) {
     final details = record.details;
+    final truckList = _splitFieldValues(
+      _field(details, ['Camions List', 'Camions']),
+    );
+    final driverList = _splitFieldValues(
+      _field(details, ['Conducteurs List', 'Conducteur']),
+    );
+    final tripsPerTruck =
+        _splitFieldValues(_field(details, ['Trips per Truck']));
+    final tripDetails = _splitFieldValues(_field(details, ['Trip Details']));
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       children: [
@@ -768,11 +888,45 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
             '${_field(details, ['Mine'])} / ${_field(details, ['Sortie'])}'),
         _r0Row('Equipment', _field(details, ['Machine/Engins'])),
         _r0Row('Distance', _field(details, ['Distance'])),
+        _r0Row('Type', _field(details, ['Qualité', 'Type'])),
         _r0Row('Operation', _field(details, ['Opération', 'Operation'])),
         _r0Row('Shift', _field(details, ['Poste'])),
-        _r0Row('Driver', _field(details, ['Conducteur'])),
+        _r0Row('Trucks', truckList.isEmpty ? '-' : '${truckList.length}'),
         _r0Row('Total Trips',
             _field(details, ['Total de Voyages', 'Total de Voyages Camions'])),
+        const Divider(height: 24),
+        _sectionTitle(context, 'Trips per Truck'),
+        if (tripsPerTruck.isEmpty)
+          _r0Row('-', '-')
+        else
+          ...tripsPerTruck.map((entry) {
+            final parts = entry.split(':');
+            if (parts.length < 2) {
+              return _r0Row(entry, '-');
+            }
+            return _r0Row(parts.first.trim(),
+                '${parts.sublist(1).join(':').trim()} trips');
+          }),
+        const Divider(height: 24),
+        _sectionTitle(context, 'Trip Details'),
+        if (tripDetails.isEmpty)
+          _r0Row('-', '-')
+        else
+          ...tripDetails.map((entry) {
+            final parts = entry.split('|').map((e) => e.trim()).toList();
+            final time = parts.isNotEmpty ? parts[0] : '-';
+            final truck = parts.length > 1 ? parts[1] : '-';
+            final equipment = parts.length > 2 ? parts[2] : '-';
+            final quality = parts.length > 3 ? parts[3] : '';
+            final subtitle =
+                quality.isEmpty ? equipment : '$equipment • $quality';
+            return _r0Row('$time  $truck', subtitle);
+          }),
+        if (driverList.isNotEmpty) ...[
+          const Divider(height: 24),
+          _sectionTitle(context, 'Drivers'),
+          ...driverList.map((entry) => _r0Row('Driver', entry)),
+        ],
       ],
     );
   }
@@ -1052,4 +1206,21 @@ class _RecordTypeInfo {
     required this.icon,
     required this.color,
   });
+}
+
+class _DailyStockEntry {
+  const _DailyStockEntry({
+    this.shift = '',
+    this.park = '',
+    this.type = '',
+    this.qty = '',
+  });
+
+  final String shift;
+  final String park;
+  final String type;
+  final String qty;
+
+  bool get isNotEmpty =>
+      shift.isNotEmpty || park.isNotEmpty || type.isNotEmpty || qty.isNotEmpty;
 }
