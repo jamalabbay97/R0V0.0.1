@@ -648,7 +648,7 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
       children: [
         _r0Row('Date', _field(details, ['Date'])),
         const SizedBox(height: 8),
-        _activitySectionCard(
+        _activitySection(
           context,
           title: 'Résumé des données',
           children: [
@@ -663,25 +663,25 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        _activitySectionCard(
+        _activitySection(
           context,
           title: 'Arrêts',
           children: stopRows,
         ),
         const SizedBox(height: 12),
-        _activitySectionCard(
+        _activitySection(
           context,
           title: 'Compteurs Vibreurs',
           children: buildCounterRows(vibratorCounters),
         ),
         const SizedBox(height: 12),
-        _activitySectionCard(
+        _activitySection(
           context,
           title: 'Compteurs Liaison',
           children: buildCounterRows(liaisonCounters),
         ),
         const SizedBox(height: 12),
-        _activitySectionCard(
+        _activitySection(
           context,
           title: 'Stocks',
           children: buildStockRows(stocks),
@@ -734,7 +734,7 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
       children: [
         _r0Row('Date', _field(details, ['Date'])),
         const Divider(height: 24),
-        _dailyDetailsCard(
+        _dailyDetailsSection(
           context,
           title: 'Module 1',
           children: [
@@ -755,7 +755,7 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
                 : module1Rows.map((row) => Text('  $row'))),
           ],
         ),
-        _dailyDetailsCard(
+        _dailyDetailsSection(
           context,
           title: 'Module 2',
           children: [
@@ -776,7 +776,7 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
                 : module2Rows.map((row) => Text('  $row'))),
           ],
         ),
-        _dailyDetailsCard(
+        _dailyDetailsSection(
           context,
           title: 'Stock',
           children: [
@@ -809,36 +809,26 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
     }
   }
 
-  Widget _dailyDetailsCard(
+  Widget _dailyDetailsSection(
     BuildContext context, {
     required String title,
     required List<Widget> children,
   }) {
-    final theme = Theme.of(context);
-    final cardColor = theme.brightness == Brightness.dark
-        ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.9)
-        : const Color(0xFFF1F2F1);
-    return Card(
-      color: cardColor,
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ...children,
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context)
+                .textTheme
+                .headlineMedium
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          ...children,
+        ],
       ),
     );
   }
@@ -1039,36 +1029,24 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
     );
   }
 
-  Widget _activitySectionCard(
+  Widget _activitySection(
     BuildContext context, {
     required String title,
     required List<Widget> children,
   }) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(fontWeight: FontWeight.bold),
         ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const Divider(height: 16),
-            ...children,
-          ],
-        ),
-      ),
+        const Divider(height: 16),
+        ...children,
+      ],
     );
   }
 
