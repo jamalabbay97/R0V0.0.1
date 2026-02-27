@@ -814,8 +814,12 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
     required String title,
     required List<Widget> children,
   }) {
+    final theme = Theme.of(context);
+    final cardColor = theme.brightness == Brightness.dark
+        ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.9)
+        : const Color(0xFFF1F2F1);
     return Card(
-      color: const Color(0xFFF1F2F1),
+      color: cardColor,
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -826,10 +830,10 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
           children: [
             Text(
               title,
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface,
+              ),
             ),
             const SizedBox(height: 12),
             ...children,
