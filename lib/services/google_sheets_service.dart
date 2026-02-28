@@ -3118,56 +3118,89 @@ class _TemplateGroupedRecordBuilder {
   String _dailyModule1Operating = '';
   String _dailyModule2Operating = '';
 
-  void addRow(Map<String, String> rowDetails) {
-    const inheritKeys = [
-      'Date',
-      'Mine',
-      'Zone',
-      'Sortie',
-      'Poste',
-      'Machine/Engins',
-      'Catégorie',
-      'Model',
-      'Début Compteur',
-      'Fin Compteur',
-      'H.M',
-      'H.A',
-      'Tonnage',
-      'Metrage Fore',
-      'Ir de Trous Fore',
-      'Nr Voyages',
-      'M Decapages',
-      'Nr T.K.U',
-      'Rendment',
-      'Chantier',
-      'Temps',
-      'Imputation',
-      'Conducteur',
-      'Graisseur',
-      'Matricules',
-      'Tricone',
-      'Gasoil',
-      'Cree par',
-      'Cree en',
-    ];
+  String _readField(Map<String, String> rowDetails, List<String> candidates) {
+    for (final candidate in candidates) {
+      final expected = _normalizeTemplateFieldKey(candidate);
+      for (final entry in rowDetails.entries) {
+        if (_normalizeTemplateFieldKey(entry.key) == expected) {
+          final value = entry.value.trim();
+          if (value.isNotEmpty) {
+            return value;
+          }
+        }
+      }
+    }
+    return '';
+  }
 
-    for (final key in inheritKeys) {
-      final value = (rowDetails[key] ?? '').trim();
+  String _normalizeTemplateFieldKey(String value) {
+    final lower = value.toLowerCase();
+    final normalized = lower
+        .replaceAll('é', 'e')
+        .replaceAll('è', 'e')
+        .replaceAll('ê', 'e')
+        .replaceAll('à', 'a')
+        .replaceAll('ù', 'u')
+        .replaceAll('ô', 'o')
+        .replaceAll('ï', 'i');
+    return normalized.replaceAll(RegExp(r"[^a-z0-9]"), '');
+  }
+
+  void addRow(Map<String, String> rowDetails) {
+    const inheritFieldCandidates = {
+      'Date': ['Date'],
+      'Mine': ['Mine'],
+      'Zone': ['Zone'],
+      'Sortie': ['Sortie'],
+      'Poste': ['Poste'],
+      'Machine/Engins': ['Machine/Engins', 'Machine Engins', 'Category'],
+      'Catégorie': ['Catégorie', 'Categorie'],
+      'Model': ['Model', 'Modèle'],
+      'Début Compteur': ['Début Compteur', 'Debut Compteur'],
+      'Fin Compteur': ['Fin Compteur'],
+      'H.M': ['H.M'],
+      'H.A': ['H.A'],
+      'Tonnage': ['Tonnage'],
+      'Metrage Fore': ['Metrage Fore', 'Métrage Foré', 'Métrage fore'],
+      'Ir de Trous Fore': ['Ir de Trous Fore', 'Nr de Trous Forés'],
+      'Nr Voyages': ['Nr Voyages', 'Nr de Voyages'],
+      'M Decapages': ['M Decapages', 'M³ Décapages'],
+      'Nr T.K.U': ['Nr T.K.U', 'Nombre T.K.U'],
+      'Rendment': ['Rendment', 'Rendement', 'Rendement %'],
+      'Chantier': ['Chantier'],
+      'Temps': ['Temps'],
+      'Imputation': ['Imputation'],
+      'Conducteur': ['Conducteur'],
+      'Graisseur': ['Graisseur'],
+      'Matricules': ['Matricules'],
+      'Tricone': ['Tricone', 'Tricône'],
+      'Gasoil': ['Gasoil', 'Diesel'],
+      'Cree par': ['Cree par', 'Créé par'],
+      'Cree en': ['Cree en', 'Créé en'],
+    };
+
+    for (final entry in inheritFieldCandidates.entries) {
+      final value = _readField(rowDetails, entry.value);
       if (value.isNotEmpty) {
-        _details[key] = value;
+        _details[entry.key] = value;
       }
     }
 
-    final stopReason = (rowDetails['Arrêt'] ?? '').trim();
-    final stopDuration = (rowDetails['Durée d\'arrêt'] ?? '').trim();
-    final vibratorCounter = (rowDetails['Compteur Vibrateur'] ?? '').trim();
-    final liaisonCounter = (rowDetails['Compteur Liaison'] ?? '').trim();
-    final stock = (rowDetails['Stock'] ?? '').trim();
-    final module = (rowDetails['Module'] ?? '').trim();
-    final nature = (rowDetails['Nature'] ?? '').trim();
-    final operatingDuration = (rowDetails['Durée marche'] ?? '').trim();
-    final stopStart = (rowDetails["Début d'Arrêt"] ?? '').trim();
-    final stopEnd = (rowDetails["Fin d'Arrêt"] ?? '').trim();
+    final stopReason = _readField(rowDetails, ['Arrêt', 'Arret']);
+    final stopDuration =
+        _readField(rowDetails, ["Durée d'arrêt", 'Duree d arret', 'Duration']);
+    final vibratorCounter =
+        _readField(rowDetails, ['Compteur Vibrateur', 'Compteurs Vibreurs']);
+    final liaisonCounter =
+        _readField(rowDetails, ['Compteur Liaison', 'Compteurs Liaison']);
+    final stock = _readField(rowDetails, ['Stock', 'Stocks']);
+    final module = _readField(rowDetails, ['Module']);
+    final nature = _readField(rowDetails, ['Nature']);
+    final operatingDuration = _readField(rowDetails, ['Durée marche']);
+    final stopStart =
+        _readField(rowDetails, ["Début d'Arrêt", 'Debut d Arret', 'Start']);
+    final stopEnd =
+        _readField(rowDetails, ["Fin d'Arrêt", 'Fin d Arret', 'End']);
 
     if (stopReason.isNotEmpty) {
       _activityStops.add(stopReason);
