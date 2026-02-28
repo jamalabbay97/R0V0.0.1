@@ -872,6 +872,11 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
     final tripsPerTruck =
         _splitFieldValues(_field(details, ['Trips per Truck']));
     final tripDetails = _splitFieldValues(_field(details, ['Trip Details']));
+    final tripsByEquipment = _splitFieldValues(_field(details, [
+      'Total de Voyages par Equipment',
+      'Total de voyage par équipement',
+      'Trips per Equipment',
+    ]));
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -893,33 +898,41 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
         if (tripsPerTruck.isEmpty)
           _r0Row('-', '-')
         else
-          ...tripsPerTruck.map((entry) {
+          ...tripsPerTruck.asMap().entries.map((tripEntry) {
+            final index = tripEntry.key;
+            final entry = tripEntry.value;
             final parts = entry.split(':');
+            final truckName = parts.first.trim();
+            final driverName =
+                index < driverList.length ? driverList[index] : '';
+            final truckWithDriver =
+                driverName.isEmpty ? truckName : '$truckName - $driverName';
+
             if (parts.length < 2) {
-              return _r0Row(entry, '-');
+              return _r0Row(truckWithDriver, '-');
             }
-            return _r0Row(parts.first.trim(),
-                '${parts.sublist(1).join(':').trim()} trips');
+            return _r0Row(
+                truckWithDriver, '${parts.sublist(1).join(':').trim()} trips');
           }),
-        const Divider(height: 24),
-        _sectionTitle(context, 'Trip Details'),
-        if (tripDetails.isEmpty)
-          _r0Row('-', '-')
-        else
-          ...tripDetails.map((entry) {
-            final parts = entry.split('|').map((e) => e.trim()).toList();
-            final time = parts.isNotEmpty ? parts[0] : '-';
-            final truck = parts.length > 1 ? parts[1] : '-';
-            final equipment = parts.length > 2 ? parts[2] : '-';
-            final quality = parts.length > 3 ? parts[3] : '';
-            final subtitle =
-                quality.isEmpty ? equipment : '$equipment • $quality';
-            return _r0Row('$time  $truck', subtitle);
-          }),
-        if (driverList.isNotEmpty) ...[
+        if (tripsByEquipment.isNotEmpty) ...[
           const Divider(height: 24),
-          _sectionTitle(context, 'Drivers'),
-          ...driverList.map((entry) => _r0Row('Driver', entry)),
+          _sectionTitle(context, 'Total de voyage par équipement'),
+          ...tripsByEquipment.map((entry) => _r0Row('-', entry)),
+          const Divider(height: 24),
+          _sectionTitle(context, 'Trip Details'),
+          if (tripDetails.isEmpty)
+            _r0Row('-', '-')
+          else
+            ...tripDetails.map((entry) {
+              final parts = entry.split('|').map((e) => e.trim()).toList();
+              final time = parts.isNotEmpty ? parts[0] : '-';
+              final truck = parts.length > 1 ? parts[1] : '-';
+              final equipment = parts.length > 2 ? parts[2] : '-';
+              final quality = parts.length > 3 ? parts[3] : '';
+              final subtitle =
+                  quality.isEmpty ? equipment : '$equipment • $quality';
+              return _r0Row('$time  $truck', subtitle);
+            }),
         ],
       ],
     );
