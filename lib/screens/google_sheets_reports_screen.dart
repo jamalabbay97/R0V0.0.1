@@ -626,19 +626,23 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
     final stopRows = _buildStopsRows(stops, stopDurations);
 
     List<Widget> buildCounterRows(List<String> counters) {
-      if (counters.isEmpty) {
-        return [_r0Row('-', '-')];
+      final filledCounters =
+          counters.where(_isMeaningfulActivityValue).toList(growable: false);
+      if (filledCounters.isEmpty) {
+        return const [];
       }
-      return counters
+      return filledCounters
           .map((counter) => _r0Row('Poste / Début / Fin', counter))
           .toList();
     }
 
     List<Widget> buildStockRows(List<String> values) {
-      if (values.isEmpty) {
-        return [_r0Row('-', '-')];
+      final filledStocks =
+          values.where(_isMeaningfulActivityValue).toList(growable: false);
+      if (filledStocks.isEmpty) {
+        return const [];
       }
-      return values
+      return filledStocks
           .map((stock) => _r0Row('Poste / Park / Type / Qte', stock))
           .toList();
     }
@@ -729,64 +733,94 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
         .where((entry) => entry.isNotEmpty)
         .toList();
 
+    final headerStyle = Theme.of(context)
+        .textTheme
+        .titleMedium
+        ?.copyWith(fontWeight: FontWeight.w700);
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       children: [
-        _r0Row('Date', _field(details, ['Date'])),
-        const Divider(height: 24),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Daily Summary', style: headerStyle),
+              const SizedBox(height: 10),
+              _dailyInfoRow('Date', _field(details, ['Date'])),
+              _dailyInfoRow('Sheet', record.sheetName),
+              _dailyInfoRow('Row', record.rowNumber.toString()),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
         _dailyDetailsSection(
           context,
           title: 'Module 1',
           children: [
-            _dailyInfoLine('Operating Time', module1Operating),
-            const SizedBox(height: 4),
-            _dailyInfoLine('Stop Time', module1Downtime),
-            const SizedBox(height: 12),
-            Text(
-              'Stops:',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
+            _buildModuleMetrics(
+              context,
+              operating: module1Operating,
+              downtime: module1Downtime,
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 10),
+            Text('Stops', style: headerStyle),
+            const SizedBox(height: 8),
             ...(module1Rows.isEmpty
-                ? [const Text('-')]
-                : module1Rows.map((row) => Text('  $row'))),
+                ? [const Text('No stops listed.')]
+                : module1Rows.asMap().entries.map(
+                    (entry) => _buildDailyStopTile(entry.key, entry.value))),
           ],
         ),
         _dailyDetailsSection(
           context,
           title: 'Module 2',
           children: [
-            _dailyInfoLine('Operating Time', module2Operating),
-            const SizedBox(height: 4),
-            _dailyInfoLine('Stop Time', module2Downtime),
-            const SizedBox(height: 12),
-            Text(
-              'Stops',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
+            _buildModuleMetrics(
+              context,
+              operating: module2Operating,
+              downtime: module2Downtime,
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 10),
+            Text('Stops', style: headerStyle),
+            const SizedBox(height: 8),
             ...(module2Rows.isEmpty
-                ? [const Text('-')]
-                : module2Rows.map((row) => Text('  $row'))),
+                ? [const Text('No stops listed.')]
+                : module2Rows.asMap().entries.map(
+                    (entry) => _buildDailyStopTile(entry.key, entry.value))),
           ],
         ),
         _dailyDetailsSection(
           context,
-          title: 'Stock',
+          title: 'Stock Entries',
           children: [
             ...(stockEntries.isEmpty
-                ? [const Text('-')]
+                ? [const Text('No stock entries found.')]
                 : stockEntries.map(
                     (stock) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        'Shift: ${stock.shift} | Park: ${stock.park} | Type: ${stock.type} | Qty: ${stock.qty}',
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _dailyInfoRow('Shift', stock.shift),
+                            _dailyInfoRow('Park', stock.park),
+                            _dailyInfoRow('Type', stock.type),
+                            _dailyInfoRow('Quantity', stock.qty),
+                          ],
+                        ),
                       ),
                     ),
                   )),
@@ -823,7 +857,7 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
             title,
             style: Theme.of(context)
                 .textTheme
-                .headlineMedium
+                .titleLarge
                 ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
@@ -833,8 +867,111 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
     );
   }
 
-  Widget _dailyInfoLine(String label, String value) {
-    return Text('$label: $value');
+  Widget _buildModuleMetrics(
+    BuildContext context, {
+    required String operating,
+    required String downtime,
+  }) {
+    final valueStyle = Theme.of(context)
+        .textTheme
+        .titleMedium
+        ?.copyWith(fontWeight: FontWeight.w700);
+
+    return Row(
+      children: [
+        Expanded(
+          child: _metricCard(
+            context,
+            label: 'Operating Time',
+            value: operating,
+            valueStyle: valueStyle,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _metricCard(
+            context,
+            label: 'Stop Time',
+            value: downtime,
+            valueStyle: valueStyle,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _metricCard(
+    BuildContext context, {
+    required String label,
+    required String value,
+    TextStyle? valueStyle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 4),
+          Text(value, style: valueStyle),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDailyStopTile(int index, String rowValue) {
+    final parts = rowValue.split(' - ');
+    final duration = parts.isNotEmpty ? parts.first.trim() : '-';
+    final reason = parts.length > 1 ? parts.sublist(1).join(' - ').trim() : '-';
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Stop ${index + 1}',
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          _dailyInfoRow('Duration', duration),
+          _dailyInfoRow('Reason', reason),
+        ],
+      ),
+    );
+  }
+
+  Widget _dailyInfoRow(String label, String value) {
+    final safeValue = value.trim().isEmpty ? '-' : value;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: RichText(
+        text: TextSpan(
+          style: Theme.of(context).textTheme.bodyMedium,
+          children: [
+            TextSpan(
+              text: '$label: ',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            TextSpan(
+              text: safeValue,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   _DailyStockEntry _parseDailyStockEntry(String raw) {
@@ -1079,18 +1216,57 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
   }
 
   List<Widget> _buildStopsRows(List<String> reasons, List<String> times) {
+    final normalizedReasons = _mergeStopReasonDetails(reasons);
     final rows = <Widget>[];
-    final itemCount =
-        reasons.length > times.length ? reasons.length : times.length;
+    final itemCount = normalizedReasons.length > times.length
+        ? normalizedReasons.length
+        : times.length;
     if (itemCount == 0) {
-      return [_r0Row('-', '-')];
+      return const [];
     }
+
     for (var i = 0; i < itemCount; i++) {
-      final reason = i < reasons.length ? reasons[i] : '-';
-      final time = i < times.length ? times[i] : '-';
+      final reason = i < normalizedReasons.length ? normalizedReasons[i] : '';
+      final time = i < times.length ? times[i] : '';
       rows.add(_r0Row(reason, time));
     }
     return rows;
+  }
+
+  List<String> _mergeStopReasonDetails(List<String> reasons) {
+    if (reasons.length < 2) {
+      return reasons;
+    }
+
+    final merged = <String>[];
+    var index = 0;
+    while (index < reasons.length) {
+      final current = reasons[index];
+      final nextIndex = index + 1;
+      if (current.endsWith(':') &&
+          nextIndex < reasons.length &&
+          !reasons[nextIndex].endsWith(':')) {
+        merged.add('$current\n${reasons[nextIndex]}');
+        index += 2;
+        continue;
+      }
+
+      merged.add(current);
+      index++;
+    }
+
+    return merged;
+  }
+
+  bool _isMeaningfulActivityValue(String value) {
+    final cleaned = value.trim();
+    if (cleaned.isEmpty || cleaned == '-') {
+      return false;
+    }
+
+    final withoutSeparators = cleaned.replaceAll('/', '').replaceAll('|', '');
+    final withoutSpaces = withoutSeparators.replaceAll(RegExp(r'\s+'), '');
+    return withoutSpaces.replaceAll('-', '').isNotEmpty;
   }
 
   List<String> _extractStopReasons(Map<String, String> details) {
@@ -1160,7 +1336,9 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
       .replaceAll(RegExp(r'[^a-z0-9]'), '');
 
   Widget _r0Row(String label, String value) {
-    final normalizedValue = value.trim().isEmpty ? '-' : value;
+    final normalizedLabel = label.trim() == '-' ? '' : label;
+    final normalizedValue =
+        (value.trim().isEmpty || value.trim() == '-') ? '' : value;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -1169,7 +1347,7 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
         children: [
           Expanded(
             child: Text(
-              label,
+              normalizedLabel,
               style: const TextStyle(
                 color: Colors.grey,
                 fontSize: 13,
