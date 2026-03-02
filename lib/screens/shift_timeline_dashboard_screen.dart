@@ -16,7 +16,7 @@ class _ShiftTimelineDashboardScreenState
 
   bool _isLoading = true;
   List<Report> _r0Reports = [];
-  Report? _selectedReport;
+  DateTime? _selectedProductionDay;
 
   static const List<String> _shiftOrder = ['3ème', '1er', '2ème'];
 
@@ -31,16 +31,16 @@ class _ShiftTimelineDashboardScreenState
     try {
       final allReports = await _databaseHelper.getReports();
       final r0Reports = allReports.where((r) {
-        final data = r.additionalData;
-        if (data == null) return false;
-        final poste =
-            data['selectedPoste'] ?? data['poste'] ?? data['posteSelected'];
-        return poste != null && _shiftOrder.contains(poste.toString());
+        final poste = _extractPoste(r);
+        return _shiftOrder.contains(poste);
       }).toList();
+
+      final productionDays = _availableProductionDays(r0Reports);
 
       setState(() {
         _r0Reports = r0Reports;
-        _selectedReport = r0Reports.isNotEmpty ? r0Reports.first : null;
+        _selectedProductionDay =
+            productionDays.isNotEmpty ? productionDays.first : null;
         _isLoading = false;
       });
     } catch (_) {
@@ -51,7 +51,9 @@ class _ShiftTimelineDashboardScreenState
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final reportsForDay = _selectedProductionDay == null
+        ? const <Report>[]
+        : _reportsForProductionDay(_selectedProductionDay!);
 
     return Scaffold(
       appBar: AppBar(
@@ -64,7 +66,7 @@ class _ShiftTimelineDashboardScreenState
                   child: Padding(
                     padding: EdgeInsets.all(20),
                     child: Text(
-                      'No shift reports found yet. Add an R0 report to view the timeline.',
+                      'No shift reports found yet. Add R0 reports to view the timeline.',
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -72,32 +74,61 @@ class _ShiftTimelineDashboardScreenState
               : ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    DropdownButtonFormField<Report>(
-                      initialValue: _selectedReport,
+                    DropdownButtonFormField<DateTime>(
+                      initialValue: _selectedProductionDay,
                       decoration: const InputDecoration(
-                        labelText: 'Select report',
+                        labelText: 'Select production day',
                         border: OutlineInputBorder(),
                       ),
-                      items: _r0Reports.map((report) {
-                        final poste = _extractPoste(report);
-                        final date = report.date;
+                      items: _availableProductionDays(_r0Reports).map((day) {
                         final label =
-                            '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} • $poste • ${report.type}';
-                        return DropdownMenuItem(
-                            value: report, child: Text(label));
+                            '${day.day.toString().padLeft(2, '0')}/${day.month.toString().padLeft(2, '0')}/${day.year}';
+                        return DropdownMenuItem(value: day, child: Text(label));
                       }).toList(),
                       onChanged: (value) {
-                        setState(() => _selectedReport = value);
+                        setState(() => _selectedProductionDay = value);
                       },
                     ),
                     const SizedBox(height: 18),
-                    if (_selectedReport != null) ...[
+                    if (_selectedProductionDay != null)
                       _ShiftTimelineCard(
-                          report: _selectedReport!, theme: theme),
-                    ],
+                        productionDay: _selectedProductionDay!,
+                        reports: reportsForDay,
+                      ),
                   ],
                 ),
     );
+  }
+
+  List<DateTime> _availableProductionDays(List<Report> reports) {
+    final days = reports.map(_productionDayFromReport).toSet().toList()
+      ..sort((a, b) => b.compareTo(a));
+    return days;
+  }
+
+  List<Report> _reportsForProductionDay(DateTime productionDay) {
+    final reportsForDay = _r0Reports
+        .where((r) => _isSameDay(_productionDayFromReport(r), productionDay))
+        .toList();
+    reportsForDay.sort((a, b) {
+      final ai = _shiftOrder.indexOf(_extractPoste(a));
+      final bi = _shiftOrder.indexOf(_extractPoste(b));
+      return ai.compareTo(bi);
+    });
+    return reportsForDay;
+  }
+
+  DateTime _productionDayFromReport(Report report) {
+    final poste = _extractPoste(report);
+    final date = DateTime(report.date.year, report.date.month, report.date.day);
+    if (poste == '3ème') {
+      return date.subtract(const Duration(days: 1));
+    }
+    return date;
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   String _extractPoste(Report report) {
@@ -112,21 +143,21 @@ class _ShiftTimelineDashboardScreenState
 }
 
 class _ShiftTimelineCard extends StatelessWidget {
-  const _ShiftTimelineCard({required this.report, required this.theme});
+  const _ShiftTimelineCard(
+      {required this.productionDay, required this.reports});
 
-  final Report report;
-  final ThemeData theme;
+  final DateTime productionDay;
+  final List<Report> reports;
 
-  static const _timelineStart = TimeOfDay(hour: 22, minute: 30);
+  static const List<String> _shiftOrder = ['3ème', '1er', '2ème'];
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final segments = _buildSegments();
     final totalDownMinutes = segments
         .where((s) => s.isDowntime)
         .fold<int>(0, (sum, s) => sum + (s.endMinute - s.startMinute));
-    final uptimeHours = (1440 - totalDownMinutes) / 60;
-    final downtimeHours = totalDownMinutes / 60;
 
     return Card(
       child: Padding(
@@ -135,17 +166,22 @@ class _ShiftTimelineCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '24h equipment operation vs downtime',
+              '24h operation timeline',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 6),
             Text(
-              'Order: 3rd shift → 1st shift → 2nd shift',
+              'Order: 3rd Shift → 1st Shift → 2nd Shift',
               style: theme.textTheme.bodySmall,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 4),
+            Text(
+              _coverageText(),
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 16),
             SizedBox(
               height: 62,
               child: CustomPaint(
@@ -171,14 +207,14 @@ class _ShiftTimelineCard extends StatelessWidget {
             const SizedBox(height: 12),
             Row(
               children: [
-                _LegendChip(color: Colors.green.shade500, text: 'Operation'),
+                _LegendChip(color: Colors.green.shade500, text: '🟢 Operation'),
                 const SizedBox(width: 8),
-                _LegendChip(color: Colors.red.shade400, text: 'Downtime'),
+                _LegendChip(color: Colors.red.shade400, text: '🔴 Downtime'),
               ],
             ),
             const SizedBox(height: 12),
             Text(
-              'Uptime: ${uptimeHours.toStringAsFixed(2)}h • Downtime: ${downtimeHours.toStringAsFixed(2)}h',
+              'Operation: ${((1440 - totalDownMinutes) / 60).toStringAsFixed(2)}h • Downtime: ${(totalDownMinutes / 60).toStringAsFixed(2)}h',
               style: theme.textTheme.bodyMedium,
             ),
           ],
@@ -187,27 +223,48 @@ class _ShiftTimelineCard extends StatelessWidget {
     );
   }
 
+  String _coverageText() {
+    final present = reports.map(_extractPoste).toSet();
+    final coverage = _shiftOrder
+        .map((shift) => present.contains(shift) ? '$shift ✓' : '$shift ✕')
+        .join('   ');
+    return 'Reports loaded: $coverage';
+  }
+
   List<_TimelineSegment> _buildSegments() {
-    final window = _windowStartAndEnd();
-    final downtime = _downtimeSegments(window.$1, window.$2);
-    if (downtime.isEmpty) {
+    final timelineStart = DateTime(
+      productionDay.year,
+      productionDay.month,
+      productionDay.day,
+      22,
+      30,
+    );
+    final timelineEnd = timelineStart.add(const Duration(hours: 24));
+
+    final ranges = <_TimelineSegment>[];
+    for (final report in reports) {
+      ranges.addAll(_downtimeSegments(report, timelineStart, timelineEnd));
+    }
+
+    final mergedDowntime = _merge(ranges);
+    if (mergedDowntime.isEmpty) {
       return const [
-        _TimelineSegment(startMinute: 0, endMinute: 1440, isDowntime: false)
+        _TimelineSegment(startMinute: 0, endMinute: 1440, isDowntime: false),
       ];
     }
 
     final segments = <_TimelineSegment>[];
-    int cursor = 0;
-    for (final d in downtime) {
-      if (d.startMinute > cursor) {
+    var cursor = 0;
+    for (final down in mergedDowntime) {
+      if (down.startMinute > cursor) {
         segments.add(_TimelineSegment(
           startMinute: cursor,
-          endMinute: d.startMinute,
+          endMinute: down.startMinute,
           isDowntime: false,
         ));
       }
-      segments.add(d);
-      cursor = d.endMinute;
+      segments.add(down);
+      cursor = down.endMinute;
     }
     if (cursor < 1440) {
       segments.add(
@@ -218,27 +275,11 @@ class _ShiftTimelineCard extends StatelessWidget {
     return segments;
   }
 
-  (DateTime, DateTime) _windowStartAndEnd() {
-    final selectedPoste = _extractPoste(report);
-    final date = report.date;
-
-    final dayStart = DateTime(date.year, date.month, date.day);
-    late DateTime timelineStart;
-
-    if (selectedPoste == '3ème') {
-      timelineStart = dayStart.add(
-        Duration(hours: _timelineStart.hour, minutes: _timelineStart.minute),
-      );
-    } else {
-      timelineStart = dayStart.subtract(const Duration(days: 1)).add(
-          Duration(hours: _timelineStart.hour, minutes: _timelineStart.minute));
-    }
-
-    return (timelineStart, timelineStart.add(const Duration(hours: 24)));
-  }
-
   List<_TimelineSegment> _downtimeSegments(
-      DateTime timelineStart, DateTime timelineEnd) {
+    Report report,
+    DateTime timelineStart,
+    DateTime timelineEnd,
+  ) {
     final data = report.additionalData ?? const <String, dynamic>{};
     final rawArrets =
         (data['Arrets'] as List?)?.whereType<Map>().toList() ?? const <Map>[];
@@ -255,7 +296,7 @@ class _ShiftTimelineCard extends StatelessWidget {
       if (startStr.isEmpty || endStr.isEmpty) continue;
 
       final start = _resolveTimeInWindow(startStr, timelineStart);
-      DateTime end = _resolveTimeInWindow(endStr, timelineStart);
+      var end = _resolveTimeInWindow(endStr, timelineStart);
       if (!end.isAfter(start)) {
         end = end.add(const Duration(days: 1));
       }
@@ -273,7 +314,7 @@ class _ShiftTimelineCard extends StatelessWidget {
     }
 
     ranges.sort((a, b) => a.startMinute.compareTo(b.startMinute));
-    return _merge(ranges);
+    return ranges;
   }
 
   DateTime _resolveTimeInWindow(String value, DateTime timelineStart) {
@@ -299,8 +340,11 @@ class _ShiftTimelineCard extends StatelessWidget {
 
   List<_TimelineSegment> _merge(List<_TimelineSegment> ranges) {
     if (ranges.isEmpty) return ranges;
-    final merged = <_TimelineSegment>[ranges.first];
-    for (final current in ranges.skip(1)) {
+
+    final sorted = [...ranges]
+      ..sort((a, b) => a.startMinute.compareTo(b.startMinute));
+    final merged = <_TimelineSegment>[sorted.first];
+    for (final current in sorted.skip(1)) {
       final last = merged.last;
       if (current.startMinute <= last.endMinute) {
         merged[merged.length - 1] = _TimelineSegment(
@@ -317,8 +361,8 @@ class _ShiftTimelineCard extends StatelessWidget {
     return merged;
   }
 
-  String _extractPoste(Report r) {
-    final data = r.additionalData ?? const <String, dynamic>{};
+  String _extractPoste(Report report) {
+    final data = report.additionalData ?? const <String, dynamic>{};
     return (data['selectedPoste'] ??
             data['poste'] ??
             data['posteSelected'] ??
@@ -387,18 +431,7 @@ class _LegendChip extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 6),
-          Text(text),
-        ],
-      ),
+      child: Text(text),
     );
   }
 }
