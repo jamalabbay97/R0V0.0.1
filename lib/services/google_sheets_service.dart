@@ -3117,6 +3117,7 @@ class _TemplateGroupedRecordBuilder {
   final List<_TruckTemplateRow> _truckRows = [];
   String _dailyModule1Operating = '';
   String _dailyModule2Operating = '';
+  String _lastDailyModule = '';
 
   String _readField(Map<String, String> rowDetails, List<String> candidates) {
     for (final candidate in candidates) {
@@ -3194,9 +3195,28 @@ class _TemplateGroupedRecordBuilder {
     final liaisonCounter =
         _readField(rowDetails, ['Compteur Liaison', 'Compteurs Liaison']);
     final stock = _readField(rowDetails, ['Stock', 'Stocks']);
-    final module = _readField(rowDetails, ['Module']);
-    final nature = _readField(rowDetails, ['Nature']);
-    final operatingDuration = _readField(rowDetails, ['Durée marche']);
+    final moduleRaw = _readField(rowDetails, [
+      'Module',
+      'Catégorie du module',
+      'Categorie du module',
+    ]);
+    final module = moduleRaw.isNotEmpty ? moduleRaw : _lastDailyModule;
+    if (moduleRaw.isNotEmpty) {
+      _lastDailyModule = moduleRaw;
+    }
+
+    final nature = _readField(rowDetails, [
+      'Nature',
+      "Nature d'arrêt",
+      'Nature d arret',
+    ]);
+    final operatingDuration = _readField(rowDetails, [
+      'Durée marche',
+      'Duree marche',
+      'Total H.M',
+      'Total H.M1',
+      'Total H.M2',
+    ]);
     final stopStart =
         _readField(rowDetails, ["Début d'Arrêt", 'Debut d Arret', 'Start']);
     final stopEnd =
