@@ -9,6 +9,7 @@ import 'package:r0/screens/machines_equipment_stopped_screen.dart';
 import 'package:r0/screens/r0_report_screen.dart';
 import 'package:r0/screens/reports_screen.dart';
 import 'package:r0/screens/settings_screen.dart';
+import 'package:r0/screens/shift_timeline_dashboard_screen.dart';
 import 'package:r0/screens/truck_tracking_screen.dart';
 import 'package:r0/widgets/custom_widgets.dart';
 import 'package:r0/widgets/logo_widget.dart';
@@ -72,6 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: const [
                 _HomeDashboardPage(),
                 GoogleSheetsReportsScreen(),
+                ShiftTimelineDashboardScreen(),
               ],
             ),
           ),
@@ -124,7 +126,7 @@ class _PageSwitcher extends StatelessWidget {
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          children: List.generate(2, (index) {
+          children: List.generate(3, (index) {
             final isSelected = index == currentPage;
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -150,7 +152,7 @@ class _PageSwitcher extends StatelessWidget {
       );
     }
 
-    final segments = ['Dashboard', 'Archive'];
+    final segments = ['Dashboard', 'Archive', 'Timeline'];
 
     return Container(
       padding: const EdgeInsets.all(4),
