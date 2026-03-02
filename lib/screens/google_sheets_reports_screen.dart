@@ -675,65 +675,36 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
       BuildContext context, GoogleSheetRecord record) {
     final details = record.details;
 
-    final module1Stops = _splitFieldValues(
-      _field(details, [
-        'Détails Arrêts M1',
-        'Arrêts M1',
-        'Module 1 Stops',
-        'Nature M1',
-        'Module 1 Details',
-      ]),
-    );
-    final module1Durations = _splitFieldValues(
-      _field(details, [
-        'Durées Arrêts M1',
-        'Durée Arrêts M1',
-        'Durées M1',
-        'Temps d\'arrêt M1',
-      ]),
-    );
-    final module2Stops = _splitFieldValues(
-      _field(details, [
-        'Détails Arrêts M2',
-        'Arrêts M2',
-        'Module 2 Stops',
-        'Nature M2',
-        'Module 2 Details',
-      ]),
-    );
-    final module2Durations = _splitFieldValues(
-      _field(details, [
-        'Durées Arrêts M2',
-        'Durée Arrêts M2',
-        'Durées M2',
-        'Temps d\'arrêt M2',
-      ]),
-    );
+    final module1Rows = _buildDailyModuleStopRows(details, moduleNumber: 1);
+    final module2Rows = _buildDailyModuleStopRows(details, moduleNumber: 2);
     final stockRows = _splitFieldValues(
-      _field(details, ['Détails Stock', 'Stocks', 'Stock Entries', 'Stock']),
+      _field(details, [
+        'Détails Stock',
+        'Stocks',
+        'Stock Entries',
+        'Stock',
+        'Poste / Park / Type / Qte',
+      ]),
     );
 
-    final module1Operating =
-        _field(details, ['Durée Marche M1', 'T H.M1 (Operating M1)', 'T H.M1']);
+    final module1Operating = _field(details,
+        ['Durée Marche M1', 'T H.M1 (Operating M1)', 'T H.M1', 'Total H.M M1']);
     final module1Downtime = _field(details, [
       'T H.A1 (Downtime M1)',
       'Durée Arrêts Totale M1',
       'Temps d\'arrêt M1',
       'T H.A1',
+      'Total H.A M1',
     ]);
-    final module2Operating =
-        _field(details, ['Durée Marche M2', 'T H.M2 (Operating M2)', 'T H.M2']);
+    final module2Operating = _field(details,
+        ['Durée Marche M2', 'T H.M2 (Operating M2)', 'T H.M2', 'Total H.M M2']);
     final module2Downtime = _field(details, [
       'T H.A2 (Downtime M2)',
       'Durée Arrêts Totale M2',
       'Temps d\'arrêt M2',
       'T H.A2',
+      'Total H.A M2',
     ]);
-
-    final module1Rows =
-        _buildDurationReasonRows(module1Durations, module1Stops).toList();
-    final module2Rows =
-        _buildDurationReasonRows(module2Durations, module2Stops).toList();
 
     final stockEntries = stockRows
         .map(_parseDailyStockEntry)
@@ -823,6 +794,45 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
       final reason = i < reasons.length ? reasons[i] : '-';
       yield '$duration - $reason';
     }
+  }
+
+  List<String> _buildDailyModuleStopRows(
+    Map<String, String> details, {
+    required int moduleNumber,
+  }) {
+    final reasons = _splitFieldValues(_field(details, [
+      'Détails Arrêts M$moduleNumber',
+      'Arrêts M$moduleNumber',
+      'Module $moduleNumber Stops',
+      'Nature M$moduleNumber',
+      'Module $moduleNumber Details',
+      'Module $moduleNumber',
+    ]));
+
+    final durations = _splitFieldValues(_field(details, [
+      'Durées Arrêts M$moduleNumber',
+      'Durée Arrêts M$moduleNumber',
+      'Durées M$moduleNumber',
+      'Temps d\'arrêt M$moduleNumber',
+      'Durée Module $moduleNumber',
+      'Durées Module $moduleNumber',
+    ]));
+
+    final combinedRows = _splitFieldValues(_field(details, [
+      'Arrêts + Durées M$moduleNumber',
+      'Module $moduleNumber Arrêts',
+      'Module $moduleNumber Détails',
+    ]));
+
+    final pairedRows = _buildDurationReasonRows(durations, reasons)
+        .where((row) => row.trim() != '- -')
+        .toList();
+
+    if (pairedRows.length >= combinedRows.length || combinedRows.isEmpty) {
+      return pairedRows;
+    }
+
+    return combinedRows;
   }
 
   _DailyStockEntry _parseDailyStockEntry(String raw) {
