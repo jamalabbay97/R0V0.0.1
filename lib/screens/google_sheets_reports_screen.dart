@@ -676,29 +676,59 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
     final details = record.details;
 
     final module1Stops = _splitFieldValues(
-      _field(details, ['Détails Arrêts M1', 'Arrêts M1', 'Module 1 Stops']),
+      _field(details, [
+        'Détails Arrêts M1',
+        'Arrêts M1',
+        'Module 1 Stops',
+        'Nature M1',
+        'Module 1 Details',
+      ]),
     );
     final module1Durations = _splitFieldValues(
-      _field(details, ['Durées Arrêts M1', 'Durée Arrêts M1']),
+      _field(details, [
+        'Durées Arrêts M1',
+        'Durée Arrêts M1',
+        'Durées M1',
+        'Temps d\'arrêt M1',
+      ]),
     );
     final module2Stops = _splitFieldValues(
-      _field(details, ['Détails Arrêts M2', 'Arrêts M2', 'Module 2 Stops']),
+      _field(details, [
+        'Détails Arrêts M2',
+        'Arrêts M2',
+        'Module 2 Stops',
+        'Nature M2',
+        'Module 2 Details',
+      ]),
     );
     final module2Durations = _splitFieldValues(
-      _field(details, ['Durées Arrêts M2', 'Durée Arrêts M2']),
+      _field(details, [
+        'Durées Arrêts M2',
+        'Durée Arrêts M2',
+        'Durées M2',
+        'Temps d\'arrêt M2',
+      ]),
     );
     final stockRows = _splitFieldValues(
       _field(details, ['Détails Stock', 'Stocks', 'Stock Entries', 'Stock']),
     );
 
     final module1Operating =
-        _field(details, ['Durée Marche M1', 'T H.M1 (Operating M1)']);
-    final module1Downtime =
-        _field(details, ['T H.A1 (Downtime M1)', 'Durée Arrêts Totale M1']);
+        _field(details, ['Durée Marche M1', 'T H.M1 (Operating M1)', 'T H.M1']);
+    final module1Downtime = _field(details, [
+      'T H.A1 (Downtime M1)',
+      'Durée Arrêts Totale M1',
+      'Temps d\'arrêt M1',
+      'T H.A1',
+    ]);
     final module2Operating =
-        _field(details, ['Durée Marche M2', 'T H.M2 (Operating M2)']);
-    final module2Downtime =
-        _field(details, ['T H.A2 (Downtime M2)', 'Durée Arrêts Totale M2']);
+        _field(details, ['Durée Marche M2', 'T H.M2 (Operating M2)', 'T H.M2']);
+    final module2Downtime = _field(details, [
+      'T H.A2 (Downtime M2)',
+      'Durée Arrêts Totale M2',
+      'Temps d\'arrêt M2',
+      'T H.A2',
+    ]);
 
     final module1Rows =
         _buildDurationReasonRows(module1Durations, module1Stops).toList();
@@ -980,7 +1010,7 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
       return const [];
     }
     return value
-        .split('\n')
+        .split(RegExp(r'\r?\n|\s*\|\s*|\s*•\s*|\s*;\s*'))
         .map((line) => line.trim())
         .where((line) => line.isNotEmpty)
         .toList();
