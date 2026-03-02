@@ -15,3 +15,12 @@
 local.properties
 .dart_tool/
 assets/credentials/
+
+# Kotlin
+.kotlin/
+kotlin-compiler-*.salive
+
+# Logs
+*.log
+gradle_log*.txt
+log.txt
