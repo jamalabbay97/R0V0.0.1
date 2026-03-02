@@ -747,7 +747,7 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
                 : stockEntries.map(
                     (stock) => _r0Row(
                       'Poste / Park / Type / Qte',
-                      '${stock.shift} / ${stock.park} / ${stock.type} / ${stock.qty}',
+                      stock.displayValue,
                     ),
                   )),
             const SizedBox(height: 6),
@@ -847,6 +847,12 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
         .toList();
 
     if (segments.isEmpty) {
+      return const _DailyStockEntry();
+    }
+
+    final isDateOnlyEntry = segments.length == 1 &&
+        RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(segments[0]);
+    if (isDateOnlyEntry) {
       return const _DailyStockEntry();
     }
 
@@ -1254,6 +1260,10 @@ class _DailyStockEntry {
   final String park;
   final String type;
   final String qty;
+
+  String get displayValue => [shift, park, type, qty]
+      .where((value) => value.trim().isNotEmpty)
+      .join(' / ');
 
   bool get isNotEmpty =>
       shift.isNotEmpty || park.isNotEmpty || type.isNotEmpty || qty.isNotEmpty;
