@@ -1,7 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:r0/services/google_sheets_service.dart';
 
 void main() {
+  setUpAll(() async {
+    await initializeDateFormatting('fr_FR', null);
+  });
+
   group('GoogleSheetsService normalization', () {
     final service = GoogleSheetsService();
 

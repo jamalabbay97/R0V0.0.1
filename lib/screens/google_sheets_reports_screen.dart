@@ -704,10 +704,6 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
         _buildDurationReasonRows(module1Durations, module1Stops).toList();
     final module2Rows =
         _buildDurationReasonRows(module2Durations, module2Stops).toList();
-    final allStops = [
-      ...module1Rows.map((row) => ('Module 1', row)),
-      ...module2Rows.map((row) => ('Module 2', row)),
-    ];
 
     final stockEntries = stockRows
         .map(_parseDailyStockEntry)
@@ -717,47 +713,28 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       children: [
-        _r0Row('Date', _field(details, ['Date'])),
-        const SizedBox(height: 8),
         _activitySection(
           context,
-          title: 'Résumé des données',
+          title: 'Date',
           children: [
-            _r0Row('T H.M1', module1Operating),
-            _r0Row('T H.A1', module1Downtime),
-            _r0Row('T H.M2', module2Operating),
-            _r0Row('T H.A2', module2Downtime),
-            const SizedBox(height: 6),
-            _r0Row('T Nr.A', allStops.length.toString()),
-            _r0Row('Sheet', record.sheetName),
-            _r0Row('Row', record.rowNumber.toString()),
+            _r0Row('Date', _field(details, ['Date']))
           ],
         ),
         const SizedBox(height: 12),
-        _activitySection(
-          context,
-          title: 'Arrêts',
-          children: [
-            ...(allStops.isEmpty
-                ? [_r0Row('-', '-')]
-                : allStops.asMap().entries.map((entry) {
-                    final index = entry.key + 1;
-                    final module = entry.value.$1;
-                    final rowValue = entry.value.$2;
-                    return _r0Row('$module • Arrêt $index', rowValue);
-                  })),
-          ],
+        _buildDailyModuleCard(
+          context: context,
+          moduleTitle: 'Module 1',
+          operatingTime: module1Operating,
+          downtime: module1Downtime,
+          stopRows: module1Rows,
         ),
         const SizedBox(height: 12),
-        _activitySection(
-          context,
-          title: 'Modules',
-          children: [
-            _r0Row('Module 1 / Marche', module1Operating),
-            _r0Row('Module 1 / Arrêts', module1Downtime),
-            _r0Row('Module 2 / Marche', module2Operating),
-            _r0Row('Module 2 / Arrêts', module2Downtime),
-          ],
+        _buildDailyModuleCard(
+          context: context,
+          moduleTitle: 'Module 2',
+          operatingTime: module2Operating,
+          downtime: module2Downtime,
+          stopRows: module2Rows,
         ),
         const SizedBox(height: 12),
         _activitySection(
@@ -772,8 +749,35 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
                       '${stock.shift} / ${stock.park} / ${stock.type} / ${stock.qty}',
                     ),
                   )),
+            const SizedBox(height: 6),
+            _r0Row('Sheet', record.sheetName),
+            _r0Row('Row', record.rowNumber.toString()),
           ],
         ),
+      ],
+    );
+  }
+
+  Widget _buildDailyModuleCard({
+    required BuildContext context,
+    required String moduleTitle,
+    required String operatingTime,
+    required String downtime,
+    required List<String> stopRows,
+  }) {
+    return _activitySection(
+      context,
+      title: moduleTitle,
+      children: [
+        _r0Row('Operating Time', operatingTime),
+        _r0Row('Stop Time', downtime),
+        const SizedBox(height: 6),
+        ...((stopRows.isEmpty)
+            ? [_r0Row('Stops', '-')]
+            : stopRows.asMap().entries.map((entry) {
+                final stopIndex = entry.key + 1;
+                return _r0Row('Stop $stopIndex', entry.value);
+              })),
       ],
     );
   }

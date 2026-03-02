@@ -4499,24 +4499,34 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const Divider(height: 16),
-                                  ...List.from(data['Arrets'])
-                                      .map((arret) => Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 2),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                    '${l10n.type}: ${arret['Arret'] ?? '-'}'),
-                                                _buildInfoRow(l10n.start,
-                                                    arret['Début'] ?? '-'),
-                                                _buildInfoRow(l10n.end,
-                                                    arret['Fin'] ?? '-'),
-                                                const Divider(height: 8),
-                                              ],
-                                            ),
-                                          )),
+                                  ...List.from(data['Arrets']).map((arret) =>
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 2),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                                '${l10n.type}: ${_getLocalizedReasonLabel(arret['Arret']?.toString() ?? '', l10n)}'),
+                                            if (arret['Catégorie'] != null &&
+                                                arret['Catégorie']
+                                                    .toString()
+                                                    .isNotEmpty)
+                                              _buildInfoRow(
+                                                  l10n.category,
+                                                  _getLocalizedCategoryLabel(
+                                                      arret['Catégorie']
+                                                          .toString(),
+                                                      l10n)),
+                                            _buildInfoRow(l10n.start,
+                                                arret['Début'] ?? '-'),
+                                            _buildInfoRow(
+                                                l10n.end, arret['Fin'] ?? '-'),
+                                            const Divider(height: 8),
+                                          ],
+                                        ),
+                                      )),
                                 ],
                               ),
                             ),
@@ -5478,6 +5488,56 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ],
       ),
     );
+  }
+
+  String _getLocalizedCategoryLabel(String key, AppLocalizations l10n) {
+    final map = {
+      'EXTERIEURS': l10n.catExterior,
+      'MATERIEL': l10n.catMaterial,
+      'EXPLOITATION': l10n.catExploitation,
+    };
+    return map[key] ?? key;
+  }
+
+  String _getLocalizedReasonLabel(String key, AppLocalizations l10n) {
+    final map = {
+      'ARRET CARREAU INDUSTRIEL': l10n.stopIndustrialArea,
+      'COUPURE GENERALE DU COURANT': l10n.stopPowerCut,
+      'GREVE': l10n.stopStrike,
+      'INTEMPERIES': l10n.stopWeather,
+      'STOCKS PLEINS': l10n.stopFullStocks,
+      'J. FERIES OU HEBDOMADAIRES': l10n.stopHolidays,
+      'ARRET PAR LA CENTRALE (M.ENERGIE)': l10n.stopPowerPlant,
+      'CONTROLE': l10n.stopControl,
+      'DEFAUT ELEC. (C.CRAME, RESEAU)': l10n.stopElecFault,
+      'PANNE MECANIQUE': l10n.stopMechBreakdown,
+      'PANNE ELECTRIQUE': l10n.stopElecBreakdown,
+      'INTERVENTION ATELIER PNEUMATIQUE': l10n.stopTireWorkshop,
+      'ENTRETIEN SYSTEMATIQUE': l10n.stopMaintenance,
+      'APPOINT (HUILE, GAZOL, EAU)': l10n.stopRefill,
+      'GRAISSAGE': l10n.stopGreasing,
+      'ARRET ELEC. INSTALATION FIXES': l10n.stopFixedInstallElec,
+      'MANQUE CAMIONS': l10n.stopNoTrucks,
+      'MANQUE BULL': l10n.stopNoBull,
+      'MANQUE MECANICIEN': l10n.stopNoMechanic,
+      'MANQUE D\'OUTILS DE TRAVAIL': l10n.stopNoTools,
+      'MACHINE A L\'ARRET': l10n.stopMachineStopped,
+      'PANNE ENGIN DEVANT MACHINE': l10n.stopBreakdownFront,
+      'RELEVE': l10n.stopShiftChange,
+      'EXECUTION PLATE FORME': l10n.stopPlatformExec,
+      'DEPLACEMENT': l10n.stopMove,
+      'TIR ET SAUTAGE': l10n.stopBlasting,
+      'MOUV. DE CABLE': l10n.stopCableMove,
+      'ARRET DECIDE': l10n.stopDecidedStop,
+      'MANQUE CONDUCTEUR': l10n.stopNoDriver,
+      'BRIQUET': l10n.stopBreak,
+      'PISTES (INTEMPERIES EXCLUES)': l10n.stopTracks,
+      'ARRETS MECA. INSTALATIONS FIXES': l10n.stopFixedInstallMech,
+      'TELESCOPAGE': l10n.stopTelescoping,
+      'EXCAVATION PURE': l10n.stopPureExcavation,
+      'TERASSEMENT PUR': l10n.stopPureEarthworks,
+    };
+    return map[key] ?? key;
   }
 
   Widget _buildInfoRow(String label, String value) {

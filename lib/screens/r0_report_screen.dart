@@ -938,7 +938,24 @@ class R0ReportState extends State<R0Report> {
               leading: const Icon(Icons.warning, color: AppColors.warning),
               title: Text(_getLocalizedReasonLabel(item.label, l10n),
                   style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text("${item.duree} -> ${item.note}"),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (item.category.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2, bottom: 2),
+                      child: Text(
+                        _getLocalizedCategoryLabel(item.category, l10n),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  Text("${item.duree} -> ${item.note}"),
+                ],
+              ),
               trailing: IconButton(
                   icon: const Icon(Icons.delete, color: AppColors.error),
                   onPressed: () {
