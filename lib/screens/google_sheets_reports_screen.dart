@@ -683,12 +683,17 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
         'Stocks',
         'Stock Entries',
         'Stock',
-        'Poste / Park / Type / Qte',
+        'Poste / Park / Type',
       ]),
     );
 
     final module1Operating = _field(details,
         ['Durée Marche M1', 'T H.M1 (Operating M1)', 'T H.M1', 'Total H.M M1']);
+    final module1Hm = _resolveDailyModuleHm(
+      details,
+      moduleNumber: 1,
+      operatingTime: module1Operating,
+    );
     final module1Downtime = _field(details, [
       'T H.A1 (Downtime M1)',
       'Durée Arrêts Totale M1',
@@ -698,6 +703,11 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
     ]);
     final module2Operating = _field(details,
         ['Durée Marche M2', 'T H.M2 (Operating M2)', 'T H.M2', 'Total H.M M2']);
+    final module2Hm = _resolveDailyModuleHm(
+      details,
+      moduleNumber: 2,
+      operatingTime: module2Operating,
+    );
     final module2Downtime = _field(details, [
       'T H.A2 (Downtime M2)',
       'Durée Arrêts Totale M2',
@@ -725,6 +735,7 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
         _buildDailyModuleCard(
           context: context,
           moduleTitle: 'Module 1',
+          hm: module1Hm,
           operatingTime: module1Operating,
           downtime: module1Downtime,
           stopRows: module1Rows,
@@ -733,6 +744,7 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
         _buildDailyModuleCard(
           context: context,
           moduleTitle: 'Module 2',
+          hm: module2Hm,
           operatingTime: module2Operating,
           downtime: module2Downtime,
           stopRows: module2Rows,
@@ -746,22 +758,53 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
                 ? [_r0Row('-', '-')]
                 : stockEntries.map(
                     (stock) => _r0Row(
-                      'Poste / Park / Type / Qte',
+                      'Poste / Park / Type',
                       stock.displayValue,
                     ),
                   )),
             const SizedBox(height: 6),
-            _r0Row('Sheet', record.sheetName),
-            _r0Row('Row', record.rowNumber.toString()),
           ],
         ),
       ],
     );
   }
 
+  String _resolveDailyModuleHm(
+    Map<String, String> details, {
+    required int moduleNumber,
+    required String operatingTime,
+  }) {
+    final moduleHm = _field(details, [
+      'Total H.M$moduleNumber',
+      'Total H.M M$moduleNumber',
+      'H.M$moduleNumber',
+      'T H.M$moduleNumber',
+      'Total HM$moduleNumber',
+    ]);
+
+    if (moduleHm != '-') {
+      return moduleHm;
+    }
+
+    final genericHm = _field(details, [
+      'Total H.M',
+      'H.M',
+      'T H.M',
+      'Durée Marche',
+      'Duree Marche',
+    ]);
+
+    if (genericHm != '-') {
+      return genericHm;
+    }
+
+    return operatingTime == '-' ? '' : operatingTime;
+  }
+
   Widget _buildDailyModuleCard({
     required BuildContext context,
     required String moduleTitle,
+    required String hm,
     required String operatingTime,
     required String downtime,
     required List<String> stopRows,
@@ -770,6 +813,7 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
       context,
       title: moduleTitle,
       children: [
+        _r0Row('H.M', hm),
         _r0Row('Operating Time', operatingTime),
         _r0Row('Stop Time', downtime),
         const SizedBox(height: 6),

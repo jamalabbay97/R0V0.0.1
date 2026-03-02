@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "d:/R0V0.0.1/android/app/src/main/java/io/flutter/plugins",
-      "program": "d:/R0V0.0.1/android/app/src/main/java/io/flutter/plugins/build/Debug/outDebug",
+      "cwd": "d:/R0V0.0.1/windows/flutter",
+      "program": "d:/R0V0.0.1/windows/flutter/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
