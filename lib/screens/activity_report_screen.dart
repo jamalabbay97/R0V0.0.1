@@ -499,15 +499,21 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
   void _showAddStopDialog() {
     String tempStopDuration = '';
     const List<String> predefinedNatures = [
+      'Arrêts Extérieures',
+      'Arrêts Eléctrique',
+      'Arrêts Mécanique',
+      'Arrêts d\'installation',
       'Manque Produit',
-      'Attente Saturation Silo',
-      'Vidange Extraction 2',
-      'Arret Mécanique sur:',
-      'Dèfout Élèctrique sur:',
-      'Arret d\'instalation sur:',
-      'Travoux Mècanique sur:',
-      'Travoux Elèctrique sur:',
-      'Travoux dans l\'instalation sur:',
+      'Décolmatage',
+      'Coupure de courant',
+      'Vidange',
+      'Arrêts d\'exploitation',
+      'Arrêts Décidés',
+      'Nettoyage',
+      'Stock saturée',
+      'Dégagement stérile',
+      'Arrêts Entretien systématique',
+      'Surcharge',
       'Autre:',
     ];
     String? selectedNature;
