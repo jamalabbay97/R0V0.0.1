@@ -12,7 +12,19 @@ class ModuleStop {
   final String id;
   String duration;
   String nature;
-  ModuleStop({required this.id, this.duration = '', this.nature = ''});
+  String stopType;
+  String stopLocation;
+  String startTime;
+  String endTime;
+
+  ModuleStop(
+      {required this.id,
+      this.duration = '',
+      this.nature = '',
+      this.stopType = '',
+      this.stopLocation = '',
+      this.startTime = '',
+      this.endTime = ''});
 }
 
 enum Poste { premier, deuxieme, troisieme }
@@ -126,6 +138,48 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
   int _currentStep = 0;
   bool _isSaving = false;
 
+  static const Map<String, String> _stopTypes = {
+    'AEXT': 'Arrêts Extérieures',
+    'AE': 'Arrêts Électrique',
+    'AM': 'Arrêts Mécanique',
+    'AI': "Arrêts d'Installation",
+    'MP': 'Manque Produit',
+    'DEC': 'décolmatage',
+    'CC': 'coupure de courant',
+    'VID': 'vidange',
+    'AEXP': "Arrêts d'Exploitation",
+    'AD': 'Arrêts Décidés',
+    'NET': 'nettoyage',
+    'aut': 'aut',
+    'STS': 'stock saturée',
+    'DS': 'dégagement stérile',
+    'AESYS': 'Arrêts Entretien systématique',
+    'surch': 'surcharge',
+  };
+
+  static const Map<int, Map<String, String>> _moduleLocations = {
+    1: {
+      'M1_TR01': 'Tremie',
+      'M1_VIB01': 'Vibreur 01',
+      'M1_VIB02': 'Vibreur 02',
+      'M1_CV73': 'Convoyeur 73',
+      'M1_cv77': 'Convoyeur 77',
+      'M1_CRIBLE1': 'Crible 01',
+      'M1_CV84': 'Convoyeur 84',
+      'M1_CV86': 'Convoyeur 86',
+    },
+    2: {
+      'M2_TR01': 'Tremie',
+      'M2_VIB01': 'Vibreur 01',
+      'M2_VIB02': 'Vibreur 02',
+      'M2_CV73': 'Convoyeur 73',
+      'M2_cv77': 'Convoyeur 77',
+      'M2_CRIBLE1': 'Crible 01',
+      'M2_CV84': 'Convoyeur 84',
+      'M2_CV86': 'Convoyeur 86',
+    },
+  };
+
   @override
   void initState() {
     super.initState();
@@ -145,7 +199,11 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
           .map((s) => ModuleStop(
               id: s['id'] ?? const Uuid().v4(),
               duration: s['duration'] ?? '',
-              nature: s['nature'] ?? ''))
+              nature: s['nature'] ?? '',
+              stopType: s['stopType'] ?? '',
+              stopLocation: s['stopLocation'] ?? '',
+              startTime: s['startTime'] ?? '',
+              endTime: s['endTime'] ?? ''))
           .toList();
     }
     if (data['module2Stops'] is List) {
@@ -153,7 +211,11 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
           .map((s) => ModuleStop(
               id: s['id'] ?? const Uuid().v4(),
               duration: s['duration'] ?? '',
-              nature: s['nature'] ?? ''))
+              nature: s['nature'] ?? '',
+              stopType: s['stopType'] ?? '',
+              stopLocation: s['stopLocation'] ?? '',
+              startTime: s['startTime'] ?? '',
+              endTime: s['endTime'] ?? ''))
           .toList();
     }
     if (data['stock'] is List) {
@@ -328,9 +390,13 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
             style: TextStyle(color: Colors.grey)),
       ...stops.asMap().entries.map((e) => OCPCard(
               child: ListTile(
-            title: Text(e.value.nature),
-            subtitle: Text(
-                "Durée: ${formatMinutesToHoursMinutes(parseDurationToMinutes(e.value.duration))}"),
+            title: Text(e.value.stopType.isNotEmpty
+                ? '${e.value.stopType} • ${e.value.stopLocation}'
+                : e.value.nature),
+            subtitle: Text(e.value.startTime.isNotEmpty &&
+                    e.value.endTime.isNotEmpty
+                ? 'De ${e.value.startTime} à ${e.value.endTime} • ${formatMinutesToHoursMinutes(parseDurationToMinutes(e.value.duration))}'
+                : "Durée: ${formatMinutesToHoursMinutes(parseDurationToMinutes(e.value.duration))}"),
             trailing: IconButton(
                 icon: const Icon(Icons.delete, color: AppColors.error),
                 onPressed: () {
@@ -350,50 +416,231 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
   }
 
   void _showAddStopDialog(int module) {
-    String duration = '';
-    String nature = '';
+    int step = 0;
+    String? selectedType;
+    String? selectedLocation;
+    DateTime startTime = DateTime.now();
+    DateTime endTime = DateTime.now().add(const Duration(minutes: 1));
+    final locations = _moduleLocations[module] ?? const <String, String>{};
     showDialog(
         context: context,
-        builder: (ctx) => AlertDialog(
-              title: Text("Ajouter Arrêt - Module $module"),
-              content: Column(mainAxisSize: MainAxisSize.min, children: [
-                TextField(
-                    decoration:
-                        const InputDecoration(labelText: "Durée (ex: 1h30)"),
-                    onChanged: (v) => duration = v),
-                const SizedBox(height: 8),
-                TextField(
-                    decoration: const InputDecoration(labelText: "Nature"),
-                    maxLines: 3,
-                    onChanged: (v) => nature = v),
-              ]),
-              actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text("Annuler")),
-                ElevatedButton(
-                    onPressed: () {
-                      if (duration.isNotEmpty && nature.isNotEmpty) {
-                        setState(() {
-                          if (module == 1) {
-                            module1Stops.add(ModuleStop(
-                                id: const Uuid().v4(),
-                                duration: duration,
-                                nature: nature));
-                          } else {
-                            module2Stops.add(ModuleStop(
-                                id: const Uuid().v4(),
-                                duration: duration,
-                                nature: nature));
-                          }
-                          _calculateTotals();
-                        });
-                        Navigator.pop(context);
-                      }
-                    },
-                    child: const Text("Ajouter"))
-              ],
+        builder: (ctx) => StatefulBuilder(
+              builder: (context, setDs) {
+                Widget content;
+                if (step == 0) {
+                  content = DropdownButtonFormField<String>(
+                    hint: const Text("Type d'arrêt"),
+                    initialValue: selectedType,
+                    isExpanded: true,
+                    items: _stopTypes.entries
+                        .map((entry) => DropdownMenuItem(
+                            value: entry.key,
+                            child: Text('${entry.key} - ${entry.value}')))
+                        .toList(),
+                    onChanged: (value) => setDs(() {
+                      selectedType = value;
+                    }),
+                  );
+                } else if (step == 1) {
+                  content = DropdownButtonFormField<String>(
+                    hint: const Text("Lieu d'arrêt"),
+                    initialValue: selectedLocation,
+                    isExpanded: true,
+                    items: locations.entries
+                        .map((entry) => DropdownMenuItem(
+                            value: entry.key,
+                            child: Text('${entry.key} - ${entry.value}')))
+                        .toList(),
+                    onChanged: (value) => setDs(() {
+                      selectedLocation = value;
+                    }),
+                  );
+                } else {
+                  content = Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                          title: const Text('Heure début'),
+                          subtitle: Text(_formatTime(startTime)),
+                          trailing: const Icon(Icons.access_time),
+                          onTap: () async {
+                            final picked = await showTimePicker(
+                                context: context,
+                                initialTime: TimeOfDay.fromDateTime(startTime),
+                                builder: (context, child) => MediaQuery(
+                                    data: MediaQuery.of(context)
+                                        .copyWith(alwaysUse24HourFormat: true),
+                                    child: child ?? const SizedBox()));
+                            if (picked != null) {
+                              setDs(() {
+                                startTime = DateTime(
+                                    startTime.year,
+                                    startTime.month,
+                                    startTime.day,
+                                    picked.hour,
+                                    picked.minute);
+                              });
+                            }
+                          }),
+                      ListTile(
+                          title: const Text('Heure fin'),
+                          subtitle: Text(_formatTime(endTime)),
+                          trailing: const Icon(Icons.access_time),
+                          onTap: () async {
+                            final picked = await showTimePicker(
+                                context: context,
+                                initialTime: TimeOfDay.fromDateTime(endTime),
+                                builder: (context, child) => MediaQuery(
+                                    data: MediaQuery.of(context)
+                                        .copyWith(alwaysUse24HourFormat: true),
+                                    child: child ?? const SizedBox()));
+                            if (picked != null) {
+                              setDs(() {
+                                endTime = DateTime(endTime.year, endTime.month,
+                                    endTime.day, picked.hour, picked.minute);
+                              });
+                            }
+                          }),
+                    ],
+                  );
+                }
+
+                return AlertDialog(
+                  title: Text("Ajouter Arrêt - Module $module"),
+                  content: SizedBox(
+                    width: 340,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          step == 0
+                              ? "Sélection du type d'arrêt"
+                              : step == 1
+                                  ? "Sélection du lieu d'arrêt"
+                                  : 'Saisie des heures',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 12),
+                        content,
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        if (step > 0)
+                          TextButton(
+                              onPressed: () => setDs(() => step--),
+                              child: const Text('Précédent'))
+                        else
+                          TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Annuler')),
+                        if ((step == 0 && selectedType != null) ||
+                            (step == 1 && selectedLocation != null))
+                          ElevatedButton(
+                              onPressed: () => setDs(() => step++),
+                              child: const Text('Suivant')),
+                        if (step == 2)
+                          ElevatedButton(
+                              onPressed: () {
+                                final validation = _validateSingleStop(
+                                    startTime, endTime, selectedType,
+                                    selectedLocation: selectedLocation);
+                                if (validation != null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content: Text(validation),
+                                          backgroundColor: AppColors.error));
+                                  return;
+                                }
+
+                                final durationMinutes =
+                                    endTime.difference(startTime).inMinutes;
+                                final durationText =
+                                    '${durationMinutes ~/ 60}h${(durationMinutes % 60).toString().padLeft(2, '0')}';
+                                final typeLabel =
+                                    '${selectedType ?? ''} - ${_stopTypes[selectedType] ?? ''}';
+                                final locationLabel =
+                                    '${selectedLocation ?? ''} - ${locations[selectedLocation] ?? ''}';
+                                setState(() {
+                                  final stop = ModuleStop(
+                                      id: const Uuid().v4(),
+                                      duration: durationText,
+                                      nature: '$typeLabel | $locationLabel',
+                                      stopType: typeLabel,
+                                      stopLocation: locationLabel,
+                                      startTime: _formatTime(startTime),
+                                      endTime: _formatTime(endTime));
+                                  if (module == 1) {
+                                    module1Stops.add(stop);
+                                  } else {
+                                    module2Stops.add(stop);
+                                  }
+                                  _calculateTotals();
+                                });
+                                Navigator.pop(context);
+                              },
+                              child: const Text('Ajouter'))
+                      ],
+                    )
+                  ],
+                );
+              },
             ));
+  }
+
+  String _formatTime(DateTime value) =>
+      '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+
+  String? _validateSingleStop(
+      DateTime startTime, DateTime endTime, String? selectedType,
+      {String? selectedLocation}) {
+    if (selectedType == null || selectedType.isEmpty) {
+      return "Le type d'arrêt est obligatoire.";
+    }
+    if (selectedLocation == null || selectedLocation.isEmpty) {
+      return "Le lieu d'arrêt est obligatoire.";
+    }
+    if (!endTime.isAfter(startTime)) {
+      return "L'heure de fin doit être supérieure à l'heure de début.";
+    }
+    return null;
+  }
+
+  List<String> _collectVerificationErrors() {
+    final errors = <String>[];
+    void validateModule(int module, List<ModuleStop> stops) {
+      for (var i = 0; i < stops.length; i++) {
+        final stop = stops[i];
+        final start = _parseTime(stop.startTime);
+        final end = _parseTime(stop.endTime);
+        if (stop.stopType.isEmpty || stop.stopLocation.isEmpty) {
+          errors.add(
+              'Module $module - Arrêt ${i + 1}: Type et lieu d\'arrêt obligatoires.');
+        }
+        if (start == null || end == null || !end.isAfter(start)) {
+          errors.add(
+              'Module $module - Arrêt ${i + 1}: horaires invalides (début/fin).');
+        }
+      }
+    }
+
+    validateModule(1, module1Stops);
+    validateModule(2, module2Stops);
+    return errors;
+  }
+
+  DateTime? _parseTime(String value) {
+    if (!value.contains(':')) return null;
+    final split = value.split(':');
+    if (split.length != 2) return null;
+    final hour = int.tryParse(split[0]);
+    final minute = int.tryParse(split[1]);
+    if (hour == null || minute == null) return null;
+    return DateTime(2000, 1, 1, hour, minute);
   }
 
   Widget _syntheseCard(String title, int operating, int downtime) {
@@ -503,12 +750,21 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
 
   // --- Step 4: Verification ---
   Widget _buildStepVerification() {
+    final errors = _collectVerificationErrors();
     return Column(children: [
-      const Icon(Icons.check_circle_outline,
-          size: 64, color: AppColors.success),
+      Icon(errors.isEmpty ? Icons.check_circle_outline : Icons.error_outline,
+          size: 64,
+          color: errors.isEmpty ? AppColors.success : AppColors.error),
       const SizedBox(height: 16),
       const Text("Récapitulatif",
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+      if (errors.isNotEmpty) ...[
+        const SizedBox(height: 8),
+        ...errors.map((e) => Align(
+            alignment: Alignment.centerLeft,
+            child:
+                Text('• $e', style: const TextStyle(color: AppColors.error)))),
+      ],
       const SizedBox(height: 24),
       _row("Date",
           "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}"),
@@ -523,7 +779,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                   fontWeight: FontWeight.bold, color: AppColors.primary)),
         ),
         ...module1Stops.map((s) => _row(s.nature,
-            formatMinutesToHoursMinutes(parseDurationToMinutes(s.duration)))),
+            '${s.startTime} - ${s.endTime} (${formatMinutesToHoursMinutes(parseDurationToMinutes(s.duration))})')),
         const Divider(),
       ],
 
@@ -536,7 +792,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                   fontWeight: FontWeight.bold, color: AppColors.primary)),
         ),
         ...module2Stops.map((s) => _row(s.nature,
-            formatMinutesToHoursMinutes(parseDurationToMinutes(s.duration)))),
+            '${s.startTime} - ${s.endTime} (${formatMinutesToHoursMinutes(parseDurationToMinutes(s.duration))})')),
         const Divider(),
       ],
 
@@ -564,6 +820,15 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
   }
 
   Future<void> _saveReport() async {
+    final verificationErrors = _collectVerificationErrors();
+    if (verificationErrors.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'Corrigez les erreurs de vérification avant de sauvegarder.'),
+          backgroundColor: AppColors.error));
+      return;
+    }
+
     setState(() => _isSaving = true);
     try {
       final report = Report(
@@ -579,6 +844,10 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                     'id': s.id,
                     'duration': s.duration,
                     'nature': s.nature,
+                    'stopType': s.stopType,
+                    'stopLocation': s.stopLocation,
+                    'startTime': s.startTime,
+                    'endTime': s.endTime,
                     'Catégorie': '',
                     'CarryOver': false,
                   })
@@ -588,6 +857,10 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                     'id': s.id,
                     'duration': s.duration,
                     'nature': s.nature,
+                    'stopType': s.stopType,
+                    'stopLocation': s.stopLocation,
+                    'startTime': s.startTime,
+                    'endTime': s.endTime,
                     'Catégorie': '',
                     'CarryOver': false,
                   })
