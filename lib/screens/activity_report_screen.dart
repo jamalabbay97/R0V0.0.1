@@ -569,22 +569,21 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
 
   void _showAddStopDialog() {
     const List<String> predefinedNatures = [
-      'Arrêts Extérieures',
-      'Arrêts Eléctrique',
-      'Arrêts Mécanique',
-      'Arrêts d\'installation',
-      'Manque Produit',
-      'Décolmatage',
-      'Coupure de courant',
-      'Vidange',
-      'Arrêts d\'exploitation',
-      'Arrêts Décidés',
-      'Nettoyage',
-      'Stock saturée',
-      'Dégagement stérile',
-      'Arrêts Entretien systématique',
-      'Surcharge',
-      'Autre:',
+      'Arrêts Extérieures:',
+      'Arrêts Eléctrique:',
+      'Arrêts Mécanique:',
+      'Arrêts d\'installation:',
+      'Arrêts d\'exploitation:',
+      'Arrêts Entretien systématique:',
+      'Manque Produit:',
+      'Décolmatage:',
+      'Coupure de courant:',
+      'Vidange:',
+      'Arrêts Décidés:',
+      'Nettoyage:',
+      'Stock saturée:',
+      'Dégagement stérile:',
+      'Surcharge:',
     ];
     String? selectedNature;
     String customNature = '';
