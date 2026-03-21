@@ -429,7 +429,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final steps = ['Infos', 'Arrêts', 'Vibreur', 'Liaison', 'Stock', 'Verif.'];
+    final steps = ['Infos', 'Arrêts', 'Compteurs', 'Stock', 'Verif.'];
 
     return Scaffold(
       appBar: AppBar(
@@ -466,12 +466,10 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       case 1:
         return _buildStepArrets();
       case 2:
-        return _buildStepVibreurs();
+        return _buildStepCompteurs();
       case 3:
-        return _buildStepLiaison();
-      case 4:
         return _buildStepStock();
-      case 5:
+      case 4:
         return _buildStepVerification();
       default:
         return const SizedBox();
@@ -480,7 +478,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
 
   Widget _buildBottomBar() {
     bool isFirst = _currentStep == 0;
-    bool isLast = _currentStep == 5;
+    bool isLast = _currentStep == 4;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -843,26 +841,69 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     );
   }
 
-  // --- Step 2: Vibreurs ---
-  Widget _buildStepVibreurs() {
-    return _buildCounterList(
-        vibratorCounters, (c) => setState(() => vibratorCounters.add(c)));
+  // --- Step 2: Compteurs ---
+  Widget _buildStepCompteurs() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildCounterSection(
+          title: 'Compteurs Vibreurs',
+          counters: vibratorCounters,
+          onAdd: (c) => setState(() => vibratorCounters.add(c)),
+          addButtonText: 'Aj Compteur Vibreur',
+          dialogTitle: 'Aj Compteur Vibreur',
+        ),
+        const SizedBox(height: 16),
+        _buildCounterSection(
+          title: 'Compteurs Liaison',
+          counters: liaisonCounters,
+          onAdd: (c) => setState(() => liaisonCounters.add(LiaisonCounter(
+                id: c.id,
+                poste: c.poste,
+                start: c.start,
+                end: c.end,
+                error: c.error,
+                startDefect: c.startDefect,
+                endDefect: c.endDefect,
+              ))),
+          addButtonText: 'Aj Compteur Liaison',
+          dialogTitle: 'Aj Compteur Liaison',
+        ),
+      ],
+    );
   }
 
-  // --- Step 3: Liaison ---
-  Widget _buildStepLiaison() {
-    return _buildCounterList(
-        liaisonCounters,
-        (c) => setState(() => liaisonCounters.add(LiaisonCounter(
-              id: c.id,
-              poste: c.poste,
-              start: c.start,
-              end: c.end,
-              error: c.error,
-            ))));
+  Widget _buildCounterSection<T extends Counter>({
+    required String title,
+    required List<T> counters,
+    required Function(Counter) onAdd,
+    required String addButtonText,
+    required String dialogTitle,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        _buildCounterList(
+          counters,
+          onAdd,
+          addButtonText: addButtonText,
+          dialogTitle: dialogTitle,
+        ),
+      ],
+    );
   }
 
-  Widget _buildCounterList(List<Counter> list, Function(Counter) onAdd) {
+  Widget _buildCounterList<T extends Counter>(
+    List<T> list,
+    Function(Counter) onAdd, {
+    required String addButtonText,
+    required String dialogTitle,
+  }) {
     return Column(children: [
       ...list.asMap().entries.map((e) {
         final startText = e.value.startDefect
@@ -885,14 +926,18 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       }),
       const SizedBox(height: 16),
       OCPButton(
-          text: "Aj Compteur",
+          text: addButtonText,
           icon: Icons.add,
           isSecondary: true,
-          onPressed: () => _showAddCounterDialog(onAdd))
+          onPressed: () =>
+              _showAddCounterDialog(onAdd, dialogTitle: dialogTitle))
     ]);
   }
 
-  void _showAddCounterDialog(Function(Counter) onAdd) {
+  void _showAddCounterDialog(
+    Function(Counter) onAdd, {
+    required String dialogTitle,
+  }) {
     Poste? poste;
     String start = '';
     String end = '';
@@ -902,7 +947,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
         context: context,
         builder: (ctx) => StatefulBuilder(
             builder: (c, setDs) => AlertDialog(
-                  title: const Text("Aj Compteur"),
+                  title: Text(dialogTitle),
                   content: Column(mainAxisSize: MainAxisSize.min, children: [
                     DropdownButtonFormField<Poste>(
                         hint: const Text("Poste"),
@@ -993,7 +1038,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                 )));
   }
 
-  // --- Step 4: Stock ---
+  // --- Step 3: Stock ---
   Widget _buildStepStock() {
     return Column(children: [
       ...stockEntries.asMap().entries.map((e) => OCPCard(
@@ -1078,7 +1123,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                 )));
   }
 
-  // --- Step 5: Verification ---
+  // --- Step 4: Verification ---
   Widget _buildStepVerification() {
     return Column(
       children: [
