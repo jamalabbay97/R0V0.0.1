@@ -6,7 +6,6 @@ import 'package:uuid/uuid.dart';
 import 'package:r0/models/report.dart';
 import 'package:r0/services/database_helper.dart';
 import 'package:r0/theme.dart';
-import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/widgets/custom_widgets.dart';
 
 // --- Enums and Helpers ---
@@ -121,34 +120,22 @@ const List<StopLocation> _tnbStopLocations = [
   StopLocation(code: 'TNB', label: 'tremie nord boucraa'),
 ];
 
-class Counter {
-  String id;
-  Poste? poste;
-  String start;
-  String end;
-  String? error;
-  bool startDefect;
-  bool endDefect;
-  Counter({
-    required this.id,
-    this.poste,
-    this.start = '',
-    this.end = '',
-    this.error,
-    this.startDefect = false,
-    this.endDefect = false,
-  });
-}
+const List<String> _tnbCounterLabels = [
+  'Vibreur',
+  'LN',
+  'L',
+  'G3',
+  'G6',
+];
 
-class LiaisonCounter extends Counter {
-  LiaisonCounter({
-    required super.id,
-    super.poste,
-    super.start,
-    super.end,
-    super.error,
-    super.startDefect,
-    super.endDefect,
+class TnbCounter {
+  String id;
+  String label;
+  String start;
+  TnbCounter({
+    required this.id,
+    required this.label,
+    this.start = '',
   });
 }
 
@@ -204,14 +191,6 @@ String formatMinutesToHoursMinutes(int totalMinutes) {
   return '${hours}h ${minutes.toString().padLeft(2, '0')}m';
 }
 
-double? validateAndParseCounterValue(String value) {
-  if (value.isEmpty) return 0;
-  final cleaned =
-      value.replaceAll(RegExp(r'[^0-9.,]'), '').replaceAll(',', '.');
-  if (cleaned == '' || cleaned == '.' || cleaned == ',') return null;
-  return double.tryParse(cleaned);
-}
-
 // --- Screen ---
 class ActivityReportScreen extends StatefulWidget {
   final DateTime? selectedDate;
@@ -239,8 +218,7 @@ class ActivityReportScreen extends StatefulWidget {
 class _ActivityReportScreenState extends State<ActivityReportScreen> {
   final DatabaseHelper _databaseHelper = DatabaseHelper();
   List<Stop> stops = [];
-  List<Counter> vibratorCounters = [];
-  List<LiaisonCounter> liaisonCounters = [];
+  List<TnbCounter> tnbCounters = [];
   List<StockEntry> stockEntries = [];
   late DateTime _selectedDate;
 
@@ -270,14 +248,14 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       // Creation mode
       _selectedDate = widget.selectedDate ?? DateTime.now();
       stops = [];
-      vibratorCounters = [];
-      liaisonCounters = [];
+      tnbCounters = _buildDefaultTnbCounters();
       stockEntries = [];
     }
     recalculateTimes();
   }
 
   void _loadExistingData() {
+    tnbCounters = _buildDefaultTnbCounters();
     if (widget.initialReport?.additionalData == null) return;
     final data = widget.initialReport!.additionalData!;
 
@@ -293,33 +271,36 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
               endTime: s['endTime'] ?? s['Fin'] ?? ''))
           .toList();
     }
-    // Load vibrator counters
+
     if (data['vibrator Counters'] is List) {
-      vibratorCounters = (data['vibrator Counters'] as List)
-          .map((counter) => Counter(
-                id: counter['id'] ?? const Uuid().v4(),
-                poste: _parsePosteFromString(counter['poste']),
-                start: counter['start'] ?? '',
-                end: counter['end'] ?? '',
-                error: counter['error'],
-                startDefect: counter['startDefect'] ?? false,
-                endDefect: counter['endDefect'] ?? false,
-              ))
-          .toList();
+      final vibratorCounters = List<Map<String, dynamic>>.from(
+        data['vibrator Counters'] as List,
+      );
+      final firstVibrator =
+          vibratorCounters.isNotEmpty ? vibratorCounters.first : null;
+      if (firstVibrator != null) {
+        _updateCounterValue(
+          'Vibreur',
+          firstVibrator['start']?.toString() ?? '',
+        );
+      }
     }
-    // Load liaison counters
+
     if (data['liaison Counters'] is List) {
-      liaisonCounters = (data['liaison Counters'] as List)
-          .map((counter) => LiaisonCounter(
-                id: counter['id'] ?? const Uuid().v4(),
-                poste: _parsePosteFromString(counter['poste']),
-                start: counter['start'] ?? '',
-                end: counter['end'] ?? '',
-                error: counter['error'],
-                startDefect: counter['startDefect'] ?? false,
-                endDefect: counter['endDefect'] ?? false,
-              ))
-          .toList();
+      final liaisonCounters = List<Map<String, dynamic>>.from(
+        data['liaison Counters'] as List,
+      );
+      for (var i = 0;
+          i < liaisonCounters.length && i < _tnbCounterLabels.length - 1;
+          i++) {
+        final counter = liaisonCounters[i];
+        final rawLabel = counter['poste']?.toString().trim();
+        final fallbackLabel = _tnbCounterLabels[i + 1];
+        final label = (rawLabel != null && rawLabel.isNotEmpty)
+            ? rawLabel
+            : fallbackLabel;
+        _updateCounterValue(label, counter['start']?.toString() ?? '');
+      }
     }
     // Load stock entries
     if (data['stock'] is List) {
@@ -398,8 +379,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
           max(ActivityReportScreen.totalPeriodMinutes - totalDowntime, 0);
 
       // Validate and calculate counters (simplified)
-      totalVibratorMinutes = calculateTotalCounterMinutes(vibratorCounters);
-      totalLiaisonMinutes = calculateTotalCounterMinutes(liaisonCounters);
+      totalVibratorMinutes = 0;
+      totalLiaisonMinutes = 0;
 
       hasVibratorErrors = false;
       hasLiaisonErrors = false;
@@ -412,20 +393,34 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     });
   }
 
-  int calculateTotalCounterMinutes(List counters) {
-    double totalHours = 0;
-    for (var counter in counters) {
-      if (counter.startDefect || counter.endDefect) {
-        continue;
-      }
-      var startVal = validateAndParseCounterValue(counter.start);
-      var endVal = validateAndParseCounterValue(counter.end);
-      if (startVal != null && endVal != null && endVal >= startVal) {
-        totalHours += (endVal - startVal);
-      }
+  List<TnbCounter> _buildDefaultTnbCounters() => _tnbCounterLabels
+      .map((label) => TnbCounter(id: const Uuid().v4(), label: label))
+      .toList();
+
+  void _updateCounterValue(String label, String value) {
+    final normalizedValue = value.trim();
+    final index = tnbCounters.indexWhere((counter) => counter.label == label);
+    if (index != -1) {
+      tnbCounters[index].start = normalizedValue;
     }
-    return (totalHours * 60).round();
   }
+
+  List<Map<String, dynamic>> _buildSavedCounters(
+    Iterable<TnbCounter> counters,
+  ) {
+    return counters
+        .where((counter) => counter.start.trim().isNotEmpty)
+        .map((counter) => {
+              'id': counter.id,
+              'poste': counter.label,
+              'start': counter.start.trim(),
+              'end': '',
+            })
+        .toList();
+  }
+
+  int get _filledCounterCount =>
+      tnbCounters.where((counter) => counter.start.trim().isNotEmpty).length;
 
   @override
   Widget build(BuildContext context) {
@@ -846,196 +841,48 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildCounterSection(
-          title: 'Compteurs Vibreurs',
-          counters: vibratorCounters,
-          onAdd: (c) => setState(() => vibratorCounters.add(c)),
-          addButtonText: 'Aj Compteur Vibreur',
-          dialogTitle: 'Aj Compteur Vibreur',
-        ),
-        const SizedBox(height: 16),
-        _buildCounterSection(
-          title: 'Compteurs Liaison',
-          counters: liaisonCounters,
-          onAdd: (c) => setState(() => liaisonCounters.add(LiaisonCounter(
-                id: c.id,
-                poste: c.poste,
-                start: c.start,
-                end: c.end,
-                error: c.error,
-                startDefect: c.startDefect,
-                endDefect: c.endDefect,
-              ))),
-          addButtonText: 'Aj Compteur Liaison',
-          dialogTitle: 'Aj Compteur Liaison',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCounterSection<T extends Counter>({
-    required String title,
-    required List<T> counters,
-    required Function(Counter) onAdd,
-    required String addButtonText,
-    required String dialogTitle,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
         Text(
-          title,
+          'Compteurs TNB',
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 8),
-        _buildCounterList(
-          counters,
-          onAdd,
-          addButtonText: addButtonText,
-          dialogTitle: dialogTitle,
+        const Text(
+          'Saisissez uniquement la valeur de départ pour chacun des cinq compteurs.',
+        ),
+        const SizedBox(height: 16),
+        ...tnbCounters.map(
+          (counter) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: OCPCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    counter.label,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    initialValue: counter.start,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: 'Valeur de départ - ${counter.label}',
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        counter.start = value.trim();
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ],
     );
-  }
-
-  Widget _buildCounterList<T extends Counter>(
-    List<T> list,
-    Function(Counter) onAdd, {
-    required String addButtonText,
-    required String dialogTitle,
-  }) {
-    return Column(children: [
-      ...list.asMap().entries.map((e) {
-        final startText = e.value.startDefect
-            ? (AppLocalizations.of(context)?.defautLabel ?? 'Défaut')
-            : e.value.start;
-        final endText = e.value.endDefect
-            ? (AppLocalizations.of(context)?.defautLabel ?? 'Défaut')
-            : e.value.end;
-        return OCPCard(
-            child: ListTile(
-          title: Text("${posteToString(e.value.poste)} Poste"),
-          subtitle: Text("$startText -> $endText"),
-          trailing: IconButton(
-              icon: const Icon(Icons.delete, color: AppColors.error),
-              onPressed: () {
-                setState(() => list.removeAt(e.key));
-                recalculateTimes();
-              }),
-        ));
-      }),
-      const SizedBox(height: 16),
-      OCPButton(
-          text: addButtonText,
-          icon: Icons.add,
-          isSecondary: true,
-          onPressed: () =>
-              _showAddCounterDialog(onAdd, dialogTitle: dialogTitle))
-    ]);
-  }
-
-  void _showAddCounterDialog(
-    Function(Counter) onAdd, {
-    required String dialogTitle,
-  }) {
-    Poste? poste;
-    String start = '';
-    String end = '';
-    bool startDefect = false;
-    bool endDefect = false;
-    showDialog(
-        context: context,
-        builder: (ctx) => StatefulBuilder(
-            builder: (c, setDs) => AlertDialog(
-                  title: Text(dialogTitle),
-                  content: Column(mainAxisSize: MainAxisSize.min, children: [
-                    DropdownButtonFormField<Poste>(
-                        hint: const Text("Poste"),
-                        items: Poste.values
-                            .map((p) => DropdownMenuItem(
-                                value: p, child: Text(posteToString(p))))
-                            .toList(),
-                        onChanged: (v) => setDs(() => poste = v)),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                              decoration:
-                                  const InputDecoration(labelText: "Début"),
-                              keyboardType: TextInputType.number,
-                              enabled: !startDefect,
-                              controller: startDefect
-                                  ? TextEditingController(text: 'Défaut')
-                                  : null,
-                              onChanged: (v) => start = v),
-                        ),
-                        Column(
-                          children: [
-                            Checkbox(
-                                value: startDefect,
-                                onChanged: (v) => setDs(() {
-                                      startDefect = v ?? false;
-                                      if (startDefect) start = '';
-                                    })),
-                            // Using a hardcoded string or a helper if l10n unavailable in State
-                            // Assuming 'Défaut' is okay or reusing existing label if possible.
-                            // The context here is ActivityScreenState, I can access context but maybe not l10n easily if it's not passed,
-                            // but I can try AppLocalizations.of(context).defautLabel
-                            const Text("Défaut",
-                                style: TextStyle(fontSize: 10)),
-                          ],
-                        )
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                              decoration:
-                                  const InputDecoration(labelText: "Fin"),
-                              keyboardType: TextInputType.number,
-                              enabled: !endDefect,
-                              controller: endDefect
-                                  ? TextEditingController(text: 'Défaut')
-                                  : null,
-                              onChanged: (v) => end = v),
-                        ),
-                        Column(
-                          children: [
-                            Checkbox(
-                                value: endDefect,
-                                onChanged: (v) => setDs(() {
-                                      endDefect = v ?? false;
-                                      if (endDefect) end = '';
-                                    })),
-                            const Text("Défaut",
-                                style: TextStyle(fontSize: 10)),
-                          ],
-                        )
-                      ],
-                    ),
-                  ]),
-                  actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text("Annuler")),
-                    ElevatedButton(
-                        onPressed: (poste != null)
-                            ? () {
-                                onAdd(Counter(
-                                    id: const Uuid().v4(),
-                                    poste: poste,
-                                    start: start,
-                                    end: end,
-                                    startDefect: startDefect,
-                                    endDefect: endDefect));
-                                recalculateTimes();
-                                Navigator.pop(context);
-                              }
-                            : null,
-                        child: const Text("Ajouter"))
-                  ],
-                )));
   }
 
   // --- Step 3: Stock ---
@@ -1149,14 +996,9 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                 const Divider(height: 16),
                 _row('T H.A:', formatMinutesToHoursMinutes(totalDowntime)),
                 _row('T H.M:', formatMinutesToHoursMinutes(operatingTime)),
-                _row('T H.V:',
-                    formatMinutesToHoursMinutes(totalVibratorMinutes)),
-                _row(
-                    'T H.L:', formatMinutesToHoursMinutes(totalLiaisonMinutes)),
                 const SizedBox(height: 8),
                 _row('T Nr.A:', stops.length.toString()),
-                _row('T Nr.V:', vibratorCounters.length.toString()),
-                _row('T Nr.L:', liaisonCounters.length.toString()),
+                _row('T Nr.C:', '$_filledCounterCount / ${tnbCounters.length}'),
               ],
             ),
           ),
@@ -1190,59 +1032,29 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
             ),
           ),
         ],
-        if (vibratorCounters.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Card(
-            margin: EdgeInsets.zero,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Compteurs Vibreurs',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const Divider(height: 16),
-                  ...vibratorCounters.map((counter) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Text(
-                            'Poste: ${counter.poste != null ? posteToString(counter.poste) : '-'} | '
-                            'Début: ${counter.start.isNotEmpty ? counter.start : '-'} | '
-                            'Fin: ${counter.end.isNotEmpty ? counter.end : '-'} '),
-                      )),
-                ],
-              ),
+        const SizedBox(height: 16),
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Compteurs TNB',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const Divider(height: 16),
+                ...tnbCounters.map((counter) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Text(
+                        '${counter.label}: ${counter.start.isNotEmpty ? counter.start : '-'}',
+                      ),
+                    )),
+              ],
             ),
           ),
-        ],
-        if (liaisonCounters.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Card(
-            margin: EdgeInsets.zero,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Compteurs Liaison',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const Divider(height: 16),
-                  ...liaisonCounters.map((counter) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Text(
-                          'Poste: ${counter.poste != null ? posteToString(counter.poste) : '-'} | '
-                          'Début: ${counter.start.isNotEmpty ? counter.start : '-'} | '
-                          'Fin: ${counter.end.isNotEmpty ? counter.end : '-'}',
-                        ),
-                      )),
-                ],
-              ),
-            ),
-          ),
-        ],
+        ),
         if (stockEntries.isNotEmpty) ...[
           const SizedBox(height: 16),
           Card(
@@ -1326,6 +1138,13 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
   Future<void> _saveReport() async {
     setState(() => _isSaving = true);
     try {
+      final savedVibratorCounters = _buildSavedCounters(
+        tnbCounters.where((counter) => counter.label == 'Vibreur'),
+      );
+      final savedLiaisonCounters = _buildSavedCounters(
+        tnbCounters.where((counter) => counter.label != 'Vibreur'),
+      );
+
       final report = Report(
           id: widget.initialReport?.id,
           description:
@@ -1348,22 +1167,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                       'Catégorie': '',
                     })
                 .toList(),
-            'vibrator Counters': vibratorCounters
-                .map((c) => {
-                      'id': c.id,
-                      'poste': c.poste?.index,
-                      'start': c.start,
-                      'end': c.end
-                    })
-                .toList(),
-            'liaison Counters': liaisonCounters
-                .map((c) => {
-                      'id': c.id,
-                      'poste': c.poste?.index,
-                      'start': c.start,
-                      'end': c.end
-                    })
-                .toList(),
+            'vibrator Counters': savedVibratorCounters,
+            'liaison Counters': savedLiaisonCounters,
             'stock': stockEntries
                 .map((e) => {
                       'id': e.id,
@@ -1378,8 +1183,9 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
             'T H.V': totalVibratorMinutes,
             'T H.L': totalLiaisonMinutes,
             'T Nr.A': stops.length,
-            'T Nr.V': vibratorCounters.length,
-            'T Nr.L': liaisonCounters.length,
+            'T Nr.V': savedVibratorCounters.length,
+            'T Nr.L': savedLiaisonCounters.length,
+            'T Nr.C': _filledCounterCount,
             'T Nr.S': stockEntries.length,
           });
       if (widget.isEditing && widget.onSave != null) {

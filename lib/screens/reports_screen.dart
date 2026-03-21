@@ -1113,231 +1113,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Vibreurs Counters Management Card
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        l10n.cvibrLabel,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    ElevatedButton.icon(
-                                      onPressed: () =>
-                                          _showAddVibratorCounterDialog(
-                                              report,
-                                              data,
-                                              setDialogState,
-                                              scaffoldMessenger,
-                                              l10n),
-                                      icon: const Icon(Icons.add),
-                                      label: Text(l10n.ajButton),
-                                    ),
-                                  ],
-                                ),
-                                const Divider(height: 16),
-                                if (data['vibrator Counters'] is List &&
-                                    (data['vibrator Counters'] as List)
-                                        .isNotEmpty)
-                                  ...List.from(data['vibrator Counters'])
-                                      .asMap()
-                                      .entries
-                                      .map((entry) {
-                                    final index = entry.key;
-                                    final counter = entry.value;
-                                    final isSelected =
-                                        _selectedCounterIndex == index;
-                                    return Card(
-                                      margin: const EdgeInsets.only(bottom: 8),
-                                      color: isSelected
-                                          ? Colors.orange.withValues(alpha: 0.1)
-                                          : null,
-                                      elevation: isSelected ? 4 : 1,
-                                      child: ListTile(
-                                        selected: isSelected,
-                                        selectedTileColor: Colors.orange
-                                            .withValues(alpha: 0.1),
-                                        title: Text(l10n.cvibrTitle(index + 1)),
-                                        subtitle: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                                '${l10n.poste}: ${_getPosteString(counter['poste'], l10n)}'),
-                                            Text(
-                                                '${l10n.start}: ${counter['start'] ?? '-'}'),
-                                            Text(
-                                                '${l10n.end}: ${counter['end'] ?? '-'}'),
-                                          ],
-                                        ),
-                                        leading: isSelected
-                                            ? const Icon(Icons.check_circle,
-                                                color: Colors.orange)
-                                            : null,
-                                        onTap: () {
-                                          setState(() {
-                                            _selectedCounterIndex =
-                                                isSelected ? null : index;
-                                          });
-                                        },
-                                        trailing: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            IconButton(
-                                              icon: const Icon(Icons.edit,
-                                                  size: 18),
-                                              onPressed: () =>
-                                                  _showEditVibratorCounterDialog(
-                                                      report,
-                                                      data,
-                                                      index,
-                                                      setDialogState,
-                                                      scaffoldMessenger,
-                                                      l10n),
-                                              tooltip: l10n.editCounter,
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(Icons.delete,
-                                                  size: 18, color: Colors.red),
-                                              onPressed: () =>
-                                                  _showDeleteVibratorCounterDialog(
-                                                      report,
-                                                      data,
-                                                      index,
-                                                      setDialogState,
-                                                      scaffoldMessenger,
-                                                      l10n),
-                                              tooltip: l10n.deleteCounter,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  })
-                                else
-                                  Text(l10n.aucunCompteurVibr,
-                                      style:
-                                          const TextStyle(color: Colors.grey)),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Liaison Counters Management Card
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        l10n.cliaisonLabel,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    ElevatedButton.icon(
-                                      onPressed: () =>
-                                          _showAddLiaisonCounterDialog(
-                                              report,
-                                              data,
-                                              setDialogState,
-                                              scaffoldMessenger,
-                                              l10n),
-                                      icon: const Icon(Icons.add),
-                                      label: Text(l10n.ajButton),
-                                    ),
-                                  ],
-                                ),
-                                const Divider(height: 16),
-                                if (data['liaison Counters'] is List &&
-                                    (data['liaison Counters'] as List)
-                                        .isNotEmpty)
-                                  ...List.from(data['liaison Counters'])
-                                      .asMap()
-                                      .entries
-                                      .map((entry) {
-                                    final index = entry.key;
-                                    final counter = entry.value;
-                                    return Card(
-                                      margin: const EdgeInsets.only(bottom: 8),
-                                      child: ListTile(
-                                        title:
-                                            Text(l10n.cliaisonTitle(index + 1)),
-                                        subtitle: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                                '${l10n.poste}: ${_getPosteString(counter['poste'], l10n)}'),
-                                            Text(
-                                                '${l10n.start}: ${counter['start'] ?? '-'}'),
-                                            Text(
-                                                '${l10n.end}: ${counter['end'] ?? '-'}'),
-                                          ],
-                                        ),
-                                        trailing: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            IconButton(
-                                              icon: const Icon(Icons.edit,
-                                                  size: 18),
-                                              onPressed: () =>
-                                                  _showEditLiaisonCounterDialog(
-                                                      report,
-                                                      data,
-                                                      index,
-                                                      setDialogState,
-                                                      scaffoldMessenger,
-                                                      l10n),
-                                              tooltip: l10n.editCounter,
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(Icons.delete,
-                                                  size: 18, color: Colors.red),
-                                              onPressed: () =>
-                                                  _showDeleteLiaisonCounterDialog(
-                                                      report,
-                                                      data,
-                                                      index,
-                                                      setDialogState,
-                                                      scaffoldMessenger,
-                                                      l10n),
-                                              tooltip: l10n.deleteCounter,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  })
-                                else
-                                  Text(l10n.noLiaisonCountersAdded,
-                                      style:
-                                          const TextStyle(color: Colors.grey)),
-                              ],
-                            ),
-                          ),
+                        _buildTnbCounterManagementCard(
+                          report,
+                          data,
+                          setDialogState,
+                          scaffoldMessenger,
+                          l10n,
                         ),
                         const SizedBox(height: 16),
 
@@ -2183,325 +1964,156 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  // Add Vibreur Counter Dialog for Activity Report
-  Future<void> _showAddVibratorCounterDialog(
-      Report report,
-      Map<String, dynamic> data,
-      StateSetter setDialogState,
-      ScaffoldMessengerState scaffoldMessenger,
-      AppLocalizations l10n) async {
-    int? selectedPoste;
-    String startIndex = '';
-    String endIndex = '';
-    bool startDefect = false;
-    bool endDefect = false;
+  Widget _buildTnbCounterManagementCard(
+    Report report,
+    Map<String, dynamic> data,
+    StateSetter setDialogState,
+    ScaffoldMessengerState scaffoldMessenger,
+    AppLocalizations l10n,
+  ) {
+    final counters = _buildTnbCounterDisplayList(data);
 
-    await showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(l10n.addVibratorCounterTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<int>(
-                initialValue: selectedPoste,
-                decoration: InputDecoration(
-                  labelText: l10n.poste,
-                  border: const OutlineInputBorder(),
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Compteurs TNB',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Ajout, modification et suppression s'appliquent aux cinq compteurs fixes.",
+            ),
+            const Divider(height: 16),
+            ...counters.map((counter) {
+              final hasValue = (counter['start'] ?? '').trim().isNotEmpty;
+              final label = counter['label'] ?? '';
+              return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  title: Text(label),
+                  subtitle: Text(
+                      '${l10n.start}: ${hasValue ? counter['start'] : '-'}'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(hasValue ? Icons.edit : Icons.add, size: 18),
+                        onPressed: () => _showTnbCounterValueDialog(
+                          report: report,
+                          data: data,
+                          label: label,
+                          initialValue: counter['start'] ?? '',
+                          isEditing: hasValue,
+                          setDialogState: setDialogState,
+                          scaffoldMessenger: scaffoldMessenger,
+                          l10n: l10n,
+                        ),
+                        tooltip: hasValue ? l10n.editCounter : l10n.ajButton,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete,
+                            size: 18, color: Colors.red),
+                        onPressed: hasValue
+                            ? () => _showDeleteTnbCounterDialog(
+                                  report: report,
+                                  data: data,
+                                  label: label,
+                                  setDialogState: setDialogState,
+                                  scaffoldMessenger: scaffoldMessenger,
+                                  l10n: l10n,
+                                )
+                            : null,
+                        tooltip: l10n.deleteCounter,
+                      ),
+                    ],
+                  ),
                 ),
-                items: [
-                  DropdownMenuItem(value: 0, child: Text(l10n.poste3eme)),
-                  DropdownMenuItem(value: 1, child: Text(l10n.poste1er)),
-                  DropdownMenuItem(value: 2, child: Text(l10n.poste2eme)),
-                ],
-                onChanged: (value) => setState(() => selectedPoste = value),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        labelText: l10n.startCounterLabel,
-                        border: const OutlineInputBorder(),
-                      ),
-                      enabled: !startDefect,
-                      controller: startDefect
-                          ? TextEditingController(text: l10n.defautLabel)
-                          : null,
-                      onChanged: (value) => setState(() => startIndex = value),
-                    ),
-                  ),
-                  Column(
-                    children: [
-                      Checkbox(
-                        value: startDefect,
-                        onChanged: (val) => setState(() {
-                          startDefect = val ?? false;
-                          if (startDefect) startIndex = '';
-                        }),
-                      ),
-                      Text(l10n.defautLabel,
-                          style: const TextStyle(fontSize: 10)),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        labelText: l10n.endCounterLabel,
-                        border: const OutlineInputBorder(),
-                      ),
-                      enabled: !endDefect,
-                      controller: endDefect
-                          ? TextEditingController(text: l10n.defautLabel)
-                          : null,
-                      onChanged: (value) => setState(() => endIndex = value),
-                    ),
-                  ),
-                  Column(
-                    children: [
-                      Checkbox(
-                        value: endDefect,
-                        onChanged: (val) => setState(() {
-                          endDefect = val ?? false;
-                          if (endDefect) endIndex = '';
-                        }),
-                      ),
-                      Text(l10n.defautLabel,
-                          style: const TextStyle(fontSize: 10)),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.cancel),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (selectedPoste != null &&
-                    startIndex.isNotEmpty &&
-                    endIndex.isNotEmpty) {
-                  final updatedData = Map<String, dynamic>.from(data);
-                  if (updatedData['vibrator Counters'] == null) {
-                    updatedData['vibrator Counters'] = [];
-                  }
-                  (updatedData['vibrator Counters'] as List).add({
-                    'id': DateTime.now().millisecondsSinceEpoch.toString(),
-                    'poste': selectedPoste,
-                    'start': startIndex,
-                    'end': endIndex,
-                    'startDefect': startDefect,
-                    'endDefect': endDefect,
-                  });
-
-                  // Recalculate totals for Activity TNB reports
-                  final recalculatedData =
-                      _recalculateActivityTotals(updatedData);
-
-                  final updatedReport = Report(
-                    id: report.id,
-                    description: report.description,
-                    type: report.type,
-                    group: report.group,
-                    date: report.date,
-                    additionalData: recalculatedData,
-                  );
-
-                  Navigator.pop(context);
-                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                  setDialogState(() {});
-                }
-              },
-              child: Text(l10n.add),
-            ),
+              );
+            }),
           ],
         ),
       ),
     );
   }
 
-  // Edit Vibreur Counter Dialog for Activity Report
-  Future<void> _showEditVibratorCounterDialog(
-      Report report,
-      Map<String, dynamic> data,
-      int index,
-      StateSetter setDialogState,
-      ScaffoldMessengerState scaffoldMessenger,
-      AppLocalizations l10n) async {
-    final counter = (data['vibrator Counters'] as List)[index];
-    int? selectedPoste;
-    final rawPoste = counter['poste'];
-    if (rawPoste is int) {
-      selectedPoste = rawPoste;
-    } else if (rawPoste is String) {
-      if (rawPoste == '3ème Poste') {
-        selectedPoste = 0;
-      } else if (rawPoste == '1er Poste') {
-        selectedPoste = 1;
-      } else if (rawPoste == '2ème Poste') {
-        selectedPoste = 2;
-      }
-    }
-    final startController = TextEditingController(text: counter['start'] ?? '');
-    final endController = TextEditingController(text: counter['end'] ?? '');
-    bool startDefect = counter['startDefect'] ?? false;
-    bool endDefect = counter['endDefect'] ?? false;
+  Future<void> _showTnbCounterValueDialog({
+    required Report report,
+    required Map<String, dynamic> data,
+    required String label,
+    required String initialValue,
+    required bool isEditing,
+    required StateSetter setDialogState,
+    required ScaffoldMessengerState scaffoldMessenger,
+    required AppLocalizations l10n,
+  }) async {
+    final controller = TextEditingController(text: initialValue);
 
-    await showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(l10n.editVibratorCounterTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<int>(
-                initialValue: selectedPoste,
-                isExpanded: true,
-                decoration: InputDecoration(
-                  labelText: l10n.poste,
-                  border: const OutlineInputBorder(),
-                ),
-                items: [
-                  DropdownMenuItem(value: 0, child: Text(l10n.poste3eme)),
-                  DropdownMenuItem(value: 1, child: Text(l10n.poste1er)),
-                  DropdownMenuItem(value: 2, child: Text(l10n.poste2eme)),
-                ],
-                onChanged: (value) => setState(() => selectedPoste = value),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        labelText: l10n.startCounterLabel,
-                        border: const OutlineInputBorder(),
-                      ),
-                      controller: startDefect
-                          ? TextEditingController(text: l10n.defautLabel)
-                          : startController,
-                      enabled: !startDefect,
-                      onChanged: (v) {
-                        // Controller handles text, but we might need explicit state update if validation relies on it
-                      },
-                    ),
-                  ),
-                  Column(
-                    children: [
-                      Checkbox(
-                        value: startDefect,
-                        onChanged: (val) => setState(() {
-                          startDefect = val ?? false;
-                          if (startDefect) startController.text = '';
-                        }),
-                      ),
-                      Text(l10n.defautLabel,
-                          style: const TextStyle(fontSize: 10)),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        labelText: l10n.endCounterLabel,
-                        border: const OutlineInputBorder(),
-                      ),
-                      controller: endDefect
-                          ? TextEditingController(text: l10n.defautLabel)
-                          : endController,
-                      enabled: !endDefect,
-                    ),
-                  ),
-                  Column(
-                    children: [
-                      Checkbox(
-                        value: endDefect,
-                        onChanged: (val) => setState(() {
-                          endDefect = val ?? false;
-                          if (endDefect) endController.text = '';
-                        }),
-                      ),
-                      Text(l10n.defautLabel,
-                          style: const TextStyle(fontSize: 10)),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.cancel),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (selectedPoste != null &&
-                    (startDefect || startController.text.isNotEmpty) &&
-                    (endDefect || endController.text.isNotEmpty)) {
-                  final updatedData = Map<String, dynamic>.from(data);
-                  (updatedData['vibrator Counters'] as List)[index] = {
-                    'id': counter['id'],
-                    'poste': selectedPoste,
-                    'start': startController.text,
-                    'end': endController.text,
-                    'startDefect': startDefect,
-                    'endDefect': endDefect,
-                  };
-
-                  // Recalculate totals for Activity TNB reports
-                  final recalculatedData =
-                      _recalculateActivityTotals(updatedData);
-
-                  final updatedReport = Report(
-                    id: report.id,
-                    description: report.description,
-                    type: report.type,
-                    group: report.group,
-                    date: report.date,
-                    additionalData: recalculatedData,
-                  );
-
-                  Navigator.pop(context);
-                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                  setDialogState(() {});
-                }
-              },
-              child: Text(l10n.modifyLabel),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Delete Vibreur Counter Dialog for Activity Report
-  Future<void> _showDeleteVibratorCounterDialog(
-      Report report,
-      Map<String, dynamic> data,
-      int index,
-      StateSetter setDialogState,
-      ScaffoldMessengerState scaffoldMessenger,
-      AppLocalizations l10n) async {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(l10n.deleteVibratorCounterTitle),
+        title: Text(isEditing ? 'Modifier $label' : 'Ajouter $label'),
+        content: TextField(
+          controller: controller,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            labelText: 'Valeur de départ - $label',
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.isEmpty) {
+                return;
+              }
+              final counters = _buildTnbCounterDisplayList(data)
+                  .map((counter) => Map<String, String>.from(counter))
+                  .toList(growable: false);
+              final index =
+                  counters.indexWhere((counter) => counter['label'] == label);
+              if (index == -1) {
+                return;
+              }
+              counters[index]['start'] = value;
+              counters[index]['end'] = '';
+              final updatedReport = _buildUpdatedActivityReportWithTnbCounters(
+                report: report,
+                data: data,
+                counters: counters,
+              );
+              Navigator.pop(context);
+              _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+              setDialogState(() {});
+            },
+            child: Text(isEditing ? l10n.modifyLabel : l10n.add),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showDeleteTnbCounterDialog({
+    required Report report,
+    required Map<String, dynamic> data,
+    required String label,
+    required StateSetter setDialogState,
+    required ScaffoldMessengerState scaffoldMessenger,
+    required AppLocalizations l10n,
+  }) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Supprimer $label'),
         content: Text(l10n.deleteCounterConfirm),
         actions: [
           TextButton(
@@ -2510,21 +2122,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              final updatedData = Map<String, dynamic>.from(data);
-              (updatedData['vibrator Counters'] as List).removeAt(index);
-
-              // Recalculate totals for Activity TNB reports
-              final recalculatedData = _recalculateActivityTotals(updatedData);
-
-              final updatedReport = Report(
-                id: report.id,
-                description: report.description,
-                type: report.type,
-                group: report.group,
-                date: report.date,
-                additionalData: recalculatedData,
+              final counters = _buildTnbCounterDisplayList(data)
+                  .map((counter) => Map<String, String>.from(counter))
+                  .toList(growable: false);
+              final index =
+                  counters.indexWhere((counter) => counter['label'] == label);
+              if (index == -1) {
+                Navigator.pop(context);
+                return;
+              }
+              counters[index]['start'] = '';
+              counters[index]['end'] = '';
+              final updatedReport = _buildUpdatedActivityReportWithTnbCounters(
+                report: report,
+                data: data,
+                counters: counters,
               );
-
               Navigator.pop(context);
               _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
               setDialogState(() {});
@@ -2537,357 +2150,46 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  // Add Liaison Counter Dialog for Activity Report
-  Future<void> _showAddLiaisonCounterDialog(
-      Report report,
-      Map<String, dynamic> data,
-      StateSetter setDialogState,
-      ScaffoldMessengerState scaffoldMessenger,
-      AppLocalizations l10n) async {
-    int? selectedPoste;
-    String startIndex = '';
-    String endIndex = '';
-    bool startDefect = false;
-    bool endDefect = false;
+  Report _buildUpdatedActivityReportWithTnbCounters({
+    required Report report,
+    required Map<String, dynamic> data,
+    required List<Map<String, String>> counters,
+  }) {
+    final updatedData = Map<String, dynamic>.from(data);
+    final filledCounters = counters
+        .where((counter) => (counter['start'] ?? '').trim().isNotEmpty)
+        .toList(growable: false);
 
-    await showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(l10n.addLiaisonCounterTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<int>(
-                initialValue: selectedPoste,
-                decoration: InputDecoration(
-                  labelText: l10n.poste,
-                  border: const OutlineInputBorder(),
-                ),
-                items: [
-                  DropdownMenuItem(value: 0, child: Text(l10n.poste3eme)),
-                  DropdownMenuItem(value: 1, child: Text(l10n.poste1er)),
-                  DropdownMenuItem(value: 2, child: Text(l10n.poste2eme)),
-                ],
-                onChanged: (value) => setState(() => selectedPoste = value),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        labelText: l10n.startCounterLabel,
-                        border: const OutlineInputBorder(),
-                      ),
-                      enabled: !startDefect,
-                      controller: startDefect
-                          ? TextEditingController(text: l10n.defautLabel)
-                          : null,
-                      onChanged: (value) => setState(() => startIndex = value),
-                    ),
-                  ),
-                  Column(
-                    children: [
-                      Checkbox(
-                        value: startDefect,
-                        onChanged: (val) => setState(() {
-                          startDefect = val ?? false;
-                          if (startDefect) startIndex = '';
-                        }),
-                      ),
-                      Text(l10n.defautLabel,
-                          style: const TextStyle(fontSize: 10)),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        labelText: l10n.endCounterLabel,
-                        border: const OutlineInputBorder(),
-                      ),
-                      enabled: !endDefect,
-                      controller: endDefect
-                          ? TextEditingController(text: l10n.defautLabel)
-                          : null,
-                      onChanged: (value) => setState(() => endIndex = value),
-                    ),
-                  ),
-                  Column(
-                    children: [
-                      Checkbox(
-                        value: endDefect,
-                        onChanged: (val) => setState(() {
-                          endDefect = val ?? false;
-                          if (endDefect) endIndex = '';
-                        }),
-                      ),
-                      Text(l10n.defautLabel,
-                          style: const TextStyle(fontSize: 10)),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.cancel),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (selectedPoste != null &&
-                    (startDefect || startIndex.isNotEmpty) &&
-                    (endDefect || endIndex.isNotEmpty)) {
-                  final updatedData = Map<String, dynamic>.from(data);
-                  if (updatedData['liaison Counters'] == null) {
-                    updatedData['liaison Counters'] = [];
-                  }
-                  (updatedData['liaison Counters'] as List).add({
-                    'id': DateTime.now().millisecondsSinceEpoch.toString(),
-                    'poste': selectedPoste,
-                    'start': startIndex,
-                    'end': endIndex,
-                    'startDefect': startDefect,
-                    'endDefect': endDefect,
-                  });
+    updatedData['vibrator Counters'] = filledCounters
+        .where((counter) => counter['label'] == 'Vibreur')
+        .map((counter) => {
+              'id': 'tnb-vibreur',
+              'poste': counter['label'],
+              'start': counter['start'],
+              'end': '',
+            })
+        .toList(growable: false);
 
-                  // Recalculate totals for Activity TNB reports
-                  final recalculatedData =
-                      _recalculateActivityTotals(updatedData);
+    updatedData['liaison Counters'] = filledCounters
+        .where((counter) => counter['label'] != 'Vibreur')
+        .map((counter) => {
+              'id': 'tnb-${counter['label']}',
+              'poste': counter['label'],
+              'start': counter['start'],
+              'end': '',
+            })
+        .toList(growable: false);
 
-                  final updatedReport = Report(
-                    id: report.id,
-                    description: report.description,
-                    type: report.type,
-                    group: report.group,
-                    date: report.date,
-                    additionalData: recalculatedData,
-                  );
+    final recalculatedData = _recalculateActivityTotals(updatedData);
+    recalculatedData['T Nr.C'] = filledCounters.length;
 
-                  Navigator.pop(context);
-                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                  setDialogState(() {});
-                }
-              },
-              child: Text(l10n.add),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Edit Liaison Counter Dialog for Activity Report
-  Future<void> _showEditLiaisonCounterDialog(
-      Report report,
-      Map<String, dynamic> data,
-      int index,
-      StateSetter setDialogState,
-      ScaffoldMessengerState scaffoldMessenger,
-      AppLocalizations l10n) async {
-    final counter = (data['liaison Counters'] as List)[index];
-    int? selectedPoste;
-    final rawPoste = counter['poste'];
-    if (rawPoste is int) {
-      selectedPoste = rawPoste;
-    } else if (rawPoste is String) {
-      if (rawPoste == '3ème Poste') {
-        selectedPoste = 0;
-      } else if (rawPoste == '1er Poste') {
-        selectedPoste = 1;
-      } else if (rawPoste == '2ème Poste') {
-        selectedPoste = 2;
-      }
-    }
-    final startController = TextEditingController(text: counter['start'] ?? '');
-    final endController = TextEditingController(text: counter['end'] ?? '');
-    bool startDefect = counter['startDefect'] ?? false;
-    bool endDefect = counter['endDefect'] ?? false;
-
-    await showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(l10n.editLiaisonCounterTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<int>(
-                initialValue: selectedPoste,
-                isExpanded: true,
-                decoration: InputDecoration(
-                  labelText: l10n.poste,
-                  border: const OutlineInputBorder(),
-                ),
-                items: [
-                  DropdownMenuItem(value: 0, child: Text(l10n.poste3eme)),
-                  DropdownMenuItem(value: 1, child: Text(l10n.poste1er)),
-                  DropdownMenuItem(value: 2, child: Text(l10n.poste2eme)),
-                ],
-                onChanged: (value) => setState(() => selectedPoste = value),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        labelText: l10n.startCounterLabel,
-                        border: const OutlineInputBorder(),
-                      ),
-                      controller: startDefect
-                          ? TextEditingController(text: l10n.defautLabel)
-                          : startController,
-                      enabled: !startDefect,
-                      onChanged: (v) {
-                        // Controller handles text
-                      },
-                    ),
-                  ),
-                  Column(
-                    children: [
-                      Checkbox(
-                        value: startDefect,
-                        onChanged: (val) => setState(() {
-                          startDefect = val ?? false;
-                          if (startDefect) startController.text = '';
-                        }),
-                      ),
-                      Text(l10n.defautLabel,
-                          style: const TextStyle(fontSize: 10)),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        labelText: l10n.endCounterLabel,
-                        border: const OutlineInputBorder(),
-                      ),
-                      controller: endDefect
-                          ? TextEditingController(text: l10n.defautLabel)
-                          : endController,
-                      enabled: !endDefect,
-                    ),
-                  ),
-                  Column(
-                    children: [
-                      Checkbox(
-                        value: endDefect,
-                        onChanged: (val) => setState(() {
-                          endDefect = val ?? false;
-                          if (endDefect) endController.text = '';
-                        }),
-                      ),
-                      Text(l10n.defautLabel,
-                          style: const TextStyle(fontSize: 10)),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.cancel),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (selectedPoste != null &&
-                    (startDefect || startController.text.isNotEmpty) &&
-                    (endDefect || endController.text.isNotEmpty)) {
-                  final updatedData = Map<String, dynamic>.from(data);
-                  (updatedData['liaison Counters'] as List)[index] = {
-                    'id': counter['id'],
-                    'poste': selectedPoste,
-                    'start': startController.text,
-                    'end': endController.text,
-                    'startDefect': startDefect,
-                    'endDefect': endDefect,
-                  };
-
-                  // Recalculate totals for Activity TNB reports
-                  final recalculatedData =
-                      _recalculateActivityTotals(updatedData);
-
-                  final updatedReport = Report(
-                    id: report.id,
-                    description: report.description,
-                    type: report.type,
-                    group: report.group,
-                    date: report.date,
-                    additionalData: recalculatedData,
-                  );
-
-                  Navigator.pop(context);
-                  _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                  setDialogState(() {});
-                }
-              },
-              child: Text(l10n.modifyLabel),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Delete Liaison Counter Dialog for Activity Report
-  Future<void> _showDeleteLiaisonCounterDialog(
-      Report report,
-      Map<String, dynamic> data,
-      int index,
-      StateSetter setDialogState,
-      ScaffoldMessengerState scaffoldMessenger,
-      AppLocalizations l10n) async {
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.deleteLiaisonCounterTitle),
-        content: Text(l10n.deleteCounterConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final updatedData = Map<String, dynamic>.from(data);
-              (updatedData['liaison Counters'] as List).removeAt(index);
-
-              // Recalculate totals for Activity TNB reports
-              final recalculatedData = _recalculateActivityTotals(updatedData);
-
-              final updatedReport = Report(
-                id: report.id,
-                description: report.description,
-                type: report.type,
-                group: report.group,
-                date: report.date,
-                additionalData: recalculatedData,
-              );
-
-              Navigator.pop(context);
-              _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-              setDialogState(() {});
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text(l10n.delete),
-          ),
-        ],
-      ),
+    return Report(
+      id: report.id,
+      description: report.description,
+      type: report.type,
+      group: report.group,
+      date: report.date,
+      additionalData: recalculatedData,
     );
   }
 
@@ -4193,14 +3495,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         'T H.M:',
                                         _formatMinutesToHoursMinutes(
                                             data['T H.M'] ?? 0)),
-                                    _buildSummaryRow(
-                                        'T H.V:',
-                                        _formatMinutesToHoursMinutes(
-                                            data['T H.V'] ?? 0)),
-                                    _buildSummaryRow(
-                                        'T H.L:',
-                                        _formatMinutesToHoursMinutes(
-                                            data['T H.L'] ?? 0)),
                                     const SizedBox(height: 8),
                                     _buildSummaryRow(
                                         'T Nr.A:',
@@ -4210,21 +3504,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                 : 0)
                                             .toString()),
                                     _buildSummaryRow(
-                                        'T Nr.V:',
-                                        (data['vibrator Counters'] is List
-                                                ? (data['vibrator Counters']
-                                                        as List)
-                                                    .length
-                                                : 0)
-                                            .toString()),
-                                    _buildSummaryRow(
-                                        'T Nr.L:',
-                                        (data['liaison Counters'] is List
-                                                ? (data['liaison Counters']
-                                                        as List)
-                                                    .length
-                                                : 0)
-                                            .toString()),
+                                      'T Nr.C:',
+                                      '${_filledTnbCounterCount(data)} / ${_buildTnbCounterDisplayList(data).length}',
+                                    ),
                                   ],
                                 ),
                               ),
@@ -4269,112 +3551,36 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               ),
                             ),
                             const SizedBox(height: 16),
-                            // Vibreurs Counters Card
-                            if (data['vibrator Counters'] is List &&
-                                (data['vibrator Counters'] as List).isNotEmpty)
-                              Card(
-                                margin: EdgeInsets.zero,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        l10n.vibratorCountersLabel,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium,
+                            // TNB Counters Card
+                            Card(
+                              margin: EdgeInsets.zero,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Compteurs TNB',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium,
+                                    ),
+                                    const Divider(height: 16),
+                                    ..._buildTnbCounterDisplayList(data).map(
+                                      (counter) => Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 2,
+                                        ),
+                                        child: Text(
+                                          '• ${counter['label']}: ${((counter['start'] ?? '').isNotEmpty) ? counter['start'] : '-'}',
+                                        ),
                                       ),
-                                      const Divider(height: 16),
-                                      ...List.from(data['vibrator Counters'])
-                                          .map((counter) => Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        vertical: 2),
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                        '• ${l10n.poste}: ${_getPosteString(counter['poste'], l10n)}'),
-                                                    if (counter['start'] !=
-                                                            null &&
-                                                        counter['start']
-                                                            .toString()
-                                                            .isNotEmpty)
-                                                      Text(
-                                                          '  ${l10n.start}: ${counter['start']}'),
-                                                    if (counter['end'] !=
-                                                            null &&
-                                                        counter['end']
-                                                            .toString()
-                                                            .isNotEmpty)
-                                                      Text(
-                                                          '  ${l10n.end}: ${counter['end']}'),
-                                                  ],
-                                                ),
-                                              )),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            if (data['vibrator Counters'] is List &&
-                                (data['vibrator Counters'] as List).isNotEmpty)
-                              const SizedBox(height: 16),
-                            // Liaison Counters Card
-                            if (data['liaison Counters'] is List &&
-                                (data['liaison Counters'] as List).isNotEmpty)
-                              Card(
-                                margin: EdgeInsets.zero,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        l10n.liaisonCountersLabel,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium,
-                                      ),
-                                      const Divider(height: 16),
-                                      ...List.from(data['liaison Counters'])
-                                          .map((counter) => Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        vertical: 2),
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                        '• ${l10n.poste}: ${_getPosteString(counter['poste'], l10n)}'),
-                                                    if (counter['start'] !=
-                                                            null &&
-                                                        counter['start']
-                                                            .toString()
-                                                            .isNotEmpty)
-                                                      Text(
-                                                          '  ${l10n.start}: ${counter['start']}'),
-                                                    if (counter['end'] !=
-                                                            null &&
-                                                        counter['end']
-                                                            .toString()
-                                                            .isNotEmpty)
-                                                      Text(
-                                                          '  ${l10n.end}: ${counter['end']}'),
-                                                  ],
-                                                ),
-                                              )),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            if (data['liaison Counters'] is List &&
-                                (data['liaison Counters'] as List).isNotEmpty)
-                              const SizedBox(height: 16),
+                            ),
+                            const SizedBox(height: 16),
                             // Stock Card
                             if (data['stock'] is List &&
                                 (data['stock'] as List).isNotEmpty)
@@ -5555,19 +4761,69 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
+  List<Map<String, String>> _buildTnbCounterDisplayList(
+    Map<String, dynamic> data,
+  ) {
+    const labels = ['Vibreur', 'LN', 'L', 'G3', 'G6'];
+    final counterMap = {
+      for (final label in labels)
+        label: <String, String>{'label': label, 'start': '', 'end': ''},
+    };
+
+    final vibratorCounters = data['vibrator Counters'] is List
+        ? List.from(data['vibrator Counters'])
+        : [];
+    if (vibratorCounters.isNotEmpty) {
+      final firstCounter = Map<String, dynamic>.from(vibratorCounters.first);
+      counterMap['Vibreur'] = {
+        'label': 'Vibreur',
+        'start': firstCounter['start']?.toString() ?? '',
+        'end': firstCounter['end']?.toString() ?? '',
+      };
+    }
+
+    final liaisonCounters = data['liaison Counters'] is List
+        ? List.from(data['liaison Counters'])
+        : [];
+    for (var i = 0; i < liaisonCounters.length && i < labels.length - 1; i++) {
+      final counter = Map<String, dynamic>.from(liaisonCounters[i]);
+      final rawLabel = counter['poste']?.toString().trim();
+      final fallbackLabel = labels[i + 1];
+      final label = rawLabel != null && labels.contains(rawLabel)
+          ? rawLabel
+          : fallbackLabel;
+      counterMap[label] = {
+        'label': label,
+        'start': counter['start']?.toString() ?? '',
+        'end': counter['end']?.toString() ?? '',
+      };
+    }
+
+    return labels.map((label) => counterMap[label]!).toList(growable: false);
+  }
+
+  int _filledTnbCounterCount(Map<String, dynamic> data) {
+    final savedCount = data['T Nr.C'];
+    if (savedCount is int) {
+      return savedCount;
+    }
+    return _buildTnbCounterDisplayList(data)
+        .where((counter) => (counter['start'] ?? '').trim().isNotEmpty)
+        .length;
+  }
+
   Widget _buildActivityReportAdditionalData(
       Map<String, dynamic> data, AppLocalizations l10n) {
     if (data.isEmpty) {
       return Text(l10n.noActivityData);
     }
 
-    final stops = (data['stops'] is List) ? List.from(data['stops']) : [];
-    final vibratorCounters = (data['vibrator Counters'] is List)
-        ? List.from(data['vibrator Counters'])
-        : [];
-    final liaisonCounters = (data['liaison Counters'] is List)
-        ? List.from(data['liaison Counters'])
-        : [];
+    final stops = (data['Arrets'] is List)
+        ? List.from(data['Arrets'])
+        : (data['stops'] is List)
+            ? List.from(data['stops'])
+            : [];
+    final tnbCounters = _buildTnbCounterDisplayList(data);
     final stockEntries =
         (data['stock'] is List) ? List.from(data['stock']) : [];
 
@@ -5597,18 +4853,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     'T H.M:',
                     _formatMinutesToHoursMinutes(
                         data['T H.M'] is int ? data['T H.M'] : 0)),
-                _buildSummaryRow(
-                    'T H.V:',
-                    _formatMinutesToHoursMinutes(
-                        data['T H.V'] is int ? data['T H.V'] : 0)),
-                _buildSummaryRow(
-                    'T H.L:',
-                    _formatMinutesToHoursMinutes(
-                        data['T H.L'] is int ? data['T H.L'] : 0)),
                 const SizedBox(height: 8),
                 _buildSummaryRow('T Nr.A:', stops.length.toString()),
-                _buildSummaryRow('T Nr.V:', vibratorCounters.length.toString()),
-                _buildSummaryRow('T Nr.L:', liaisonCounters.length.toString()),
+                _buildSummaryRow(
+                  'T Nr.C:',
+                  '${_filledTnbCounterCount(data)} / ${tnbCounters.length}',
+                ),
               ],
             ),
           ),
@@ -5631,42 +4881,28 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
             ),
           ),
-        if (vibratorCounters.isNotEmpty)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(l10n.vibrTitle,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  ...vibratorCounters.map((counter) => Padding(
-                        padding: const EdgeInsets.only(left: 16, top: 4),
-                        child: Text(
-                            'Poste: ${_getPosteString(counter['poste'], l10n)}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
-                      )),
-                ],
-              ),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Compteurs TNB',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                ...tnbCounters.map(
+                  (counter) => Padding(
+                    padding: const EdgeInsets.only(left: 16, top: 4),
+                    child: Text(
+                      '${counter['label']}: ${((counter['start'] ?? '').isNotEmpty) ? counter['start'] : '-'}',
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        if (liaisonCounters.isNotEmpty)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(l10n.liaisonTitle,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  ...liaisonCounters.map((counter) => Padding(
-                        padding: const EdgeInsets.only(left: 16, top: 4),
-                        child: Text(
-                            'Poste: \t${_getPosteString(counter['poste'], l10n)}, Début: ${counter['start'] ?? '-'}, Fin: ${counter['end'] ?? '-'}'),
-                      )),
-                ],
-              ),
-            ),
-          ),
+        ),
         if (stockEntries.isNotEmpty)
           Card(
             child: Padding(
@@ -5911,12 +5147,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
     updatedData['T H.M'] = operatingTime;
     updatedData['T H.V'] = totalVibratorMinutes;
     updatedData['T H.L'] = totalLiaisonMinutes;
+    updatedData['T Nr.V'] = vibratorCounters.length;
+    updatedData['T Nr.L'] = liaisonCounters.length;
+    updatedData['T Nr.C'] = vibratorCounters.length + liaisonCounters.length;
 
     return updatedData;
   }
 
   String _getPosteString(dynamic posteIndex, AppLocalizations l10n) {
     if (posteIndex == null) return '-';
+    if (posteIndex is String && posteIndex.trim().isNotEmpty) {
+      return posteIndex.trim();
+    }
     switch (posteIndex) {
       case 0:
         return l10n.poste3eme;
