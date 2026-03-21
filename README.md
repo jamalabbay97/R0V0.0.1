@@ -59,6 +59,14 @@ This improves query efficiency and keeps the UI responsive for large datasets.
 
 Automated checks prevent regressions and improve long-term stability.
 
+## Publishing
+
+- `web`: build with `flutter build web --release` and deploy with Firebase Hosting.
+- `android`: build a release bundle with `flutter build appbundle --release`.
+- `ios`: build an IPA with `flutter build ipa --release` (signing required for store upload).
+- A manual GitHub Actions workflow at `.github/workflows/publish.yml` now automates web deployment plus Android and iOS release artifacts.
+- Detailed release instructions and required secrets are documented in `docs/PUBLISHING.md`.
+
 ## Dependencies
 
 - Flutter SDK

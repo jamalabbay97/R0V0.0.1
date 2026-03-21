@@ -1,5 +1,9 @@
-import 'package:sqflite/sqflite.dart';
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:r0/models/report.dart';
 import 'package:r0/services/google_sheets_service.dart';
@@ -8,12 +12,20 @@ class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   static Database? _database;
   final GoogleSheetsService _sheetsService = GoogleSheetsService();
+  static const String _webReportsKey = 'reports_web_storage';
+  static const String _webNextIdKey = 'reports_web_next_id';
 
   factory DatabaseHelper() => _instance;
 
   DatabaseHelper._internal();
 
   Future<Database> get database async {
+    if (kIsWeb) {
+      throw UnsupportedError(
+        'SQLite database access is not available on web. '
+        'Use DatabaseHelper CRUD methods instead.',
+      );
+    }
     if (_database != null) return _database!;
     _database = await _initDatabase();
     return _database!;
@@ -78,12 +90,18 @@ class DatabaseHelper {
       "date DESC, CASE group_name WHEN '3ème' THEN 1 WHEN '1er' THEN 2 WHEN '2ème' THEN 3 ELSE 4 END ASC";
 
   Future<int> insertReport(Report report) async {
+    if (kIsWeb) {
+      return _insertWebReport(report);
+    }
     final db = await database;
     final id = await db.insert('reports', report.toMap());
     return id;
   }
 
   Future<List<Report>> getReports() async {
+    if (kIsWeb) {
+      return _getWebReports();
+    }
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'reports',
@@ -96,6 +114,15 @@ class DatabaseHelper {
     int limit = 50,
     int offset = 0,
   }) async {
+    if (kIsWeb) {
+      final reports = await _getWebReports();
+      if (offset >= reports.length) {
+        return <Report>[];
+      }
+      final end =
+          (offset + limit) > reports.length ? reports.length : offset + limit;
+      return reports.sublist(offset, end);
+    }
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'reports',
@@ -107,6 +134,10 @@ class DatabaseHelper {
   }
 
   Future<List<Report>> getReportsByType(String type) async {
+    if (kIsWeb) {
+      final reports = await _getWebReports();
+      return reports.where((report) => report.type == type).toList();
+    }
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'reports',
@@ -118,6 +149,15 @@ class DatabaseHelper {
   }
 
   Future<Report?> getReport(int id) async {
+    if (kIsWeb) {
+      final reports = await _getWebReports();
+      for (final report in reports) {
+        if (report.id == id) {
+          return report;
+        }
+      }
+      return null;
+    }
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'reports',
@@ -129,6 +169,9 @@ class DatabaseHelper {
   }
 
   Future<int> updateReport(Report report) async {
+    if (kIsWeb) {
+      return _updateWebReport(report);
+    }
     final db = await database;
     final updated = await db.update(
       'reports',
@@ -149,6 +192,11 @@ class DatabaseHelper {
       throw Exception('Failed to save report to Google Sheets');
     }
 
+    if (kIsWeb) {
+      await updateReport(report.copyWith(isSentToSheets: true));
+      return;
+    }
+
     final db = await database;
     await db.update(
       'reports',
@@ -159,6 +207,14 @@ class DatabaseHelper {
   }
 
   Future<int> deleteReport(int id) async {
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      final storedMaps = await _readWebReportMaps(prefs);
+      final initialLength = storedMaps.length;
+      storedMaps.removeWhere((map) => map['id'] == id);
+      await _writeWebReportMaps(prefs, storedMaps);
+      return initialLength - storedMaps.length;
+    }
     final db = await database;
     return await db.delete(
       'reports',
@@ -168,9 +224,89 @@ class DatabaseHelper {
   }
 
   Future<void> close() async {
+    if (kIsWeb) {
+      return;
+    }
     if (_database != null) {
       await _database!.close();
       _database = null;
     }
+  }
+
+  Future<int> _insertWebReport(Report report) async {
+    final prefs = await SharedPreferences.getInstance();
+    final storedMaps = await _readWebReportMaps(prefs);
+    final nextId = prefs.getInt(_webNextIdKey) ?? 1;
+    final reportWithId = report.copyWith(id: nextId);
+    storedMaps.add(reportWithId.toMap());
+    await _writeWebReportMaps(prefs, storedMaps);
+    await prefs.setInt(_webNextIdKey, nextId + 1);
+    return nextId;
+  }
+
+  Future<List<Report>> _getWebReports() async {
+    final prefs = await SharedPreferences.getInstance();
+    final storedMaps = await _readWebReportMaps(prefs);
+    final reports = storedMaps.map(Report.fromMap).toList();
+    reports.sort(_compareReports);
+    return reports;
+  }
+
+  Future<int> _updateWebReport(Report report) async {
+    if (report.id == null) {
+      throw ArgumentError('Cannot update report without an id.');
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final storedMaps = await _readWebReportMaps(prefs);
+    final index = storedMaps.indexWhere((map) => map['id'] == report.id);
+
+    if (index == -1) {
+      return 0;
+    }
+
+    storedMaps[index] = report.toMap();
+    await _writeWebReportMaps(prefs, storedMaps);
+    return 1;
+  }
+
+  Future<List<Map<String, dynamic>>> _readWebReportMaps(
+    SharedPreferences prefs,
+  ) {
+    final jsonString = prefs.getString(_webReportsKey);
+    if (jsonString == null || jsonString.isEmpty) {
+      return Future.value(<Map<String, dynamic>>[]);
+    }
+
+    final decoded = jsonDecode(jsonString);
+    if (decoded is! List) {
+      return Future.value(<Map<String, dynamic>>[]);
+    }
+
+    return Future.value(
+      decoded.map((item) => Map<String, dynamic>.from(item as Map)).toList(),
+    );
+  }
+
+  Future<void> _writeWebReportMaps(
+    SharedPreferences prefs,
+    List<Map<String, dynamic>> reports,
+  ) async {
+    await prefs.setString(_webReportsKey, jsonEncode(reports));
+  }
+
+  int _compareReports(Report a, Report b) {
+    final dateComparison = b.date.compareTo(a.date);
+    if (dateComparison != 0) {
+      return dateComparison;
+    }
+
+    final groupOrder = <String, int>{
+      '3ème': 1,
+      '1er': 2,
+      '2ème': 3,
+    };
+
+    return (groupOrder[a.group] ?? 4).compareTo(groupOrder[b.group] ?? 4);
   }
 }

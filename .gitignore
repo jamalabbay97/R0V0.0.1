@@ -24,3 +24,7 @@ kotlin-compiler-*.salive
 *.log
 gradle_log*.txt
 log.txt
+
+# Release credentials
+android/key.properties
+android/app/upload-keystore.jks
