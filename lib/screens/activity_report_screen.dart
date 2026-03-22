@@ -57,6 +57,7 @@ String stockTypeToString(StockType? t) {
 // --- Data Models ---
 class Stop {
   String id;
+  String category;
   String duration;
   String nature;
   String location;
@@ -64,6 +65,7 @@ class Stop {
   String endTime;
   Stop({
     required this.id,
+    this.category = '',
     this.duration = '',
     this.nature = '',
     this.location = '',
@@ -72,11 +74,55 @@ class Stop {
   });
 }
 
+class StopCategory {
+  final String label;
+  final List<String> types;
+  const StopCategory({required this.label, required this.types});
+}
+
 class StopLocation {
   final String code;
   final String label;
   const StopLocation({required this.code, required this.label});
 }
+
+const List<StopCategory> _tnbStopCategories = [
+  StopCategory(
+    label: 'Arrêts Extérieures',
+    types: [
+      'MP - Manque Produit',
+      'CC - Coupure De Courant',
+      'AD - Arrêts Décidés',
+      'DS - Attente Dégagement Stérile',
+      'MB - Manque Bull',
+      'Aut - Autre',
+    ],
+  ),
+  StopCategory(
+    label: 'Arrêts Materiel',
+    types: [
+      'AE - Arrêts Éléctrique',
+      'AM - Arrêts Mécanique',
+      'AI - Arrêts Installateur',
+      'AESYS - Arrêts Entretien Systématique',
+    ],
+  ),
+  StopCategory(
+    label: "Arrêts d'Exploitation",
+    types: [
+      'NET - Nettoyage',
+      'Surch - Surcharge',
+      'Attente Vidange Extracteur',
+      'Attente Vidange Silo',
+      'DEC - Décolmatage',
+      'MO - Manque Opérateur',
+    ],
+  ),
+  StopCategory(
+    label: 'STS - Stock Saturée',
+    types: ['Stock Saturée'],
+  ),
+];
 
 const List<StopLocation> _tnbStopLocations = [
   StopLocation(code: 'TR', label: 'tremie'),
@@ -264,6 +310,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       stops = (data['Arrets'] as List)
           .map((s) => Stop(
               id: s['id'] ?? const Uuid().v4(),
+              category: s['category'] ?? s['Catégorie'] ?? '',
               duration: s['duration'] ?? '',
               nature: s['nature'] ?? '',
               location: s['location'] ?? s['Lieu'] ?? '',
@@ -531,11 +578,13 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     return Column(children: [
       ...stops.asMap().entries.map((e) => OCPCard(
               child: ListTile(
-            title: Text(e.value.nature),
+            title: Text(e.value.nature.isNotEmpty ? e.value.nature : '-'),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
+                Text(
+                    "Catégorie: ${e.value.category.isNotEmpty ? e.value.category : '-'}"),
                 Text(
                     "Lieu: ${e.value.location.isNotEmpty ? e.value.location : '-'}"),
                 Text(
@@ -561,30 +610,11 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
   }
 
   void _showAddStopDialog() {
-    const List<String> predefinedNatures = [
-      'Arrêts Extérieures:',
-      'Arrêts Eléctrique:',
-      'Arrêts Mécanique:',
-      'Arrêts d\'installation:',
-      'Arrêts d\'exploitation:',
-      'Arrêts Entretien systématique:',
-      'Manque Produit:',
-      'Décolmatage:',
-      'Coupure de courant:',
-      'Vidange:',
-      'Arrêts Décidés:',
-      'Nettoyage:',
-      'Stock saturée:',
-      'Dégagement stérile:',
-      'Surcharge:',
-    ];
+    StopCategory? selectedCategory;
     String? selectedNature;
-    String customNature = '';
     StopLocation? selectedLocation;
     TimeOfDay? selectedStart;
     TimeOfDay? selectedEnd;
-    int step = 0;
-    final customNatureController = TextEditingController();
 
     String formatTimeOfDay(TimeOfDay value) =>
         '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
@@ -595,211 +625,183 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
-          Widget content;
-          if (step == 0) {
-            content = Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  initialValue: selectedNature,
-                  decoration: const InputDecoration(
-                    labelText: 'Type d\'arrêt',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: predefinedNatures
-                      .map((nature) => DropdownMenuItem(
-                            value: nature,
-                            child: Text(nature),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedNature = value;
-                      customNature = '';
-                      customNatureController.clear();
-                    });
-                  },
-                  hint: const Text('Sélectionner un type d\'arrêt'),
-                  isExpanded: true,
-                ),
-                if (selectedNature?.endsWith(':') == true) ...[
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: customNatureController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nature (complément)',
-                      border: OutlineInputBorder(),
-                      hintText: 'Maximum 20 caractères par ligne',
-                    ),
-                    maxLines: 5,
-                    onChanged: (value) {
-                      final words = value.split(' ');
-                      final lines = <String>[];
-                      String currentLine = '';
-                      for (var word in words) {
-                        if ((currentLine +
-                                    (currentLine.isEmpty ? '' : ' ') +
-                                    word)
-                                .length <=
-                            20) {
-                          currentLine +=
-                              (currentLine.isEmpty ? '' : ' ') + word;
-                        } else {
-                          if (currentLine.isNotEmpty) {
-                            lines.add(currentLine);
-                          }
-                          currentLine = word;
-                        }
-                      }
-                      if (currentLine.isNotEmpty) {
-                        lines.add(currentLine);
-                      }
-                      setState(() => customNature = lines.join(''));
-                    },
-                  ),
-                ],
-              ],
-            );
-          } else if (step == 1) {
-            content = DropdownButtonFormField<StopLocation>(
-              decoration: const InputDecoration(
-                labelText: 'Lieu d\'arrêt',
-                border: OutlineInputBorder(),
-              ),
-              initialValue: selectedLocation,
-              isExpanded: true,
-              items: _tnbStopLocations
-                  .map((location) => DropdownMenuItem<StopLocation>(
-                        value: location,
-                        child: Text('${location.code} - ${location.label}'),
-                      ))
-                  .toList(),
-              onChanged: (value) => setState(() => selectedLocation = value),
-              hint: const Text('Sélectionner le lieu'),
-            );
-          } else {
-            content = Row(
-              children: [
-                Expanded(
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Début'),
-                    subtitle: Text(selectedStart == null
-                        ? '--:--'
-                        : formatTimeOfDay(selectedStart!)),
-                    trailing: const Icon(Icons.access_time),
-                    onTap: () async {
-                      final picked = await showTimePicker(
-                        context: context,
-                        initialTime: selectedStart ?? TimeOfDay.now(),
-                        builder: (context, child) => MediaQuery(
-                          data: MediaQuery.of(context)
-                              .copyWith(alwaysUse24HourFormat: true),
-                          child: child ?? const SizedBox(),
-                        ),
-                      );
-                      if (picked != null) {
-                        setState(() => selectedStart = picked);
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Fin'),
-                    subtitle: Text(selectedEnd == null
-                        ? '--:--'
-                        : formatTimeOfDay(selectedEnd!)),
-                    trailing: const Icon(Icons.access_time),
-                    onTap: () async {
-                      final picked = await showTimePicker(
-                        context: context,
-                        initialTime:
-                            selectedEnd ?? (selectedStart ?? TimeOfDay.now()),
-                        builder: (context, child) => MediaQuery(
-                          data: MediaQuery.of(context)
-                              .copyWith(alwaysUse24HourFormat: true),
-                          child: child ?? const SizedBox(),
-                        ),
-                      );
-                      if (picked != null) {
-                        setState(() => selectedEnd = picked);
-                      }
-                    },
-                  ),
-                ),
-              ],
-            );
-          }
+          final availableTypes = selectedCategory?.types ?? const <String>[];
+          final canSubmit = selectedCategory != null &&
+              selectedNature != null &&
+              selectedLocation != null &&
+              selectedStart != null &&
+              selectedEnd != null &&
+              minutesFromTimeOfDay(selectedEnd!) >
+                  minutesFromTimeOfDay(selectedStart!);
 
           return AlertDialog(
             title: const Text('Ajouter un arrêt'),
             content: SingleChildScrollView(
               child: SizedBox(
-                width: 320,
+                width: 360,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      step == 0
-                          ? 'Type d\'arrêt'
-                          : step == 1
-                              ? 'Lieu d\'arrêt'
-                              : 'Horaire de l\'arrêt',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    DropdownButtonFormField<StopCategory>(
+                      initialValue: selectedCategory,
+                      decoration: const InputDecoration(
+                        labelText: "Catégorie d'arrêt",
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _tnbStopCategories
+                          .map((category) => DropdownMenuItem(
+                                value: category,
+                                child: Text(category.label),
+                              ))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedCategory = value;
+                          selectedNature = null;
+                          selectedLocation = null;
+                          selectedStart = null;
+                          selectedEnd = null;
+                        });
+                      },
+                      hint: const Text('Sélectionner la catégorie d\'arrêt'),
+                      isExpanded: true,
                     ),
-                    const SizedBox(height: 16),
-                    content,
+                    if (selectedCategory != null) ...[
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedNature,
+                        decoration: const InputDecoration(
+                          labelText: 'Type d\'arrêt',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: availableTypes
+                            .map((nature) => DropdownMenuItem(
+                                  value: nature,
+                                  child: Text(nature),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedNature = value;
+                            selectedLocation = null;
+                            selectedStart = null;
+                            selectedEnd = null;
+                          });
+                        },
+                        hint: const Text('Sélectionner le type d\'arrêt'),
+                        isExpanded: true,
+                      ),
+                    ],
+                    if (selectedNature != null) ...[
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<StopLocation>(
+                        decoration: const InputDecoration(
+                          labelText: 'Lieu d\'arrêt',
+                          border: OutlineInputBorder(),
+                        ),
+                        initialValue: selectedLocation,
+                        isExpanded: true,
+                        items: _tnbStopLocations
+                            .map((location) => DropdownMenuItem<StopLocation>(
+                                  value: location,
+                                  child: Text(
+                                      '${location.code} - ${location.label}'),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedLocation = value;
+                            selectedStart = null;
+                            selectedEnd = null;
+                          });
+                        },
+                        hint: const Text('Sélectionner le lieu'),
+                      ),
+                    ],
+                    if (selectedLocation != null) ...[
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text('Début'),
+                              subtitle: Text(selectedStart == null
+                                  ? '--:--'
+                                  : formatTimeOfDay(selectedStart!)),
+                              trailing: const Icon(Icons.access_time),
+                              onTap: () async {
+                                final picked = await showTimePicker(
+                                  context: context,
+                                  initialTime: selectedStart ?? TimeOfDay.now(),
+                                  builder: (context, child) => MediaQuery(
+                                    data: MediaQuery.of(context)
+                                        .copyWith(alwaysUse24HourFormat: true),
+                                    child: child ?? const SizedBox(),
+                                  ),
+                                );
+                                if (picked != null) {
+                                  setState(() => selectedStart = picked);
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text('Fin'),
+                              subtitle: Text(selectedEnd == null
+                                  ? '--:--'
+                                  : formatTimeOfDay(selectedEnd!)),
+                              trailing: const Icon(Icons.access_time),
+                              onTap: () async {
+                                final picked = await showTimePicker(
+                                  context: context,
+                                  initialTime: selectedEnd ??
+                                      (selectedStart ?? TimeOfDay.now()),
+                                  builder: (context, child) => MediaQuery(
+                                    data: MediaQuery.of(context)
+                                        .copyWith(alwaysUse24HourFormat: true),
+                                    child: child ?? const SizedBox(),
+                                  ),
+                                );
+                                if (picked != null) {
+                                  setState(() => selectedEnd = picked);
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (selectedStart != null &&
+                          selectedEnd != null &&
+                          minutesFromTimeOfDay(selectedEnd!) <=
+                              minutesFromTimeOfDay(selectedStart!))
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Text(
+                            "L'heure de fin doit être après l'heure de début.",
+                            style: TextStyle(color: AppColors.error),
+                          ),
+                        ),
+                    ],
                   ],
                 ),
               ),
             ),
             actions: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if (step == 0)
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Annuler'),
-                    )
-                  else
-                    TextButton(
-                      onPressed: () => setState(() => step--),
-                      child: const Text('Précédent'),
-                    ),
-                  if (step < 2)
-                    ElevatedButton(
-                      onPressed: () {
-                        if (step == 0) {
-                          if (selectedNature == null) return;
-                          if (selectedNature!.endsWith(':') &&
-                              customNature.trim().isEmpty) {
-                            return;
-                          }
-                        }
-                        if (step == 1 && selectedLocation == null) return;
-                        setState(() => step++);
-                      },
-                      child: const Text('Suivant'),
-                    )
-                  else
-                    ElevatedButton(
-                      onPressed: () {
-                        if (selectedNature == null ||
-                            selectedLocation == null ||
-                            selectedStart == null ||
-                            selectedEnd == null) {
-                          return;
-                        }
-
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Annuler'),
+              ),
+              ElevatedButton(
+                onPressed: canSubmit
+                    ? () {
                         final startMinutes =
                             minutesFromTimeOfDay(selectedStart!);
                         final endMinutes = minutesFromTimeOfDay(selectedEnd!);
-                        if (endMinutes <= startMinutes) return;
 
                         final durationMinutes = endMinutes - startMinutes;
                         final durationHours = durationMinutes ~/ 60;
@@ -807,15 +809,12 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                         final durationText =
                             '${durationHours}h ${remainingMinutes.toString().padLeft(2, '0')}';
 
-                        final finalNature = selectedNature!.endsWith(':')
-                            ? '$selectedNature\n${customNature.trim()}'
-                            : selectedNature!;
-
                         setState(() {
                           stops.add(Stop(
                             id: const Uuid().v4(),
+                            category: selectedCategory!.label,
                             duration: durationText,
-                            nature: finalNature,
+                            nature: selectedNature!,
                             location:
                                 '${selectedLocation!.code} - ${selectedLocation!.label}',
                             startTime: formatTimeOfDay(selectedStart!),
@@ -824,10 +823,9 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                         });
                         recalculateTimes();
                         Navigator.pop(context);
-                      },
-                      child: const Text('Ajouter'),
-                    ),
-                ],
+                      }
+                    : null,
+                child: const Text('Ajouter'),
               ),
             ],
           );
@@ -1020,6 +1018,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                   ...stops.map((stop) => Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2),
                         child: Text(
+                          'Catégorie: ${stop.category.isNotEmpty ? stop.category : '-'} | '
                           '${stop.nature.isNotEmpty ? stop.nature : '-'} | '
                           'Lieu: ${stop.location.isNotEmpty ? stop.location : '-'} | '
                           'De: ${stop.startTime.isNotEmpty ? stop.startTime : '--:--'} '
@@ -1157,6 +1156,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                 .map((s) => {
                       'id': s.id,
                       'duration': s.duration,
+                      'category': s.category,
                       'nature': s.nature,
                       'location': s.location,
                       'startTime': s.startTime,
@@ -1164,7 +1164,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                       'Lieu': s.location,
                       'Début': s.startTime,
                       'Fin': s.endTime,
-                      'Catégorie': '',
+                      'Catégorie': s.category,
                     })
                 .toList(),
             'vibrator Counters': savedVibratorCounters,
