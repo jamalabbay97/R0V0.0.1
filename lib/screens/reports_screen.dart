@@ -1076,9 +1076,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       .entries
                                       .map((entry) {
                                     final index = entry.key;
-                                    final stop = entry.value;
+                                    final stop = entry.value is Map
+                                        ? Map<String, dynamic>.from(entry.value)
+                                        : <String, dynamic>{};
                                     final isSelected =
                                         _selectedStopIndex == index;
+                                    final stopType = _getTnbStopTypeLabel(stop);
                                     return Card(
                                       margin: const EdgeInsets.only(bottom: 8),
                                       color: isSelected
@@ -1089,19 +1092,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         selected: isSelected,
                                         selectedTileColor:
                                             Colors.green.withValues(alpha: 0.1),
-                                        title: Text(l10n.arretTitle(index + 1)),
+                                        title: Text(
+                                          stopType.isNotEmpty
+                                              ? stopType
+                                              : l10n.arretTitle(index + 1),
+                                        ),
                                         subtitle: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                                '${l10n.natureLabel}: ${(stop['nature'] ?? '-').toString()}'),
-                                            Text(
-                                                'Lieu: ${(stop['location'] ?? stop['Lieu'] ?? '-').toString()}'),
-                                            Text(
-                                                'Début: ${(stop['startTime'] ?? stop['Début'] ?? '--:--').toString()} | Fin: ${(stop['endTime'] ?? stop['Fin'] ?? '--:--').toString()}'),
-                                            Text(
-                                                '${l10n.dureeLabel}: ${_formatMinutesToHoursMinutes(_parseDurationToMinutes((stop['duration'] ?? '').toString()))}'),
+                                              _formatTnbActivityStopSummary(
+                                                  stop),
+                                            ),
                                           ],
                                         ),
                                         leading: isSelected
@@ -1508,13 +1511,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         final startMinutes =
                             minutesFromTimeOfDay(selectedStart!);
                         final endMinutes = minutesFromTimeOfDay(selectedEnd!);
-
                         final durationMinutes = endMinutes - startMinutes;
                         final durationHours = durationMinutes ~/ 60;
                         final remainingMinutes = durationMinutes % 60;
                         final durationText =
                             '${durationHours}h ${remainingMinutes.toString().padLeft(2, '0')}';
-
                         final formattedLocation =
                             '${selectedLocation!.code} - ${selectedLocation!.label}';
 
@@ -1839,7 +1840,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         final startMinutes =
                             minutesFromTimeOfDay(selectedStart!);
                         final endMinutes = minutesFromTimeOfDay(selectedEnd!);
-
                         final durationMinutes = endMinutes - startMinutes;
                         final durationHours = durationMinutes ~/ 60;
                         final remainingMinutes = durationMinutes % 60;
@@ -1902,11 +1902,29 @@ class _ReportsScreenState extends State<ReportsScreen> {
       StateSetter setDialogState,
       ScaffoldMessengerState scaffoldMessenger,
       AppLocalizations l10n) async {
+    final rawStop = (data['Arrets'] as List)[index];
+    final stop = rawStop is Map
+        ? Map<String, dynamic>.from(rawStop)
+        : <String, dynamic>{};
+    final stopType = _getTnbStopTypeLabel(stop);
+
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(l10n.deleteStopTitle),
-        content: Text(l10n.deleteStopConfirm),
+        title: Text(
+          stopType.isNotEmpty
+              ? '${l10n.deleteStopTitle} - $stopType'
+              : l10n.deleteStopTitle,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.deleteStopConfirm),
+            const SizedBox(height: 12),
+            Text(_formatTnbActivityStopSummary(stop)),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -4932,6 +4950,39 @@ class _ReportsScreenState extends State<ReportsScreen> {
       }
     }
     return '';
+  }
+
+  String _getTnbStopTypeLabel(Map<String, dynamic> stop) =>
+      (stop['nature'] ?? stop['Arret'] ?? stop['stopType'] ?? '')
+          .toString()
+          .trim();
+
+  String _getTnbStopLocationLabel(Map<String, dynamic> stop) =>
+      (stop['location'] ?? stop['Lieu'] ?? stop['stopLocation'] ?? '')
+          .toString()
+          .trim();
+
+  String _formatTnbActivityStopSummary(Map<String, dynamic> stop) {
+    final category = _getTnbStopCategoryLabel(stop);
+    final type = _getTnbStopTypeLabel(stop);
+    final location = _getTnbStopLocationLabel(stop);
+    final start =
+        (stop['startTime'] ?? stop['start'] ?? stop['Début'] ?? '').toString();
+    final end =
+        (stop['endTime'] ?? stop['end'] ?? stop['Fin'] ?? '').toString();
+    final duration = _formatMinutesToHoursMinutes(
+      _parseDurationToMinutes((stop['duration'] ?? '').toString()),
+    );
+
+    final segments = <String>[
+      if (category.isNotEmpty) 'Catégorie: $category',
+      if (type.isNotEmpty) 'Type: $type',
+      if (location.isNotEmpty) 'Lieu: $location',
+      if (start.isNotEmpty || end.isNotEmpty)
+        'Horaire: ${start.isEmpty ? '--:--' : start} → ${end.isEmpty ? '--:--' : end}',
+      'Durée: $duration',
+    ];
+    return segments.join('\n');
   }
 
   static const Map<String, String> _dailyStopTypes = {

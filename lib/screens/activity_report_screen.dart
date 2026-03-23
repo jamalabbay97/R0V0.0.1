@@ -471,7 +471,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final steps = ['Infos', 'Arrêts', 'Compteurs', 'Stock', 'Verif.'];
+    final steps = ['Infos', 'Arrêts', 'Stock', 'Verif.'];
 
     return Scaffold(
       appBar: AppBar(
@@ -508,10 +508,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       case 1:
         return _buildStepArrets();
       case 2:
-        return _buildStepCompteurs();
-      case 3:
         return _buildStepStock();
-      case 4:
+      case 3:
         return _buildStepVerification();
       default:
         return const SizedBox();
@@ -520,7 +518,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
 
   Widget _buildBottomBar() {
     bool isFirst = _currentStep == 0;
-    bool isLast = _currentStep == 4;
+    bool isLast = _currentStep == 3;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -551,25 +549,38 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
 
   // --- Step 0: Infos ---
   Widget _buildStepInfos() {
-    return OCPCard(
-      onTap: () async {
-        final picked = await showDatePicker(
-            context: context,
-            initialDate: _selectedDate,
-            firstDate: DateTime(2000),
-            lastDate: DateTime.now(),
-            locale: const Locale('fr', 'FR'));
-        if (picked != null) setState(() => _selectedDate = picked);
-      },
-      child: Row(children: [
-        const Icon(Icons.calendar_today, color: AppColors.primary),
-        const SizedBox(width: 16),
-        Text(
-            "Date: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const Spacer(),
-        const Icon(Icons.arrow_forward_ios, size: 16),
-      ]),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        OCPCard(
+          onTap: () async {
+            final picked = await showDatePicker(
+                context: context,
+                initialDate: _selectedDate,
+                firstDate: DateTime(2000),
+                lastDate: DateTime.now(),
+                locale: const Locale('fr', 'FR'));
+            if (picked != null) setState(() => _selectedDate = picked);
+          },
+          child: Row(children: [
+            const Icon(Icons.calendar_today, color: AppColors.primary),
+            const SizedBox(width: 16),
+            Text(
+                "Date: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Spacer(),
+            const Icon(Icons.arrow_forward_ios, size: 16),
+          ]),
+        ),
+        const SizedBox(height: 16),
+        OCPCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: _buildCounterFields(),
+          ),
+        ),
+      ],
     );
   }
 
@@ -834,56 +845,50 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     );
   }
 
-  // --- Step 2: Compteurs ---
-  Widget _buildStepCompteurs() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'Compteurs TNB',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Saisissez uniquement la valeur de départ pour chacun des cinq compteurs.',
-        ),
-        const SizedBox(height: 16),
-        ...tnbCounters.map(
-          (counter) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: OCPCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    counter.label,
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    initialValue: counter.start,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration: InputDecoration(
-                      labelText: 'Valeur de départ - ${counter.label}',
-                      border: const OutlineInputBorder(),
-                    ),
-                    onChanged: (value) {
-                      setState(() {
-                        counter.start = value.trim();
-                      });
-                    },
-                  ),
-                ],
+  List<Widget> _buildCounterFields() {
+    return [
+      Text(
+        'Compteurs TNB',
+        style: Theme.of(context).textTheme.titleMedium,
+      ),
+      const SizedBox(height: 8),
+      const Text(
+        'Saisissez uniquement la valeur de départ pour chacun des cinq compteurs.',
+      ),
+      const SizedBox(height: 16),
+      ...tnbCounters.map(
+        (counter) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                counter.label,
+                style: Theme.of(context).textTheme.titleSmall,
               ),
-            ),
+              const SizedBox(height: 12),
+              TextFormField(
+                initialValue: counter.start,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Valeur de départ - ${counter.label}',
+                  border: const OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    counter.start = value.trim();
+                  });
+                },
+              ),
+            ],
           ),
         ),
-      ],
-    );
+      ),
+    ];
   }
 
-  // --- Step 3: Stock ---
+  // --- Step 2: Stock ---
   Widget _buildStepStock() {
     return Column(children: [
       ...stockEntries.asMap().entries.map((e) => OCPCard(
@@ -968,7 +973,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                 )));
   }
 
-  // --- Step 4: Verification ---
+  // --- Step 3: Verification ---
   Widget _buildStepVerification() {
     return Column(
       children: [
