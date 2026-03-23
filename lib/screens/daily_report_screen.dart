@@ -10,8 +10,11 @@ import 'package:r0/widgets/custom_widgets.dart';
 // --- Models & Enums ---
 class ModuleStop {
   final String id;
+  String category;
   String duration;
   String nature;
+  String location;
+  String detail;
   String stopType;
   String stopLocation;
   String startTime;
@@ -19,12 +22,21 @@ class ModuleStop {
 
   ModuleStop(
       {required this.id,
+      this.category = '',
       this.duration = '',
       this.nature = '',
+      this.location = '',
+      this.detail = '',
       this.stopType = '',
       this.stopLocation = '',
       this.startTime = '',
       this.endTime = ''});
+}
+
+class StopCategory {
+  final String label;
+  final List<String> types;
+  const StopCategory({required this.label, required this.types});
 }
 
 enum Poste { premier, deuxieme, troisieme }
@@ -107,6 +119,54 @@ String formatMinutesToHoursMinutes(int totalMinutes) {
   return "${hours}h ${minutes.toString().padLeft(2, '0')}m";
 }
 
+const List<StopCategory> _tnbStopCategories = [
+  StopCategory(
+    label: 'Arrêts Extérieures',
+    types: [
+      'MP - Manque Produit',
+      'CC - Coupure De Courant',
+      'AD - Arrêts Décidés',
+      'DS - Attente Dégagement Stérile',
+      'MB - Manque Bull',
+      'Aut - Autre',
+    ],
+  ),
+  StopCategory(
+    label: 'Arrêts Materiel',
+    types: [
+      'AE - Arrêts Éléctrique',
+      'AM - Arrêts Mécanique',
+      'AI - Arrêts Installateur',
+      'AESYS - Arrêts Entretien Systématique',
+    ],
+  ),
+  StopCategory(
+    label: "Arrêts d'Exploitation",
+    types: [
+      'NET - Nettoyage',
+      'Surch - Surcharge',
+      'DEC - Décolmatage',
+      'MO - Manque Opérateur',
+    ],
+  ),
+  StopCategory(
+    label: 'STS - Stock Saturée',
+    types: ['Stock Saturée'],
+  ),
+];
+
+String _extractTnbStopTypeCode(String? type) {
+  final rawType = type?.trim() ?? '';
+  if (rawType.isEmpty) {
+    return '';
+  }
+
+  return rawType.split(' - ').first.trim().toUpperCase();
+}
+
+bool _tnbStopTypeRequiresDetail(String? type) =>
+    const {'AE', 'AM', 'AI', 'AESYS'}.contains(_extractTnbStopTypeCode(type));
+
 // --- Screen ---
 class DailyReportScreen extends StatefulWidget {
   final Report? initialReport;
@@ -138,25 +198,6 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
   int _currentStep = 0;
   bool _isSaving = false;
 
-  static const Map<String, String> _stopTypes = {
-    'AEXT': 'Arrêts Extérieures',
-    'AE': 'Arrêts Électrique',
-    'AM': 'Arrêts Mécanique',
-    'AI': "Arrêts d'Installation",
-    'MP': 'Manque Produit',
-    'DEC': 'décolmatage',
-    'CC': 'coupure de courant',
-    'VID': 'vidange',
-    'AEXP': "Arrêts d'Exploitation",
-    'AD': 'Arrêts Décidés',
-    'NET': 'nettoyage',
-    'aut': 'aut',
-    'STS': 'stock saturée',
-    'DS': 'dégagement stérile',
-    'AESYS': 'Arrêts Entretien systématique',
-    'surch': 'surcharge',
-  };
-
   static const Map<int, Map<String, String>> _moduleLocations = {
     1: {
       'M1_TR01': 'Tremie',
@@ -167,6 +208,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
       'M1_CRIBLE1': 'Crible 01',
       'M1_CV84': 'Convoyeur 84',
       'M1_CV86': 'Convoyeur 86',
+      'CV_G4': 'Convoyeur G4',
     },
     2: {
       'M2_TR01': 'Tremie',
@@ -177,6 +219,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
       'M2_CRIBLE1': 'Crible 01',
       'M2_CV84': 'Convoyeur 84',
       'M2_CV86': 'Convoyeur 86',
+      'CV_G5': 'Convoyeur G5',
     },
   };
 
@@ -198,8 +241,11 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
       module1Stops = (data['module1Stops'] as List)
           .map((s) => ModuleStop(
               id: s['id'] ?? const Uuid().v4(),
+              category: s['category'] ?? s['Catégorie'] ?? '',
               duration: s['duration'] ?? '',
               nature: s['nature'] ?? '',
+              location: s['location'] ?? s['Lieu'] ?? s['stopLocation'] ?? '',
+              detail: s['detail'] ?? s['Détail'] ?? '',
               stopType: s['stopType'] ?? '',
               stopLocation: s['stopLocation'] ?? '',
               startTime: s['startTime'] ?? '',
@@ -210,8 +256,11 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
       module2Stops = (data['module2Stops'] as List)
           .map((s) => ModuleStop(
               id: s['id'] ?? const Uuid().v4(),
+              category: s['category'] ?? s['Catégorie'] ?? '',
               duration: s['duration'] ?? '',
               nature: s['nature'] ?? '',
+              location: s['location'] ?? s['Lieu'] ?? s['stopLocation'] ?? '',
+              detail: s['detail'] ?? s['Détail'] ?? '',
               stopType: s['stopType'] ?? '',
               stopLocation: s['stopLocation'] ?? '',
               startTime: s['startTime'] ?? '',
@@ -390,13 +439,27 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
             style: TextStyle(color: Colors.grey)),
       ...stops.asMap().entries.map((e) => OCPCard(
               child: ListTile(
-            title: Text(e.value.stopType.isNotEmpty
-                ? '${e.value.stopType} • ${e.value.stopLocation}'
-                : e.value.nature),
-            subtitle: Text(e.value.startTime.isNotEmpty &&
-                    e.value.endTime.isNotEmpty
-                ? 'De ${e.value.startTime} à ${e.value.endTime} • ${formatMinutesToHoursMinutes(parseDurationToMinutes(e.value.duration))}'
-                : "Durée: ${formatMinutesToHoursMinutes(parseDurationToMinutes(e.value.duration))}"),
+            title: Text(e.value.nature.isNotEmpty ? e.value.nature : '-'),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                    "Catégorie: ${e.value.category.isNotEmpty ? e.value.category : '-'}"),
+                if (e.value.location.isNotEmpty)
+                  Text("Lieu: ${e.value.location}"),
+                if (_tnbStopTypeRequiresDetail(e.value.nature) &&
+                    e.value.detail.isNotEmpty)
+                  Text("Détail: ${e.value.detail}"),
+                Text(
+                  "De ${e.value.startTime.isNotEmpty ? e.value.startTime : '--:--'} à "
+                  "${e.value.endTime.isNotEmpty ? e.value.endTime : '--:--'}",
+                ),
+                Text(
+                  "Durée: ${formatMinutesToHoursMinutes(parseDurationToMinutes(e.value.duration))}",
+                ),
+              ],
+            ),
             trailing: IconButton(
                 icon: const Icon(Icons.delete, color: AppColors.error),
                 onPressed: () {
@@ -417,31 +480,67 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
 
   void _showAddStopDialog(int module) {
     int step = 0;
-    String? selectedType;
+    StopCategory? selectedCategory;
+    String? selectedNature;
     String? selectedLocation;
+    String stopDetail = '';
     DateTime startTime = DateTime.now();
     DateTime endTime = DateTime.now().add(const Duration(minutes: 1));
     final locations = _moduleLocations[module] ?? const <String, String>{};
+
     showDialog(
         context: context,
         builder: (ctx) => StatefulBuilder(
               builder: (context, setDs) {
+                final availableTypes =
+                    selectedCategory?.types ?? const <String>[];
+                final requiresDetail =
+                    _tnbStopTypeRequiresDetail(selectedNature);
                 Widget content;
                 if (step == 0) {
-                  content = DropdownButtonFormField<String>(
-                    hint: const Text("Type d'arrêt"),
-                    initialValue: selectedType,
-                    isExpanded: true,
-                    items: _stopTypes.entries
-                        .map((entry) => DropdownMenuItem(
-                            value: entry.key,
-                            child: Text('${entry.key} - ${entry.value}')))
+                  content = DropdownButtonFormField<StopCategory>(
+                    initialValue: selectedCategory,
+                    decoration: const InputDecoration(
+                      labelText: "Catégorie d'arrêt",
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _tnbStopCategories
+                        .map((category) => DropdownMenuItem(
+                              value: category,
+                              child: Text(category.label),
+                            ))
                         .toList(),
                     onChanged: (value) => setDs(() {
-                      selectedType = value;
+                      selectedCategory = value;
+                      selectedNature = null;
+                      selectedLocation = null;
+                      stopDetail = '';
                     }),
+                    hint: const Text('Sélectionner la catégorie d\'arrêt'),
+                    isExpanded: true,
                   );
                 } else if (step == 1) {
+                  content = DropdownButtonFormField<String>(
+                    initialValue: selectedNature,
+                    decoration: const InputDecoration(
+                      labelText: 'Type d\'arrêt',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: availableTypes
+                        .map((nature) => DropdownMenuItem(
+                              value: nature,
+                              child: Text(nature),
+                            ))
+                        .toList(),
+                    onChanged: (value) => setDs(() {
+                      selectedNature = value;
+                      selectedLocation = null;
+                      stopDetail = '';
+                    }),
+                    hint: const Text('Sélectionner le type d\'arrêt'),
+                    isExpanded: true,
+                  );
+                } else if (step == 2) {
                   content = DropdownButtonFormField<String>(
                     hint: const Text("Lieu d'arrêt"),
                     initialValue: selectedLocation,
@@ -459,6 +558,17 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                   content = Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      if (requiresDetail) ...[
+                        TextFormField(
+                          initialValue: stopDetail,
+                          decoration: const InputDecoration(
+                            labelText: "Détail de l'arrêt",
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: (value) => setDs(() => stopDetail = value),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       ListTile(
                           title: const Text('Heure début'),
                           subtitle: Text(_formatTime(startTime)),
@@ -516,7 +626,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                         Text(
                           step == 0
                               ? "Sélection du type d'arrêt"
-                              : step == 1
+                              : step == 2
                                   ? "Sélection du lieu d'arrêt"
                                   : 'Saisie des heures',
                           style: const TextStyle(fontWeight: FontWeight.bold),
@@ -538,17 +648,23 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                           TextButton(
                               onPressed: () => Navigator.pop(context),
                               child: const Text('Annuler')),
-                        if ((step == 0 && selectedType != null) ||
-                            (step == 1 && selectedLocation != null))
+                        if ((step == 0 && selectedCategory != null) ||
+                            (step == 1 && selectedNature != null) ||
+                            (step == 2 && selectedLocation != null))
                           ElevatedButton(
                               onPressed: () => setDs(() => step++),
                               child: const Text('Suivant')),
-                        if (step == 2)
+                        if (step == 3)
                           ElevatedButton(
                               onPressed: () {
                                 final validation = _validateSingleStop(
-                                    startTime, endTime, selectedType,
-                                    selectedLocation: selectedLocation);
+                                  startTime,
+                                  endTime,
+                                  selectedCategory,
+                                  selectedNature,
+                                  selectedLocation,
+                                  stopDetail,
+                                );
                                 if (validation != null) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
@@ -559,21 +675,24 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
 
                                 final durationMinutes =
                                     endTime.difference(startTime).inMinutes;
-                                final durationText =
-                                    '${durationMinutes ~/ 60}h${(durationMinutes % 60).toString().padLeft(2, '0')}';
-                                final typeLabel =
-                                    '${selectedType ?? ''} - ${_stopTypes[selectedType] ?? ''}';
+                                final durationText = '${durationMinutes ~/ 60}h'
+                                    '${(durationMinutes % 60).toString().padLeft(2, '0')}';
                                 final locationLabel =
                                     '${selectedLocation ?? ''} - ${locations[selectedLocation] ?? ''}';
+
                                 setState(() {
                                   final stop = ModuleStop(
-                                      id: const Uuid().v4(),
-                                      duration: durationText,
-                                      nature: '$typeLabel | $locationLabel',
-                                      stopType: typeLabel,
-                                      stopLocation: locationLabel,
-                                      startTime: _formatTime(startTime),
-                                      endTime: _formatTime(endTime));
+                                    id: const Uuid().v4(),
+                                    category: selectedCategory!.label,
+                                    duration: durationText,
+                                    nature: selectedNature!,
+                                    location: locationLabel,
+                                    detail: stopDetail.trim(),
+                                    stopType: selectedNature!,
+                                    stopLocation: locationLabel,
+                                    startTime: _formatTime(startTime),
+                                    endTime: _formatTime(endTime),
+                                  );
                                   if (module == 1) {
                                     module1Stops.add(stop);
                                   } else {
@@ -596,13 +715,25 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
       '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
 
   String? _validateSingleStop(
-      DateTime startTime, DateTime endTime, String? selectedType,
-      {String? selectedLocation}) {
-    if (selectedType == null || selectedType.isEmpty) {
+    DateTime startTime,
+    DateTime endTime,
+    StopCategory? selectedCategory,
+    String? selectedNature,
+    String? selectedLocation,
+    String stopDetail,
+  ) {
+    if (selectedCategory == null) {
+      return "La catégorie d'arrêt est obligatoire.";
+    }
+    if (selectedNature == null || selectedNature.isEmpty) {
       return "Le type d'arrêt est obligatoire.";
     }
     if (selectedLocation == null || selectedLocation.isEmpty) {
       return "Le lieu d'arrêt est obligatoire.";
+    }
+    if (_tnbStopTypeRequiresDetail(selectedNature) &&
+        stopDetail.trim().isEmpty) {
+      return "Le détail d'arrêt est obligatoire.";
     }
     if (!endTime.isAfter(startTime)) {
       return "L'heure de fin doit être supérieure à l'heure de début.";
@@ -617,13 +748,22 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
         final stop = stops[i];
         final start = _parseTime(stop.startTime);
         final end = _parseTime(stop.endTime);
-        if (stop.stopType.isEmpty || stop.stopLocation.isEmpty) {
+        if (stop.category.isEmpty || stop.nature.isEmpty) {
+          errors.add(
+              'Module $module - Arrêt ${i + 1}: catégorie et type d\'arrêt obligatoires.');
+        }
+        if (stop.location.isEmpty) {
+          errors.add(
+              'Module $module - Arrêt ${i + 1}: lieu d\'arrêt obligatoire.');
+        }
+        if (_tnbStopTypeRequiresDetail(stop.nature) &&
+            stop.detail.trim().isEmpty) {
           errors.add(
               'Module $module - Arrêt ${i + 1}: Type et lieu d\'arrêt obligatoires.');
         }
         if (start == null || end == null || !end.isAfter(start)) {
           errors.add(
-              'Module $module - Arrêt ${i + 1}: horaires invalides (début/fin).');
+              'Module $module - Arrêt ${i + 1}: détail d\'arrêt obligatoire.');
         }
       }
     }
@@ -778,8 +918,12 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
               style: TextStyle(
                   fontWeight: FontWeight.bold, color: AppColors.primary)),
         ),
-        ...module1Stops.map((s) => _row(s.nature,
-            '${s.startTime} - ${s.endTime} (${formatMinutesToHoursMinutes(parseDurationToMinutes(s.duration))})')),
+        ...module1Stops.map((s) => _row(
+            [if (s.category.isNotEmpty) s.category, s.nature]
+                .where((value) => value.isNotEmpty)
+                .join(' • '),
+            '${s.startTime} - ${s.endTime} '
+            '(${formatMinutesToHoursMinutes(parseDurationToMinutes(s.duration))})')),
         const Divider(),
       ],
 
@@ -791,8 +935,12 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
               style: TextStyle(
                   fontWeight: FontWeight.bold, color: AppColors.primary)),
         ),
-        ...module2Stops.map((s) => _row(s.nature,
-            '${s.startTime} - ${s.endTime} (${formatMinutesToHoursMinutes(parseDurationToMinutes(s.duration))})')),
+        ...module2Stops.map((s) => _row(
+            [if (s.category.isNotEmpty) s.category, s.nature]
+                .where((value) => value.isNotEmpty)
+                .join(' • '),
+            '${s.startTime} - ${s.endTime} '
+            '(${formatMinutesToHoursMinutes(parseDurationToMinutes(s.duration))})')),
         const Divider(),
       ],
 
@@ -842,26 +990,32 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
           'module1Stops': module1Stops
               .map((s) => {
                     'id': s.id,
+                    'category': s.category,
                     'duration': s.duration,
                     'nature': s.nature,
+                    'location': s.location,
+                    'detail': s.detail,
                     'stopType': s.stopType,
                     'stopLocation': s.stopLocation,
                     'startTime': s.startTime,
                     'endTime': s.endTime,
-                    'Catégorie': '',
+                    'Catégorie': s.category,
                     'CarryOver': false,
                   })
               .toList(),
           'module2Stops': module2Stops
               .map((s) => {
                     'id': s.id,
+                    'category': s.category,
                     'duration': s.duration,
                     'nature': s.nature,
+                    'location': s.location,
+                    'detail': s.detail,
                     'stopType': s.stopType,
                     'stopLocation': s.stopLocation,
                     'startTime': s.startTime,
                     'endTime': s.endTime,
-                    'Catégorie': '',
+                    'Catégorie': s.category,
                     'CarryOver': false,
                   })
               .toList(),
