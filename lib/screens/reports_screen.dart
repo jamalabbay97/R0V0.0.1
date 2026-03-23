@@ -114,13 +114,22 @@ const List<_TnbStopCategory> _tnbStopCategories = [
 String _normalizeTnbStopValue(String value) =>
     value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
 
+String _extractTnbStopTypeCode(String? type) {
+  final rawType = type?.trim() ?? '';
+  if (rawType.isEmpty) {
+    return '';
+  }
+
+  return rawType.split(' - ').first.trim().toUpperCase();
+}
+
 bool _tnbStopTypeRequiresLocation(String? type) {
   final rawType = type?.trim() ?? '';
   if (rawType.isEmpty) {
     return false;
   }
 
-  final typeCode = rawType.split(' - ').first.trim().toUpperCase();
+  final typeCode = _extractTnbStopTypeCode(rawType);
   if (const {'AE', 'AM', 'AI', 'AESYS', 'SURCH', 'DEC'}.contains(typeCode)) {
     return true;
   }
@@ -129,6 +138,9 @@ bool _tnbStopTypeRequiresLocation(String? type) {
   return normalizedType == 'attentevidangeextracteur' ||
       normalizedType == 'attentevidangesilo';
 }
+
+bool _tnbStopTypeRequiresDetail(String? type) =>
+    const {'AE', 'AM', 'AI', 'AESYS'}.contains(_extractTnbStopTypeCode(type));
 
 const List<_TnbStopLocation> _tnbStopLocations = [
   _TnbStopLocation(code: 'TR', label: 'tremie'),
@@ -1334,6 +1346,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     _TnbStopCategory? selectedCategory;
     String? selectedType;
     _TnbStopLocation? selectedLocation;
+    String stopDetail = '';
     TimeOfDay? selectedStart;
     TimeOfDay? selectedEnd;
 
@@ -1349,6 +1362,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         builder: (context, setState) {
           final availableTypes = selectedCategory?.types ?? const <String>[];
           final requiresLocation = _tnbStopTypeRequiresLocation(selectedType);
+          final requiresDetail = _tnbStopTypeRequiresDetail(selectedType);
           final hasInvalidTimeRange = selectedStart != null &&
               selectedEnd != null &&
               minutesFromTimeOfDay(selectedEnd!) <=
@@ -1356,6 +1370,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           final canSubmit = selectedCategory != null &&
               selectedType != null &&
               (!requiresLocation || selectedLocation != null) &&
+              (!requiresDetail || stopDetail.trim().isNotEmpty) &&
               selectedStart != null &&
               selectedEnd != null &&
               !hasInvalidTimeRange;
@@ -1389,6 +1404,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           selectedCategory = value;
                           selectedType = null;
                           selectedLocation = null;
+                          stopDetail = '';
                           selectedStart = null;
                           selectedEnd = null;
                         });
@@ -1416,6 +1432,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           setState(() {
                             selectedType = value;
                             selectedLocation = null;
+                            stopDetail = '';
                             selectedStart = null;
                             selectedEnd = null;
                           });
@@ -1449,6 +1466,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           });
                         },
                         hint: const Text('Sélectionner le lieu'),
+                      ),
+                    ],
+                    if (requiresDetail) ...[
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        initialValue: stopDetail,
+                        decoration: const InputDecoration(
+                          labelText: "Détail de l'arrêt",
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            stopDetail = value;
+                          });
+                        },
                       ),
                     ],
                     if (selectedType != null &&
@@ -1554,7 +1586,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           'nature': selectedType!,
                           'Arret': selectedType!,
                           'location': formattedLocation,
+                          'detail': requiresDetail ? stopDetail.trim() : '',
                           'Lieu': formattedLocation,
+                          'Détail': requiresDetail ? stopDetail.trim() : '',
                           'startTime': formatTimeOfDay(selectedStart!),
                           'endTime': formatTimeOfDay(selectedEnd!),
                           'Début': formatTimeOfDay(selectedStart!),
@@ -1672,6 +1706,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           )
         : null;
     _TnbStopLocation? selectedLocation = findLocation();
+    String stopDetail = (stop['detail'] ?? stop['Détail'] ?? '').toString();
     TimeOfDay? selectedStart = parseTime(stop['startTime'] ?? stop['Début']);
     TimeOfDay? selectedEnd = parseTime(stop['endTime'] ?? stop['Fin']);
 
@@ -1681,6 +1716,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         builder: (context, setState) {
           final availableTypes = selectedCategory?.types ?? const <String>[];
           final requiresLocation = _tnbStopTypeRequiresLocation(selectedType);
+          final requiresDetail = _tnbStopTypeRequiresDetail(selectedType);
           final hasInvalidTimeRange = selectedStart != null &&
               selectedEnd != null &&
               minutesFromTimeOfDay(selectedEnd!) <=
@@ -1688,6 +1724,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           final canSubmit = selectedCategory != null &&
               selectedType != null &&
               (!requiresLocation || selectedLocation != null) &&
+              (!requiresDetail || stopDetail.trim().isNotEmpty) &&
               selectedStart != null &&
               selectedEnd != null &&
               !hasInvalidTimeRange;
@@ -1721,6 +1758,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           selectedCategory = value;
                           selectedType = null;
                           selectedLocation = null;
+                          stopDetail = '';
                           selectedStart = null;
                           selectedEnd = null;
                         });
@@ -1748,6 +1786,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           setState(() {
                             selectedType = value;
                             selectedLocation = null;
+                            stopDetail = '';
                             selectedStart = null;
                             selectedEnd = null;
                           });
@@ -1781,6 +1820,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           });
                         },
                         hint: const Text('Sélectionner le lieu'),
+                      ),
+                    ],
+                    if (requiresDetail) ...[
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        initialValue: stopDetail,
+                        decoration: const InputDecoration(
+                          labelText: "Détail de l'arrêt",
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            stopDetail = value;
+                          });
+                        },
                       ),
                     ],
                     if (selectedType != null &&
@@ -1883,7 +1937,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         updatedStop['nature'] = selectedType!;
                         updatedStop['Arret'] = selectedType!;
                         updatedStop['location'] = formattedLocation;
+                        updatedStop['detail'] =
+                            requiresDetail ? stopDetail.trim() : '';
                         updatedStop['Lieu'] = formattedLocation;
+                        updatedStop['Détail'] =
+                            requiresDetail ? stopDetail.trim() : '';
                         updatedStop['startTime'] =
                             formatTimeOfDay(selectedStart!);
                         updatedStop['endTime'] = formatTimeOfDay(selectedEnd!);
@@ -5000,11 +5058,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
           .toString()
           .trim();
 
+  String _getTnbStopDetailLabel(Map<String, dynamic> stop) =>
+      (stop['detail'] ?? stop['Détail'] ?? '').toString().trim();
+
   String _formatTnbActivityStopSummary(Map<String, dynamic> stop) {
     final category = _getTnbStopCategoryLabel(stop);
     final type = _getTnbStopTypeLabel(stop);
     final location = _getTnbStopLocationLabel(stop);
+    final detail = _getTnbStopDetailLabel(stop);
     final showLocation = _tnbStopTypeRequiresLocation(type);
+    final showDetail = _tnbStopTypeRequiresDetail(type);
     final start =
         (stop['startTime'] ?? stop['start'] ?? stop['Début'] ?? '').toString();
     final end =
@@ -5016,7 +5079,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final segments = <String>[
       if (category.isNotEmpty) 'Catégorie: $category',
       if (type.isNotEmpty) 'Type: $type',
-      if (showLocation && location.isNotEmpty) 'Lieu: $location',
+      if (showLocation) 'Lieu: ${location.isEmpty ? '-' : location}',
+      if (showDetail) 'Détail: ${detail.isEmpty ? '-' : detail}',
       if (start.isNotEmpty || end.isNotEmpty)
         'Horaire: ${start.isEmpty ? '--:--' : start} → ${end.isEmpty ? '--:--' : end}',
       'Durée: $duration',
