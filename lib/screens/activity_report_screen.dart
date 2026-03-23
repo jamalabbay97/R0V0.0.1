@@ -124,6 +124,38 @@ const List<StopCategory> _tnbStopCategories = [
   ),
 ];
 
+String _normalizeTnbStopValue(String value) =>
+    value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+bool _tnbStopTypeRequiresLocation(String? type) {
+  final rawType = type?.trim() ?? '';
+  if (rawType.isEmpty) {
+    return false;
+  }
+
+  final typeCode = rawType.split(' - ').first.trim().toUpperCase();
+  if (const {'AE', 'AM', 'AI', 'AESYS', 'SURCH', 'DEC'}.contains(typeCode)) {
+    return true;
+  }
+
+  final normalizedType = _normalizeTnbStopValue(rawType);
+  return normalizedType == 'attentevidangeextracteur' ||
+      normalizedType == 'attentevidangesilo';
+}
+
+String _formatTnbStopResultLine(Stop stop) {
+  final segments = <String>[
+    'Catégorie: ${stop.category.isNotEmpty ? stop.category : '-'}',
+    stop.nature.isNotEmpty ? stop.nature : '-',
+    if (_tnbStopTypeRequiresLocation(stop.nature))
+      'Lieu: ${stop.location.isNotEmpty ? stop.location : '-'}',
+    'De: ${stop.startTime.isNotEmpty ? stop.startTime : '--:--'} à ${stop.endTime.isNotEmpty ? stop.endTime : '--:--'}',
+    'Durée: ${stop.duration.isNotEmpty ? formatMinutesToHoursMinutes(parseDurationToMinutes(stop.duration)) : '-'}',
+  ];
+
+  return segments.join(' | ');
+}
+
 const List<StopLocation> _tnbStopLocations = [
   StopLocation(code: 'TR', label: 'tremie'),
   StopLocation(code: 'VIB1', label: 'vibreur 1'),
@@ -596,8 +628,9 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
               children: [
                 Text(
                     "Catégorie: ${e.value.category.isNotEmpty ? e.value.category : '-'}"),
-                Text(
-                    "Lieu: ${e.value.location.isNotEmpty ? e.value.location : '-'}"),
+                if (_tnbStopTypeRequiresLocation(e.value.nature) &&
+                    e.value.location.isNotEmpty)
+                  Text("Lieu: ${e.value.location}"),
                 Text(
                     "De ${e.value.startTime.isNotEmpty ? e.value.startTime : '--:--'} à ${e.value.endTime.isNotEmpty ? e.value.endTime : '--:--'}"),
                 Text(
@@ -637,9 +670,10 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           final availableTypes = selectedCategory?.types ?? const <String>[];
+          final requiresLocation = _tnbStopTypeRequiresLocation(selectedNature);
           final canSubmit = selectedCategory != null &&
               selectedNature != null &&
-              selectedLocation != null &&
+              (!requiresLocation || selectedLocation != null) &&
               selectedStart != null &&
               selectedEnd != null &&
               minutesFromTimeOfDay(selectedEnd!) >
@@ -704,7 +738,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                         isExpanded: true,
                       ),
                     ],
-                    if (selectedNature != null) ...[
+                    if (requiresLocation) ...[
                       const SizedBox(height: 16),
                       DropdownButtonFormField<StopLocation>(
                         decoration: const InputDecoration(
@@ -730,7 +764,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                         hint: const Text('Sélectionner le lieu'),
                       ),
                     ],
-                    if (selectedLocation != null) ...[
+                    if (selectedNature != null &&
+                        (!requiresLocation || selectedLocation != null)) ...[
                       const SizedBox(height: 16),
                       Row(
                         children: [
@@ -826,8 +861,9 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                             category: selectedCategory!.label,
                             duration: durationText,
                             nature: selectedNature!,
-                            location:
-                                '${selectedLocation!.code} - ${selectedLocation!.label}',
+                            location: requiresLocation
+                                ? '${selectedLocation!.code} - ${selectedLocation!.label}'
+                                : '',
                             startTime: formatTimeOfDay(selectedStart!),
                             endTime: formatTimeOfDay(selectedEnd!),
                           ));
@@ -1020,17 +1056,12 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const Divider(height: 16),
-                  ...stops.map((stop) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Text(
-                          'Catégorie: ${stop.category.isNotEmpty ? stop.category : '-'} | '
-                          '${stop.nature.isNotEmpty ? stop.nature : '-'} | '
-                          'Lieu: ${stop.location.isNotEmpty ? stop.location : '-'} | '
-                          'De: ${stop.startTime.isNotEmpty ? stop.startTime : '--:--'} '
-                          'à ${stop.endTime.isNotEmpty ? stop.endTime : '--:--'} | '
-                          'Durée: ${stop.duration.isNotEmpty ? formatMinutesToHoursMinutes(parseDurationToMinutes(stop.duration)) : '-'}',
-                        ),
-                      )),
+                  ...stops.map(
+                    (stop) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Text(_formatTnbStopResultLine(stop)),
+                    ),
+                  ),
                 ],
               ),
             ),

@@ -111,6 +111,25 @@ const List<_TnbStopCategory> _tnbStopCategories = [
   ),
 ];
 
+String _normalizeTnbStopValue(String value) =>
+    value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+bool _tnbStopTypeRequiresLocation(String? type) {
+  final rawType = type?.trim() ?? '';
+  if (rawType.isEmpty) {
+    return false;
+  }
+
+  final typeCode = rawType.split(' - ').first.trim().toUpperCase();
+  if (const {'AE', 'AM', 'AI', 'AESYS', 'SURCH', 'DEC'}.contains(typeCode)) {
+    return true;
+  }
+
+  final normalizedType = _normalizeTnbStopValue(rawType);
+  return normalizedType == 'attentevidangeextracteur' ||
+      normalizedType == 'attentevidangesilo';
+}
+
 const List<_TnbStopLocation> _tnbStopLocations = [
   _TnbStopLocation(code: 'TR', label: 'tremie'),
   _TnbStopLocation(code: 'VIB1', label: 'vibreur 1'),
@@ -1329,13 +1348,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           final availableTypes = selectedCategory?.types ?? const <String>[];
+          final requiresLocation = _tnbStopTypeRequiresLocation(selectedType);
           final hasInvalidTimeRange = selectedStart != null &&
               selectedEnd != null &&
               minutesFromTimeOfDay(selectedEnd!) <=
                   minutesFromTimeOfDay(selectedStart!);
           final canSubmit = selectedCategory != null &&
               selectedType != null &&
-              selectedLocation != null &&
+              (!requiresLocation || selectedLocation != null) &&
               selectedStart != null &&
               selectedEnd != null &&
               !hasInvalidTimeRange;
@@ -1403,7 +1423,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         hint: const Text('Sélectionner le type d\'arrêt'),
                       ),
                     ],
-                    if (selectedType != null) ...[
+                    if (requiresLocation) ...[
                       const SizedBox(height: 16),
                       DropdownButtonFormField<_TnbStopLocation>(
                         initialValue: selectedLocation,
@@ -1431,7 +1451,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         hint: const Text('Sélectionner le lieu'),
                       ),
                     ],
-                    if (selectedLocation != null) ...[
+                    if (selectedType != null &&
+                        (!requiresLocation || selectedLocation != null)) ...[
                       const SizedBox(height: 16),
                       Row(
                         children: [
@@ -1516,8 +1537,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         final remainingMinutes = durationMinutes % 60;
                         final durationText =
                             '${durationHours}h ${remainingMinutes.toString().padLeft(2, '0')}';
-                        final formattedLocation =
-                            '${selectedLocation!.code} - ${selectedLocation!.label}';
+                        final formattedLocation = requiresLocation
+                            ? '${selectedLocation!.code} - ${selectedLocation!.label}'
+                            : '';
 
                         final updatedData = Map<String, dynamic>.from(data);
                         if (updatedData['Arrets'] == null) {
@@ -1658,13 +1680,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           final availableTypes = selectedCategory?.types ?? const <String>[];
+          final requiresLocation = _tnbStopTypeRequiresLocation(selectedType);
           final hasInvalidTimeRange = selectedStart != null &&
               selectedEnd != null &&
               minutesFromTimeOfDay(selectedEnd!) <=
                   minutesFromTimeOfDay(selectedStart!);
           final canSubmit = selectedCategory != null &&
               selectedType != null &&
-              selectedLocation != null &&
+              (!requiresLocation || selectedLocation != null) &&
               selectedStart != null &&
               selectedEnd != null &&
               !hasInvalidTimeRange;
@@ -1732,7 +1755,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         hint: const Text('Sélectionner le type d\'arrêt'),
                       ),
                     ],
-                    if (selectedType != null) ...[
+                    if (requiresLocation) ...[
                       const SizedBox(height: 16),
                       DropdownButtonFormField<_TnbStopLocation>(
                         initialValue: selectedLocation,
@@ -1760,7 +1783,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         hint: const Text('Sélectionner le lieu'),
                       ),
                     ],
-                    if (selectedLocation != null) ...[
+                    if (selectedType != null &&
+                        (!requiresLocation || selectedLocation != null)) ...[
                       const SizedBox(height: 16),
                       Row(
                         children: [
@@ -1846,8 +1870,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         final durationText =
                             '${durationHours}h ${remainingMinutes.toString().padLeft(2, '0')}';
 
-                        final formattedLocation =
-                            '${selectedLocation!.code} - ${selectedLocation!.label}';
+                        final formattedLocation = requiresLocation
+                            ? '${selectedLocation!.code} - ${selectedLocation!.label}'
+                            : '';
 
                         final updatedData = Map<String, dynamic>.from(data);
                         final updatedStop = Map<String, dynamic>.from(stop);
@@ -3530,7 +3555,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                     const EdgeInsets.symmetric(
                                                         vertical: 2),
                                                 child: Text(
-                                                    _formatDailyStopLine(stop)),
+                                                  _formatTnbActivityStopSummary(
+                                                    Map<String, dynamic>.from(
+                                                      stop is Map
+                                                          ? stop
+                                                          : <String, dynamic>{},
+                                                    ),
+                                                  ),
+                                                ),
                                               ))
                                     else if (data['Arrets'] is List &&
                                         (data['Arrets'] as List).isEmpty)
@@ -4870,7 +4902,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                   ...stops.map((stop) => Padding(
                         padding: const EdgeInsets.only(left: 16, top: 4),
-                        child: Text(_formatDailyStopLine(stop)),
+                        child: Text(
+                          _formatTnbActivityStopSummary(
+                            Map<String, dynamic>.from(
+                              stop is Map ? stop : <String, dynamic>{},
+                            ),
+                          ),
+                        ),
                       )),
                 ],
               ),
@@ -4966,6 +5004,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final category = _getTnbStopCategoryLabel(stop);
     final type = _getTnbStopTypeLabel(stop);
     final location = _getTnbStopLocationLabel(stop);
+    final showLocation = _tnbStopTypeRequiresLocation(type);
     final start =
         (stop['startTime'] ?? stop['start'] ?? stop['Début'] ?? '').toString();
     final end =
@@ -4977,7 +5016,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final segments = <String>[
       if (category.isNotEmpty) 'Catégorie: $category',
       if (type.isNotEmpty) 'Type: $type',
-      if (location.isNotEmpty) 'Lieu: $location',
+      if (showLocation && location.isNotEmpty) 'Lieu: $location',
       if (start.isNotEmpty || end.isNotEmpty)
         'Horaire: ${start.isEmpty ? '--:--' : start} → ${end.isEmpty ? '--:--' : end}',
       'Durée: $duration',
