@@ -625,10 +625,12 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                       children: [
                         Text(
                           step == 0
-                              ? "Sélection du type d'arrêt"
-                              : step == 2
-                                  ? "Sélection du lieu d'arrêt"
-                                  : 'Saisie des heures',
+                              ? "Sélection de la catégorie d'arrêt"
+                              : step == 1
+                                  ? "Sélection du type d'arrêt"
+                                  : step == 2
+                                      ? "Sélection du lieu d'arrêt"
+                                      : 'Saisie des heures',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 12),
@@ -803,6 +805,22 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
         Text(v, style: TextStyle(fontWeight: FontWeight.bold, color: color))
       ]));
 
+  String _formatVerificationStopLabel(ModuleStop stop) => [
+        if (stop.category.isNotEmpty) stop.category,
+        stop.nature
+      ].where((value) => value.isNotEmpty).join(' • ');
+
+  String _formatVerificationStopValue(ModuleStop stop) {
+    final details = <String>[
+      if (stop.location.isNotEmpty) 'Lieu: ${stop.location}',
+      if (_tnbStopTypeRequiresDetail(stop.nature) && stop.detail.isNotEmpty)
+        'Détail: ${stop.detail}',
+      '${stop.startTime} - ${stop.endTime}',
+      '(${formatMinutesToHoursMinutes(parseDurationToMinutes(stop.duration))})',
+    ];
+    return details.join(' • ');
+  }
+
   // --- Step 3: Stock ---
   Widget _buildStepStock() {
     return Column(children: [
@@ -919,11 +937,9 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                   fontWeight: FontWeight.bold, color: AppColors.primary)),
         ),
         ...module1Stops.map((s) => _row(
-            [if (s.category.isNotEmpty) s.category, s.nature]
-                .where((value) => value.isNotEmpty)
-                .join(' • '),
-            '${s.startTime} - ${s.endTime} '
-            '(${formatMinutesToHoursMinutes(parseDurationToMinutes(s.duration))})')),
+              _formatVerificationStopLabel(s),
+              _formatVerificationStopValue(s),
+            )),
         const Divider(),
       ],
 
@@ -936,11 +952,9 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                   fontWeight: FontWeight.bold, color: AppColors.primary)),
         ),
         ...module2Stops.map((s) => _row(
-            [if (s.category.isNotEmpty) s.category, s.nature]
-                .where((value) => value.isNotEmpty)
-                .join(' • '),
-            '${s.startTime} - ${s.endTime} '
-            '(${formatMinutesToHoursMinutes(parseDurationToMinutes(s.duration))})')),
+              _formatVerificationStopLabel(s),
+              _formatVerificationStopValue(s),
+            )),
         const Divider(),
       ],
 

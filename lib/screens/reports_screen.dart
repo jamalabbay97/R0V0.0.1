@@ -1697,7 +1697,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     _TnbStopCategory? selectedCategory = findCategory();
     final storedType =
-        (stop['nature'] ?? stop['Arret'] ?? '').toString().trim();
+        (stop['stopType'] ?? stop['nature'] ?? stop['Arret'] ?? '')
+            .toString()
+            .trim();
     String? selectedType = selectedCategory != null &&
             selectedCategory.types.any(
                 (type) => normalizeValue(type) == normalizeValue(storedType))
@@ -5049,7 +5051,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   String _getTnbStopTypeLabel(Map<String, dynamic> stop) =>
-      (stop['nature'] ?? stop['Arret'] ?? stop['stopType'] ?? '')
+      (stop['stopType'] ?? stop['nature'] ?? stop['Arret'] ?? '')
           .toString()
           .trim();
 
@@ -5088,25 +5090,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return segments.join('\n');
   }
 
-  static const Map<String, String> _dailyStopTypes = {
-    'AEXT': 'Arrêts Extérieures',
-    'AE': 'Arrêts Électrique',
-    'AM': 'Arrêts Mécanique',
-    'AI': "Arrêts d'Installation",
-    'MP': 'Manque Produit',
-    'DEC': 'décolmatage',
-    'CC': 'coupure de courant',
-    'VID': 'vidange',
-    'AEXP': "Arrêts d'Exploitation",
-    'AD': 'Arrêts Décidés',
-    'NET': 'nettoyage',
-    'aut': 'aut',
-    'STS': 'stock saturée',
-    'DS': 'dégagement stérile',
-    'AESYS': 'Arrêts Entretien systématique',
-    'surch': 'surcharge',
-  };
-
   static const Map<int, Map<String, String>> _dailyModuleLocations = {
     1: {
       'M1_TR01': 'Tremie',
@@ -5117,6 +5100,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       'M1_CRIBLE1': 'Crible 01',
       'M1_CV84': 'Convoyeur 84',
       'M1_CV86': 'Convoyeur 86',
+      'CV_G4': 'Convoyeur G4',
     },
     2: {
       'M2_TR01': 'Tremie',
@@ -5127,36 +5111,34 @@ class _ReportsScreenState extends State<ReportsScreen> {
       'M2_CRIBLE1': 'Crible 01',
       'M2_CV84': 'Convoyeur 84',
       'M2_CV86': 'Convoyeur 86',
+      'CV_G5': 'Convoyeur G5',
     },
   };
 
   String _formatDailyStopLine(dynamic rawStop) {
     final stop = rawStop is Map ? rawStop : <String, dynamic>{};
     final category = _getTnbStopCategoryLabel(Map<String, dynamic>.from(stop));
-    final stopType = (stop['stopType'] ?? '').toString();
-    final stopLocation = (stop['stopLocation'] ?? '').toString();
-    final nature = (stop['nature'] ?? '-').toString();
+    final stopType = (stop['stopType'] ?? stop['nature'] ?? '-').toString();
+    final stopLocation =
+        (stop['location'] ?? stop['stopLocation'] ?? '').toString();
+    final stopDetail = _getTnbStopDetailLabel(Map<String, dynamic>.from(stop));
     final start =
         (stop['startTime'] ?? stop['start'] ?? stop['Début'] ?? '').toString();
     final end =
         (stop['endTime'] ?? stop['end'] ?? stop['Fin'] ?? '').toString();
     final duration = _formatMinutesToHoursMinutes(
         _parseDurationToMinutes(stop['duration'] ?? ''));
-
-    final title = stopType.isNotEmpty || stopLocation.isNotEmpty
-        ? [
-            if (category.isNotEmpty) category,
-            if (stopType.isNotEmpty) stopType,
-            if (stopLocation.isNotEmpty) stopLocation,
-          ].join(' • ')
-        : [
-            if (category.isNotEmpty) category,
-            nature,
-          ].join(' • ');
-    if (start.isNotEmpty && end.isNotEmpty) {
-      return '$title — $start → $end ($duration)';
-    }
-    return '$title — $duration';
+    final segments = <String>[
+      if (category.isNotEmpty) category,
+      if (stopType.isNotEmpty) stopType,
+      if (stopLocation.isNotEmpty) 'Lieu: $stopLocation',
+      if (_tnbStopTypeRequiresDetail(stopType) && stopDetail.isNotEmpty)
+        'Détail: $stopDetail',
+    ];
+    final title = segments.isEmpty ? '-' : segments.join(' • ');
+    return start.isNotEmpty && end.isNotEmpty
+        ? '$title — $start → $end ($duration)'
+        : '$title — $duration';
   }
 
   DateTime? _parseDailyTime(String value) {
@@ -5174,14 +5156,50 @@ class _ReportsScreenState extends State<ReportsScreen> {
   int _moduleNumberFromPrefix(String modulePrefix) =>
       modulePrefix == 'module1' ? 1 : 2;
 
+  _TnbStopCategory? _findDailyStopCategory(Map<String, dynamic> stop) {
+    String normalizeValue(String value) =>
+        value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+    final storedCategory =
+        (stop['category'] ?? stop['Catégorie'] ?? '').toString().trim();
+    if (storedCategory.isNotEmpty) {
+      for (final category in _tnbStopCategories) {
+        if (normalizeValue(category.label) == normalizeValue(storedCategory)) {
+          return category;
+        }
+      }
+    }
+
+    final storedType =
+        (stop['stopType'] ?? stop['nature'] ?? '').toString().trim();
+    if (storedType.isEmpty) return null;
+
+    for (final category in _tnbStopCategories) {
+      if (category.types
+          .any((type) => normalizeValue(type) == normalizeValue(storedType))) {
+        return category;
+      }
+    }
+
+    return null;
+  }
+
   String? _validateDailyStopFields(
-      {required String? type,
+      {required _TnbStopCategory? category,
+      required String? type,
       required String? location,
+      required String detail,
       required String startTime,
       required String endTime}) {
+    if (category == null) {
+      return "La catégorie d'arrêt est obligatoire.";
+    }
     if (type == null || type.isEmpty) return "Le type d'arrêt est obligatoire.";
     if (location == null || location.isEmpty) {
       return "Le lieu d'arrêt est obligatoire.";
+    }
+    if (_tnbStopTypeRequiresDetail(type) && detail.trim().isEmpty) {
+      return "Le détail d'arrêt est obligatoire.";
     }
     final start = _parseDailyTime(startTime);
     final end = _parseDailyTime(endTime);
@@ -7102,7 +7120,37 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         IconButton(
                           icon: const Icon(Icons.delete,
                               size: 18, color: Colors.red),
-                          onPressed: () {
+                          onPressed: () async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: Text(l10n.deleteStopTitle),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(l10n.deleteStopConfirm),
+                                    const SizedBox(height: 12),
+                                    Text(_formatDailyStopLine(stop)),
+                                  ],
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                    child: Text(l10n.cancel),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: Text(l10n.delete),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (confirmed != true) return;
+
                             setState(() {
                               stops.removeAt(index);
                               _updateDailyTotalsForModule(
@@ -7169,8 +7217,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
       AppLocalizations l10n,
       Function(int) onTotalDowntimeChanged) async {
     int step = 0;
+    _TnbStopCategory? selectedCategory;
     String? selectedType;
     String? selectedLocation;
+    String stopDetail = '';
     String startTime = '';
     String endTime = '';
 
@@ -7191,14 +7241,37 @@ class _ReportsScreenState extends State<ReportsScreen> {
               children: [
                 Text(
                   step == 0
-                      ? "Sélection du type d'arrêt"
+                      ? "Sélection de la catégorie d'arrêt"
                       : step == 1
-                          ? "Sélection du lieu d'arrêt"
-                          : 'Saisie des heures',
+                          ? "Sélection du type d'arrêt"
+                          : step == 2
+                              ? "Sélection du lieu d'arrêt"
+                              : 'Saisie des heures',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
                 if (step == 0)
+                  DropdownButtonFormField<_TnbStopCategory>(
+                    initialValue: selectedCategory,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: "Catégorie d'arrêt",
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _tnbStopCategories
+                        .map((category) => DropdownMenuItem(
+                              value: category,
+                              child: Text(category.label),
+                            ))
+                        .toList(),
+                    onChanged: (value) => setLocalState(() {
+                      selectedCategory = value;
+                      selectedType = null;
+                      selectedLocation = null;
+                      stopDetail = '';
+                    }),
+                  )
+                else if (step == 1)
                   DropdownButtonFormField<String>(
                     initialValue: selectedType,
                     isExpanded: true,
@@ -7206,16 +7279,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       labelText: "Type d'arrêt",
                       border: OutlineInputBorder(),
                     ),
-                    items: _dailyStopTypes.entries
+                    items: (selectedCategory?.types ?? const <String>[])
                         .map((entry) => DropdownMenuItem(
-                              value: entry.key,
-                              child: Text('${entry.key} - ${entry.value}'),
+                              value: entry,
+                              child: Text(entry),
                             ))
                         .toList(),
-                    onChanged: (value) =>
-                        setLocalState(() => selectedType = value),
+                    onChanged: (value) => setLocalState(() {
+                      selectedType = value;
+                      selectedLocation = null;
+                      stopDetail = '';
+                    }),
                   )
-                else if (step == 1)
+                else if (step == 2)
                   DropdownButtonFormField<String>(
                     initialValue: selectedLocation,
                     isExpanded: true,
@@ -7235,6 +7311,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 else
                   Column(
                     children: [
+                      if (_tnbStopTypeRequiresDetail(selectedType)) ...[
+                        TextFormField(
+                          initialValue: stopDetail,
+                          decoration: const InputDecoration(
+                            labelText: "Détail de l'arrêt",
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: (value) =>
+                              setLocalState(() => stopDetail = value),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       ListTile(
                         title: Text(l10n.startTimeLabel),
                         subtitle: Text(startTime.isEmpty
@@ -7297,18 +7385,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     onPressed: () => Navigator.pop(context),
                     child: Text(l10n.cancel),
                   ),
-                if ((step == 0 && selectedType != null) ||
-                    (step == 1 && selectedLocation != null))
+                if ((step == 0 && selectedCategory != null) ||
+                    (step == 1 && selectedType != null) ||
+                    (step == 2 && selectedLocation != null))
                   ElevatedButton(
                     onPressed: () => setLocalState(() => step++),
                     child: Text(l10n.next),
                   ),
-                if (step == 2)
+                if (step == 3)
                   ElevatedButton(
                     onPressed: () {
                       final validation = _validateDailyStopFields(
+                        category: selectedCategory,
                         type: selectedType,
                         location: selectedLocation,
+                        detail: stopDetail,
                         startTime: startTime,
                         endTime: endTime,
                       );
@@ -7326,8 +7417,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       final durationMinutes = end.difference(start).inMinutes;
                       final durationText =
                           '${durationMinutes ~/ 60}h${(durationMinutes % 60).toString().padLeft(2, '0')}';
-                      final typeLabel =
-                          '$selectedType - ${_dailyStopTypes[selectedType] ?? ''}';
                       final locationLabel =
                           '$selectedLocation - ${locations[selectedLocation] ?? ''}';
 
@@ -7335,12 +7424,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         stops.add({
                           'id':
                               DateTime.now().millisecondsSinceEpoch.toString(),
+                          'category': selectedCategory!.label,
                           'duration': durationText,
-                          'nature': '$typeLabel | $locationLabel',
-                          'stopType': typeLabel,
+                          'nature': selectedType!,
+                          'location': locationLabel,
+                          'detail': stopDetail.trim(),
+                          'stopType': selectedType,
                           'stopLocation': locationLabel,
                           'startTime': startTime,
                           'endTime': endTime,
+                          'Catégorie': selectedCategory!.label,
                         });
                         _updateDailyTotalsForModule(data, modulePrefix, stops);
                         setDialogState(() {});
@@ -7376,16 +7469,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
         : <String, dynamic>{};
     int step = 0;
 
+    _TnbStopCategory? selectedCategory = _findDailyStopCategory(stop);
     String? selectedType =
-        ((stop['stopType'] ?? '') as String).split(' - ').first;
-    if (selectedType.isEmpty) {
-      selectedType = null;
-    }
+        (stop['stopType'] ?? stop['nature'] ?? '').toString().trim();
+    if (selectedType.isEmpty) selectedType = null;
     String? selectedLocation =
-        ((stop['stopLocation'] ?? '') as String).split(' - ').first;
+        ((stop['location'] ?? stop['stopLocation'] ?? '') as String)
+            .split(' - ')
+            .first;
     if (selectedLocation.isEmpty) {
       selectedLocation = null;
     }
+    String stopDetail = (stop['detail'] ?? stop['Détail'] ?? '').toString();
     String startTime =
         (stop['startTime'] ?? stop['start'] ?? stop['Début'] ?? '').toString();
     String endTime =
@@ -7408,14 +7503,37 @@ class _ReportsScreenState extends State<ReportsScreen> {
               children: [
                 Text(
                   step == 0
-                      ? "Sélection du type d'arrêt"
+                      ? "Sélection de la catégorie d'arrêt"
                       : step == 1
-                          ? "Sélection du lieu d'arrêt"
-                          : 'Saisie des heures',
+                          ? "Sélection du type d'arrêt"
+                          : step == 2
+                              ? "Sélection du lieu d'arrêt"
+                              : 'Saisie des heures',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
                 if (step == 0)
+                  DropdownButtonFormField<_TnbStopCategory>(
+                    initialValue: selectedCategory,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: "Catégorie d'arrêt",
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _tnbStopCategories
+                        .map((category) => DropdownMenuItem(
+                              value: category,
+                              child: Text(category.label),
+                            ))
+                        .toList(),
+                    onChanged: (value) => setLocalState(() {
+                      selectedCategory = value;
+                      selectedType = null;
+                      selectedLocation = null;
+                      stopDetail = '';
+                    }),
+                  )
+                else if (step == 1)
                   DropdownButtonFormField<String>(
                     initialValue: selectedType,
                     isExpanded: true,
@@ -7423,16 +7541,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       labelText: "Type d'arrêt",
                       border: OutlineInputBorder(),
                     ),
-                    items: _dailyStopTypes.entries
+                    items: (selectedCategory?.types ?? const <String>[])
                         .map((entry) => DropdownMenuItem(
-                              value: entry.key,
-                              child: Text('${entry.key} - ${entry.value}'),
+                              value: entry,
+                              child: Text(entry),
                             ))
                         .toList(),
-                    onChanged: (value) =>
-                        setLocalState(() => selectedType = value),
+                    onChanged: (value) => setLocalState(() {
+                      selectedType = value;
+                      selectedLocation = null;
+                      stopDetail = '';
+                    }),
                   )
-                else if (step == 1)
+                else if (step == 2)
                   DropdownButtonFormField<String>(
                     initialValue: selectedLocation,
                     isExpanded: true,
@@ -7452,6 +7573,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 else
                   Column(
                     children: [
+                      if (_tnbStopTypeRequiresDetail(selectedType)) ...[
+                        TextFormField(
+                          initialValue: stopDetail,
+                          decoration: const InputDecoration(
+                            labelText: "Détail de l'arrêt",
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: (value) =>
+                              setLocalState(() => stopDetail = value),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       ListTile(
                         title: Text(l10n.startTimeLabel),
                         subtitle: Text(startTime.isEmpty
@@ -7520,18 +7653,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     onPressed: () => Navigator.pop(context),
                     child: Text(l10n.cancel),
                   ),
-                if ((step == 0 && selectedType != null) ||
-                    (step == 1 && selectedLocation != null))
+                if ((step == 0 && selectedCategory != null) ||
+                    (step == 1 && selectedType != null) ||
+                    (step == 2 && selectedLocation != null))
                   ElevatedButton(
                     onPressed: () => setLocalState(() => step++),
                     child: Text(l10n.next),
                   ),
-                if (step == 2)
+                if (step == 3)
                   ElevatedButton(
                     onPressed: () {
                       final validation = _validateDailyStopFields(
+                        category: selectedCategory,
                         type: selectedType,
                         location: selectedLocation,
+                        detail: stopDetail,
                         startTime: startTime,
                         endTime: endTime,
                       );
@@ -7549,8 +7685,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       final durationMinutes = end.difference(start).inMinutes;
                       final durationText =
                           '${durationMinutes ~/ 60}h${(durationMinutes % 60).toString().padLeft(2, '0')}';
-                      final typeLabel =
-                          '$selectedType - ${_dailyStopTypes[selectedType] ?? ''}';
                       final locationLabel =
                           '$selectedLocation - ${locations[selectedLocation] ?? ''}';
 
@@ -7558,12 +7692,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         stops[index] = {
                           'id': stop['id'] ??
                               DateTime.now().millisecondsSinceEpoch.toString(),
+                          'category': selectedCategory!.label,
                           'duration': durationText,
-                          'nature': '$typeLabel | $locationLabel',
-                          'stopType': typeLabel,
+                          'nature': selectedType!,
+                          'location': locationLabel,
+                          'detail': stopDetail.trim(),
+                          'stopType': selectedType,
                           'stopLocation': locationLabel,
                           'startTime': startTime,
                           'endTime': endTime,
+                          'Catégorie': selectedCategory!.label,
                         };
                         _updateDailyTotalsForModule(data, modulePrefix, stops);
                         setDialogState(() {});
