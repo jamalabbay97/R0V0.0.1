@@ -11,6 +11,7 @@ import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 import 'package:uuid/uuid.dart';
 import 'package:r0/data/r0_arrets_data.dart';
 import 'package:r0/theme.dart';
+import 'dart:math' as math;
 
 class _ShiftWindow {
   final String poste;
@@ -3653,15 +3654,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           .titleMedium,
                                     ),
                                     const Divider(height: 16),
-                                    ..._buildTnbCounterDisplayList(data).map(
-                                      (counter) => Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 2,
-                                        ),
-                                        child: Text(
-                                          '• ${counter['label']}: ${((counter['start'] ?? '').isNotEmpty) ? counter['start'] : '-'}',
-                                        ),
-                                      ),
+                                    ..._buildTnbShiftCounterRows(
+                                      data,
+                                      baseDate: report.date,
+                                      bullet: '• ',
                                     ),
                                   ],
                                 ),
@@ -4889,6 +4885,166 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return labels.map((label) => counterMap[label]!).toList(growable: false);
   }
 
+  DateTime? _parseTnbStopDateTimeForCycle(
+    String raw,
+    DateTime cycleStart,
+    DateTime cycleEnd,
+  ) {
+    final value = raw.trim();
+    if (value.isEmpty) return null;
+    final parts = value.split(':');
+    if (parts.length != 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return null;
+
+    final sameDay = DateTime(
+      cycleStart.year,
+      cycleStart.month,
+      cycleStart.day,
+      hour,
+      minute,
+    );
+    final nextDay = sameDay.add(const Duration(days: 1));
+
+    if (!sameDay.isBefore(cycleStart) && !sameDay.isAfter(cycleEnd)) {
+      return sameDay;
+    }
+    if (!nextDay.isBefore(cycleStart) && !nextDay.isAfter(cycleEnd)) {
+      return nextDay;
+    }
+    return sameDay.isBefore(cycleStart) ? nextDay : sameDay;
+  }
+
+  int _calculateTnbDowntimeMinutesInWindow({
+    required List stops,
+    required DateTime windowStart,
+    required DateTime windowEnd,
+    required DateTime cycleStart,
+    required DateTime cycleEnd,
+  }) {
+    final now = DateTime.now();
+    final ranges = <TimeRange>[];
+
+    for (final rawStop in stops) {
+      if (rawStop is! Map) continue;
+      final stop = Map<String, dynamic>.from(rawStop);
+      final rawStart = (stop['startTime'] ?? stop['Début'] ?? '').toString();
+      final rawEnd = (stop['endTime'] ?? stop['Fin'] ?? '').toString();
+
+      final start =
+          _parseTnbStopDateTimeForCycle(rawStart, cycleStart, cycleEnd);
+      if (start == null) continue;
+
+      DateTime? end =
+          _parseTnbStopDateTimeForCycle(rawEnd, cycleStart, cycleEnd);
+      end ??= now;
+      if (end.isBefore(start)) {
+        end = end.add(const Duration(days: 1));
+      }
+
+      final effectiveStart = start.isBefore(windowStart) ? windowStart : start;
+      final effectiveEnd = end.isAfter(windowEnd) ? windowEnd : end;
+      if (effectiveEnd.isAfter(effectiveStart)) {
+        ranges.add(TimeRange(
+          effectiveStart.difference(windowStart).inMinutes,
+          effectiveEnd.difference(windowStart).inMinutes,
+        ));
+      }
+    }
+
+    return TimeCalculationService.calculateTotalDowntimeMinutes(
+      ranges,
+      maxMinutes: windowEnd.difference(windowStart).inMinutes,
+    );
+  }
+
+  String _formatTnbCounterNumber(double value) {
+    final fixed = value.toStringAsFixed(2);
+    return fixed.endsWith('.00') ? fixed.substring(0, fixed.length - 3) : fixed;
+  }
+
+  List<Widget> _buildTnbShiftCounterRows(
+    Map<String, dynamic> data, {
+    required DateTime baseDate,
+    TextStyle? shiftTitleStyle,
+    EdgeInsetsGeometry rowPadding = const EdgeInsets.symmetric(vertical: 2),
+    String bullet = '',
+  }) {
+    final counters = _buildTnbCounterDisplayList(data)
+        .where((counter) => (counter['start'] ?? '').trim().isNotEmpty)
+        .toList();
+    if (counters.isEmpty) {
+      return const [Text('-')];
+    }
+
+    final stops =
+        (data['Arrets'] is List) ? List.from(data['Arrets']) : <dynamic>[];
+    final cycleStart =
+        DateTime(baseDate.year, baseDate.month, baseDate.day, 22, 30);
+    final cycleEnd = cycleStart.add(const Duration(hours: 24));
+
+    final shifts = <({String label, DateTime start, DateTime end})>[
+      (
+        label: '3ème poste',
+        start: cycleStart,
+        end: cycleStart.add(const Duration(hours: 8)),
+      ),
+      (
+        label: '1er poste',
+        start: cycleStart.add(const Duration(hours: 8)),
+        end: cycleStart.add(const Duration(hours: 16)),
+      ),
+      (
+        label: '2ème poste',
+        start: cycleStart.add(const Duration(hours: 16)),
+        end: cycleStart.add(const Duration(hours: 24)),
+      ),
+    ];
+
+    final rows = <Widget>[];
+    for (final shift in shifts) {
+      rows.add(Text(
+        shift.label,
+        style: shiftTitleStyle ?? const TextStyle(fontWeight: FontWeight.w600),
+      ));
+      rows.add(const SizedBox(height: 6));
+
+      for (final counter in counters) {
+        final startValue =
+            double.tryParse((counter['start'] ?? '').replaceAll(',', '.'));
+        if (startValue == null) continue;
+
+        double runningValue = startValue;
+        for (final currentShift in shifts) {
+          final downtime = _calculateTnbDowntimeMinutesInWindow(
+            stops: stops,
+            windowStart: currentShift.start,
+            windowEnd: currentShift.end,
+            cycleStart: cycleStart,
+            cycleEnd: cycleEnd,
+          );
+          final operatingHours = math.max(0, 480 - downtime) / 60.0;
+          final nextValue = runningValue + operatingHours;
+
+          if (currentShift.label == shift.label) {
+            rows.add(Padding(
+              padding: rowPadding,
+              child: Text(
+                '$bullet${counter['label']} : ${_formatTnbCounterNumber(runningValue)} → ${_formatTnbCounterNumber(nextValue)}',
+              ),
+            ));
+            break;
+          }
+          runningValue = nextValue;
+        }
+      }
+      rows.add(const SizedBox(height: 10));
+    }
+
+    return rows;
+  }
+
   int _filledTnbCounterCount(Map<String, dynamic> data) {
     final savedCount = data['T Nr.C'];
     if (savedCount is int) {
@@ -4984,13 +5140,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   'Compteurs TNB',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                ...tnbCounters.map(
-                  (counter) => Padding(
-                    padding: const EdgeInsets.only(left: 16, top: 4),
-                    child: Text(
-                      '${counter['label']}: ${((counter['start'] ?? '').isNotEmpty) ? counter['start'] : '-'}',
-                    ),
-                  ),
+                ..._buildTnbShiftCounterRows(
+                  data,
+                  baseDate: DateTime.now(),
+                  rowPadding: const EdgeInsets.only(left: 16, top: 4),
                 ),
               ],
             ),
@@ -5100,6 +5253,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       'M1_CRIBLE1': 'Crible 01',
       'M1_CV84': 'Convoyeur 84',
       'M1_CV86': 'Convoyeur 86',
+      'CV_G0': 'Convoyeur G0',
+      'CV_G2': 'Convoyeur G2',
+      'CV_G0_G2': 'Convoyeurs G0 + G2 (panne totale)',
       'CV_G4': 'Convoyeur G4',
     },
     2: {
@@ -5111,8 +5267,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
       'M2_CRIBLE1': 'Crible 01',
       'M2_CV84': 'Convoyeur 84',
       'M2_CV86': 'Convoyeur 86',
+      'CV_G0': 'Convoyeur G0',
+      'CV_G2': 'Convoyeur G2',
+      'CV_G0_G2': 'Convoyeurs G0 + G2 (panne totale)',
       'CV_G5': 'Convoyeur G5',
     },
+  };
+  static const Set<String> _sharedDailyConveyorLocationKeys = {
+    'CV_G0_G2',
   };
 
   String _formatDailyStopLine(dynamic rawStop) {
@@ -5139,6 +5301,65 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return start.isNotEmpty && end.isNotEmpty
         ? '$title — $start → $end ($duration)'
         : '$title — $duration';
+  }
+
+  bool _isSharedDailyConveyorLocation(String? locationKey) =>
+      locationKey != null &&
+      _sharedDailyConveyorLocationKeys.contains(locationKey);
+
+  String _otherModulePrefix(String modulePrefix) =>
+      modulePrefix == 'module1' ? 'module2' : 'module1';
+
+  void _deleteMirroredDailyStopIfLinked(Map<String, dynamic> data,
+      String modulePrefix, Map<String, dynamic> stop) {
+    final sharedMirrorId = (stop['sharedMirrorId'] ?? '').toString();
+    if (sharedMirrorId.isEmpty) return;
+
+    final otherModulePrefix = _otherModulePrefix(modulePrefix);
+    final otherStopsKey = '${otherModulePrefix}Stops';
+    final otherStops = (data[otherStopsKey] is List)
+        ? List.from(data[otherStopsKey])
+        : <dynamic>[];
+    otherStops.removeWhere((entry) =>
+        entry is Map &&
+        (entry['sharedMirrorId'] ?? '').toString() == sharedMirrorId);
+    data[otherStopsKey] = otherStops;
+    _updateDailyTotalsForModule(data, otherModulePrefix, otherStops);
+  }
+
+  void _upsertMirroredDailyStop(Map<String, dynamic> data, String modulePrefix,
+      Map<String, dynamic> sourceStop, String sharedMirrorId) {
+    final otherModulePrefix = _otherModulePrefix(modulePrefix);
+    final otherStopsKey = '${otherModulePrefix}Stops';
+    final otherStops = (data[otherStopsKey] is List)
+        ? List.from(data[otherStopsKey])
+        : <dynamic>[];
+
+    final mirroredStop = {
+      ...sourceStop,
+      'id': '${const Uuid().v4()}_$otherModulePrefix',
+      'sharedMirrorId': sharedMirrorId,
+      'sharedSourceModule': modulePrefix,
+    };
+
+    final existingIndex = otherStops.indexWhere((entry) =>
+        entry is Map &&
+        (entry['sharedMirrorId'] ?? '').toString() == sharedMirrorId);
+    if (existingIndex >= 0) {
+      final existing = otherStops[existingIndex];
+      final existingId = existing is Map
+          ? (existing['id'] ?? mirroredStop['id'])
+          : mirroredStop['id'];
+      otherStops[existingIndex] = {
+        ...mirroredStop,
+        'id': existingId,
+      };
+    } else {
+      otherStops.add(mirroredStop);
+    }
+
+    data[otherStopsKey] = otherStops;
+    _updateDailyTotalsForModule(data, otherModulePrefix, otherStops);
   }
 
   DateTime? _parseDailyTime(String value) {
@@ -7152,7 +7373,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             if (confirmed != true) return;
 
                             setState(() {
+                              final removedStop = stops[index] is Map
+                                  ? Map<String, dynamic>.from(stops[index])
+                                  : <String, dynamic>{};
                               stops.removeAt(index);
+                              _deleteMirroredDailyStopIfLinked(
+                                  data, modulePrefix, removedStop);
                               _updateDailyTotalsForModule(
                                   data, modulePrefix, stops);
                               totalDowntime =
@@ -7223,6 +7449,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     String stopDetail = '';
     String startTime = '';
     String endTime = '';
+    bool applyToBothModules = true;
 
     final moduleNumber = _moduleNumberFromPrefix(modulePrefix);
     final locations =
@@ -7292,21 +7519,38 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     }),
                   )
                 else if (step == 2)
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedLocation,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: "Lieu d'arrêt",
-                      border: OutlineInputBorder(),
-                    ),
-                    items: locations.entries
-                        .map((entry) => DropdownMenuItem(
-                              value: entry.key,
-                              child: Text('${entry.key} - ${entry.value}'),
-                            ))
-                        .toList(),
-                    onChanged: (value) =>
-                        setLocalState(() => selectedLocation = value),
+                  Column(
+                    children: [
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedLocation,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: "Lieu d'arrêt",
+                          border: OutlineInputBorder(),
+                        ),
+                        items: locations.entries
+                            .map((entry) => DropdownMenuItem(
+                                  value: entry.key,
+                                  child: Text('${entry.key} - ${entry.value}'),
+                                ))
+                            .toList(),
+                        onChanged: (value) => setLocalState(() {
+                          selectedLocation = value;
+                          applyToBothModules =
+                              _isSharedDailyConveyorLocation(value);
+                        }),
+                      ),
+                      if (_isSharedDailyConveyorLocation(selectedLocation))
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Appliquer aux deux modules'),
+                          subtitle: const Text(
+                              'Utiliser pour les pannes convoyeurs partagés (G0/G2).'),
+                          value: applyToBothModules,
+                          onChanged: (value) =>
+                              setLocalState(() => applyToBothModules = value),
+                        ),
+                    ],
                   )
                 else
                   Column(
@@ -7421,7 +7665,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           '$selectedLocation - ${locations[selectedLocation] ?? ''}';
 
                       setState(() {
-                        stops.add({
+                        final stopEntry = {
                           'id':
                               DateTime.now().millisecondsSinceEpoch.toString(),
                           'category': selectedCategory!.label,
@@ -7434,7 +7678,26 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           'startTime': startTime,
                           'endTime': endTime,
                           'Catégorie': selectedCategory!.label,
-                        });
+                        };
+                        final shouldMirror = applyToBothModules &&
+                            _isSharedDailyConveyorLocation(selectedLocation);
+                        final sharedMirrorId =
+                            shouldMirror ? const Uuid().v4() : '';
+                        if (sharedMirrorId.isNotEmpty) {
+                          stopEntry['sharedMirrorId'] = sharedMirrorId;
+                          stopEntry['sharedSourceModule'] = modulePrefix;
+                        }
+                        stops.add(stopEntry);
+
+                        if (sharedMirrorId.isNotEmpty) {
+                          _upsertMirroredDailyStop(
+                            data,
+                            modulePrefix,
+                            stopEntry,
+                            sharedMirrorId,
+                          );
+                        }
+
                         _updateDailyTotalsForModule(data, modulePrefix, stops);
                         setDialogState(() {});
                         onTotalDowntimeChanged(
@@ -7485,6 +7748,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
         (stop['startTime'] ?? stop['start'] ?? stop['Début'] ?? '').toString();
     String endTime =
         (stop['endTime'] ?? stop['end'] ?? stop['Fin'] ?? '').toString();
+    final existingSharedMirrorId = (stop['sharedMirrorId'] ?? '').toString();
+    bool applyToBothModules = existingSharedMirrorId.isNotEmpty ||
+        _isSharedDailyConveyorLocation(selectedLocation);
 
     final moduleNumber = _moduleNumberFromPrefix(modulePrefix);
     final locations =
@@ -7554,21 +7820,38 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     }),
                   )
                 else if (step == 2)
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedLocation,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: "Lieu d'arrêt",
-                      border: OutlineInputBorder(),
-                    ),
-                    items: locations.entries
-                        .map((entry) => DropdownMenuItem(
-                              value: entry.key,
-                              child: Text('${entry.key} - ${entry.value}'),
-                            ))
-                        .toList(),
-                    onChanged: (value) =>
-                        setLocalState(() => selectedLocation = value),
+                  Column(
+                    children: [
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedLocation,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: "Lieu d'arrêt",
+                          border: OutlineInputBorder(),
+                        ),
+                        items: locations.entries
+                            .map((entry) => DropdownMenuItem(
+                                  value: entry.key,
+                                  child: Text('${entry.key} - ${entry.value}'),
+                                ))
+                            .toList(),
+                        onChanged: (value) => setLocalState(() {
+                          selectedLocation = value;
+                          applyToBothModules =
+                              _isSharedDailyConveyorLocation(value);
+                        }),
+                      ),
+                      if (_isSharedDailyConveyorLocation(selectedLocation))
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Appliquer aux deux modules'),
+                          subtitle: const Text(
+                              'Mettre à jour aussi le module miroir lié.'),
+                          value: applyToBothModules,
+                          onChanged: (value) =>
+                              setLocalState(() => applyToBothModules = value),
+                        ),
+                    ],
                   )
                 else
                   Column(
@@ -7689,7 +7972,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           '$selectedLocation - ${locations[selectedLocation] ?? ''}';
 
                       setState(() {
-                        stops[index] = {
+                        final shouldMirror = applyToBothModules &&
+                            _isSharedDailyConveyorLocation(selectedLocation);
+                        final sharedMirrorId = shouldMirror
+                            ? (existingSharedMirrorId.isNotEmpty
+                                ? existingSharedMirrorId
+                                : const Uuid().v4())
+                            : '';
+                        final updatedStop = {
                           'id': stop['id'] ??
                               DateTime.now().millisecondsSinceEpoch.toString(),
                           'category': selectedCategory!.label,
@@ -7703,6 +7993,26 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           'endTime': endTime,
                           'Catégorie': selectedCategory!.label,
                         };
+                        if (sharedMirrorId.isNotEmpty) {
+                          updatedStop['sharedMirrorId'] = sharedMirrorId;
+                          updatedStop['sharedSourceModule'] = modulePrefix;
+                        }
+                        stops[index] = updatedStop;
+
+                        if (sharedMirrorId.isNotEmpty) {
+                          _upsertMirroredDailyStop(
+                            data,
+                            modulePrefix,
+                            updatedStop,
+                            sharedMirrorId,
+                          );
+                        } else if (existingSharedMirrorId.isNotEmpty) {
+                          _deleteMirroredDailyStopIfLinked(
+                            data,
+                            modulePrefix,
+                            {'sharedMirrorId': existingSharedMirrorId},
+                          );
+                        }
                         _updateDailyTotalsForModule(data, modulePrefix, stops);
                         setDialogState(() {});
                         onTotalDowntimeChanged(

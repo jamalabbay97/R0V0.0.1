@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:uuid/uuid.dart';
 import 'package:r0/models/report.dart';
 import 'package:r0/services/database_helper.dart';
+import 'package:r0/services/time_calculation_service.dart';
 import 'package:r0/theme.dart';
 import 'package:r0/widgets/custom_widgets.dart';
 
@@ -230,6 +231,28 @@ class TnbCounter {
     required this.id,
     required this.label,
     this.start = '',
+  });
+}
+
+class _ShiftCounterSegment {
+  final String shiftLabel;
+  final double startValue;
+  final double endValue;
+
+  _ShiftCounterSegment({
+    required this.shiftLabel,
+    required this.startValue,
+    required this.endValue,
+  });
+}
+
+class _ShiftCounterBlock {
+  final String counterLabel;
+  final List<_ShiftCounterSegment> segments;
+
+  _ShiftCounterBlock({
+    required this.counterLabel,
+    required this.segments,
   });
 }
 
@@ -469,8 +492,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
 
   void recalculateTimes() {
     setState(() {
-      totalDowntime =
-          stops.fold(0, (acc, s) => acc + parseDurationToMinutes(s.duration));
+      totalDowntime = _calculateCycleDowntimeMinutes();
       operatingTime =
           max(ActivityReportScreen.totalPeriodMinutes - totalDowntime, 0);
 
@@ -487,6 +509,86 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
               entry.startTime.isNotEmpty) &&
           entry.poste == null);
     });
+  }
+
+  int _calculateCycleDowntimeMinutes() {
+    final ranges = <TimeRange>[];
+    final cycleStart = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      22,
+      30,
+    );
+    final cycleEnd = cycleStart.add(
+      const Duration(minutes: ActivityReportScreen.totalPeriodMinutes),
+    );
+    final now = DateTime.now();
+
+    for (final stop in stops) {
+      final start = _tryParseStopDateTime(stop.startTime, cycleStart, cycleEnd);
+      if (start == null) {
+        final fallback = parseDurationToMinutes(stop.duration);
+        if (fallback > 0) {
+          ranges.add(TimeRange(0, fallback));
+        }
+        continue;
+      }
+
+      DateTime? end = _tryParseStopDateTime(stop.endTime, cycleStart, cycleEnd);
+
+      // Open stop: keep counter paused until the stop is closed.
+      end ??= now;
+      if (end.isBefore(start)) {
+        end = end.add(const Duration(days: 1));
+      }
+
+      final effectiveStart = start.isBefore(cycleStart) ? cycleStart : start;
+      final effectiveEnd = end.isAfter(cycleEnd) ? cycleEnd : end;
+      if (effectiveEnd.isAfter(effectiveStart)) {
+        ranges.add(TimeRange(
+          effectiveStart.difference(cycleStart).inMinutes,
+          effectiveEnd.difference(cycleStart).inMinutes,
+        ));
+      }
+    }
+
+    return TimeCalculationService.calculateTotalDowntimeMinutes(
+      ranges,
+      maxMinutes: ActivityReportScreen.totalPeriodMinutes,
+    );
+  }
+
+  DateTime? _tryParseStopDateTime(
+    String raw,
+    DateTime cycleStart,
+    DateTime cycleEnd,
+  ) {
+    final value = raw.trim();
+    if (value.isEmpty) return null;
+    final parts = value.split(':');
+    if (parts.length != 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return null;
+
+    final sameDay = DateTime(
+      cycleStart.year,
+      cycleStart.month,
+      cycleStart.day,
+      hour,
+      minute,
+    );
+    final nextDay = sameDay.add(const Duration(days: 1));
+
+    if (!sameDay.isBefore(cycleStart) && !sameDay.isAfter(cycleEnd)) {
+      return sameDay;
+    }
+    if (!nextDay.isBefore(cycleStart) && !nextDay.isAfter(cycleEnd)) {
+      return nextDay;
+    }
+    // Best-effort fallback for values near cycle boundaries.
+    return sameDay.isBefore(cycleStart) ? nextDay : sameDay;
   }
 
   List<TnbCounter> _buildDefaultTnbCounters() => _tnbCounterLabels
@@ -506,13 +608,134 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
   ) {
     return counters
         .where((counter) => counter.start.trim().isNotEmpty)
-        .map((counter) => {
-              'id': counter.id,
-              'poste': counter.label,
-              'start': counter.start.trim(),
-              'end': '',
-            })
-        .toList();
+        .map((counter) {
+      final endValue = _calculateCounterEndValue(counter.start);
+      return {
+        'id': counter.id,
+        'poste': counter.label,
+        'start': counter.start.trim(),
+        'end': endValue,
+      };
+    }).toList();
+  }
+
+  String _calculateCounterEndValue(String startValue) {
+    final parsedStart = double.tryParse(startValue.replaceAll(',', '.').trim());
+    if (parsedStart == null) {
+      return '';
+    }
+    final operatingHours = operatingTime / 60.0;
+    final calculatedEnd = parsedStart + operatingHours;
+    final formatted = calculatedEnd.toStringAsFixed(2);
+    return formatted.endsWith('.00')
+        ? formatted.substring(0, formatted.length - 3)
+        : formatted;
+  }
+
+  List<_ShiftCounterBlock> _buildShiftCounterBlocks() {
+    final cycleStart = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      22,
+      30,
+    );
+    final shiftWindows = <({String label, DateTime start, DateTime end})>[
+      (
+        label: '3ème poste',
+        start: cycleStart,
+        end: cycleStart.add(const Duration(hours: 8)),
+      ),
+      (
+        label: '1er poste',
+        start: cycleStart.add(const Duration(hours: 8)),
+        end: cycleStart.add(const Duration(hours: 16)),
+      ),
+      (
+        label: '2ème poste',
+        start: cycleStart.add(const Duration(hours: 16)),
+        end: cycleStart.add(const Duration(hours: 24)),
+      ),
+    ];
+
+    final result = <_ShiftCounterBlock>[];
+
+    for (final counter in tnbCounters) {
+      if (counter.start.trim().isEmpty) continue;
+      final parsedStart =
+          double.tryParse(counter.start.replaceAll(',', '.').trim());
+      if (parsedStart == null) continue;
+
+      var current = parsedStart;
+      final segments = <_ShiftCounterSegment>[];
+
+      for (final shift in shiftWindows) {
+        final shiftDowntimeMinutes =
+            _calculateDowntimeMinutesBetween(shift.start, shift.end);
+        final shiftOperatingHours = max(0, 480 - shiftDowntimeMinutes) / 60.0;
+        final next = current + shiftOperatingHours;
+        segments.add(_ShiftCounterSegment(
+          shiftLabel: shift.label,
+          startValue: current,
+          endValue: next,
+        ));
+        current = next;
+      }
+
+      result.add(_ShiftCounterBlock(
+        counterLabel: counter.label,
+        segments: segments,
+      ));
+    }
+
+    return result;
+  }
+
+  int _calculateDowntimeMinutesBetween(
+      DateTime windowStart, DateTime windowEnd) {
+    final cycleStart = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      22,
+      30,
+    );
+    final cycleEnd = cycleStart.add(
+      const Duration(minutes: ActivityReportScreen.totalPeriodMinutes),
+    );
+    final now = DateTime.now();
+    final ranges = <TimeRange>[];
+
+    for (final stop in stops) {
+      final start = _tryParseStopDateTime(stop.startTime, cycleStart, cycleEnd);
+      if (start == null) continue;
+
+      DateTime? end = _tryParseStopDateTime(stop.endTime, cycleStart, cycleEnd);
+      end ??= now;
+      if (end.isBefore(start)) {
+        end = end.add(const Duration(days: 1));
+      }
+
+      final effectiveStart = start.isBefore(windowStart) ? windowStart : start;
+      final effectiveEnd = end.isAfter(windowEnd) ? windowEnd : end;
+
+      if (effectiveEnd.isAfter(effectiveStart)) {
+        ranges.add(TimeRange(
+          effectiveStart.difference(windowStart).inMinutes,
+          effectiveEnd.difference(windowStart).inMinutes,
+        ));
+      }
+    }
+
+    return TimeCalculationService.calculateTotalDowntimeMinutes(
+      ranges,
+      maxMinutes: windowEnd.difference(windowStart).inMinutes,
+    );
+  }
+
+  String _formatCounterNumber(double value) {
+    final fixed = value.toStringAsFixed(2);
+    return fixed.endsWith('.00') ? fixed.substring(0, fixed.length - 3) : fixed;
   }
 
   int get _filledCounterCount =>
@@ -1053,6 +1276,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
 
   // --- Step 3: Verification ---
   Widget _buildStepVerification() {
+    final shiftCounterBlocks = _buildShiftCounterBlocks();
     return Column(
       children: [
         const Icon(Icons.check_circle_outline,
@@ -1122,12 +1346,41 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const Divider(height: 16),
-                ...tnbCounters.map((counter) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Text(
-                        '${counter.label}: ${counter.start.isNotEmpty ? counter.start : '-'}',
-                      ),
-                    )),
+                ...[
+                  for (final shiftLabel in const [
+                    '3ème poste',
+                    '1er poste',
+                    '2ème poste',
+                  ]) ...[
+                    Text(
+                      shiftLabel,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 6),
+                    ...shiftCounterBlocks.map((block) {
+                      final segment = block.segments.firstWhere(
+                        (s) => s.shiftLabel == shiftLabel,
+                        orElse: () => _ShiftCounterSegment(
+                          shiftLabel: shiftLabel,
+                          startValue: 0,
+                          endValue: 0,
+                        ),
+                      );
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          '${block.counterLabel} : ${_formatCounterNumber(segment.startValue)} → ${_formatCounterNumber(segment.endValue)}',
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 10),
+                  ]
+                ],
+                const SizedBox(height: 8),
+                const Text(
+                  "La valeur de fin est calculée automatiquement avec T H.M",
+                  style: TextStyle(color: Colors.grey),
+                ),
               ],
             ),
           ),

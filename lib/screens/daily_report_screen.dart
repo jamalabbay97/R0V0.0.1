@@ -182,6 +182,9 @@ class DailyReportScreen extends StatefulWidget {
 
 class _DailyReportScreenState extends State<DailyReportScreen> {
   static const totalPeriodMinutes = 24 * 60;
+  static const Set<String> _sharedConveyorLocationKeys = {
+    'CV_G0_G2',
+  };
   final _databaseHelper = DatabaseHelper();
 
   DateTime _selectedDate = DateTime.now();
@@ -208,6 +211,9 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
       'M1_CRIBLE1': 'Crible 01',
       'M1_CV84': 'Convoyeur 84',
       'M1_CV86': 'Convoyeur 86',
+      'CV_G0': 'Convoyeur G0',
+      'CV_G2': 'Convoyeur G2',
+      'CV_G0_G2': 'Convoyeurs G0 + G2 (panne totale)',
       'CV_G4': 'Convoyeur G4',
     },
     2: {
@@ -219,6 +225,9 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
       'M2_CRIBLE1': 'Crible 01',
       'M2_CV84': 'Convoyeur 84',
       'M2_CV86': 'Convoyeur 86',
+      'CV_G0': 'Convoyeur G0',
+      'CV_G2': 'Convoyeur G2',
+      'CV_G0_G2': 'Convoyeurs G0 + G2 (panne totale)',
       'CV_G5': 'Convoyeur G5',
     },
   };
@@ -486,6 +495,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     String stopDetail = '';
     DateTime startTime = DateTime.now();
     DateTime endTime = DateTime.now().add(const Duration(minutes: 1));
+    bool applyToBothModules = true;
     final locations = _moduleLocations[module] ?? const <String, String>{};
 
     showDialog(
@@ -541,18 +551,34 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                     isExpanded: true,
                   );
                 } else if (step == 2) {
-                  content = DropdownButtonFormField<String>(
-                    hint: const Text("Lieu d'arrêt"),
-                    initialValue: selectedLocation,
-                    isExpanded: true,
-                    items: locations.entries
-                        .map((entry) => DropdownMenuItem(
-                            value: entry.key,
-                            child: Text('${entry.key} - ${entry.value}')))
-                        .toList(),
-                    onChanged: (value) => setDs(() {
-                      selectedLocation = value;
-                    }),
+                  content = Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      DropdownButtonFormField<String>(
+                        hint: const Text("Lieu d'arrêt"),
+                        initialValue: selectedLocation,
+                        isExpanded: true,
+                        items: locations.entries
+                            .map((entry) => DropdownMenuItem(
+                                value: entry.key,
+                                child: Text('${entry.key} - ${entry.value}')))
+                            .toList(),
+                        onChanged: (value) => setDs(() {
+                          selectedLocation = value;
+                          applyToBothModules = _isSharedConveyorLocation(value);
+                        }),
+                      ),
+                      if (_isSharedConveyorLocation(selectedLocation))
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Appliquer aux deux modules'),
+                          subtitle: const Text(
+                              'Utiliser pour les pannes convoyeurs partagés (G0/G2).'),
+                          value: applyToBothModules,
+                          onChanged: (value) =>
+                              setDs(() => applyToBothModules = value),
+                        ),
+                    ],
                   );
                 } else {
                   content = Column(
@@ -700,6 +726,27 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                                   } else {
                                     module2Stops.add(stop);
                                   }
+                                  if (applyToBothModules &&
+                                      _isSharedConveyorLocation(
+                                          selectedLocation)) {
+                                    final mirroredStop = ModuleStop(
+                                      id: const Uuid().v4(),
+                                      category: selectedCategory!.label,
+                                      duration: durationText,
+                                      nature: selectedNature!,
+                                      location: locationLabel,
+                                      detail: stopDetail.trim(),
+                                      stopType: selectedNature!,
+                                      stopLocation: locationLabel,
+                                      startTime: _formatTime(startTime),
+                                      endTime: _formatTime(endTime),
+                                    );
+                                    if (module == 1) {
+                                      module2Stops.add(mirroredStop);
+                                    } else {
+                                      module1Stops.add(mirroredStop);
+                                    }
+                                  }
                                   _calculateTotals();
                                 });
                                 Navigator.pop(context);
@@ -715,6 +762,9 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
 
   String _formatTime(DateTime value) =>
       '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+
+  bool _isSharedConveyorLocation(String? locationKey) =>
+      locationKey != null && _sharedConveyorLocationKeys.contains(locationKey);
 
   String? _validateSingleStop(
     DateTime startTime,
