@@ -160,17 +160,18 @@ bool _tnbStopTypeRequiresDetail(String? type) =>
 
 String _formatTnbStopResultLine(Stop stop) {
   final segments = <String>[
-    'Catégorie: ${stop.category.isNotEmpty ? stop.category : '-'}',
     stop.nature.isNotEmpty ? stop.nature : '-',
-    if (_tnbStopTypeRequiresLocation(stop.nature))
-      'Lieu: ${stop.location.isNotEmpty ? stop.location : '-'}',
-    if (_tnbStopTypeRequiresDetail(stop.nature))
-      'Détail: ${stop.detail.isNotEmpty ? stop.detail : '-'}',
-    'De: ${stop.startTime.isNotEmpty ? stop.startTime : '--:--'} à ${stop.endTime.isNotEmpty ? stop.endTime : '--:--'}',
-    'Durée: ${stop.duration.isNotEmpty ? formatMinutesToHoursMinutes(parseDurationToMinutes(stop.duration)) : '-'}',
+    if (_tnbStopTypeRequiresDetail(stop.nature) && stop.detail.isNotEmpty)
+      stop.detail,
+    if (_tnbStopTypeRequiresLocation(stop.nature) && stop.location.isNotEmpty)
+      stop.location,
+    'De ${stop.startTime.isNotEmpty ? stop.startTime : '--:--'} a ${stop.endTime.isNotEmpty ? stop.endTime : '--:--'}',
+    stop.duration.isNotEmpty
+        ? formatMinutesToHoursMinutes(parseDurationToMinutes(stop.duration))
+        : '-',
   ];
 
-  return segments.join(' | ');
+  return segments.join('\n');
 }
 
 const List<StopLocation> _tnbStopLocations = [
@@ -861,24 +862,9 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     return Column(children: [
       ...stops.asMap().entries.map((e) => OCPCard(
               child: ListTile(
-            title: Text(e.value.nature.isNotEmpty ? e.value.nature : '-'),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                    "Catégorie: ${e.value.category.isNotEmpty ? e.value.category : '-'}"),
-                if (_tnbStopTypeRequiresLocation(e.value.nature) &&
-                    e.value.location.isNotEmpty)
-                  Text("Lieu: ${e.value.location}"),
-                if (_tnbStopTypeRequiresDetail(e.value.nature) &&
-                    e.value.detail.isNotEmpty)
-                  Text("Détail: ${e.value.detail}"),
-                Text(
-                    "De ${e.value.startTime.isNotEmpty ? e.value.startTime : '--:--'} à ${e.value.endTime.isNotEmpty ? e.value.endTime : '--:--'}"),
-                Text(
-                    "Durée: ${formatMinutesToHoursMinutes(parseDurationToMinutes(e.value.duration))}"),
-              ],
+            title: Text(
+              _formatTnbStopResultLine(e.value),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
             trailing: IconButton(
                 icon: const Icon(Icons.delete, color: AppColors.error),
@@ -1324,7 +1310,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                   const Divider(height: 16),
                   ...stops.map(
                     (stop) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
                       child: Text(_formatTnbStopResultLine(stop)),
                     ),
                   ),
