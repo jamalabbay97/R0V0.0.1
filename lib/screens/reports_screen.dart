@@ -1113,7 +1113,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         : <String, dynamic>{};
                                     final isSelected =
                                         _selectedStopIndex == index;
-                                    final stopType = _getTnbStopTypeLabel(stop);
                                     return Card(
                                       margin: const EdgeInsets.only(bottom: 8),
                                       color: isSelected
@@ -1125,19 +1124,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         selectedTileColor:
                                             Colors.green.withValues(alpha: 0.1),
                                         title: Text(
-                                          stopType.isNotEmpty
-                                              ? stopType
-                                              : l10n.arretTitle(index + 1),
-                                        ),
-                                        subtitle: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              _formatTnbActivityStopSummary(
-                                                  stop),
-                                            ),
-                                          ],
+                                          _formatTnbActivityStopSummary(stop),
                                         ),
                                         leading: isSelected
                                             ? const Icon(Icons.check_circle,
@@ -5217,7 +5204,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
       (stop['detail'] ?? stop['Détail'] ?? '').toString().trim();
 
   String _formatTnbActivityStopSummary(Map<String, dynamic> stop) {
-    final category = _getTnbStopCategoryLabel(stop);
     final type = _getTnbStopTypeLabel(stop);
     final location = _getTnbStopLocationLabel(stop);
     final detail = _getTnbStopDetailLabel(stop);
@@ -5232,13 +5218,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
 
     final segments = <String>[
-      if (category.isNotEmpty) 'Catégorie: $category',
-      if (type.isNotEmpty) 'Type: $type',
-      if (showLocation) 'Lieu: ${location.isEmpty ? '-' : location}',
-      if (showDetail) 'Détail: ${detail.isEmpty ? '-' : detail}',
-      if (start.isNotEmpty || end.isNotEmpty)
-        'Horaire: ${start.isEmpty ? '--:--' : start} → ${end.isEmpty ? '--:--' : end}',
-      'Durée: $duration',
+      type.isNotEmpty ? type : '-',
+      if (showDetail && detail.isNotEmpty) detail,
+      if (showLocation && location.isNotEmpty) location,
+      'De ${start.isEmpty ? '--:--' : start} a ${end.isEmpty ? '--:--' : end}',
+      duration,
     ];
     return segments.join('\n');
   }
