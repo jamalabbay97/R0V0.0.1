@@ -4159,22 +4159,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            Text(
-                                                '${l10n.type}: ${_getLocalizedReasonLabel(arret['Arret']?.toString() ?? '', l10n)}'),
-                                            if (arret['Catégorie'] != null &&
-                                                arret['Catégorie']
-                                                    .toString()
-                                                    .isNotEmpty)
-                                              _buildInfoRow(
-                                                  l10n.category,
-                                                  _getLocalizedCategoryLabel(
-                                                      arret['Catégorie']
-                                                          .toString(),
-                                                      l10n)),
-                                            _buildInfoRow(l10n.start,
-                                                arret['Début'] ?? '-'),
-                                            _buildInfoRow(
-                                                l10n.end, arret['Fin'] ?? '-'),
+                                            Text(_formatDailyStopLine(arret)),
                                             const Divider(height: 8),
                                           ],
                                         ),
@@ -5165,31 +5150,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return "${hours}h ${minutes.toString().padLeft(2, '0')}m";
   }
 
-  String _normalizeTnbStopValue(String value) =>
-      value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-
-  String _getTnbStopCategoryLabel(Map<String, dynamic> stop) {
-    final storedCategory =
-        (stop['category'] ?? stop['Catégorie'] ?? '').toString().trim();
-    if (storedCategory.isNotEmpty) {
-      return storedCategory;
-    }
-
-    final storedType =
-        (stop['nature'] ?? stop['Arret'] ?? '').toString().trim();
-    if (storedType.isEmpty) {
-      return '';
-    }
-
-    for (final category in _tnbStopCategories) {
-      if (category.types.any((type) =>
-          _normalizeTnbStopValue(type) == _normalizeTnbStopValue(storedType))) {
-        return category.label;
-      }
-    }
-    return '';
-  }
-
   String _getTnbStopTypeLabel(Map<String, dynamic> stop) =>
       (stop['stopType'] ?? stop['nature'] ?? stop['Arret'] ?? '')
           .toString()
@@ -5263,28 +5223,55 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   String _formatDailyStopLine(dynamic rawStop) {
     final stop = rawStop is Map ? rawStop : <String, dynamic>{};
-    final category = _getTnbStopCategoryLabel(Map<String, dynamic>.from(stop));
-    final stopType = (stop['stopType'] ?? stop['nature'] ?? '-').toString();
+    final stopType =
+        (stop['stopType'] ?? stop['nature'] ?? stop['Arret'] ?? '-')
+            .toString()
+            .trim();
     final stopLocation =
-        (stop['location'] ?? stop['stopLocation'] ?? '').toString();
+        (stop['location'] ?? stop['stopLocation'] ?? stop['Lieu'] ?? '')
+            .toString()
+            .trim();
     final stopDetail = _getTnbStopDetailLabel(Map<String, dynamic>.from(stop));
     final start =
         (stop['startTime'] ?? stop['start'] ?? stop['Début'] ?? '').toString();
     final end =
         (stop['endTime'] ?? stop['end'] ?? stop['Fin'] ?? '').toString();
-    final duration = _formatMinutesToHoursMinutes(
-        _parseDurationToMinutes(stop['duration'] ?? ''));
+    final parsedDurationMinutes =
+        _parseDurationToMinutes((stop['duration'] ?? '').toString());
+    final durationMinutes = parsedDurationMinutes > 0
+        ? parsedDurationMinutes
+        : _calculateDurationMinutesFromRange(start, end);
+    final duration = _formatMinutesToHoursMinutes(durationMinutes);
     final segments = <String>[
-      if (category.isNotEmpty) category,
-      if (stopType.isNotEmpty) stopType,
-      if (stopLocation.isNotEmpty) 'Lieu: $stopLocation',
-      if (_tnbStopTypeRequiresDetail(stopType) && stopDetail.isNotEmpty)
-        'Détail: $stopDetail',
+      stopType.isNotEmpty ? stopType : '-',
+      if (stopDetail.isNotEmpty) stopDetail,
+      if (stopLocation.isNotEmpty) stopLocation,
+      'De ${start.isEmpty ? '--:--' : start} a ${end.isEmpty ? '--:--' : end}',
+      duration,
     ];
-    final title = segments.isEmpty ? '-' : segments.join(' • ');
-    return start.isNotEmpty && end.isNotEmpty
-        ? '$title — $start → $end ($duration)'
-        : '$title — $duration';
+    return segments.join('\n');
+  }
+
+  int _calculateDurationMinutesFromRange(String start, String end) {
+    final startMinutes = _toMinutes(start);
+    final endMinutes = _toMinutes(end);
+    if (startMinutes == null || endMinutes == null) {
+      return 0;
+    }
+    if (endMinutes >= startMinutes) {
+      return endMinutes - startMinutes;
+    }
+    return (24 * 60 - startMinutes) + endMinutes;
+  }
+
+  int? _toMinutes(String value) {
+    final match = RegExp(r'^(\d{1,2}):(\d{1,2})$').firstMatch(value.trim());
+    if (match == null) return null;
+    final hour = int.tryParse(match.group(1)!);
+    final minute = int.tryParse(match.group(2)!);
+    if (hour == null || minute == null) return null;
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+    return hour * 60 + minute;
   }
 
   bool _isSharedDailyConveyorLocation(String? locationKey) =>
@@ -5604,56 +5591,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ],
       ),
     );
-  }
-
-  String _getLocalizedCategoryLabel(String key, AppLocalizations l10n) {
-    final map = {
-      'EXTERIEURS': l10n.catExterior,
-      'MATERIEL': l10n.catMaterial,
-      'EXPLOITATION': l10n.catExploitation,
-    };
-    return map[key] ?? key;
-  }
-
-  String _getLocalizedReasonLabel(String key, AppLocalizations l10n) {
-    final map = {
-      'ARRET CARREAU INDUSTRIEL': l10n.stopIndustrialArea,
-      'COUPURE GENERALE DU COURANT': l10n.stopPowerCut,
-      'GREVE': l10n.stopStrike,
-      'INTEMPERIES': l10n.stopWeather,
-      'STOCKS PLEINS': l10n.stopFullStocks,
-      'J. FERIES OU HEBDOMADAIRES': l10n.stopHolidays,
-      'ARRET PAR LA CENTRALE (M.ENERGIE)': l10n.stopPowerPlant,
-      'CONTROLE': l10n.stopControl,
-      'DEFAUT ELEC. (C.CRAME, RESEAU)': l10n.stopElecFault,
-      'PANNE MECANIQUE': l10n.stopMechBreakdown,
-      'PANNE ELECTRIQUE': l10n.stopElecBreakdown,
-      'INTERVENTION ATELIER PNEUMATIQUE': l10n.stopTireWorkshop,
-      'ENTRETIEN SYSTEMATIQUE': l10n.stopMaintenance,
-      'APPOINT (HUILE, GAZOL, EAU)': l10n.stopRefill,
-      'GRAISSAGE': l10n.stopGreasing,
-      'ARRET ELEC. INSTALATION FIXES': l10n.stopFixedInstallElec,
-      'MANQUE CAMIONS': l10n.stopNoTrucks,
-      'MANQUE BULL': l10n.stopNoBull,
-      'MANQUE MECANICIEN': l10n.stopNoMechanic,
-      'MANQUE D\'OUTILS DE TRAVAIL': l10n.stopNoTools,
-      'MACHINE A L\'ARRET': l10n.stopMachineStopped,
-      'PANNE ENGIN DEVANT MACHINE': l10n.stopBreakdownFront,
-      'RELEVE': l10n.stopShiftChange,
-      'EXECUTION PLATE FORME': l10n.stopPlatformExec,
-      'DEPLACEMENT': l10n.stopMove,
-      'TIR ET SAUTAGE': l10n.stopBlasting,
-      'MOUV. DE CABLE': l10n.stopCableMove,
-      'ARRET DECIDE': l10n.stopDecidedStop,
-      'MANQUE CONDUCTEUR': l10n.stopNoDriver,
-      'BRIQUET': l10n.stopBreak,
-      'PISTES (INTEMPERIES EXCLUES)': l10n.stopTracks,
-      'ARRETS MECA. INSTALATIONS FIXES': l10n.stopFixedInstallMech,
-      'TELESCOPAGE': l10n.stopTelescoping,
-      'EXCAVATION PURE': l10n.stopPureExcavation,
-      'TERASSEMENT PUR': l10n.stopPureEarthworks,
-    };
-    return map[key] ?? key;
   }
 
   Widget _buildInfoRow(String label, String value) {
@@ -6317,7 +6254,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(l10n.typeParam(arret['Arret'] ?? '-'),
+                            Text(_formatDailyStopLine(arret),
                                 style: TextStyle(
                                     color: arret['CarryOver'] == true
                                         ? Colors.orange
@@ -6325,8 +6262,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     fontWeight: arret['CarryOver'] == true
                                         ? FontWeight.bold
                                         : null)),
-                            _buildSummaryItem('Début', arret['Début'] ?? ''),
-                            _buildSummaryItem('Fin', arret['Fin'] ?? ''),
                             if (arret['CarryOver'] == true)
                               Padding(
                                 padding: const EdgeInsets.only(left: 16),
@@ -9244,11 +9179,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            Text(
-                                                'Type: ${arret['Arret'] ?? '-'}'),
-                                            Text(
-                                                'Début: ${arret['Début'] ?? '-'}'),
-                                            Text('Fin: ${arret['Fin'] ?? '-'}'),
+                                            Text(_formatDailyStopLine(arret)),
                                           ],
                                         ),
                                         leading: isSelected

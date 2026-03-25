@@ -453,20 +453,14 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                    "Catégorie: ${e.value.category.isNotEmpty ? e.value.category : '-'}"),
-                if (e.value.location.isNotEmpty)
-                  Text("Lieu: ${e.value.location}"),
-                if (_tnbStopTypeRequiresDetail(e.value.nature) &&
-                    e.value.detail.isNotEmpty)
-                  Text("Détail: ${e.value.detail}"),
+                if (e.value.detail.isNotEmpty) Text(e.value.detail),
+                if (e.value.location.isNotEmpty) Text(e.value.location),
                 Text(
                   "De ${e.value.startTime.isNotEmpty ? e.value.startTime : '--:--'} à "
                   "${e.value.endTime.isNotEmpty ? e.value.endTime : '--:--'}",
                 ),
-                Text(
-                  "Durée: ${formatMinutesToHoursMinutes(parseDurationToMinutes(e.value.duration))}",
-                ),
+                Text(formatMinutesToHoursMinutes(
+                    parseDurationToMinutes(e.value.duration))),
               ],
             ),
             trailing: IconButton(
