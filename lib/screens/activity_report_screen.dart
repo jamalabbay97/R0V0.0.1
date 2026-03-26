@@ -29,6 +29,202 @@ String posteToString(Poste? p) {
   }
 }
 
+class _StopTimeEntryPage extends StatefulWidget {
+  final String titleSuffix;
+
+  const _StopTimeEntryPage({required this.titleSuffix});
+
+  @override
+  State<_StopTimeEntryPage> createState() => _StopTimeEntryPageState();
+}
+
+class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
+  TimeOfDay _startTime = TimeOfDay.now();
+  TimeOfDay _endTime =
+      TimeOfDay.fromDateTime(DateTime.now().add(const Duration(minutes: 1)));
+
+  String _formatTime(TimeOfDay value) =>
+      '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+
+  int _toMinutes(TimeOfDay value) => (value.hour * 60) + value.minute;
+
+  Future<void> _pickStartTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _startTime,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+        child: child ?? const SizedBox(),
+      ),
+    );
+    if (picked != null) {
+      setState(() => _startTime = picked);
+    }
+  }
+
+  Future<void> _pickEndTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _endTime,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+        child: child ?? const SizedBox(),
+      ),
+    );
+    if (picked != null) {
+      setState(() => _endTime = picked);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasValidRange = _toMinutes(_endTime) > _toMinutes(_startTime);
+
+    return Material(
+      color: Colors.transparent,
+      child: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF202820), Color(0xFF1C211D)],
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black45,
+                      blurRadius: 16,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ajouter Arrêt ${widget.titleSuffix}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Saisie des heures',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 30,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text(
+                        'Heure début',
+                        style: TextStyle(color: Colors.white, fontSize: 20),
+                      ),
+                      subtitle: Text(
+                        _formatTime(_startTime),
+                        style: TextStyle(
+                          color: Colors.grey.shade400,
+                          fontSize: 16,
+                        ),
+                      ),
+                      trailing: const Icon(
+                        Icons.access_time,
+                        color: Colors.white70,
+                        size: 34,
+                      ),
+                      onTap: _pickStartTime,
+                    ),
+                    const SizedBox(height: 10),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text(
+                        'Heure fin',
+                        style: TextStyle(color: Colors.white, fontSize: 20),
+                      ),
+                      subtitle: Text(
+                        _formatTime(_endTime),
+                        style: TextStyle(
+                          color: Colors.grey.shade400,
+                          fontSize: 16,
+                        ),
+                      ),
+                      trailing: const Icon(
+                        Icons.access_time,
+                        color: Colors.white70,
+                        size: 34,
+                      ),
+                      onTap: _pickEndTime,
+                    ),
+                    const SizedBox(height: 16),
+                    if (!hasValidRange)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          "L'heure de fin doit être après l'heure de début.",
+                          style: TextStyle(color: AppColors.error),
+                        ),
+                      ),
+                    Row(
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text(
+                            'Précédent',
+                            style: TextStyle(
+                                color: AppColors.success, fontSize: 22),
+                          ),
+                        ),
+                        const Spacer(),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.success,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(150, 56),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                          ),
+                          onPressed: hasValidRange
+                              ? () {
+                                  Navigator.of(context).pop(
+                                    _StopTimeSelectionResult(
+                                      start: _startTime,
+                                      end: _endTime,
+                                    ),
+                                  );
+                                }
+                              : null,
+                          child: const Text(
+                            'Ajouter',
+                            style: TextStyle(fontSize: 28),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 String parkToString(Park? p) {
   switch (p) {
     case Park.park1:
@@ -87,6 +283,13 @@ class StopLocation {
   final String code;
   final String label;
   const StopLocation({required this.code, required this.label});
+}
+
+class _StopTimeSelectionResult {
+  final TimeOfDay start;
+  final TimeOfDay end;
+
+  const _StopTimeSelectionResult({required this.start, required this.end});
 }
 
 const List<StopCategory> _tnbStopCategories = [
@@ -887,8 +1090,6 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     String? selectedNature;
     StopLocation? selectedLocation;
     String stopDetail = '';
-    TimeOfDay? selectedStart;
-    TimeOfDay? selectedEnd;
 
     String formatTimeOfDay(TimeOfDay value) =>
         '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
@@ -902,15 +1103,10 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
           final availableTypes = selectedCategory?.types ?? const <String>[];
           final requiresLocation = _tnbStopTypeRequiresLocation(selectedNature);
           final requiresDetail = _tnbStopTypeRequiresDetail(selectedNature);
-          final hasValidTimeRange = selectedStart != null &&
-              selectedEnd != null &&
-              minutesFromTimeOfDay(selectedEnd!) >
-                  minutesFromTimeOfDay(selectedStart!);
           final canSubmit = selectedCategory != null &&
               selectedNature != null &&
               (!requiresLocation || selectedLocation != null) &&
-              (!requiresDetail || stopDetail.trim().isNotEmpty) &&
-              hasValidTimeRange;
+              (!requiresDetail || stopDetail.trim().isNotEmpty);
 
           return AlertDialog(
             title: const Text('Ajouter un arrêt'),
@@ -939,8 +1135,6 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                           selectedNature = null;
                           selectedLocation = null;
                           stopDetail = '';
-                          selectedStart = null;
-                          selectedEnd = null;
                         });
                       },
                       hint: const Text('Sélectionner la catégorie d\'arrêt'),
@@ -965,8 +1159,6 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                             selectedNature = value;
                             selectedLocation = null;
                             stopDetail = '';
-                            selectedStart = null;
-                            selectedEnd = null;
                           });
                         },
                         hint: const Text('Sélectionner le type d\'arrêt'),
@@ -992,8 +1184,6 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                         onChanged: (value) {
                           setState(() {
                             selectedLocation = value;
-                            selectedStart = null;
-                            selectedEnd = null;
                           });
                         },
                         hint: const Text('Sélectionner le lieu'),
@@ -1014,75 +1204,6 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                         },
                       ),
                     ],
-                    if (selectedNature != null &&
-                        (!requiresLocation || selectedLocation != null)) ...[
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text('Début'),
-                              subtitle: Text(selectedStart == null
-                                  ? '--:--'
-                                  : formatTimeOfDay(selectedStart!)),
-                              trailing: const Icon(Icons.access_time),
-                              onTap: () async {
-                                final picked = await showTimePicker(
-                                  context: context,
-                                  initialTime: selectedStart ?? TimeOfDay.now(),
-                                  builder: (context, child) => MediaQuery(
-                                    data: MediaQuery.of(context)
-                                        .copyWith(alwaysUse24HourFormat: true),
-                                    child: child ?? const SizedBox(),
-                                  ),
-                                );
-                                if (picked != null) {
-                                  setState(() => selectedStart = picked);
-                                }
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text('Fin'),
-                              subtitle: Text(selectedEnd == null
-                                  ? '--:--'
-                                  : formatTimeOfDay(selectedEnd!)),
-                              trailing: const Icon(Icons.access_time),
-                              onTap: () async {
-                                final picked = await showTimePicker(
-                                  context: context,
-                                  initialTime: selectedEnd ??
-                                      (selectedStart ?? TimeOfDay.now()),
-                                  builder: (context, child) => MediaQuery(
-                                    data: MediaQuery.of(context)
-                                        .copyWith(alwaysUse24HourFormat: true),
-                                    child: child ?? const SizedBox(),
-                                  ),
-                                );
-                                if (picked != null) {
-                                  setState(() => selectedEnd = picked);
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (selectedStart != null &&
-                          selectedEnd != null &&
-                          minutesFromTimeOfDay(selectedEnd!) <=
-                              minutesFromTimeOfDay(selectedStart!))
-                        const Padding(
-                          padding: EdgeInsets.only(top: 8),
-                          child: Text(
-                            "L'heure de fin doit être après l'heure de début.",
-                            style: TextStyle(color: AppColors.error),
-                          ),
-                        ),
-                    ],
                   ],
                 ),
               ),
@@ -1094,10 +1215,26 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
               ),
               ElevatedButton(
                 onPressed: canSubmit
-                    ? () {
+                    ? () async {
+                        final selectedTimeResult =
+                            await showDialog<_StopTimeSelectionResult>(
+                          context: context,
+                          useRootNavigator: true,
+                          barrierDismissible: false,
+                          barrierColor: Colors.black54,
+                          builder: (_) => _StopTimeEntryPage(
+                            titleSuffix: selectedNature ?? '',
+                          ),
+                        );
+
+                        if (selectedTimeResult == null) {
+                          return;
+                        }
+
                         final startMinutes =
-                            minutesFromTimeOfDay(selectedStart!);
-                        final endMinutes = minutesFromTimeOfDay(selectedEnd!);
+                            minutesFromTimeOfDay(selectedTimeResult.start);
+                        final endMinutes =
+                            minutesFromTimeOfDay(selectedTimeResult.end);
 
                         final durationMinutes = endMinutes - startMinutes;
                         final durationHours = durationMinutes ~/ 60;
@@ -1115,15 +1252,16 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                                 ? '${selectedLocation!.code} - ${selectedLocation!.label}'
                                 : '',
                             detail: requiresDetail ? stopDetail.trim() : '',
-                            startTime: formatTimeOfDay(selectedStart!),
-                            endTime: formatTimeOfDay(selectedEnd!),
+                            startTime:
+                                formatTimeOfDay(selectedTimeResult.start),
+                            endTime: formatTimeOfDay(selectedTimeResult.end),
                           ));
                         });
                         recalculateTimes();
-                        Navigator.pop(context);
+                        if (context.mounted) Navigator.pop(context);
                       }
                     : null,
-                child: const Text('Ajouter'),
+                child: const Text('Suivant'),
               ),
             ],
           );
