@@ -328,6 +328,7 @@ const List<StopCategory> _tnbStopCategories = [
       'MP - Manque Produit',
       'CC - Coupure De Courant',
       'AD - Arrêts Décidés',
+      'STS - Stock Saturée',
       'DS - Attente Dégagement Stérile',
       'MB - Manque Bull',
       'Aut - Autre',
@@ -346,14 +347,13 @@ const List<StopCategory> _tnbStopCategories = [
     label: "Arrêts d'Exploitation",
     types: [
       'NET - Nettoyage',
-      'Surch - Surcharge',
+      'NETG - Nettoyage Général',
+      'SURCH - Surcharge',
+      'Attente Vidange Extracteur',
+      'Attente Vidange Silo',
       'DEC - Décolmatage',
       'MO - Manque Opérateur',
     ],
-  ),
-  StopCategory(
-    label: 'STS - Stock Saturée',
-    types: ['Stock Saturée'],
   ),
 ];
 

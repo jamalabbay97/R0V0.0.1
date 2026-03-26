@@ -88,8 +88,9 @@ const List<_TnbStopCategory> _tnbStopCategories = [
       'MP - Manque Produit',
       'CC - Coupure De Courant',
       'AD - Arrêts Décidés',
-      'DS - Attente Degagement sterile',
-      'Manque bull',
+      'STS - Stock Saturée',
+      'DS - Attente Dégagement Stérile',
+      'MB - Manque Bull',
       'Aut - Autre',
     ],
   ),
@@ -106,16 +107,13 @@ const List<_TnbStopCategory> _tnbStopCategories = [
     label: "Arrêts d'Exploitation",
     types: [
       'NET - Nettoyage',
-      'Surch - Surcharge',
+      'NETG - Nettoyage Général',
+      'SURCH - Surcharge',
       'Attente Vidange Extracteur',
       'Attente Vidange Silo',
       'DEC - Décolmatage',
-      'Manque Operateur',
+      'MO - Manque Opérateur',
     ],
-  ),
-  _TnbStopCategory(
-    label: 'STS - Stock Saturée',
-    types: ['Stock Saturée'],
   ),
 ];
 
@@ -138,7 +136,8 @@ bool _tnbStopTypeRequiresLocation(String? type) {
   }
 
   final typeCode = _extractTnbStopTypeCode(rawType);
-  if (const {'AE', 'AM', 'AI', 'AESYS', 'SURCH', 'DEC'}.contains(typeCode)) {
+  if (const {'AE', 'AM', 'AI', 'AESYS', 'SURCH', 'DEC', 'NET'}
+      .contains(typeCode)) {
     return true;
   }
 
