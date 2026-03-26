@@ -74,6 +74,13 @@ class _TnbStopLocation {
   const _TnbStopLocation({required this.code, required this.label});
 }
 
+class _StopTimeSelectionResult {
+  final TimeOfDay start;
+  final TimeOfDay end;
+
+  const _StopTimeSelectionResult({required this.start, required this.end});
+}
+
 const List<_TnbStopCategory> _tnbStopCategories = [
   _TnbStopCategory(
     label: 'Arrêts Extérieures',
@@ -1335,8 +1342,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     String? selectedType;
     _TnbStopLocation? selectedLocation;
     String stopDetail = '';
-    TimeOfDay? selectedStart;
-    TimeOfDay? selectedEnd;
 
     String formatTimeOfDay(TimeOfDay value) =>
         '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
@@ -1351,17 +1356,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
           final availableTypes = selectedCategory?.types ?? const <String>[];
           final requiresLocation = _tnbStopTypeRequiresLocation(selectedType);
           final requiresDetail = _tnbStopTypeRequiresDetail(selectedType);
-          final hasInvalidTimeRange = selectedStart != null &&
-              selectedEnd != null &&
-              minutesFromTimeOfDay(selectedEnd!) <=
-                  minutesFromTimeOfDay(selectedStart!);
           final canSubmit = selectedCategory != null &&
               selectedType != null &&
               (!requiresLocation || selectedLocation != null) &&
-              (!requiresDetail || stopDetail.trim().isNotEmpty) &&
-              selectedStart != null &&
-              selectedEnd != null &&
-              !hasInvalidTimeRange;
+              (!requiresDetail || stopDetail.trim().isNotEmpty);
 
           return AlertDialog(
             title: Text(l10n.addStopTitle),
@@ -1393,8 +1391,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           selectedType = null;
                           selectedLocation = null;
                           stopDetail = '';
-                          selectedStart = null;
-                          selectedEnd = null;
                         });
                       },
                       hint: const Text('Sélectionner la catégorie d\'arrêt'),
@@ -1421,8 +1417,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             selectedType = value;
                             selectedLocation = null;
                             stopDetail = '';
-                            selectedStart = null;
-                            selectedEnd = null;
                           });
                         },
                         hint: const Text('Sélectionner le type d\'arrêt'),
@@ -1449,8 +1443,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         onChanged: (value) {
                           setState(() {
                             selectedLocation = value;
-                            selectedStart = null;
-                            selectedEnd = null;
                           });
                         },
                         hint: const Text('Sélectionner le lieu'),
@@ -1471,72 +1463,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         },
                       ),
                     ],
-                    if (selectedType != null &&
-                        (!requiresLocation || selectedLocation != null)) ...[
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text('Début'),
-                              subtitle: Text(selectedStart == null
-                                  ? '--:--'
-                                  : formatTimeOfDay(selectedStart!)),
-                              trailing: const Icon(Icons.access_time),
-                              onTap: () async {
-                                final picked = await showTimePicker(
-                                  context: context,
-                                  initialTime: selectedStart ?? TimeOfDay.now(),
-                                  builder: (context, child) => MediaQuery(
-                                    data: MediaQuery.of(context)
-                                        .copyWith(alwaysUse24HourFormat: true),
-                                    child: child ?? const SizedBox(),
-                                  ),
-                                );
-                                if (picked != null) {
-                                  setState(() => selectedStart = picked);
-                                }
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text('Fin'),
-                              subtitle: Text(selectedEnd == null
-                                  ? '--:--'
-                                  : formatTimeOfDay(selectedEnd!)),
-                              trailing: const Icon(Icons.access_time),
-                              onTap: () async {
-                                final picked = await showTimePicker(
-                                  context: context,
-                                  initialTime: selectedEnd ??
-                                      (selectedStart ?? TimeOfDay.now()),
-                                  builder: (context, child) => MediaQuery(
-                                    data: MediaQuery.of(context)
-                                        .copyWith(alwaysUse24HourFormat: true),
-                                    child: child ?? const SizedBox(),
-                                  ),
-                                );
-                                if (picked != null) {
-                                  setState(() => selectedEnd = picked);
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (hasInvalidTimeRange)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 8),
-                          child: Text(
-                            "L'heure de fin doit être après l'heure de début.",
-                            style: TextStyle(color: AppColors.error),
-                          ),
-                        ),
-                    ],
                   ],
                 ),
               ),
@@ -1548,10 +1474,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
               ElevatedButton(
                 onPressed: canSubmit
-                    ? () {
+                    ? () async {
+                        final selectedTimeResult =
+                            await _showStopTimeEntryDialog(
+                          titleSuffix: selectedType ?? '',
+                        );
+                        if (selectedTimeResult == null) {
+                          return;
+                        }
+
                         final startMinutes =
-                            minutesFromTimeOfDay(selectedStart!);
-                        final endMinutes = minutesFromTimeOfDay(selectedEnd!);
+                            minutesFromTimeOfDay(selectedTimeResult.start);
+                        final endMinutes =
+                            minutesFromTimeOfDay(selectedTimeResult.end);
+
                         final durationMinutes = endMinutes - startMinutes;
                         final durationHours = durationMinutes ~/ 60;
                         final remainingMinutes = durationMinutes % 60;
@@ -1577,10 +1513,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           'detail': requiresDetail ? stopDetail.trim() : '',
                           'Lieu': formattedLocation,
                           'Détail': requiresDetail ? stopDetail.trim() : '',
-                          'startTime': formatTimeOfDay(selectedStart!),
-                          'endTime': formatTimeOfDay(selectedEnd!),
-                          'Début': formatTimeOfDay(selectedStart!),
-                          'Fin': formatTimeOfDay(selectedEnd!),
+                          'startTime':
+                              formatTimeOfDay(selectedTimeResult.start),
+                          'endTime': formatTimeOfDay(selectedTimeResult.end),
+                          'Début': formatTimeOfDay(selectedTimeResult.start),
+                          'Fin': formatTimeOfDay(selectedTimeResult.end),
                         });
 
                         final recalculatedData =
@@ -1595,13 +1532,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           additionalData: recalculatedData,
                         );
 
-                        Navigator.pop(context);
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
                         _saveReportUpdate(
                             updatedReport, scaffoldMessenger, l10n);
                         setDialogState(() {});
                       }
                     : null,
-                child: Text(l10n.add),
+                child: Text(l10n.next),
               ),
             ],
           );
@@ -1707,17 +1646,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
           final availableTypes = selectedCategory?.types ?? const <String>[];
           final requiresLocation = _tnbStopTypeRequiresLocation(selectedType);
           final requiresDetail = _tnbStopTypeRequiresDetail(selectedType);
-          final hasInvalidTimeRange = selectedStart != null &&
-              selectedEnd != null &&
-              minutesFromTimeOfDay(selectedEnd!) <=
-                  minutesFromTimeOfDay(selectedStart!);
           final canSubmit = selectedCategory != null &&
               selectedType != null &&
               (!requiresLocation || selectedLocation != null) &&
-              (!requiresDetail || stopDetail.trim().isNotEmpty) &&
-              selectedStart != null &&
-              selectedEnd != null &&
-              !hasInvalidTimeRange;
+              (!requiresDetail || stopDetail.trim().isNotEmpty);
 
           return AlertDialog(
             title: Text(l10n.editStopTitle),
@@ -1749,8 +1681,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           selectedType = null;
                           selectedLocation = null;
                           stopDetail = '';
-                          selectedStart = null;
-                          selectedEnd = null;
                         });
                       },
                       hint: const Text('Sélectionner la catégorie d\'arrêt'),
@@ -1777,8 +1707,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             selectedType = value;
                             selectedLocation = null;
                             stopDetail = '';
-                            selectedStart = null;
-                            selectedEnd = null;
                           });
                         },
                         hint: const Text('Sélectionner le type d\'arrêt'),
@@ -1805,8 +1733,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         onChanged: (value) {
                           setState(() {
                             selectedLocation = value;
-                            selectedStart = null;
-                            selectedEnd = null;
                           });
                         },
                         hint: const Text('Sélectionner le lieu'),
@@ -1827,72 +1753,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         },
                       ),
                     ],
-                    if (selectedType != null &&
-                        (!requiresLocation || selectedLocation != null)) ...[
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text('Début'),
-                              subtitle: Text(selectedStart == null
-                                  ? '--:--'
-                                  : formatTimeOfDay(selectedStart!)),
-                              trailing: const Icon(Icons.access_time),
-                              onTap: () async {
-                                final picked = await showTimePicker(
-                                  context: context,
-                                  initialTime: selectedStart ?? TimeOfDay.now(),
-                                  builder: (context, child) => MediaQuery(
-                                    data: MediaQuery.of(context)
-                                        .copyWith(alwaysUse24HourFormat: true),
-                                    child: child ?? const SizedBox(),
-                                  ),
-                                );
-                                if (picked != null) {
-                                  setState(() => selectedStart = picked);
-                                }
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text('Fin'),
-                              subtitle: Text(selectedEnd == null
-                                  ? '--:--'
-                                  : formatTimeOfDay(selectedEnd!)),
-                              trailing: const Icon(Icons.access_time),
-                              onTap: () async {
-                                final picked = await showTimePicker(
-                                  context: context,
-                                  initialTime: selectedEnd ??
-                                      (selectedStart ?? TimeOfDay.now()),
-                                  builder: (context, child) => MediaQuery(
-                                    data: MediaQuery.of(context)
-                                        .copyWith(alwaysUse24HourFormat: true),
-                                    child: child ?? const SizedBox(),
-                                  ),
-                                );
-                                if (picked != null) {
-                                  setState(() => selectedEnd = picked);
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (hasInvalidTimeRange)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 8),
-                          child: Text(
-                            "L'heure de fin doit être après l'heure de début.",
-                            style: TextStyle(color: AppColors.error),
-                          ),
-                        ),
-                    ],
                   ],
                 ),
               ),
@@ -1904,7 +1764,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
               ElevatedButton(
                 onPressed: canSubmit
-                    ? () {
+                    ? () async {
+                        final selectedTimeResult =
+                            await _showStopTimeEntryDialog(
+                          titleSuffix: selectedType ?? '',
+                          initialStart: selectedStart,
+                          initialEnd: selectedEnd,
+                        );
+                        if (selectedTimeResult == null) {
+                          return;
+                        }
+
+                        selectedStart = selectedTimeResult.start;
+                        selectedEnd = selectedTimeResult.end;
+
                         final startMinutes =
                             minutesFromTimeOfDay(selectedStart!);
                         final endMinutes = minutesFromTimeOfDay(selectedEnd!);
@@ -1952,7 +1825,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           additionalData: recalculatedData,
                         );
 
-                        Navigator.pop(context);
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
                         _saveReportUpdate(
                             updatedReport, scaffoldMessenger, l10n);
                         setDialogState(() {});
@@ -5345,6 +5220,96 @@ class _ReportsScreenState extends State<ReportsScreen> {
   String _formatTimeOfDay(TimeOfDay value) =>
       '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
 
+  Future<_StopTimeSelectionResult?> _showStopTimeEntryDialog({
+    required String titleSuffix,
+    TimeOfDay? initialStart,
+    TimeOfDay? initialEnd,
+  }) async {
+    TimeOfDay start = initialStart ?? TimeOfDay.now();
+    TimeOfDay end = initialEnd ?? TimeOfDay.now();
+
+    return showDialog<_StopTimeSelectionResult>(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: false,
+      barrierColor: Colors.black54,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Ajouter Arrêt $titleSuffix'),
+        content: SizedBox(
+          width: 400,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('Heure début'),
+                subtitle: Text(_formatTimeOfDay(start)),
+                trailing: const Icon(Icons.access_time),
+              ),
+              SizedBox(
+                height: 180,
+                child: TimePickerSpinner(
+                  is24HourMode: true,
+                  isShowSeconds: false,
+                  minutesInterval: 1,
+                  time: DateTime(2000, 1, 1, start.hour, start.minute),
+                  onTimeChange: (dateTime) {
+                    start =
+                        TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                title: const Text('Heure fin'),
+                subtitle: Text(_formatTimeOfDay(end)),
+                trailing: const Icon(Icons.access_time),
+              ),
+              SizedBox(
+                height: 180,
+                child: TimePickerSpinner(
+                  is24HourMode: true,
+                  isShowSeconds: false,
+                  minutesInterval: 1,
+                  time: DateTime(2000, 1, 1, end.hour, end.minute),
+                  onTimeChange: (dateTime) {
+                    end =
+                        TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final startMinutes = (start.hour * 60) + start.minute;
+              final endMinutes = (end.hour * 60) + end.minute;
+              if (endMinutes <= startMinutes) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                        "L'heure de fin doit être après l'heure de début."),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
+              Navigator.of(dialogContext).pop(
+                _StopTimeSelectionResult(start: start, end: end),
+              );
+            },
+            child: const Text('Suivant'),
+          ),
+        ],
+      ),
+    );
+  }
+
   int _moduleNumberFromPrefix(String modulePrefix) =>
       modulePrefix == 'module1' ? 1 : 2;
 
@@ -7361,13 +7326,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ScaffoldMessengerState scaffoldMessenger,
       AppLocalizations l10n,
       Function(int) onTotalDowntimeChanged) async {
-    int step = 0;
     _TnbStopCategory? selectedCategory;
     String? selectedType;
     String? selectedLocation;
     String stopDetail = '';
-    String startTime = '';
-    String endTime = '';
     bool applyToBothModules = true;
 
     final moduleNumber = _moduleNumberFromPrefix(modulePrefix);
@@ -7377,69 +7339,69 @@ class _ReportsScreenState extends State<ReportsScreen> {
     await showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setLocalState) => AlertDialog(
-          title: Text(l10n.addStopTitle),
-          content: SizedBox(
-            width: 360,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  step == 0
-                      ? "Sélection de la catégorie d'arrêt"
-                      : step == 1
-                          ? "Sélection du type d'arrêt"
-                          : step == 2
-                              ? "Sélection du lieu d'arrêt"
-                              : 'Saisie des heures',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                if (step == 0)
-                  DropdownButtonFormField<_TnbStopCategory>(
-                    initialValue: selectedCategory,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: "Catégorie d'arrêt",
-                      border: OutlineInputBorder(),
+        builder: (context, setLocalState) {
+          final availableTypes = selectedCategory?.types ?? const <String>[];
+          final requiresDetail = _tnbStopTypeRequiresDetail(selectedType);
+          final canSubmit = selectedCategory != null &&
+              selectedType != null &&
+              selectedLocation != null &&
+              (!requiresDetail || stopDetail.trim().isNotEmpty);
+
+          return AlertDialog(
+            title: Text(l10n.addStopTitle),
+            content: SizedBox(
+              width: 360,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DropdownButtonFormField<_TnbStopCategory>(
+                      initialValue: selectedCategory,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: "Catégorie d'arrêt",
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _tnbStopCategories
+                          .map((category) => DropdownMenuItem(
+                                value: category,
+                                child: Text(category.label),
+                              ))
+                          .toList(),
+                      onChanged: (value) => setLocalState(() {
+                        selectedCategory = value;
+                        selectedType = null;
+                        selectedLocation = null;
+                        stopDetail = '';
+                        applyToBothModules = true;
+                      }),
                     ),
-                    items: _tnbStopCategories
-                        .map((category) => DropdownMenuItem(
-                              value: category,
-                              child: Text(category.label),
-                            ))
-                        .toList(),
-                    onChanged: (value) => setLocalState(() {
-                      selectedCategory = value;
-                      selectedType = null;
-                      selectedLocation = null;
-                      stopDetail = '';
-                    }),
-                  )
-                else if (step == 1)
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedType,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: "Type d'arrêt",
-                      border: OutlineInputBorder(),
-                    ),
-                    items: (selectedCategory?.types ?? const <String>[])
-                        .map((entry) => DropdownMenuItem(
-                              value: entry,
-                              child: Text(entry),
-                            ))
-                        .toList(),
-                    onChanged: (value) => setLocalState(() {
-                      selectedType = value;
-                      selectedLocation = null;
-                      stopDetail = '';
-                    }),
-                  )
-                else if (step == 2)
-                  Column(
-                    children: [
+                    if (selectedCategory != null) ...[
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedType,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: "Type d'arrêt",
+                          border: OutlineInputBorder(),
+                        ),
+                        items: availableTypes
+                            .map((entry) => DropdownMenuItem(
+                                  value: entry,
+                                  child: Text(entry),
+                                ))
+                            .toList(),
+                        onChanged: (value) => setLocalState(() {
+                          selectedType = value;
+                          selectedLocation = null;
+                          stopDetail = '';
+                          applyToBothModules = true;
+                        }),
+                      ),
+                    ],
+                    if (selectedType != null) ...[
+                      const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
                         initialValue: selectedLocation,
                         isExpanded: true,
@@ -7459,177 +7421,135 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               _isSharedDailyConveyorLocation(value);
                         }),
                       ),
-                      if (_isSharedDailyConveyorLocation(selectedLocation))
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('Appliquer aux deux modules'),
-                          subtitle: const Text(
-                              'Utiliser pour les pannes convoyeurs partagés (G0/G2).'),
-                          value: applyToBothModules,
-                          onChanged: (value) =>
-                              setLocalState(() => applyToBothModules = value),
-                        ),
                     ],
-                  )
-                else
-                  Column(
-                    children: [
-                      if (_tnbStopTypeRequiresDetail(selectedType)) ...[
-                        TextFormField(
-                          initialValue: stopDetail,
-                          decoration: const InputDecoration(
-                            labelText: "Détail de l'arrêt",
-                            border: OutlineInputBorder(),
-                          ),
-                          onChanged: (value) =>
-                              setLocalState(() => stopDetail = value),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      ListTile(
-                        title: Text(l10n.startTimeLabel),
-                        subtitle: Text(startTime.isEmpty
-                            ? l10n.selectTimeTitle
-                            : startTime),
-                        trailing: const Icon(Icons.access_time),
-                        onTap: () async {
-                          final picked = await showTimePicker(
-                            context: context,
-                            initialTime: TimeOfDay.now(),
-                            builder: (context, child) => MediaQuery(
-                              data: MediaQuery.of(context)
-                                  .copyWith(alwaysUse24HourFormat: true),
-                              child: child ?? const SizedBox(),
-                            ),
-                          );
-                          if (picked != null) {
-                            setLocalState(
-                                () => startTime = _formatTimeOfDay(picked));
-                          }
-                        },
+                    if (_isSharedDailyConveyorLocation(selectedLocation))
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Appliquer aux deux modules'),
+                        subtitle: const Text(
+                            'Utiliser pour les pannes convoyeurs partagés (G0/G2).'),
+                        value: applyToBothModules,
+                        onChanged: (value) =>
+                            setLocalState(() => applyToBothModules = value),
                       ),
-                      ListTile(
-                        title: Text(l10n.endTimeLabel),
-                        subtitle: Text(
-                            endTime.isEmpty ? l10n.selectTimeTitle : endTime),
-                        trailing: const Icon(Icons.access_time),
-                        onTap: () async {
-                          final picked = await showTimePicker(
-                            context: context,
-                            initialTime: TimeOfDay.now(),
-                            builder: (context, child) => MediaQuery(
-                              data: MediaQuery.of(context)
-                                  .copyWith(alwaysUse24HourFormat: true),
-                              child: child ?? const SizedBox(),
-                            ),
-                          );
-                          if (picked != null) {
-                            setLocalState(
-                                () => endTime = _formatTimeOfDay(picked));
-                          }
-                        },
+                    if (requiresDetail) ...[
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        initialValue: stopDetail,
+                        decoration: const InputDecoration(
+                          labelText: "Détail de l'arrêt",
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) =>
+                            setLocalState(() => stopDetail = value),
                       ),
                     ],
-                  ),
-              ],
+                  ],
+                ),
+              ),
             ),
-          ),
-          actions: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                if (step > 0)
-                  TextButton(
-                    onPressed: () => setLocalState(() => step--),
-                    child: Text(l10n.previous),
-                  )
-                else
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(l10n.cancel),
-                  ),
-                if ((step == 0 && selectedCategory != null) ||
-                    (step == 1 && selectedType != null) ||
-                    (step == 2 && selectedLocation != null))
-                  ElevatedButton(
-                    onPressed: () => setLocalState(() => step++),
-                    child: Text(l10n.next),
-                  ),
-                if (step == 3)
-                  ElevatedButton(
-                    onPressed: () {
-                      final validation = _validateDailyStopFields(
-                        category: selectedCategory,
-                        type: selectedType,
-                        location: selectedLocation,
-                        detail: stopDetail,
-                        startTime: startTime,
-                        endTime: endTime,
-                      );
-                      if (validation != null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text(validation),
-                              backgroundColor: AppColors.error),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(l10n.cancel),
+              ),
+              ElevatedButton(
+                onPressed: canSubmit
+                    ? () async {
+                        final selectedTimeResult =
+                            await _showStopTimeEntryDialog(
+                          titleSuffix: selectedType ?? '',
                         );
-                        return;
+                        if (selectedTimeResult == null) return;
+
+                        final start = DateTime(
+                            2000,
+                            1,
+                            1,
+                            selectedTimeResult.start.hour,
+                            selectedTimeResult.start.minute);
+                        final end = DateTime(
+                            2000,
+                            1,
+                            1,
+                            selectedTimeResult.end.hour,
+                            selectedTimeResult.end.minute);
+
+                        final validation = _validateDailyStopFields(
+                          category: selectedCategory,
+                          type: selectedType,
+                          location: selectedLocation,
+                          detail: stopDetail,
+                          startTime: _formatTimeOfDay(selectedTimeResult.start),
+                          endTime: _formatTimeOfDay(selectedTimeResult.end),
+                        );
+                        if (validation != null) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text(validation),
+                                  backgroundColor: AppColors.error),
+                            );
+                          }
+                          return;
+                        }
+
+                        final durationMinutes = end.difference(start).inMinutes;
+                        final durationText =
+                            '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
+                        final locationLabel =
+                            '$selectedLocation - ${locations[selectedLocation] ?? ''}';
+
+                        setState(() {
+                          final shouldMirror = applyToBothModules &&
+                              _isSharedDailyConveyorLocation(selectedLocation);
+                          final sharedMirrorId =
+                              shouldMirror ? const Uuid().v4() : '';
+                          final stopEntry = {
+                            'id': DateTime.now()
+                                .millisecondsSinceEpoch
+                                .toString(),
+                            'category': selectedCategory!.label,
+                            'duration': durationText,
+                            'nature': selectedType!,
+                            'location': locationLabel,
+                            'detail': stopDetail.trim(),
+                            'stopType': selectedType,
+                            'stopLocation': locationLabel,
+                            'startTime':
+                                _formatTimeOfDay(selectedTimeResult.start),
+                            'endTime': _formatTimeOfDay(selectedTimeResult.end),
+                            'Catégorie': selectedCategory!.label,
+                          };
+                          if (sharedMirrorId.isNotEmpty) {
+                            stopEntry['sharedMirrorId'] = sharedMirrorId;
+                            stopEntry['sharedSourceModule'] = modulePrefix;
+                          }
+                          stops.add(stopEntry);
+
+                          if (sharedMirrorId.isNotEmpty) {
+                            _upsertMirroredDailyStop(
+                              data,
+                              modulePrefix,
+                              stopEntry,
+                              sharedMirrorId,
+                            );
+                          }
+
+                          _updateDailyTotalsForModule(
+                              data, modulePrefix, stops);
+                          setDialogState(() {});
+                          onTotalDowntimeChanged(
+                              data['${modulePrefix}TotalDowntime'] ?? 0);
+                        });
+                        if (context.mounted) Navigator.pop(context);
                       }
-
-                      final start = _parseDailyTime(startTime)!;
-                      final end = _parseDailyTime(endTime)!;
-                      final durationMinutes = end.difference(start).inMinutes;
-                      final durationText =
-                          '${durationMinutes ~/ 60}h${(durationMinutes % 60).toString().padLeft(2, '0')}';
-                      final locationLabel =
-                          '$selectedLocation - ${locations[selectedLocation] ?? ''}';
-
-                      setState(() {
-                        final stopEntry = {
-                          'id':
-                              DateTime.now().millisecondsSinceEpoch.toString(),
-                          'category': selectedCategory!.label,
-                          'duration': durationText,
-                          'nature': selectedType!,
-                          'location': locationLabel,
-                          'detail': stopDetail.trim(),
-                          'stopType': selectedType,
-                          'stopLocation': locationLabel,
-                          'startTime': startTime,
-                          'endTime': endTime,
-                          'Catégorie': selectedCategory!.label,
-                        };
-                        final shouldMirror = applyToBothModules &&
-                            _isSharedDailyConveyorLocation(selectedLocation);
-                        final sharedMirrorId =
-                            shouldMirror ? const Uuid().v4() : '';
-                        if (sharedMirrorId.isNotEmpty) {
-                          stopEntry['sharedMirrorId'] = sharedMirrorId;
-                          stopEntry['sharedSourceModule'] = modulePrefix;
-                        }
-                        stops.add(stopEntry);
-
-                        if (sharedMirrorId.isNotEmpty) {
-                          _upsertMirroredDailyStop(
-                            data,
-                            modulePrefix,
-                            stopEntry,
-                            sharedMirrorId,
-                          );
-                        }
-
-                        _updateDailyTotalsForModule(data, modulePrefix, stops);
-                        setDialogState(() {});
-                        onTotalDowntimeChanged(
-                            data['${modulePrefix}TotalDowntime'] ?? 0);
-                      });
-                      Navigator.pop(context);
-                    },
-                    child: Text(l10n.addButton),
-                  ),
-              ],
-            ),
-          ],
-        ),
+                    : null,
+                child: Text(l10n.next),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -7649,7 +7569,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final stop = stops[index] is Map
         ? Map<String, dynamic>.from(stops[index])
         : <String, dynamic>{};
-    int step = 0;
 
     _TnbStopCategory? selectedCategory = _findDailyStopCategory(stop);
     String? selectedType =
@@ -7678,69 +7597,67 @@ class _ReportsScreenState extends State<ReportsScreen> {
     await showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setLocalState) => AlertDialog(
-          title: Text(l10n.editStopTitle),
-          content: SizedBox(
-            width: 360,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  step == 0
-                      ? "Sélection de la catégorie d'arrêt"
-                      : step == 1
-                          ? "Sélection du type d'arrêt"
-                          : step == 2
-                              ? "Sélection du lieu d'arrêt"
-                              : 'Saisie des heures',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                if (step == 0)
-                  DropdownButtonFormField<_TnbStopCategory>(
-                    initialValue: selectedCategory,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: "Catégorie d'arrêt",
-                      border: OutlineInputBorder(),
+        builder: (context, setLocalState) {
+          final availableTypes = selectedCategory?.types ?? const <String>[];
+          final requiresDetail = _tnbStopTypeRequiresDetail(selectedType);
+          final canSubmit = selectedCategory != null &&
+              selectedType != null &&
+              selectedLocation != null &&
+              (!requiresDetail || stopDetail.trim().isNotEmpty);
+
+          return AlertDialog(
+            title: Text(l10n.editStopTitle),
+            content: SizedBox(
+              width: 360,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DropdownButtonFormField<_TnbStopCategory>(
+                      initialValue: selectedCategory,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: "Catégorie d'arrêt",
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _tnbStopCategories
+                          .map((category) => DropdownMenuItem(
+                                value: category,
+                                child: Text(category.label),
+                              ))
+                          .toList(),
+                      onChanged: (value) => setLocalState(() {
+                        selectedCategory = value;
+                        selectedType = null;
+                        selectedLocation = null;
+                        stopDetail = '';
+                      }),
                     ),
-                    items: _tnbStopCategories
-                        .map((category) => DropdownMenuItem(
-                              value: category,
-                              child: Text(category.label),
-                            ))
-                        .toList(),
-                    onChanged: (value) => setLocalState(() {
-                      selectedCategory = value;
-                      selectedType = null;
-                      selectedLocation = null;
-                      stopDetail = '';
-                    }),
-                  )
-                else if (step == 1)
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedType,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: "Type d'arrêt",
-                      border: OutlineInputBorder(),
-                    ),
-                    items: (selectedCategory?.types ?? const <String>[])
-                        .map((entry) => DropdownMenuItem(
-                              value: entry,
-                              child: Text(entry),
-                            ))
-                        .toList(),
-                    onChanged: (value) => setLocalState(() {
-                      selectedType = value;
-                      selectedLocation = null;
-                      stopDetail = '';
-                    }),
-                  )
-                else if (step == 2)
-                  Column(
-                    children: [
+                    if (selectedCategory != null) ...[
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedType,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: "Type d'arrêt",
+                          border: OutlineInputBorder(),
+                        ),
+                        items: availableTypes
+                            .map((entry) => DropdownMenuItem(
+                                  value: entry,
+                                  child: Text(entry),
+                                ))
+                            .toList(),
+                        onChanged: (value) => setLocalState(() {
+                          selectedType = value;
+                          selectedLocation = null;
+                          stopDetail = '';
+                        }),
+                      ),
+                    ],
+                    if (selectedType != null) ...[
+                      const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
                         initialValue: selectedLocation,
                         isExpanded: true,
@@ -7760,191 +7677,141 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               _isSharedDailyConveyorLocation(value);
                         }),
                       ),
-                      if (_isSharedDailyConveyorLocation(selectedLocation))
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('Appliquer aux deux modules'),
-                          subtitle: const Text(
-                              'Mettre à jour aussi le module miroir lié.'),
-                          value: applyToBothModules,
-                          onChanged: (value) =>
-                              setLocalState(() => applyToBothModules = value),
-                        ),
                     ],
-                  )
-                else
-                  Column(
-                    children: [
-                      if (_tnbStopTypeRequiresDetail(selectedType)) ...[
-                        TextFormField(
-                          initialValue: stopDetail,
-                          decoration: const InputDecoration(
-                            labelText: "Détail de l'arrêt",
-                            border: OutlineInputBorder(),
-                          ),
-                          onChanged: (value) =>
-                              setLocalState(() => stopDetail = value),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      ListTile(
-                        title: Text(l10n.startTimeLabel),
-                        subtitle: Text(startTime.isEmpty
-                            ? l10n.selectTimeTitle
-                            : startTime),
-                        trailing: const Icon(Icons.access_time),
-                        onTap: () async {
-                          final picked = await showTimePicker(
-                            context: context,
-                            initialTime: _parseDailyTime(startTime) != null
-                                ? TimeOfDay.fromDateTime(
-                                    _parseDailyTime(startTime)!)
-                                : TimeOfDay.now(),
-                            builder: (context, child) => MediaQuery(
-                              data: MediaQuery.of(context)
-                                  .copyWith(alwaysUse24HourFormat: true),
-                              child: child ?? const SizedBox(),
-                            ),
-                          );
-                          if (picked != null) {
-                            setLocalState(
-                                () => startTime = _formatTimeOfDay(picked));
-                          }
-                        },
+                    if (_isSharedDailyConveyorLocation(selectedLocation))
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Appliquer aux deux modules'),
+                        subtitle: const Text(
+                            'Mettre à jour aussi le module miroir lié.'),
+                        value: applyToBothModules,
+                        onChanged: (value) =>
+                            setLocalState(() => applyToBothModules = value),
                       ),
-                      ListTile(
-                        title: Text(l10n.endTimeLabel),
-                        subtitle: Text(
-                            endTime.isEmpty ? l10n.selectTimeTitle : endTime),
-                        trailing: const Icon(Icons.access_time),
-                        onTap: () async {
-                          final picked = await showTimePicker(
-                            context: context,
-                            initialTime: _parseDailyTime(endTime) != null
-                                ? TimeOfDay.fromDateTime(
-                                    _parseDailyTime(endTime)!)
-                                : TimeOfDay.now(),
-                            builder: (context, child) => MediaQuery(
-                              data: MediaQuery.of(context)
-                                  .copyWith(alwaysUse24HourFormat: true),
-                              child: child ?? const SizedBox(),
-                            ),
-                          );
-                          if (picked != null) {
-                            setLocalState(
-                                () => endTime = _formatTimeOfDay(picked));
-                          }
-                        },
+                    if (requiresDetail) ...[
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        initialValue: stopDetail,
+                        decoration: const InputDecoration(
+                          labelText: "Détail de l'arrêt",
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) =>
+                            setLocalState(() => stopDetail = value),
                       ),
                     ],
-                  ),
-              ],
+                  ],
+                ),
+              ),
             ),
-          ),
-          actions: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                if (step > 0)
-                  TextButton(
-                    onPressed: () => setLocalState(() => step--),
-                    child: Text(l10n.previous),
-                  )
-                else
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(l10n.cancel),
-                  ),
-                if ((step == 0 && selectedCategory != null) ||
-                    (step == 1 && selectedType != null) ||
-                    (step == 2 && selectedLocation != null))
-                  ElevatedButton(
-                    onPressed: () => setLocalState(() => step++),
-                    child: Text(l10n.next),
-                  ),
-                if (step == 3)
-                  ElevatedButton(
-                    onPressed: () {
-                      final validation = _validateDailyStopFields(
-                        category: selectedCategory,
-                        type: selectedType,
-                        location: selectedLocation,
-                        detail: stopDetail,
-                        startTime: startTime,
-                        endTime: endTime,
-                      );
-                      if (validation != null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text(validation),
-                              backgroundColor: AppColors.error),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(l10n.cancel),
+              ),
+              ElevatedButton(
+                onPressed: canSubmit
+                    ? () async {
+                        final selectedTimeResult =
+                            await _showStopTimeEntryDialog(
+                          titleSuffix: selectedType ?? '',
+                          initialStart: _parseDailyTime(startTime) != null
+                              ? TimeOfDay.fromDateTime(
+                                  _parseDailyTime(startTime)!)
+                              : null,
+                          initialEnd: _parseDailyTime(endTime) != null
+                              ? TimeOfDay.fromDateTime(
+                                  _parseDailyTime(endTime)!)
+                              : null,
                         );
-                        return;
+                        if (selectedTimeResult == null) return;
+
+                        startTime = _formatTimeOfDay(selectedTimeResult.start);
+                        endTime = _formatTimeOfDay(selectedTimeResult.end);
+                        final validation = _validateDailyStopFields(
+                          category: selectedCategory,
+                          type: selectedType,
+                          location: selectedLocation,
+                          detail: stopDetail,
+                          startTime: startTime,
+                          endTime: endTime,
+                        );
+                        if (validation != null) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text(validation),
+                                  backgroundColor: AppColors.error),
+                            );
+                          }
+                          return;
+                        }
+                        final start = _parseDailyTime(startTime)!;
+                        final end = _parseDailyTime(endTime)!;
+                        final durationMinutes = end.difference(start).inMinutes;
+                        final durationText =
+                            '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
+                        final locationLabel =
+                            '$selectedLocation - ${locations[selectedLocation] ?? ''}';
+
+                        setState(() {
+                          final shouldMirror = applyToBothModules &&
+                              _isSharedDailyConveyorLocation(selectedLocation);
+                          final sharedMirrorId = shouldMirror
+                              ? (existingSharedMirrorId.isNotEmpty
+                                  ? existingSharedMirrorId
+                                  : const Uuid().v4())
+                              : '';
+                          final updatedStop = {
+                            'id': stop['id'] ??
+                                DateTime.now()
+                                    .millisecondsSinceEpoch
+                                    .toString(),
+                            'category': selectedCategory!.label,
+                            'duration': durationText,
+                            'nature': selectedType!,
+                            'location': locationLabel,
+                            'detail': stopDetail.trim(),
+                            'stopType': selectedType,
+                            'stopLocation': locationLabel,
+                            'startTime': startTime,
+                            'endTime': endTime,
+                            'Catégorie': selectedCategory!.label,
+                          };
+                          if (sharedMirrorId.isNotEmpty) {
+                            updatedStop['sharedMirrorId'] = sharedMirrorId;
+                            updatedStop['sharedSourceModule'] = modulePrefix;
+                          }
+                          stops[index] = updatedStop;
+
+                          if (sharedMirrorId.isNotEmpty) {
+                            _upsertMirroredDailyStop(
+                              data,
+                              modulePrefix,
+                              updatedStop,
+                              sharedMirrorId,
+                            );
+                          } else if (existingSharedMirrorId.isNotEmpty) {
+                            _deleteMirroredDailyStopIfLinked(
+                              data,
+                              modulePrefix,
+                              {'sharedMirrorId': existingSharedMirrorId},
+                            );
+                          }
+                          _updateDailyTotalsForModule(
+                              data, modulePrefix, stops);
+                          setDialogState(() {});
+                          onTotalDowntimeChanged(
+                              data['${modulePrefix}TotalDowntime'] ?? 0);
+                        });
+                        if (context.mounted) Navigator.pop(context);
                       }
-
-                      final start = _parseDailyTime(startTime)!;
-                      final end = _parseDailyTime(endTime)!;
-                      final durationMinutes = end.difference(start).inMinutes;
-                      final durationText =
-                          '${durationMinutes ~/ 60}h${(durationMinutes % 60).toString().padLeft(2, '0')}';
-                      final locationLabel =
-                          '$selectedLocation - ${locations[selectedLocation] ?? ''}';
-
-                      setState(() {
-                        final shouldMirror = applyToBothModules &&
-                            _isSharedDailyConveyorLocation(selectedLocation);
-                        final sharedMirrorId = shouldMirror
-                            ? (existingSharedMirrorId.isNotEmpty
-                                ? existingSharedMirrorId
-                                : const Uuid().v4())
-                            : '';
-                        final updatedStop = {
-                          'id': stop['id'] ??
-                              DateTime.now().millisecondsSinceEpoch.toString(),
-                          'category': selectedCategory!.label,
-                          'duration': durationText,
-                          'nature': selectedType!,
-                          'location': locationLabel,
-                          'detail': stopDetail.trim(),
-                          'stopType': selectedType,
-                          'stopLocation': locationLabel,
-                          'startTime': startTime,
-                          'endTime': endTime,
-                          'Catégorie': selectedCategory!.label,
-                        };
-                        if (sharedMirrorId.isNotEmpty) {
-                          updatedStop['sharedMirrorId'] = sharedMirrorId;
-                          updatedStop['sharedSourceModule'] = modulePrefix;
-                        }
-                        stops[index] = updatedStop;
-
-                        if (sharedMirrorId.isNotEmpty) {
-                          _upsertMirroredDailyStop(
-                            data,
-                            modulePrefix,
-                            updatedStop,
-                            sharedMirrorId,
-                          );
-                        } else if (existingSharedMirrorId.isNotEmpty) {
-                          _deleteMirroredDailyStopIfLinked(
-                            data,
-                            modulePrefix,
-                            {'sharedMirrorId': existingSharedMirrorId},
-                          );
-                        }
-                        _updateDailyTotalsForModule(data, modulePrefix, stops);
-                        setDialogState(() {});
-                        onTotalDowntimeChanged(
-                            data['${modulePrefix}TotalDowntime'] ?? 0);
-                      });
-                      Navigator.pop(context);
-                    },
-                    child: Text(l10n.modifyLabel),
-                  ),
-              ],
-            ),
-          ],
-        ),
+                    : null,
+                child: Text(l10n.modifyLabel),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
