@@ -3574,246 +3574,362 @@ class _ReportsScreenState extends State<ReportsScreen> {
     // Special handling for daily TSUD report (case-insensitive)
     if (typeLower == 'daily tsud') {
       final data = report.additionalData ?? {};
+      final maxHeight = MediaQuery.of(context).size.height * 0.8;
       await showDialog(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(child: Text(l10n.dataVerification)),
-              IconButton(
-                icon: const Icon(Icons.edit),
-                onPressed: () => _editReport(report),
-                tooltip: 'Modifier le rapport',
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Date Card
-                Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(l10n.date,
-                            style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 4),
-                        Text(DateFormat('yyyy-MM-dd').format(report.date)),
-                      ],
-                    ),
+          context: context,
+          builder: (dialogContext) => Dialog(
+                insetPadding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 600,
+                    maxHeight: maxHeight,
                   ),
-                ),
-                // Module 1 Card
-                Builder(
-                  builder: (context) {
-                    final module1Stops = (data['module1Stops'] is List)
-                        ? List.from(data['module1Stops'])
-                        : [];
-                    final module1Downtime =
-                        _calculateDowntimeFromStops(module1Stops);
-                    const int totalPeriod = 24 * 60; // 24 hours in minutes
-                    final module1OperatingTime =
-                        (totalPeriod - module1Downtime).clamp(0, totalPeriod);
-
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(l10n.module1Label,
-                                style: Theme.of(context).textTheme.titleMedium),
-                            const SizedBox(height: 4),
-                            Text(
-                                '${l10n.operatingTime}: ${_formatMinutesToHoursMinutes(module1OperatingTime)}'),
-                            Text(
-                                '${l10n.stopTime}: ${_formatMinutesToHoursMinutes(module1Downtime)}'),
-                            if (module1Stops.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Text('${l10n.stopsLabel}:',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold)),
-                              ...module1Stops.map((stop) => Padding(
-                                    padding:
-                                        const EdgeInsets.only(left: 16, top: 4),
-                                    child: Text(_formatDailyStopLine(stop)),
-                                  )),
-                            ],
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                // Module 2 Card
-                Builder(
-                  builder: (context) {
-                    final module2Stops = (data['module2Stops'] is List)
-                        ? List.from(data['module2Stops'])
-                        : [];
-                    final module2Downtime =
-                        _calculateDowntimeFromStops(module2Stops);
-                    const int totalPeriod = 24 * 60; // 24 hours in minutes
-                    final module2OperatingTime =
-                        (totalPeriod - module2Downtime).clamp(0, totalPeriod);
-
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(l10n.module2Label,
-                                style: Theme.of(context).textTheme.titleMedium),
-                            const SizedBox(height: 4),
-                            Text(
-                                '${l10n.operatingTime}: ${_formatMinutesToHoursMinutes(module2OperatingTime)}'),
-                            Text(
-                                '${l10n.stopTime}: ${_formatMinutesToHoursMinutes(module2Downtime)}'),
-                            if (module2Stops.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Text(l10n.stopsLabel,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold)),
-                              ...module2Stops.map((stop) => Padding(
-                                    padding:
-                                        const EdgeInsets.only(left: 16, top: 4),
-                                    child: Text(_formatDailyStopLine(stop)),
-                                  )),
-                            ],
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                // Stocks Card (if any)
-                if (data['stock'] is List && (data['stock'] as List).isNotEmpty)
-                  Card(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(l10n.stockLabel,
-                              style: Theme.of(context).textTheme.titleMedium),
-                          const SizedBox(height: 4),
-                          ...List.from(data['stock']).map((entry) => Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 2),
-                                child: Text(
-                                  '${l10n.poste}: ${_getPosteString(entry['poste'], l10n)} | ${l10n.parkLabel}: ${_getParkString(entry['park'], l10n)} | ${l10n.type}: ${_getStockTypeString(entry['type'], l10n)} | ${l10n.quantityLabel}: ${entry['quantity'] ?? '-'} |',
+                            Expanded(
+                              child: Text(
+                                l10n.dataVerification,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                              )),
-                        ],
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit),
+                                  onPressed: () => _editReport(report),
+                                  tooltip: 'Modifier le rapport',
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.close),
+                                  onPressed: () => Navigator.pop(dialogContext),
+                                  padding: const EdgeInsets.all(6),
+                                  constraints: const BoxConstraints(),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                      const Divider(height: 1),
+                      Flexible(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Date Card
+                              Card(
+                                margin: const EdgeInsets.symmetric(vertical: 4),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(l10n.date,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium),
+                                      const SizedBox(height: 4),
+                                      Text(DateFormat('yyyy-MM-dd')
+                                          .format(report.date)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              // Module 1 Card
+                              Builder(
+                                builder: (context) {
+                                  final module1Stops =
+                                      (data['module1Stops'] is List)
+                                          ? List.from(data['module1Stops'])
+                                          : [];
+                                  final module1Downtime =
+                                      _calculateDowntimeFromStops(module1Stops);
+                                  const int totalPeriod =
+                                      24 * 60; // 24 hours in minutes
+                                  final module1OperatingTime =
+                                      (totalPeriod - module1Downtime)
+                                          .clamp(0, totalPeriod);
+
+                                  return Card(
+                                    margin:
+                                        const EdgeInsets.symmetric(vertical: 4),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(12.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(l10n.module1Label,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleMedium),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                              '${l10n.operatingTime}: ${_formatMinutesToHoursMinutes(module1OperatingTime)}'),
+                                          Text(
+                                              '${l10n.stopTime}: ${_formatMinutesToHoursMinutes(module1Downtime)}'),
+                                          if (module1Stops.isNotEmpty) ...[
+                                            const SizedBox(height: 8),
+                                            Text('${l10n.stopsLabel}:',
+                                                style: const TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.bold)),
+                                            ...module1Stops
+                                                .map((stop) => Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                              left: 16, top: 4),
+                                                      child: Text(
+                                                          _formatDailyStopLine(
+                                                              stop)),
+                                                    )),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              // Module 2 Card
+                              Builder(
+                                builder: (context) {
+                                  final module2Stops =
+                                      (data['module2Stops'] is List)
+                                          ? List.from(data['module2Stops'])
+                                          : [];
+                                  final module2Downtime =
+                                      _calculateDowntimeFromStops(module2Stops);
+                                  const int totalPeriod =
+                                      24 * 60; // 24 hours in minutes
+                                  final module2OperatingTime =
+                                      (totalPeriod - module2Downtime)
+                                          .clamp(0, totalPeriod);
+
+                                  return Card(
+                                    margin:
+                                        const EdgeInsets.symmetric(vertical: 4),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(12.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(l10n.module2Label,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleMedium),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                              '${l10n.operatingTime}: ${_formatMinutesToHoursMinutes(module2OperatingTime)}'),
+                                          Text(
+                                              '${l10n.stopTime}: ${_formatMinutesToHoursMinutes(module2Downtime)}'),
+                                          if (module2Stops.isNotEmpty) ...[
+                                            const SizedBox(height: 8),
+                                            Text(l10n.stopsLabel,
+                                                style: const TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.bold)),
+                                            ...module2Stops
+                                                .map((stop) => Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                              left: 16, top: 4),
+                                                      child: Text(
+                                                          _formatDailyStopLine(
+                                                              stop)),
+                                                    )),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              // Stocks Card (if any)
+                              if (data['stock'] is List &&
+                                  (data['stock'] as List).isNotEmpty)
+                                Card(
+                                  margin:
+                                      const EdgeInsets.symmetric(vertical: 4),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12.0),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(l10n.stockLabel,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium),
+                                        const SizedBox(height: 4),
+                                        ...List.from(data['stock'])
+                                            .map((entry) => Padding(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(vertical: 2),
+                                                  child: Text(
+                                                    '${l10n.poste}: ${_getPosteString(entry['poste'], l10n)} | ${l10n.parkLabel}: ${_getParkString(entry['park'], l10n)} | ${l10n.type}: ${_getStockTypeString(entry['type'], l10n)} | ${l10n.quantityLabel}: ${entry['quantity'] ?? '-'} |',
+                                                  ),
+                                                )),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(l10n.close),
-            ),
-          ],
-        ),
-      );
+                ),
+              ));
       return;
     }
 
     // Special handling for Machine/Engin Arrêtés report (case-insensitive)
     if (typeLower == 'machine/engin arrêtés') {
       final data = report.additionalData ?? {};
+      final maxHeight = MediaQuery.of(context).size.height * 0.8;
       await showDialog(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(child: Text(l10n.dataVerification)),
-              IconButton(
-                icon: const Icon(Icons.edit),
-                onPressed: () => _editReport(report),
-                tooltip: 'Modifier le rapport',
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
+        builder: (dialogContext) => Dialog(
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 600,
+              maxHeight: maxHeight,
+            ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Date Card
-                Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(l10n.dateLabel,
-                            style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 4),
-                        Text(DateFormat('yyyy-MM-dd').format(report.date)),
-                      ],
-                    ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.dataVerification,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit),
+                            onPressed: () => _editReport(report),
+                            tooltip: 'Modifier le rapport',
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(dialogContext),
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                // Équipements arrêtés Card
-                Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
+                const Divider(height: 1),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(l10n.machinesStoppedLabel,
-                            style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 4),
-                        if (data['equipmentList'] is List &&
-                            (data['equipmentList'] as List).isNotEmpty) ...[
-                          ...List.from(data['equipmentList'])
-                              .asMap()
-                              .entries
-                              .map((entry) {
-                            final index = entry.key;
-                            final equipment = entry.value;
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('${l10n.equipmentIndex(index + 1)}:',
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold)),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                      '${l10n.type}: ${equipment['equipmentType'] ?? '-'}'),
-                                  Text(
-                                      '${l10n.reasonLabel}: ${equipment['Reason'] ?? '-'}'),
-                                  if (index <
-                                      (data['equipmentList'] as List).length -
-                                          1)
-                                    const Divider(),
+                        // Date Card
+                        Card(
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(l10n.dateLabel,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium),
+                                const SizedBox(height: 4),
+                                Text(DateFormat('yyyy-MM-dd')
+                                    .format(report.date)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // Équipements arrêtés Card
+                        Card(
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(l10n.machinesStoppedLabel,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium),
+                                const SizedBox(height: 4),
+                                if (data['equipmentList'] is List &&
+                                    (data['equipmentList'] as List)
+                                        .isNotEmpty) ...[
+                                  ...List.from(data['equipmentList'])
+                                      .asMap()
+                                      .entries
+                                      .map((entry) {
+                                    final index = entry.key;
+                                    final equipment = entry.value;
+                                    return Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 8.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                              '${l10n.equipmentIndex(index + 1)}:',
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.bold)),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                              '${l10n.type}: ${equipment['equipmentType'] ?? '-'}'),
+                                          Text(
+                                              '${l10n.reasonLabel}: ${equipment['Reason'] ?? '-'}'),
+                                          if (index <
+                                              (data['equipmentList'] as List)
+                                                      .length -
+                                                  1)
+                                            const Divider(),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+                                ] else ...[
+                                  Text(l10n.noEquipmentStopped,
+                                      style:
+                                          const TextStyle(color: Colors.grey)),
                                 ],
-                              ),
-                            );
-                          }),
-                        ] else ...[
-                          Text(l10n.noEquipmentStopped,
-                              style: const TextStyle(color: Colors.grey)),
-                        ],
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -3821,12 +3937,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(l10n.close),
-            ),
-          ],
         ),
       );
       return;
@@ -10608,7 +10718,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxWidth: 600,
+              maxWidth: 800,
               maxHeight: maxHeight,
             ),
             child: Column(
