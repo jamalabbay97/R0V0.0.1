@@ -792,7 +792,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                               contentPadding: EdgeInsets.zero,
                               title: const Text('Appliquer aux deux modules'),
                               subtitle: const Text(
-                                  'Utiliser pour les pannes convoyeurs partagés (G0/G2).'),
+                                  'Appliquer aux deux modules 1 et 2.'),
                               value: applyToBothModules,
                               onChanged: (value) =>
                                   setDs(() => applyToBothModules = value),
