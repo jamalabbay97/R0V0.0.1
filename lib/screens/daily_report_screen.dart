@@ -380,6 +380,12 @@ bool _tnbStopTypeRequiresLocation(String? type) {
       normalized == 'ATTENTE VIDANGE SILO';
 }
 
+bool _tnbStopTypeAlwaysMirrors(String? type) {
+  final code = _extractTnbStopTypeCode(type);
+  return const {'MP', 'CC', 'AD', 'STS', 'DS', 'MB', 'NETG', 'AUT'}
+      .contains(code);
+}
+
 // --- Screen ---
 class DailyReportScreen extends StatefulWidget {
   final Report? initialReport;
@@ -913,10 +919,16 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                                 } else {
                                   module2Stops.add(stop);
                                 }
-                                if (requiresLocation &&
-                                    applyToBothModules &&
-                                    _isSharedConveyorLocation(
-                                        selectedLocation)) {
+                                final shouldMirrorByType =
+                                    _tnbStopTypeAlwaysMirrors(selectedNature);
+                                final shouldMirrorBySharedLocation =
+                                    requiresLocation &&
+                                        applyToBothModules &&
+                                        _isSharedConveyorLocation(
+                                            selectedLocation);
+
+                                if (shouldMirrorByType ||
+                                    shouldMirrorBySharedLocation) {
                                   final mirroredStop = ModuleStop(
                                     id: const Uuid().v4(),
                                     category: selectedCategory!.label,

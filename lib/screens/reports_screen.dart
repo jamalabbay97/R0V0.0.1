@@ -148,6 +148,12 @@ bool _tnbStopTypeRequiresLocation(String? type) {
 bool _tnbStopTypeRequiresDetail(String? type) =>
     const {'AE', 'AM', 'AI', 'AESYS'}.contains(_extractTnbStopTypeCode(type));
 
+bool _tnbStopTypeAlwaysMirrors(String? type) {
+  final typeCode = _extractTnbStopTypeCode(type);
+  return const {'MP', 'CC', 'AD', 'STS', 'DS', 'MB', 'NETG', 'AUT'}
+      .contains(typeCode);
+}
+
 const List<_TnbStopLocation> _tnbStopLocations = [
   _TnbStopLocation(code: 'TR', label: 'tremie'),
   _TnbStopLocation(code: 'VIB1', label: 'vibreur 1'),
@@ -5281,8 +5287,49 @@ class _ReportsScreenState extends State<ReportsScreen> {
     _updateDailyTotalsForModule(data, otherModulePrefix, otherStops);
   }
 
+  String _dailyStopTypeValue(Map<String, dynamic> stop) =>
+      (stop['stopType'] ?? stop['nature'] ?? '').toString().trim();
+
+  bool _areDailyStopsEquivalent(dynamic entry, Map<String, dynamic> reference) {
+    if (entry is! Map) return false;
+
+    String value(dynamic mapValue) => (mapValue ?? '').toString().trim();
+
+    final mapped = Map<String, dynamic>.from(entry);
+    return value(mapped['category']) == value(reference['category']) &&
+        value(mapped['nature'] ?? mapped['stopType']) ==
+            value(reference['nature'] ?? reference['stopType']) &&
+        value(mapped['location'] ?? mapped['stopLocation']) ==
+            value(reference['location'] ?? reference['stopLocation']) &&
+        value(mapped['detail']) == value(reference['detail']) &&
+        value(mapped['startTime'] ?? mapped['start'] ?? mapped['Début']) ==
+            value(reference['startTime'] ??
+                reference['start'] ??
+                reference['Début']) &&
+        value(mapped['endTime'] ?? mapped['end'] ?? mapped['Fin']) ==
+            value(reference['endTime'] ?? reference['end'] ?? reference['Fin']);
+  }
+
+  void _deleteMirroredDailyStopByTypeFallback(Map<String, dynamic> data,
+      String modulePrefix, Map<String, dynamic> stop) {
+    if (!_tnbStopTypeAlwaysMirrors(_dailyStopTypeValue(stop))) return;
+    final otherModulePrefix = _otherModulePrefix(modulePrefix);
+    final otherStopsKey = '${otherModulePrefix}Stops';
+    final otherStops = (data[otherStopsKey] is List)
+        ? List.from(data[otherStopsKey])
+        : <dynamic>[];
+    final mirroredIndex =
+        otherStops.indexWhere((entry) => _areDailyStopsEquivalent(entry, stop));
+    if (mirroredIndex < 0) return;
+
+    otherStops.removeAt(mirroredIndex);
+    data[otherStopsKey] = otherStops;
+    _updateDailyTotalsForModule(data, otherModulePrefix, otherStops);
+  }
+
   void _upsertMirroredDailyStop(Map<String, dynamic> data, String modulePrefix,
-      Map<String, dynamic> sourceStop, String sharedMirrorId) {
+      Map<String, dynamic> sourceStop, String sharedMirrorId,
+      {Map<String, dynamic>? legacyMatchStop}) {
     final otherModulePrefix = _otherModulePrefix(modulePrefix);
     final otherStopsKey = '${otherModulePrefix}Stops';
     final otherStops = (data[otherStopsKey] is List)
@@ -5309,7 +5356,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
         'id': existingId,
       };
     } else {
-      otherStops.add(mirroredStop);
+      final legacyReference = legacyMatchStop ?? sourceStop;
+      final legacyIndex = otherStops.indexWhere((entry) =>
+          _areDailyStopsEquivalent(
+              entry, Map<String, dynamic>.from(legacyReference)));
+      if (legacyIndex >= 0) {
+        final existing = otherStops[legacyIndex];
+        final existingId = existing is Map
+            ? (existing['id'] ?? mirroredStop['id'])
+            : mirroredStop['id'];
+        otherStops[legacyIndex] = {
+          ...mirroredStop,
+          'id': existingId,
+        };
+      } else {
+        otherStops.add(mirroredStop);
+      }
     }
 
     data[otherStopsKey] = otherStops;
@@ -7372,6 +7434,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               stops.removeAt(index);
                               _deleteMirroredDailyStopIfLinked(
                                   data, modulePrefix, removedStop);
+                              _deleteMirroredDailyStopByTypeFallback(
+                                  data, modulePrefix, removedStop);
                               _updateDailyTotalsForModule(
                                   data, modulePrefix, stops);
                               totalDowntime =
@@ -7614,9 +7678,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             : '';
 
                         setState(() {
-                          final shouldMirror = requiresLocation &&
-                              applyToBothModules &&
-                              _isSharedDailyConveyorLocation(selectedLocation);
+                          final shouldMirrorByType =
+                              _tnbStopTypeAlwaysMirrors(selectedType);
+                          final shouldMirrorBySharedLocation =
+                              requiresLocation &&
+                                  applyToBothModules &&
+                                  _isSharedDailyConveyorLocation(
+                                      selectedLocation);
+                          final shouldMirror = shouldMirrorByType ||
+                              shouldMirrorBySharedLocation;
                           final sharedMirrorId =
                               shouldMirror ? const Uuid().v4() : '';
                           final stopEntry = {
@@ -7873,9 +7943,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             : '';
 
                         setState(() {
-                          final shouldMirror = requiresLocation &&
-                              applyToBothModules &&
-                              _isSharedDailyConveyorLocation(selectedLocation);
+                          final shouldMirrorByType =
+                              _tnbStopTypeAlwaysMirrors(selectedType);
+                          final shouldMirrorBySharedLocation =
+                              requiresLocation &&
+                                  applyToBothModules &&
+                                  _isSharedDailyConveyorLocation(
+                                      selectedLocation);
+                          final shouldMirror = shouldMirrorByType ||
+                              shouldMirrorBySharedLocation;
                           final sharedMirrorId = shouldMirror
                               ? (existingSharedMirrorId.isNotEmpty
                                   ? existingSharedMirrorId
@@ -7909,6 +7985,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               modulePrefix,
                               updatedStop,
                               sharedMirrorId,
+                              legacyMatchStop: stop,
                             );
                           } else if (existingSharedMirrorId.isNotEmpty) {
                             _deleteMirroredDailyStopIfLinked(
