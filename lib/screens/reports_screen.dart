@@ -136,7 +136,8 @@ bool _tnbStopTypeRequiresLocation(String? type) {
   }
 
   final typeCode = _extractTnbStopTypeCode(rawType);
-  if (const {'AE', 'AM', 'AI', 'AESYS', 'SURCH', 'DEC'}.contains(typeCode)) {
+  if (const {'AE', 'AM', 'AI', 'AESYS', 'SURCH', 'DEC', 'NET'}
+      .contains(typeCode)) {
     return true;
   }
 
