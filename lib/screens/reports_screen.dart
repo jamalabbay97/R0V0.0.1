@@ -136,8 +136,7 @@ bool _tnbStopTypeRequiresLocation(String? type) {
   }
 
   final typeCode = _extractTnbStopTypeCode(rawType);
-  if (const {'AE', 'AM', 'AI', 'AESYS', 'SURCH', 'DEC', 'NET'}
-      .contains(typeCode)) {
+  if (const {'AE', 'AM', 'AI', 'AESYS', 'SURCH', 'DEC'}.contains(typeCode)) {
     return true;
   }
 
@@ -5461,7 +5460,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
       return "La catégorie d'arrêt est obligatoire.";
     }
     if (type == null || type.isEmpty) return "Le type d'arrêt est obligatoire.";
-    if (location == null || location.isEmpty) {
+    if (_tnbStopTypeRequiresLocation(type) &&
+        (location == null || location.isEmpty)) {
       return "Le lieu d'arrêt est obligatoire.";
     }
     if (_tnbStopTypeRequiresDetail(type) && detail.trim().isEmpty) {
@@ -7450,10 +7450,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setLocalState) {
           final availableTypes = selectedCategory?.types ?? const <String>[];
+          final requiresLocation = _tnbStopTypeRequiresLocation(selectedType);
           final requiresDetail = _tnbStopTypeRequiresDetail(selectedType);
           final canSubmit = selectedCategory != null &&
               selectedType != null &&
-              selectedLocation != null &&
+              (!requiresLocation || selectedLocation != null) &&
               (!requiresDetail || stopDetail.trim().isNotEmpty);
 
           return AlertDialog(
@@ -7509,7 +7510,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         }),
                       ),
                     ],
-                    if (selectedType != null) ...[
+                    if (selectedType != null && requiresLocation) ...[
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
                         initialValue: selectedLocation,
@@ -7531,7 +7532,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         }),
                       ),
                     ],
-                    if (_isSharedDailyConveyorLocation(selectedLocation))
+                    if (requiresLocation &&
+                        _isSharedDailyConveyorLocation(selectedLocation))
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Appliquer aux deux modules'),
@@ -7606,11 +7608,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         final durationMinutes = end.difference(start).inMinutes;
                         final durationText =
                             '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
-                        final locationLabel =
-                            '$selectedLocation - ${locations[selectedLocation] ?? ''}';
+                        final locationLabel = requiresLocation &&
+                                selectedLocation != null
+                            ? '$selectedLocation - ${locations[selectedLocation] ?? ''}'
+                            : '';
 
                         setState(() {
-                          final shouldMirror = applyToBothModules &&
+                          final shouldMirror = requiresLocation &&
+                              applyToBothModules &&
                               _isSharedDailyConveyorLocation(selectedLocation);
                           final sharedMirrorId =
                               shouldMirror ? const Uuid().v4() : '';
@@ -7708,10 +7713,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setLocalState) {
           final availableTypes = selectedCategory?.types ?? const <String>[];
+          final requiresLocation = _tnbStopTypeRequiresLocation(selectedType);
           final requiresDetail = _tnbStopTypeRequiresDetail(selectedType);
           final canSubmit = selectedCategory != null &&
               selectedType != null &&
-              selectedLocation != null &&
+              (!requiresLocation || selectedLocation != null) &&
               (!requiresDetail || stopDetail.trim().isNotEmpty);
 
           return AlertDialog(
@@ -7765,7 +7771,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         }),
                       ),
                     ],
-                    if (selectedType != null) ...[
+                    if (selectedType != null && requiresLocation) ...[
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
                         initialValue: selectedLocation,
@@ -7787,7 +7793,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         }),
                       ),
                     ],
-                    if (_isSharedDailyConveyorLocation(selectedLocation))
+                    if (requiresLocation &&
+                        _isSharedDailyConveyorLocation(selectedLocation))
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Appliquer aux deux modules'),
@@ -7860,11 +7867,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         final durationMinutes = end.difference(start).inMinutes;
                         final durationText =
                             '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
-                        final locationLabel =
-                            '$selectedLocation - ${locations[selectedLocation] ?? ''}';
+                        final locationLabel = requiresLocation &&
+                                selectedLocation != null
+                            ? '$selectedLocation - ${locations[selectedLocation] ?? ''}'
+                            : '';
 
                         setState(() {
-                          final shouldMirror = applyToBothModules &&
+                          final shouldMirror = requiresLocation &&
+                              applyToBothModules &&
                               _isSharedDailyConveyorLocation(selectedLocation);
                           final sharedMirrorId = shouldMirror
                               ? (existingSharedMirrorId.isNotEmpty

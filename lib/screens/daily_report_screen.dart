@@ -369,6 +369,17 @@ String _extractTnbStopTypeCode(String? type) {
 bool _tnbStopTypeRequiresDetail(String? type) =>
     const {'AE', 'AM', 'AI', 'AESYS'}.contains(_extractTnbStopTypeCode(type));
 
+bool _tnbStopTypeRequiresLocation(String? type) {
+  final code = _extractTnbStopTypeCode(type);
+  if (const {'AE', 'AM', 'AI', 'AESYS', 'SURCH', 'DEC', 'NET'}.contains(code)) {
+    return true;
+  }
+
+  final normalized = (type ?? '').trim().toUpperCase();
+  return normalized == 'ATTENTE VIDANGE EXTRACTEUR' ||
+      normalized == 'ATTENTE VIDANGE SILO';
+}
+
 // --- Screen ---
 class DailyReportScreen extends StatefulWidget {
   final Report? initialReport;
@@ -703,9 +714,11 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                     selectedCategory?.types ?? const <String>[];
                 final requiresDetail =
                     _tnbStopTypeRequiresDetail(selectedNature);
+                final requiresLocation =
+                    _tnbStopTypeRequiresLocation(selectedNature);
                 final canSubmit = selectedCategory != null &&
                     selectedNature != null &&
-                    selectedLocation != null &&
+                    (!requiresLocation || selectedLocation != null) &&
                     (!requiresDetail || stopDetail.trim().isNotEmpty);
 
                 return AlertDialog(
@@ -764,7 +777,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                               isExpanded: true,
                             ),
                           ],
-                          if (selectedNature != null) ...[
+                          if (selectedNature != null && requiresLocation) ...[
                             const SizedBox(height: 16),
                             DropdownButtonFormField<String>(
                               decoration: const InputDecoration(
@@ -787,7 +800,8 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                               hint: const Text('Sélectionner le lieu'),
                             ),
                           ],
-                          if (_isSharedConveyorLocation(selectedLocation))
+                          if (requiresLocation &&
+                              _isSharedConveyorLocation(selectedLocation))
                             SwitchListTile(
                               contentPadding: EdgeInsets.zero,
                               title: const Text('Appliquer aux deux modules'),
@@ -875,8 +889,9 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                               final durationMinutes = endMinutes - startMinutes;
                               final durationText = '${durationMinutes ~/ 60}h '
                                   '${(durationMinutes % 60).toString().padLeft(2, '0')}';
-                              final locationLabel =
-                                  '${selectedLocation ?? ''} - ${locations[selectedLocation] ?? ''}';
+                              final locationLabel = selectedLocation == null
+                                  ? ''
+                                  : '${selectedLocation ?? ''} - ${locations[selectedLocation] ?? ''}';
 
                               setState(() {
                                 final stop = ModuleStop(
@@ -898,7 +913,8 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                                 } else {
                                   module2Stops.add(stop);
                                 }
-                                if (applyToBothModules &&
+                                if (requiresLocation &&
+                                    applyToBothModules &&
                                     _isSharedConveyorLocation(
                                         selectedLocation)) {
                                   final mirroredStop = ModuleStop(
@@ -951,7 +967,8 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     if (selectedNature == null || selectedNature.isEmpty) {
       return "Le type d'arrêt est obligatoire.";
     }
-    if (selectedLocation == null || selectedLocation.isEmpty) {
+    if (_tnbStopTypeRequiresLocation(selectedNature) &&
+        (selectedLocation == null || selectedLocation.isEmpty)) {
       return "Le lieu d'arrêt est obligatoire.";
     }
     if (_tnbStopTypeRequiresDetail(selectedNature) &&
@@ -975,7 +992,8 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
           errors.add(
               'Module $module - Arrêt ${i + 1}: catégorie et type d\'arrêt obligatoires.');
         }
-        if (stop.location.isEmpty) {
+        if (_tnbStopTypeRequiresLocation(stop.nature) &&
+            stop.location.isEmpty) {
           errors.add(
               'Module $module - Arrêt ${i + 1}: lieu d\'arrêt obligatoire.');
         }
