@@ -40,6 +40,7 @@ class _StopTimeEntryPage extends StatefulWidget {
 }
 
 class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
+  static const int _cycleAnchorMinutes = 22 * 60 + 30;
   TimeOfDay _startTime = TimeOfDay.now();
   TimeOfDay _endTime =
       TimeOfDay.fromDateTime(DateTime.now().add(const Duration(minutes: 1)));
@@ -48,6 +49,10 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
       '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
 
   int _toMinutes(TimeOfDay value) => (value.hour * 60) + value.minute;
+  int _toCycleMinutes(TimeOfDay value) {
+    final minutes = _toMinutes(value);
+    return minutes < _cycleAnchorMinutes ? minutes + (24 * 60) : minutes;
+  }
 
   Future<void> _pickStartTime() async {
     final picked = await showSpinnerTimePickerDialog(
@@ -73,7 +78,9 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final hasValidRange = _toMinutes(_endTime) > _toMinutes(_startTime);
+    final durationMinutes =
+        _toCycleMinutes(_endTime) - _toCycleMinutes(_startTime);
+    final hasValidRange = durationMinutes > 0 && durationMinutes <= 24 * 60;
 
     return Material(
       color: Colors.transparent,
@@ -168,7 +175,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                       const Padding(
                         padding: EdgeInsets.only(bottom: 8),
                         child: Text(
-                          "L'heure de fin doit être après l'heure de début.",
+                          "L'arrêt doit rester dans la fenêtre 22:30 → 22:30 (24h max).",
                           style: TextStyle(color: AppColors.error),
                         ),
                       ),
@@ -532,6 +539,7 @@ class ActivityReportScreen extends StatefulWidget {
 
 class _ActivityReportScreenState extends State<ActivityReportScreen> {
   final DatabaseHelper _databaseHelper = DatabaseHelper();
+  static const int _cycleAnchorMinutes = 22 * 60 + 30;
   List<Stop> stops = [];
   List<TnbCounter> tnbCounters = [];
   List<StockEntry> stockEntries = [];
@@ -551,6 +559,14 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
 
   int _currentStep = 0;
   bool _isSaving = false;
+
+  int _toCycleMinutes(TimeOfDay value) {
+    final minutes = (value.hour * 60) + value.minute;
+    return minutes < _cycleAnchorMinutes ? minutes + (24 * 60) : minutes;
+  }
+
+  int _durationMinutesInCycle(TimeOfDay start, TimeOfDay end) =>
+      _toCycleMinutes(end) - _toCycleMinutes(start);
 
   @override
   void initState() {
@@ -1087,8 +1103,6 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
 
     String formatTimeOfDay(TimeOfDay value) =>
         '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
-    int minutesFromTimeOfDay(TimeOfDay value) =>
-        (value.hour * 60) + value.minute;
 
     showDialog(
       context: context,
@@ -1225,12 +1239,25 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                           return;
                         }
 
-                        final startMinutes =
-                            minutesFromTimeOfDay(selectedTimeResult.start);
-                        final endMinutes =
-                            minutesFromTimeOfDay(selectedTimeResult.end);
-
-                        final durationMinutes = endMinutes - startMinutes;
+                        final durationMinutes = _durationMinutesInCycle(
+                          selectedTimeResult.start,
+                          selectedTimeResult.end,
+                        );
+                        if (durationMinutes <= 0 ||
+                            durationMinutes >
+                                ActivityReportScreen.totalPeriodMinutes) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "L'arrêt doit rester dans la fenêtre 22:30 → 22:30 (24h max).",
+                                ),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                          }
+                          return;
+                        }
                         final durationHours = durationMinutes ~/ 60;
                         final remainingMinutes = durationMinutes % 60;
                         final durationText =

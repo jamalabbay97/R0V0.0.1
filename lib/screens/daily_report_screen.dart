@@ -112,6 +112,7 @@ class _StopTimeEntryPage extends StatefulWidget {
 }
 
 class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
+  static const int _cycleAnchorMinutes = 22 * 60 + 30;
   TimeOfDay _startTime = TimeOfDay.now();
   TimeOfDay _endTime = TimeOfDay.now();
 
@@ -119,6 +120,10 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
       '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
 
   int _toMinutes(TimeOfDay value) => (value.hour * 60) + value.minute;
+  int _toCycleMinutes(TimeOfDay value) {
+    final minutes = _toMinutes(value);
+    return minutes < _cycleAnchorMinutes ? minutes + (24 * 60) : minutes;
+  }
 
   Future<void> _pickStartTime() async {
     final picked = await showSpinnerTimePickerDialog(
@@ -144,7 +149,9 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final hasValidRange = _toMinutes(_endTime) > _toMinutes(_startTime);
+    final durationMinutes =
+        _toCycleMinutes(_endTime) - _toCycleMinutes(_startTime);
+    final hasValidRange = durationMinutes > 0 && durationMinutes <= 24 * 60;
 
     return Material(
       color: Colors.transparent,
@@ -239,7 +246,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                       const Padding(
                         padding: EdgeInsets.only(bottom: 8),
                         child: Text(
-                          "L'heure de fin doit être après l'heure de début.",
+                          "L'arrêt doit rester dans la fenêtre 22:30 → 22:30 (24h max).",
                           style: TextStyle(color: AppColors.error),
                         ),
                       ),
@@ -396,6 +403,7 @@ class DailyReportScreen extends StatefulWidget {
 
 class _DailyReportScreenState extends State<DailyReportScreen> {
   static const totalPeriodMinutes = 24 * 60;
+  static const int _cycleAnchorMinutes = 22 * 60 + 30;
   static const Set<String> _sharedConveyorLocationKeys = {
     'CV_G0_G2',
   };
@@ -414,6 +422,14 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
 
   int _currentStep = 0;
   bool _isSaving = false;
+
+  int _toCycleMinutes(TimeOfDay value) {
+    final minutes = (value.hour * 60) + value.minute;
+    return minutes < _cycleAnchorMinutes ? minutes + (24 * 60) : minutes;
+  }
+
+  int _durationMinutesInCycle(TimeOfDay start, TimeOfDay end) =>
+      _toCycleMinutes(end) - _toCycleMinutes(start);
 
   static const Map<int, Map<String, String>> _moduleLocations = {
     1: {
@@ -704,8 +720,6 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     final locations = _moduleLocations[module] ?? const <String, String>{};
     String formatTimeOfDay(TimeOfDay value) =>
         '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
-    int minutesFromTimeOfDay(TimeOfDay value) =>
-        (value.hour * 60) + value.minute;
 
     showDialog(
         context: context,
@@ -850,24 +864,9 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                                 return;
                               }
 
-                              final startDateTime = DateTime(
-                                2000,
-                                1,
-                                1,
-                                selectedTimeResult.start.hour,
-                                selectedTimeResult.start.minute,
-                              );
-                              final endDateTime = DateTime(
-                                2000,
-                                1,
-                                1,
-                                selectedTimeResult.end.hour,
-                                selectedTimeResult.end.minute,
-                              );
-
                               final validation = _validateSingleStop(
-                                startDateTime,
-                                endDateTime,
+                                selectedTimeResult.start,
+                                selectedTimeResult.end,
                                 selectedCategory,
                                 selectedNature,
                                 selectedLocation,
@@ -883,11 +882,10 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                                 return;
                               }
 
-                              final startMinutes = minutesFromTimeOfDay(
-                                  selectedTimeResult.start);
-                              final endMinutes =
-                                  minutesFromTimeOfDay(selectedTimeResult.end);
-                              final durationMinutes = endMinutes - startMinutes;
+                              final durationMinutes = _durationMinutesInCycle(
+                                selectedTimeResult.start,
+                                selectedTimeResult.end,
+                              );
                               final durationText = '${durationMinutes ~/ 60}h '
                                   '${(durationMinutes % 60).toString().padLeft(2, '0')}';
                               final locationLabel = selectedLocation == null
@@ -961,8 +959,8 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
       locationKey != null && _sharedConveyorLocationKeys.contains(locationKey);
 
   String? _validateSingleStop(
-    DateTime startTime,
-    DateTime endTime,
+    TimeOfDay startTime,
+    TimeOfDay endTime,
     StopCategory? selectedCategory,
     String? selectedNature,
     String? selectedLocation,
@@ -982,8 +980,9 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
         stopDetail.trim().isEmpty) {
       return "Le détail d'arrêt est obligatoire.";
     }
-    if (!endTime.isAfter(startTime)) {
-      return "L'heure de fin doit être supérieure à l'heure de début.";
+    final durationMinutes = _durationMinutesInCycle(startTime, endTime);
+    if (durationMinutes <= 0 || durationMinutes > totalPeriodMinutes) {
+      return "L'arrêt doit rester dans la fenêtre 22:30 → 22:30 (24h max).";
     }
     return null;
   }
@@ -1009,7 +1008,10 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
           errors.add(
               'Module $module - Arrêt ${i + 1}: Type et lieu d\'arrêt obligatoires.');
         }
-        if (start == null || end == null || !end.isAfter(start)) {
+        final durationMinutes = (start == null || end == null)
+            ? 0
+            : _durationMinutesInCycle(start, end);
+        if (durationMinutes <= 0 || durationMinutes > totalPeriodMinutes) {
           errors.add(
               'Module $module - Arrêt ${i + 1}: détail d\'arrêt obligatoire.');
         }
@@ -1021,14 +1023,14 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     return errors;
   }
 
-  DateTime? _parseTime(String value) {
+  TimeOfDay? _parseTime(String value) {
     if (!value.contains(':')) return null;
     final split = value.split(':');
     if (split.length != 2) return null;
     final hour = int.tryParse(split[0]);
     final minute = int.tryParse(split[1]);
     if (hour == null || minute == null) return null;
-    return DateTime(2000, 1, 1, hour, minute);
+    return TimeOfDay(hour: hour, minute: minute);
   }
 
   Widget _syntheseCard(String title, int operating, int downtime) {
