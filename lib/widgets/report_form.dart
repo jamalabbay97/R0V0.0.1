@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/models/report.dart';
+import 'package:r0/widgets/spinner_time_picker_dialog.dart';
 
 class ReportForm extends StatefulWidget {
   final Report? initialReport;
@@ -63,10 +64,10 @@ class _ReportFormState extends State<ReportForm> {
   }
 
   Future<void> _selectTime(BuildContext context) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: _selectedTime,
-    );
+    final TimeOfDay? picked = await showSpinnerTimePickerDialog(
+        context: context,
+        initialTime: _selectedTime,
+        title: 'Choisir l\'heure');
     if (picked != null && picked != _selectedTime) {
       setState(() {
         _selectedTime = picked;

@@ -7,6 +7,7 @@ import 'package:r0/screens/daily_report_screen.dart';
 import 'package:r0/screens/r0_report_screen.dart';
 import 'package:r0/screens/truck_tracking_screen.dart';
 import 'package:r0/screens/machines_equipment_stopped_screen.dart';
+import 'package:r0/widgets/spinner_time_picker_dialog.dart';
 
 /// ReportEditorScreen provides a comprehensive editing interface for all report types.
 /// It opens the appropriate form based on the report type, pre-populated with existing data.
@@ -371,9 +372,10 @@ class _GenericReportEditorState extends State<GenericReportEditor> {
   }
 
   Future<void> _selectTime(BuildContext context) async {
-    final TimeOfDay? picked = await showTimePicker(
+    final TimeOfDay? picked = await showSpinnerTimePickerDialog(
       context: context,
       initialTime: _selectedTime,
+      title: 'Choisir l\'heure',
     );
     if (picked != null && picked != _selectedTime) {
       setState(() {

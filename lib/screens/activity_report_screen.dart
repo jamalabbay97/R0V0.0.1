@@ -8,6 +8,7 @@ import 'package:r0/services/database_helper.dart';
 import 'package:r0/services/time_calculation_service.dart';
 import 'package:r0/theme.dart';
 import 'package:r0/widgets/custom_widgets.dart';
+import 'package:r0/widgets/spinner_time_picker_dialog.dart';
 
 // --- Enums and Helpers ---
 enum Poste { premier, deuxieme, troisieme }
@@ -49,13 +50,10 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
   int _toMinutes(TimeOfDay value) => (value.hour * 60) + value.minute;
 
   Future<void> _pickStartTime() async {
-    final picked = await showTimePicker(
+    final picked = await showSpinnerTimePickerDialog(
       context: context,
       initialTime: _startTime,
-      builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-        child: child ?? const SizedBox(),
-      ),
+      title: 'Heure début',
     );
     if (picked != null) {
       setState(() => _startTime = picked);
@@ -63,13 +61,10 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
   }
 
   Future<void> _pickEndTime() async {
-    final picked = await showTimePicker(
+    final picked = await showSpinnerTimePickerDialog(
       context: context,
       initialTime: _endTime,
-      builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-        child: child ?? const SizedBox(),
-      ),
+      title: 'Heure fin',
     );
     if (picked != null) {
       setState(() => _endTime = picked);

@@ -11,6 +11,7 @@ import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 import 'package:uuid/uuid.dart';
 import 'package:r0/data/r0_arrets_data.dart';
 import 'package:r0/theme.dart';
+import 'package:r0/widgets/spinner_time_picker_dialog.dart';
 import 'dart:math' as math;
 
 class _ShiftWindow {
@@ -2557,9 +2558,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       lastDate: DateTime.now(),
                     );
                     if (picked != null && dialogContext.mounted) {
-                      final TimeOfDay? time = await showTimePicker(
+                      final TimeOfDay? time = await showSpinnerTimePickerDialog(
                         context: dialogContext,
                         initialTime: TimeOfDay.fromDateTime(selectedDate),
+                        title: l10n.timeLabel,
                       );
                       if (time != null && dialogContext.mounted) {
                         final newDate = DateTime(
