@@ -3481,21 +3481,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     const Divider(height: 16),
                                     if (data['Arrets'] is List &&
                                         (data['Arrets'] as List).isNotEmpty)
-                                      ...List.from(data['Arrets'])
-                                          .map((stop) => Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        vertical: 2),
-                                                child: Text(
-                                                  _formatTnbActivityStopSummary(
-                                                    Map<String, dynamic>.from(
-                                                      stop is Map
-                                                          ? stop
-                                                          : <String, dynamic>{},
-                                                    ),
-                                                  ),
-                                                ),
-                                              ))
+                                      ..._buildStopsByShiftSections(
+                                        stops: List.from(data['Arrets']),
+                                        baseDate: report.date,
+                                        formatter: (stop) =>
+                                            _formatTnbActivityStopSummary(
+                                          Map<String, dynamic>.from(
+                                            stop is Map
+                                                ? stop
+                                                : <String, dynamic>{},
+                                          ),
+                                        ),
+                                      )
                                     else if (data['Arrets'] is List &&
                                         (data['Arrets'] as List).isEmpty)
                                       Text(l10n.aucunArret,
@@ -3696,15 +3693,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                 style: const TextStyle(
                                                     fontWeight:
                                                         FontWeight.bold)),
-                                            ...module1Stops
-                                                .map((stop) => Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                              left: 16, top: 4),
-                                                      child: Text(
-                                                          _formatDailyStopLine(
-                                                              stop)),
-                                                    )),
+                                            ..._buildStopsByShiftSections(
+                                              stops: module1Stops,
+                                              baseDate: report.date,
+                                              formatter: _formatDailyStopLine,
+                                              leftPadding: 16,
+                                            ),
                                           ],
                                         ],
                                       ),
@@ -3751,15 +3745,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                 style: const TextStyle(
                                                     fontWeight:
                                                         FontWeight.bold)),
-                                            ...module2Stops
-                                                .map((stop) => Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                              left: 16, top: 4),
-                                                      child: Text(
-                                                          _formatDailyStopLine(
-                                                              stop)),
-                                                    )),
+                                            ..._buildStopsByShiftSections(
+                                              stops: module2Stops,
+                                              baseDate: report.date,
+                                              formatter: _formatDailyStopLine,
+                                              leftPadding: 16,
+                                            ),
                                           ],
                                         ],
                                       ),
@@ -4930,6 +4921,91 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return fixed.endsWith('.00') ? fixed.substring(0, fixed.length - 3) : fixed;
   }
 
+  List<({String label, DateTime start, DateTime end})> _cycleShiftWindows(
+      DateTime baseDate) {
+    final cycleStart =
+        DateTime(baseDate.year, baseDate.month, baseDate.day, 22, 30);
+    return [
+      (
+        label: '3ème poste (22:30 - 06:30)',
+        start: cycleStart,
+        end: cycleStart.add(const Duration(hours: 8)),
+      ),
+      (
+        label: '1er poste (06:30 - 14:30)',
+        start: cycleStart.add(const Duration(hours: 8)),
+        end: cycleStart.add(const Duration(hours: 16)),
+      ),
+      (
+        label: '2ème poste (14:30 - 22:30)',
+        start: cycleStart.add(const Duration(hours: 16)),
+        end: cycleStart.add(const Duration(hours: 24)),
+      ),
+    ];
+  }
+
+  List<Widget> _buildStopsByShiftSections({
+    required List<dynamic> stops,
+    required DateTime baseDate,
+    required String Function(dynamic stop) formatter,
+    double leftPadding = 0,
+  }) {
+    final cycleStart =
+        DateTime(baseDate.year, baseDate.month, baseDate.day, 22, 30);
+    final cycleEnd = cycleStart.add(const Duration(hours: 24));
+    final shifts = _cycleShiftWindows(baseDate);
+
+    final rows = <Widget>[];
+    for (final shift in shifts) {
+      rows.add(Padding(
+        padding: EdgeInsets.only(left: leftPadding, top: 8, bottom: 4),
+        child: Text(
+          shift.label,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ));
+
+      final shiftStops = stops.where((rawStop) {
+        if (rawStop is! Map) return false;
+        final stop = Map<String, dynamic>.from(rawStop);
+        final rawStart =
+            (stop['startTime'] ?? stop['start'] ?? stop['Début'] ?? '')
+                .toString();
+        if (rawStart.isEmpty) return false;
+        final start =
+            _parseTnbStopDateTimeForCycle(rawStart, cycleStart, cycleEnd);
+        if (start == null) return false;
+
+        final rawEnd =
+            (stop['endTime'] ?? stop['end'] ?? stop['Fin'] ?? '').toString();
+        DateTime? end =
+            _parseTnbStopDateTimeForCycle(rawEnd, cycleStart, cycleEnd);
+        end ??= DateTime.now();
+        if (end.isBefore(start)) {
+          end = end.add(const Duration(days: 1));
+        }
+
+        return end.isAfter(shift.start) && start.isBefore(shift.end);
+      }).toList();
+
+      if (shiftStops.isEmpty) {
+        rows.add(Padding(
+          padding: EdgeInsets.only(left: leftPadding + 16, bottom: 4),
+          child: const Text('-', style: TextStyle(color: Colors.grey)),
+        ));
+      } else {
+        rows.addAll(shiftStops.map(
+          (stop) => Padding(
+            padding: EdgeInsets.only(left: leftPadding + 16, top: 2, bottom: 2),
+            child: Text(formatter(stop)),
+          ),
+        ));
+      }
+    }
+
+    return rows;
+  }
+
   List<Widget> _buildTnbShiftCounterRows(
     Map<String, dynamic> data, {
     required DateTime baseDate,
@@ -4950,23 +5026,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         DateTime(baseDate.year, baseDate.month, baseDate.day, 22, 30);
     final cycleEnd = cycleStart.add(const Duration(hours: 24));
 
-    final shifts = <({String label, DateTime start, DateTime end})>[
-      (
-        label: '3ème poste',
-        start: cycleStart,
-        end: cycleStart.add(const Duration(hours: 8)),
-      ),
-      (
-        label: '1er poste',
-        start: cycleStart.add(const Duration(hours: 8)),
-        end: cycleStart.add(const Duration(hours: 16)),
-      ),
-      (
-        label: '2ème poste',
-        start: cycleStart.add(const Duration(hours: 16)),
-        end: cycleStart.add(const Duration(hours: 24)),
-      ),
-    ];
+    final shifts = _cycleShiftWindows(baseDate);
 
     final rows = <Widget>[];
     for (final shift in shifts) {
