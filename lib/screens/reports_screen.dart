@@ -213,6 +213,8 @@ class ReportsScreen extends StatefulWidget {
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
+  static const int _cycleAnchorMinutes = 22 * 60 + 30;
+  static const int _maxCycleMinutes = 24 * 60;
   final DatabaseHelper _databaseHelper = DatabaseHelper();
   List<Report> _reports = [];
   List<Report> _filteredReports = [];
@@ -254,6 +256,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   final posteOrder = const ["3ème", "1er", "2ème"];
+
+  int _toCycleMinutesFromTimeOfDay(TimeOfDay value) {
+    final minutes = (value.hour * 60) + value.minute;
+    return minutes < _cycleAnchorMinutes ? minutes + _maxCycleMinutes : minutes;
+  }
+
+  int _durationMinutesInCycle(TimeOfDay start, TimeOfDay end) =>
+      _toCycleMinutesFromTimeOfDay(end) - _toCycleMinutesFromTimeOfDay(start);
 
   @override
   void initState() {
@@ -1352,9 +1362,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     String formatTimeOfDay(TimeOfDay value) =>
         '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
 
-    int minutesFromTimeOfDay(TimeOfDay value) =>
-        (value.hour * 60) + value.minute;
-
     await showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -1489,12 +1496,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           return;
                         }
 
-                        final startMinutes =
-                            minutesFromTimeOfDay(selectedTimeResult.start);
-                        final endMinutes =
-                            minutesFromTimeOfDay(selectedTimeResult.end);
-
-                        final durationMinutes = endMinutes - startMinutes;
+                        final durationMinutes = _durationMinutesInCycle(
+                          selectedTimeResult.start,
+                          selectedTimeResult.end,
+                        );
                         final durationHours = durationMinutes ~/ 60;
                         final remainingMinutes = durationMinutes % 60;
                         final durationText =
@@ -1624,9 +1629,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     String formatTimeOfDay(TimeOfDay value) =>
         '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
-
-    int minutesFromTimeOfDay(TimeOfDay value) =>
-        (value.hour * 60) + value.minute;
 
     _TnbStopCategory? selectedCategory = findCategory();
     final storedType =
@@ -1784,10 +1786,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         selectedStart = selectedTimeResult.start;
                         selectedEnd = selectedTimeResult.end;
 
-                        final startMinutes =
-                            minutesFromTimeOfDay(selectedStart!);
-                        final endMinutes = minutesFromTimeOfDay(selectedEnd!);
-                        final durationMinutes = endMinutes - startMinutes;
+                        final durationMinutes = _durationMinutesInCycle(
+                          selectedStart!,
+                          selectedEnd!,
+                        );
                         final durationHours = durationMinutes ~/ 60;
                         final remainingMinutes = durationMinutes % 60;
                         final durationText =
@@ -5390,6 +5392,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return DateTime(2000, 1, 1, hour, minute);
   }
 
+  int? _durationMinutesFromTimeStrings(String start, String end) {
+    final parsedStart = _parseDailyTime(start);
+    final parsedEnd = _parseDailyTime(end);
+    if (parsedStart == null || parsedEnd == null) return null;
+    final startTimeOfDay = TimeOfDay.fromDateTime(parsedStart);
+    final endTimeOfDay = TimeOfDay.fromDateTime(parsedEnd);
+    final durationMinutes =
+        _durationMinutesInCycle(startTimeOfDay, endTimeOfDay);
+    if (durationMinutes <= 0 || durationMinutes > _maxCycleMinutes) return null;
+    return durationMinutes;
+  }
+
   String _formatTimeOfDay(TimeOfDay value) =>
       '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
 
@@ -5460,13 +5474,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              final startMinutes = (start.hour * 60) + start.minute;
-              final endMinutes = (end.hour * 60) + end.minute;
-              if (endMinutes <= startMinutes) {
+              final durationMinutes = _durationMinutesInCycle(start, end);
+              if (durationMinutes <= 0 || durationMinutes > _maxCycleMinutes) {
                 ScaffoldMessenger.of(dialogContext).showSnackBar(
                   const SnackBar(
                     content: Text(
-                        "L'heure de fin doit être après l'heure de début."),
+                        "L'arrêt doit rester dans la fenêtre 22:30 → 22:30 (24h max)."),
                     backgroundColor: AppColors.error,
                   ),
                 );
@@ -5534,8 +5547,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
     final start = _parseDailyTime(startTime);
     final end = _parseDailyTime(endTime);
-    if (start == null || end == null || !end.isAfter(start)) {
-      return "L'heure de fin doit être supérieure à l'heure de début.";
+    final durationMinutes = (start == null || end == null)
+        ? null
+        : _durationMinutesInCycle(
+            TimeOfDay.fromDateTime(start),
+            TimeOfDay.fromDateTime(end),
+          );
+    if (durationMinutes == null ||
+        durationMinutes <= 0 ||
+        durationMinutes > _maxCycleMinutes) {
+      return "L'arrêt doit rester dans la fenêtre 22:30 → 22:30 (24h max).";
     }
     return null;
   }
@@ -5564,25 +5585,39 @@ class _ReportsScreenState extends State<ReportsScreen> {
         (stop is Map && stop['start'] != null && stop['end'] != null) ||
         (stop is Map && stop['Début'] != null && stop['Fin'] != null));
     if (hasTimeRanges) {
-      final rawRanges = stops
+      final ranges = stops
           .whereType<Map>()
           .map((stop) {
-            final start = stop['startTime'] ?? stop['start'] ?? stop['Début'];
-            final end = stop['endTime'] ?? stop['end'] ?? stop['Fin'];
+            final startRaw =
+                (stop['startTime'] ?? stop['start'] ?? stop['Début'] ?? '')
+                    .toString();
+            final endRaw = (stop['endTime'] ?? stop['end'] ?? stop['Fin'] ?? '')
+                .toString();
+            final start = _parseDailyTime(startRaw);
+            final end = _parseDailyTime(endRaw);
             if (start == null || end == null) return null;
-            return {
-              'start': start.toString(),
-              'end': end.toString(),
-            };
+
+            final startMinutes = _toCycleMinutesFromTimeOfDay(
+              TimeOfDay.fromDateTime(start),
+            );
+            final endMinutes = _toCycleMinutesFromTimeOfDay(
+              TimeOfDay.fromDateTime(end),
+            );
+            if (endMinutes <= startMinutes) return null;
+
+            return TimeRange(startMinutes, endMinutes);
           })
-          .whereType<Map<String, String>>()
+          .whereType<TimeRange>()
           .toList();
-      final ranges = TimeCalculationService.parseTimeRanges(rawRanges);
-      return TimeCalculationService.calculateTotalDowntimeMinutes(ranges);
+      return TimeCalculationService.calculateTotalDowntimeMinutes(
+        ranges,
+        maxMinutes: _maxCycleMinutes,
+      );
     }
     return stops
         .map((stop) => _parseDurationToMinutes(stop['duration'] ?? ''))
-        .fold(0, (a, b) => a + b);
+        .fold(0, (a, b) => a + b)
+        .clamp(0, _maxCycleMinutes);
   }
 
   // Parse duration string to minutes
@@ -7640,19 +7675,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         );
                         if (selectedTimeResult == null) return;
 
-                        final start = DateTime(
-                            2000,
-                            1,
-                            1,
-                            selectedTimeResult.start.hour,
-                            selectedTimeResult.start.minute);
-                        final end = DateTime(
-                            2000,
-                            1,
-                            1,
-                            selectedTimeResult.end.hour,
-                            selectedTimeResult.end.minute);
-
                         final validation = _validateDailyStopFields(
                           category: selectedCategory,
                           type: selectedType,
@@ -7672,7 +7694,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           return;
                         }
 
-                        final durationMinutes = end.difference(start).inMinutes;
+                        final durationMinutes = _durationMinutesInCycle(
+                          selectedTimeResult.start,
+                          selectedTimeResult.end,
+                        );
                         final durationText =
                             '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
                         final locationLabel = requiresLocation &&
@@ -7935,9 +7960,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           }
                           return;
                         }
-                        final start = _parseDailyTime(startTime)!;
-                        final end = _parseDailyTime(endTime)!;
-                        final durationMinutes = end.difference(start).inMinutes;
+                        final durationMinutes = _durationMinutesFromTimeStrings(
+                                startTime, endTime) ??
+                            0;
                         final durationText =
                             '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
                         final locationLabel = requiresLocation &&
