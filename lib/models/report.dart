@@ -1,5 +1,7 @@
 import 'package:intl/intl.dart';
 import 'dart:convert';
+import 'package:r0/services/stop_sorting_service.dart';
+import 'package:r0/services/trip_sorting_service.dart';
 
 class Report {
   final int? id; // Local SQLite ID
@@ -23,6 +25,12 @@ class Report {
   });
 
   Map<String, dynamic> toMap() {
+    final normalizedAdditionalData = additionalData != null
+        ? Map<String, dynamic>.from(additionalData!)
+        : null;
+    StopSortingService.sortStopsInAdditionalData(normalizedAdditionalData);
+    TripSortingService.sortTripsInAdditionalData(normalizedAdditionalData);
+
     return {
       'id': id,
       'firestore_id': firestoreId,
@@ -30,13 +38,20 @@ class Report {
       'date': DateFormat('yyyy-MM-dd HH:mm:ss').format(date),
       'group_name': group,
       'type': type,
-      'additional_data':
-          additionalData != null ? jsonEncode(additionalData) : null,
+      'additional_data': normalizedAdditionalData != null
+          ? jsonEncode(normalizedAdditionalData)
+          : null,
       'sheets_synced': isSentToSheets ? 1 : 0,
     };
   }
 
   factory Report.fromMap(Map<String, dynamic> map) {
+    final parsedAdditionalData = map['additional_data'] != null
+        ? Map<String, dynamic>.from(jsonDecode(map['additional_data']))
+        : null;
+    StopSortingService.sortStopsInAdditionalData(parsedAdditionalData);
+    TripSortingService.sortTripsInAdditionalData(parsedAdditionalData);
+
     return Report(
       id: map['id'] as int?,
       firestoreId: map['firestore_id'] as String?,
@@ -44,9 +59,7 @@ class Report {
       date: DateFormat('yyyy-MM-dd HH:mm:ss').parse(map['date'] as String),
       group: map['group_name'] as String,
       type: map['type'] as String,
-      additionalData: map['additional_data'] != null
-          ? Map<String, dynamic>.from(jsonDecode(map['additional_data']))
-          : null,
+      additionalData: parsedAdditionalData,
       isSentToSheets: (map['sheets_synced'] as int? ?? 0) == 1,
     );
   }

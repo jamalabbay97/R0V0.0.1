@@ -76,6 +76,36 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
   int _currentStep = 0;
   bool _isSaving = false;
 
+  int _tripTimeToMinutes(dynamic rawTime) {
+    final value = rawTime?.toString() ?? '';
+    final parts = value.split(':');
+    if (parts.length != 2) return (24 * 60) + 1;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return (24 * 60) + 1;
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+      return (24 * 60) + 1;
+    }
+    return (hour * 60) + minute;
+  }
+
+  void _sortTruckTrips(Map<String, dynamic> truck) {
+    final counts = truck['counts'];
+    if (counts is! List) return;
+    counts.sort((a, b) {
+      final aMap = a is Map ? a : const {};
+      final bMap = b is Map ? b : const {};
+      return _tripTimeToMinutes(aMap['time'])
+          .compareTo(_tripTimeToMinutes(bMap['time']));
+    });
+  }
+
+  void _sortAllTruckTrips() {
+    for (final truck in truckData) {
+      _sortTruckTrips(truck);
+    }
+  }
+
   // Predefined lists
   static const List<String> predefinedTrucks = [
     'W17',
@@ -121,7 +151,14 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
   void _loadExistingData() {
     if (widget.initialReport?.additionalData == null) return;
     final data = widget.initialReport!.additionalData!;
-    if (data['truckData'] is List) truckData = List.from(data['truckData']);
+    if (data['truckData'] is List) {
+      truckData = List<Map<String, dynamic>>.from(
+        (data['truckData'] as List).map(
+          (truck) => Map<String, dynamic>.from(truck),
+        ),
+      );
+      _sortAllTruckTrips();
+    }
 
     // Find mine/zone
     if (data['mine'] != null) {
@@ -515,6 +552,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
   void _deleteTrip(Map<String, dynamic> truck, Map<String, dynamic> trip) {
     setState(() {
       (truck['counts'] as List).remove(trip);
+      _sortTruckTrips(truck);
     });
   }
 
@@ -595,6 +633,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                               "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}";
                           trip['equipment'] = eq;
                           trip['productQualityType'] = tripQuality?.toString();
+                          _sortTruckTrips(truck);
                         });
                         Navigator.pop(context);
                       },
@@ -674,6 +713,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                             'equipment': eq,
                             'productQualityType': tripQuality?.toString()
                           });
+                          _sortTruckTrips(truck);
                         });
                         Navigator.pop(context);
                       },
@@ -885,6 +925,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
       return;
     }
     setState(() => _isSaving = true);
+    _sortAllTruckTrips();
     int totalTrips = truckData.fold(
         0, (acc, t) => acc + ((t['counts'] as List?)?.length ?? 0));
 

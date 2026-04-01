@@ -336,6 +336,7 @@ class R0ReportState extends State<R0Report> {
                 originalEnd: (a['OriginalEnd'] ?? a['Fin'])?.toString() ?? '',
               ))
           .toList();
+      _sortVentilationByStart();
     }
     // Load Repartition Data
     if (data['repartition'] is Map) {
@@ -349,6 +350,31 @@ class R0ReportState extends State<R0Report> {
   double _parseNumeric(String value) {
     if (value.isEmpty) return 0.0;
     return double.tryParse(value.replaceAll(',', '.')) ?? 0.0;
+  }
+
+  int _startMinutesFromValue(String? value) {
+    if (value == null || !value.contains(':')) return (24 * 60) + 1;
+    final split = value.split(':');
+    if (split.length != 2) return (24 * 60) + 1;
+    final hour = int.tryParse(split[0]);
+    final minute = int.tryParse(split[1]);
+    if (hour == null || minute == null) return (24 * 60) + 1;
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+      return (24 * 60) + 1;
+    }
+    return (hour * 60) + minute;
+  }
+
+  void _sortVentilationByStart() {
+    formData.ventilation.sort((a, b) {
+      final aMinutes = _startMinutesFromValue(
+        a.originalStart.isNotEmpty ? a.originalStart : a.duree,
+      );
+      final bMinutes = _startMinutesFromValue(
+        b.originalStart.isNotEmpty ? b.originalStart : b.duree,
+      );
+      return aMinutes.compareTo(bMinutes);
+    });
   }
 
   void _calculateHours() {
@@ -1216,6 +1242,7 @@ class R0ReportState extends State<R0Report> {
                                   "${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}",
                               originalEnd:
                                   "${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}"));
+                          _sortVentilationByStart();
                           _calculateHours();
                         });
                         Navigator.pop(context);

@@ -97,7 +97,7 @@ class DailyStockEntry {
 
 class _StopTimeSelectionResult {
   final TimeOfDay start;
-  final TimeOfDay end;
+  final TimeOfDay? end;
 
   const _StopTimeSelectionResult({required this.start, required this.end});
 }
@@ -115,6 +115,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
   static const int _cycleAnchorMinutes = 22 * 60 + 30;
   TimeOfDay _startTime = TimeOfDay.now();
   TimeOfDay _endTime = TimeOfDay.now();
+  bool _isPending = false;
 
   String _formatTime(TimeOfDay value) =>
       '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
@@ -151,7 +152,8 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
   Widget build(BuildContext context) {
     final durationMinutes =
         _toCycleMinutes(_endTime) - _toCycleMinutes(_startTime);
-    final hasValidRange = durationMinutes > 0 && durationMinutes <= 24 * 60;
+    final hasValidRange =
+        _isPending || (durationMinutes > 0 && durationMinutes <= 24 * 60);
 
     return Material(
       color: Colors.transparent,
@@ -228,7 +230,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                         style: TextStyle(color: Colors.white, fontSize: 20),
                       ),
                       subtitle: Text(
-                        _formatTime(_endTime),
+                        _isPending ? 'Pending' : _formatTime(_endTime),
                         style: TextStyle(
                           color: Colors.grey.shade400,
                           fontSize: 16,
@@ -239,7 +241,20 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                         color: Colors.white70,
                         size: 34,
                       ),
-                      onTap: _pickEndTime,
+                      onTap: _isPending ? null : _pickEndTime,
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text(
+                        'Arrêt en cours',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      subtitle: const Text(
+                        "Enregistrer l'heure de début maintenant, puis ajouter l'heure de fin plus tard.",
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                      value: _isPending,
+                      onChanged: (value) => setState(() => _isPending = value),
                     ),
                     const SizedBox(height: 16),
                     if (!hasValidRange)
@@ -275,7 +290,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                                   Navigator.of(context).pop(
                                     _StopTimeSelectionResult(
                                       start: _startTime,
-                                      end: _endTime,
+                                      end: _isPending ? null : _endTime,
                                     ),
                                   );
                                 }
@@ -431,6 +446,24 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
   int _durationMinutesInCycle(TimeOfDay start, TimeOfDay end) =>
       _toCycleMinutes(end) - _toCycleMinutes(start);
 
+  int _minutesFromTimeText(String value) {
+    if (!value.contains(':')) return (24 * 60) + 1;
+    final split = value.split(':');
+    if (split.length != 2) return (24 * 60) + 1;
+    final hour = int.tryParse(split[0]);
+    final minute = int.tryParse(split[1]);
+    if (hour == null || minute == null) return (24 * 60) + 1;
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+      return (24 * 60) + 1;
+    }
+    return (hour * 60) + minute;
+  }
+
+  void _sortModuleStopsByStartTime(List<ModuleStop> stops) {
+    stops.sort((a, b) => _minutesFromTimeText(a.startTime)
+        .compareTo(_minutesFromTimeText(b.startTime)));
+  }
+
   static const Map<int, Map<String, String>> _moduleLocations = {
     1: {
       'M1_TR01': 'Tremie',
@@ -490,6 +523,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
               startTime: s['startTime'] ?? '',
               endTime: s['endTime'] ?? ''))
           .toList();
+      _sortModuleStopsByStartTime(module1Stops);
     }
     if (data['module2Stops'] is List) {
       module2Stops = (data['module2Stops'] as List)
@@ -505,6 +539,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
               startTime: s['startTime'] ?? '',
               endTime: s['endTime'] ?? ''))
           .toList();
+      _sortModuleStopsByStartTime(module2Stops);
     }
     if (data['stock'] is List) {
       stockEntries = (data['stock'] as List)
@@ -687,20 +722,40 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                 if (e.value.location.isNotEmpty) Text(e.value.location),
                 Text(
                   "De ${e.value.startTime.isNotEmpty ? e.value.startTime : '--:--'} à "
-                  "${e.value.endTime.isNotEmpty ? e.value.endTime : '--:--'}",
+                  "${e.value.endTime.isNotEmpty ? e.value.endTime : 'Pending'}",
                 ),
+                if (e.value.endTime.isEmpty)
+                  const Text(
+                    'Arrêt en cours • Appuyez sur "Terminer"',
+                    style: TextStyle(color: AppColors.success),
+                  ),
                 Text(formatMinutesToHoursMinutes(
                     parseDurationToMinutes(e.value.duration))),
               ],
             ),
-            trailing: IconButton(
-                icon: const Icon(Icons.delete, color: AppColors.error),
-                onPressed: () {
-                  setState(() {
-                    stops.removeAt(e.key);
-                    _calculateTotals();
-                  });
-                }),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (e.value.endTime.isEmpty)
+                  TextButton.icon(
+                    icon: const Icon(Icons.stop_circle_outlined, size: 18),
+                    label: const Text('Terminer'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.success,
+                    ),
+                    onPressed: () =>
+                        _endPendingModuleStop(module, stops, e.key),
+                  ),
+                IconButton(
+                    icon: const Icon(Icons.delete, color: AppColors.error),
+                    onPressed: () {
+                      setState(() {
+                        stops.removeAt(e.key);
+                        _calculateTotals();
+                      });
+                    }),
+              ],
+            ),
           ))),
       const SizedBox(height: 16),
       OCPButton(
@@ -882,12 +937,11 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                                 return;
                               }
 
-                              final durationMinutes = _durationMinutesInCycle(
-                                selectedTimeResult.start,
-                                selectedTimeResult.end,
-                              );
-                              final durationText = '${durationMinutes ~/ 60}h '
-                                  '${(durationMinutes % 60).toString().padLeft(2, '0')}';
+                              final durationText = selectedTimeResult.end ==
+                                      null
+                                  ? ''
+                                  : '${_durationMinutesInCycle(selectedTimeResult.start, selectedTimeResult.end!) ~/ 60}h '
+                                      '${(_durationMinutesInCycle(selectedTimeResult.start, selectedTimeResult.end!) % 60).toString().padLeft(2, '0')}';
                               final locationLabel = selectedLocation == null
                                   ? ''
                                   : '${selectedLocation ?? ''} - ${locations[selectedLocation] ?? ''}';
@@ -904,13 +958,17 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                                   stopLocation: locationLabel,
                                   startTime:
                                       formatTimeOfDay(selectedTimeResult.start),
-                                  endTime:
-                                      formatTimeOfDay(selectedTimeResult.end),
+                                  endTime: selectedTimeResult.end == null
+                                      ? 'Pending'
+                                      : formatTimeOfDay(
+                                          selectedTimeResult.end!),
                                 );
                                 if (module == 1) {
                                   module1Stops.add(stop);
+                                  _sortModuleStopsByStartTime(module1Stops);
                                 } else {
                                   module2Stops.add(stop);
+                                  _sortModuleStopsByStartTime(module2Stops);
                                 }
                                 final shouldMirrorByType =
                                     _tnbStopTypeAlwaysMirrors(selectedNature);
@@ -933,13 +991,17 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                                     stopLocation: locationLabel,
                                     startTime: formatTimeOfDay(
                                         selectedTimeResult.start),
-                                    endTime:
-                                        formatTimeOfDay(selectedTimeResult.end),
+                                    endTime: selectedTimeResult.end == null
+                                        ? 'Pending'
+                                        : formatTimeOfDay(
+                                            selectedTimeResult.end!),
                                   );
                                   if (module == 1) {
                                     module2Stops.add(mirroredStop);
+                                    _sortModuleStopsByStartTime(module2Stops);
                                   } else {
                                     module1Stops.add(mirroredStop);
+                                    _sortModuleStopsByStartTime(module1Stops);
                                   }
                                 }
                                 _calculateTotals();
@@ -958,9 +1020,55 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
   bool _isSharedConveyorLocation(String? locationKey) =>
       locationKey != null && _sharedConveyorLocationKeys.contains(locationKey);
 
+  Future<void> _endPendingModuleStop(
+      int module, List<ModuleStop> stops, int index) async {
+    final stop = stops[index];
+    if (stop.endTime.isNotEmpty) return;
+    final start = _parseTime(stop.startTime);
+    if (start == null) return;
+
+    final selectedEnd = await showSpinnerTimePickerDialog(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      title: 'Heure fin',
+    );
+    if (selectedEnd == null) return;
+
+    final validation = _validateSingleStop(
+      start,
+      selectedEnd,
+      StopCategory(label: stop.category, types: const []),
+      stop.nature,
+      stop.location,
+      stop.detail,
+    );
+    if (validation != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(validation), backgroundColor: AppColors.error),
+        );
+      }
+      return;
+    }
+
+    final durationMinutes = _durationMinutesInCycle(start, selectedEnd);
+    setState(() {
+      stop.endTime =
+          '${selectedEnd.hour.toString().padLeft(2, '0')}:${selectedEnd.minute.toString().padLeft(2, '0')}';
+      stop.duration =
+          '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
+      if (module == 1) {
+        module1Stops[index] = stop;
+      } else {
+        module2Stops[index] = stop;
+      }
+      _calculateTotals();
+    });
+  }
+
   String? _validateSingleStop(
     TimeOfDay startTime,
-    TimeOfDay endTime,
+    TimeOfDay? endTime,
     StopCategory? selectedCategory,
     String? selectedNature,
     String? selectedLocation,
@@ -979,6 +1087,9 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     if (_tnbStopTypeRequiresDetail(selectedNature) &&
         stopDetail.trim().isEmpty) {
       return "Le détail d'arrêt est obligatoire.";
+    }
+    if (endTime == null) {
+      return null;
     }
     final durationMinutes = _durationMinutesInCycle(startTime, endTime);
     if (durationMinutes <= 0 || durationMinutes > totalPeriodMinutes) {
@@ -1008,12 +1119,17 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
           errors.add(
               'Module $module - Arrêt ${i + 1}: Type et lieu d\'arrêt obligatoires.');
         }
-        final durationMinutes = (start == null || end == null)
-            ? 0
-            : _durationMinutesInCycle(start, end);
-        if (durationMinutes <= 0 || durationMinutes > totalPeriodMinutes) {
+        if (start == null) {
           errors.add(
-              'Module $module - Arrêt ${i + 1}: détail d\'arrêt obligatoire.');
+              'Module $module - Arrêt ${i + 1}: heure de début obligatoire.');
+          continue;
+        }
+        if (end != null) {
+          final durationMinutes = _durationMinutesInCycle(start, end);
+          if (durationMinutes <= 0 || durationMinutes > totalPeriodMinutes) {
+            errors.add(
+                'Module $module - Arrêt ${i + 1}: plage horaire invalide.');
+          }
         }
       }
     }
@@ -1188,6 +1304,21 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
               _formatVerificationStopLabel(s),
               _formatVerificationStopValue(s),
             )),
+        ...module1Stops
+            .asMap()
+            .entries
+            .where((e) => e.value.endTime.isEmpty)
+            .map(
+              (e) => Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () =>
+                      _endPendingModuleStop(1, module1Stops, e.key),
+                  icon: const Icon(Icons.stop_circle_outlined, size: 16),
+                  label: Text('Terminer M1 #${e.key + 1}'),
+                ),
+              ),
+            ),
         const Divider(),
       ],
 
@@ -1203,6 +1334,21 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
               _formatVerificationStopLabel(s),
               _formatVerificationStopValue(s),
             )),
+        ...module2Stops
+            .asMap()
+            .entries
+            .where((e) => e.value.endTime.isEmpty)
+            .map(
+              (e) => Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () =>
+                      _endPendingModuleStop(2, module2Stops, e.key),
+                  icon: const Icon(Icons.stop_circle_outlined, size: 16),
+                  label: Text('Terminer M2 #${e.key + 1}'),
+                ),
+              ),
+            ),
         const Divider(),
       ],
 

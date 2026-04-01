@@ -77,7 +77,7 @@ class _TnbStopLocation {
 
 class _StopTimeSelectionResult {
   final TimeOfDay start;
-  final TimeOfDay end;
+  final TimeOfDay? end;
 
   const _StopTimeSelectionResult({required this.start, required this.end});
 }
@@ -264,6 +264,53 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   int _durationMinutesInCycle(TimeOfDay start, TimeOfDay end) =>
       _toCycleMinutesFromTimeOfDay(end) - _toCycleMinutesFromTimeOfDay(start);
+
+  int _minutesFromStopStart(dynamic rawValue) {
+    if (rawValue == null) return (24 * 60) + 1;
+    final value = rawValue.toString();
+    if (!value.contains(':')) return (24 * 60) + 1;
+    final split = value.split(':');
+    if (split.length != 2) return (24 * 60) + 1;
+    final hour = int.tryParse(split[0]);
+    final minute = int.tryParse(split[1]);
+    if (hour == null || minute == null) return (24 * 60) + 1;
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+      return (24 * 60) + 1;
+    }
+    return (hour * 60) + minute;
+  }
+
+  void _sortArretsByStartTime(List<dynamic> arrets) {
+    arrets.sort((a, b) {
+      final aMap = a is Map ? a : const {};
+      final bMap = b is Map ? b : const {};
+      final aMinutes = _minutesFromStopStart(
+        aMap['OriginalStart'] ?? aMap['startTime'] ?? aMap['Début'],
+      );
+      final bMinutes = _minutesFromStopStart(
+        bMap['OriginalStart'] ?? bMap['startTime'] ?? bMap['Début'],
+      );
+      return aMinutes.compareTo(bMinutes);
+    });
+  }
+
+  int _tripTimeToMinutes(dynamic rawTime) {
+    final value = rawTime?.toString() ?? '';
+    final parts = value.split(':');
+    if (parts.length != 2) return (24 * 60) + 1;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return (24 * 60) + 1;
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+      return (24 * 60) + 1;
+    }
+    return (hour * 60) + minute;
+  }
+
+  void _sortTripCountsByTime(List<Map<String, dynamic>> counts) {
+    counts.sort((a, b) =>
+        _tripTimeToMinutes(a['time']).compareTo(_tripTimeToMinutes(b['time'])));
+  }
 
   @override
   void initState() {
@@ -1149,6 +1196,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         title: Text(
                                           _formatTnbActivityStopSummary(stop),
                                         ),
+                                        subtitle: _isPendingStop(stop)
+                                            ? const Text(
+                                                'Arrêt en cours • Appuyez sur "Terminer"',
+                                                style: TextStyle(
+                                                    color: AppColors.success),
+                                              )
+                                            : null,
                                         leading: isSelected
                                             ? const Icon(Icons.check_circle,
                                                 color: Colors.green)
@@ -1162,6 +1216,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         trailing: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
+                                            if (_isPendingStop(stop))
+                                              TextButton.icon(
+                                                icon: const Icon(
+                                                  Icons.stop_circle_outlined,
+                                                  size: 18,
+                                                ),
+                                                label: const Text('Terminer'),
+                                                style: TextButton.styleFrom(
+                                                  foregroundColor:
+                                                      AppColors.success,
+                                                ),
+                                                onPressed: () =>
+                                                    _endPendingActivityStop(
+                                                  report,
+                                                  data,
+                                                  index,
+                                                  setDialogState,
+                                                  scaffoldMessenger,
+                                                  l10n,
+                                                ),
+                                              ),
                                             IconButton(
                                               icon: const Icon(Icons.edit,
                                                   size: 18),
@@ -1496,14 +1571,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           return;
                         }
 
-                        final durationMinutes = _durationMinutesInCycle(
-                          selectedTimeResult.start,
-                          selectedTimeResult.end,
-                        );
-                        final durationHours = durationMinutes ~/ 60;
-                        final remainingMinutes = durationMinutes % 60;
-                        final durationText =
-                            '${durationHours}h ${remainingMinutes.toString().padLeft(2, '0')}';
+                        final durationMinutes = selectedTimeResult.end == null
+                            ? null
+                            : _durationMinutesInCycle(
+                                selectedTimeResult.start,
+                                selectedTimeResult.end!,
+                              );
+                        final durationText = durationMinutes == null
+                            ? ''
+                            : '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
                         final formattedLocation = requiresLocation
                             ? '${selectedLocation!.code} - ${selectedLocation!.label}'
                             : '';
@@ -1526,10 +1602,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           'Détail': requiresDetail ? stopDetail.trim() : '',
                           'startTime':
                               formatTimeOfDay(selectedTimeResult.start),
-                          'endTime': formatTimeOfDay(selectedTimeResult.end),
+                          'endTime': selectedTimeResult.end == null
+                              ? 'Pending'
+                              : formatTimeOfDay(selectedTimeResult.end!),
                           'Début': formatTimeOfDay(selectedTimeResult.start),
-                          'Fin': formatTimeOfDay(selectedTimeResult.end),
+                          'Fin': selectedTimeResult.end == null
+                              ? 'Pending'
+                              : formatTimeOfDay(selectedTimeResult.end!),
                         });
+                        _sortArretsByStartTime(updatedData['Arrets'] as List);
 
                         final recalculatedData =
                             _recalculateActivityTotals(updatedData);
@@ -1786,14 +1867,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         selectedStart = selectedTimeResult.start;
                         selectedEnd = selectedTimeResult.end;
 
-                        final durationMinutes = _durationMinutesInCycle(
-                          selectedStart!,
-                          selectedEnd!,
-                        );
-                        final durationHours = durationMinutes ~/ 60;
-                        final remainingMinutes = durationMinutes % 60;
-                        final durationText =
-                            '${durationHours}h ${remainingMinutes.toString().padLeft(2, '0')}';
+                        final durationMinutes = selectedEnd == null
+                            ? null
+                            : _durationMinutesInCycle(
+                                selectedStart!,
+                                selectedEnd!,
+                              );
+                        final durationText = durationMinutes == null
+                            ? ''
+                            : '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
 
                         final formattedLocation = requiresLocation
                             ? '${selectedLocation!.code} - ${selectedLocation!.label}'
@@ -1815,11 +1897,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             requiresDetail ? stopDetail.trim() : '';
                         updatedStop['startTime'] =
                             formatTimeOfDay(selectedStart!);
-                        updatedStop['endTime'] = formatTimeOfDay(selectedEnd!);
+                        updatedStop['endTime'] = selectedEnd == null
+                            ? 'Pending'
+                            : formatTimeOfDay(selectedEnd!);
                         updatedStop['Début'] = formatTimeOfDay(selectedStart!);
-                        updatedStop['Fin'] = formatTimeOfDay(selectedEnd!);
+                        updatedStop['Fin'] = selectedEnd == null
+                            ? ''
+                            : formatTimeOfDay(selectedEnd!);
 
                         (updatedData['Arrets'] as List)[index] = updatedStop;
+                        _sortArretsByStartTime(updatedData['Arrets'] as List);
 
                         final recalculatedData =
                             _recalculateActivityTotals(updatedData);
@@ -5474,6 +5561,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }) async {
     TimeOfDay start = initialStart ?? TimeOfDay.now();
     TimeOfDay end = initialEnd ?? TimeOfDay.now();
+    bool isPending = initialEnd == null;
 
     return showDialog<_StopTimeSelectionResult>(
       context: context,
@@ -5508,7 +5596,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               const SizedBox(height: 8),
               ListTile(
                 title: const Text('Heure fin'),
-                subtitle: Text(_formatTimeOfDay(end)),
+                subtitle: Text(isPending ? 'Pending' : _formatTimeOfDay(end)),
                 trailing: const Icon(Icons.access_time),
               ),
               SizedBox(
@@ -5524,6 +5612,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   },
                 ),
               ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Arrêt en cours'),
+                subtitle:
+                    const Text("Sauvegarder avec l'heure de début seulement."),
+                value: isPending,
+                onChanged: (value) {
+                  isPending = value;
+                  (dialogContext as Element).markNeedsBuild();
+                },
+              ),
             ],
           ),
         ),
@@ -5534,6 +5633,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
           ElevatedButton(
             onPressed: () {
+              if (isPending) {
+                Navigator.of(dialogContext).pop(
+                  _StopTimeSelectionResult(start: start, end: null),
+                );
+                return;
+              }
               final durationMinutes = _durationMinutesInCycle(start, end);
               if (durationMinutes <= 0 || durationMinutes > _maxCycleMinutes) {
                 ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -5553,6 +5658,142 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  bool _isPendingStop(Map<String, dynamic> stop) {
+    final endTime =
+        (stop['endTime'] ?? stop['Fin'] ?? stop['end'] ?? '').toString().trim();
+    return endTime.isEmpty;
+  }
+
+  TimeOfDay? _parseStopTimeOfDay(dynamic value) {
+    if (value == null) return null;
+    final raw = value.toString().trim();
+    final parts = raw.split(':');
+    if (parts.length != 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return null;
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+
+  Future<void> _endPendingActivityStop(
+      Report report,
+      Map<String, dynamic> data,
+      int index,
+      StateSetter setDialogState,
+      ScaffoldMessengerState scaffoldMessenger,
+      AppLocalizations l10n) async {
+    final arrets =
+        (data['Arrets'] is List) ? List.from(data['Arrets']) : <dynamic>[];
+    if (index < 0 || index >= arrets.length) return;
+    final stop = arrets[index] is Map
+        ? Map<String, dynamic>.from(arrets[index])
+        : <String, dynamic>{};
+    if (!_isPendingStop(stop)) return;
+
+    final start = _parseStopTimeOfDay(stop['startTime'] ?? stop['Début']);
+    if (start == null) return;
+
+    final selectedEnd = await showSpinnerTimePickerDialog(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      title: 'Heure fin',
+    );
+    if (selectedEnd == null) return;
+
+    final durationMinutes = _durationMinutesInCycle(start, selectedEnd);
+    if (durationMinutes <= 0 || durationMinutes > _maxCycleMinutes) {
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text("L'arrêt doit rester dans la fenêtre 22:30 → 22:30."),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final durationText =
+        '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
+    final endTime = _formatTimeOfDay(selectedEnd);
+    stop['endTime'] = endTime;
+    stop['Fin'] = endTime;
+    stop['duration'] = durationText;
+    arrets[index] = stop;
+
+    final updatedData = Map<String, dynamic>.from(data);
+    updatedData['Arrets'] = arrets;
+    final recalculatedData = _recalculateActivityTotals(updatedData);
+    data
+      ..clear()
+      ..addAll(recalculatedData);
+    final updatedReport = report.copyWith(additionalData: recalculatedData);
+    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+    setDialogState(() {});
+    scaffoldMessenger.showSnackBar(
+      const SnackBar(content: Text("Arrêt terminé avec succès.")),
+    );
+  }
+
+  Future<void> _endPendingDailyStopForModule(
+      Report report,
+      Map<String, dynamic> data,
+      String modulePrefix,
+      List stops,
+      int index,
+      StateSetter setState,
+      StateSetter setDialogState,
+      ScaffoldMessengerState scaffoldMessenger,
+      AppLocalizations l10n,
+      Function(int) onTotalDowntimeChanged) async {
+    if (index < 0 || index >= stops.length) return;
+    final stop = stops[index] is Map
+        ? Map<String, dynamic>.from(stops[index])
+        : <String, dynamic>{};
+    if (!_isPendingStop(stop)) return;
+
+    final start = _parseStopTimeOfDay(
+        stop['startTime'] ?? stop['start'] ?? stop['Début']);
+    if (start == null) return;
+
+    final selectedEnd = await showSpinnerTimePickerDialog(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      title: 'Heure fin',
+    );
+    if (selectedEnd == null) return;
+
+    final durationMinutes = _durationMinutesInCycle(start, selectedEnd);
+    if (durationMinutes <= 0 || durationMinutes > _maxCycleMinutes) {
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text("L'arrêt doit rester dans la fenêtre 22:30 → 22:30."),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final endTime = _formatTimeOfDay(selectedEnd);
+    stop['endTime'] = endTime;
+    stop['Fin'] = endTime;
+    stop['end'] = endTime;
+    stop['duration'] =
+        '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
+    stops[index] = stop;
+
+    setState(() {
+      _updateDailyTotalsForModule(data, modulePrefix, stops);
+      setDialogState(() {});
+      onTotalDowntimeChanged(data['${modulePrefix}TotalDowntime'] ?? 0);
+    });
+
+    final updatedReport = report.copyWith(additionalData: data);
+    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+    scaffoldMessenger.showSnackBar(
+      const SnackBar(content: Text("Arrêt terminé avec succès.")),
     );
   }
 
@@ -5606,8 +5847,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
       return "Le détail d'arrêt est obligatoire.";
     }
     final start = _parseDailyTime(startTime);
+    if (start == null) {
+      return "L'heure de début est obligatoire.";
+    }
+    if (endTime.trim().isEmpty) {
+      return null;
+    }
     final end = _parseDailyTime(endTime);
-    final durationMinutes = (start == null || end == null)
+    final durationMinutes = (end == null)
         ? null
         : _durationMinutesInCycle(
             TimeOfDay.fromDateTime(start),
@@ -7470,6 +7717,37 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        if (_isPendingStop(stop is Map
+                            ? Map<String, dynamic>.from(stop)
+                            : <String, dynamic>{}))
+                          TextButton.icon(
+                            icon: const Icon(Icons.stop_circle_outlined,
+                                size: 18),
+                            label: const Text('Terminer'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.success,
+                            ),
+                            onPressed: () async {
+                              await _endPendingDailyStopForModule(
+                                report,
+                                data,
+                                modulePrefix,
+                                stops,
+                                index,
+                                setState,
+                                setDialogState,
+                                scaffoldMessenger,
+                                l10n,
+                                (int newTotal) {
+                                  setState(() {
+                                    totalDowntime = newTotal;
+                                    operatingTime =
+                                        (24 * 60 - newTotal).clamp(0, 24 * 60);
+                                  });
+                                },
+                              );
+                            },
+                          ),
                         IconButton(
                           icon: const Icon(Icons.edit, size: 18),
                           onPressed: () async {
@@ -7741,7 +8019,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           location: selectedLocation,
                           detail: stopDetail,
                           startTime: _formatTimeOfDay(selectedTimeResult.start),
-                          endTime: _formatTimeOfDay(selectedTimeResult.end),
+                          endTime: selectedTimeResult.end == null
+                              ? 'Pending'
+                              : _formatTimeOfDay(selectedTimeResult.end!),
                         );
                         if (validation != null) {
                           if (context.mounted) {
@@ -7754,12 +8034,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           return;
                         }
 
-                        final durationMinutes = _durationMinutesInCycle(
-                          selectedTimeResult.start,
-                          selectedTimeResult.end,
-                        );
-                        final durationText =
-                            '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
+                        final durationMinutes = selectedTimeResult.end == null
+                            ? null
+                            : _durationMinutesInCycle(
+                                selectedTimeResult.start,
+                                selectedTimeResult.end!,
+                              );
+                        final durationText = durationMinutes == null
+                            ? 'Pending'
+                            : '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
                         final locationLabel = requiresLocation &&
                                 selectedLocation != null
                             ? '$selectedLocation - ${locations[selectedLocation] ?? ''}'
@@ -7790,7 +8073,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             'stopLocation': locationLabel,
                             'startTime':
                                 _formatTimeOfDay(selectedTimeResult.start),
-                            'endTime': _formatTimeOfDay(selectedTimeResult.end),
+                            'endTime': selectedTimeResult.end == null
+                                ? 'Pending'
+                                : _formatTimeOfDay(selectedTimeResult.end!),
                             'Catégorie': selectedCategory!.label,
                           };
                           if (sharedMirrorId.isNotEmpty) {
@@ -8001,7 +8286,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         if (selectedTimeResult == null) return;
 
                         startTime = _formatTimeOfDay(selectedTimeResult.start);
-                        endTime = _formatTimeOfDay(selectedTimeResult.end);
+                        endTime = selectedTimeResult.end == null
+                            ? 'Pending'
+                            : _formatTimeOfDay(selectedTimeResult.end!);
                         final validation = _validateDailyStopFields(
                           category: selectedCategory,
                           type: selectedType,
@@ -8500,6 +8787,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     List<Map<String, dynamic>> counts = List<Map<String, dynamic>>.from(
         (truck['counts'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ??
             []);
+    _sortTripCountsByTime(counts);
 
     // Controllers
     final driverController = TextEditingController(text: driver1);
@@ -8643,6 +8931,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             } else {
                               counts.add(updatedTrip);
                             }
+                            _sortTripCountsByTime(counts);
                           });
                           Navigator.pop(context);
                         }
@@ -8713,6 +9002,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                             onPressed: () {
                                               setTripState(() {
                                                 counts.removeAt(i);
+                                                _sortTripCountsByTime(counts);
                                               });
                                               setState(() {});
                                             },
@@ -10299,6 +10589,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         'OriginalStart': result['Début'] ?? '',
         'OriginalEnd': result['Fin'] ?? '',
       });
+      _sortArretsByStartTime(data['Arrets'] as List);
 
       // Recalculate hours
       _recalculateR0Hours(data, report.date);
@@ -10355,6 +10646,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       updatedArret['OriginalStart'] = result['Début'] ?? '';
       updatedArret['OriginalEnd'] = result['Fin'] ?? '';
       (data['Arrets'] as List)[index] = updatedArret;
+      _sortArretsByStartTime(data['Arrets'] as List);
 
       // Recalculate hours
       _recalculateR0Hours(data, report.date);
