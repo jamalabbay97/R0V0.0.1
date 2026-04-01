@@ -854,10 +854,17 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
   List<Map<String, dynamic>> _buildSavedCounters(
     Iterable<TnbCounter> counters,
   ) {
+    final shiftWindows = _buildShiftWindows();
+    final shiftOperatingHours = shiftWindows
+        .map((shift) => _calculateShiftOperatingHours(shift.start, shift.end))
+        .toList(growable: false);
     return counters
         .where((counter) => counter.start.trim().isNotEmpty)
         .map((counter) {
-      final endValue = _calculateCounterEndValue(counter.start);
+      final endValue = _calculateCounterEndValue(
+        counter.start,
+        shiftOperatingHours: shiftOperatingHours,
+      );
       return {
         'id': counter.id,
         'poste': counter.label,
@@ -867,12 +874,16 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     }).toList();
   }
 
-  String _calculateCounterEndValue(String startValue) {
+  String _calculateCounterEndValue(
+    String startValue, {
+    required List<double> shiftOperatingHours,
+  }) {
     final parsedStart = double.tryParse(startValue.replaceAll(',', '.').trim());
     if (parsedStart == null) {
       return '';
     }
-    final operatingHours = operatingTime / 60.0;
+    final operatingHours =
+        shiftOperatingHours.fold<double>(0, (sum, value) => sum + value);
     final calculatedEnd = parsedStart + operatingHours;
     final formatted = calculatedEnd.toStringAsFixed(2);
     return formatted.endsWith('.00')
@@ -880,7 +891,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
         : formatted;
   }
 
-  List<_ShiftCounterBlock> _buildShiftCounterBlocks() {
+  List<({String label, DateTime start, DateTime end})> _buildShiftWindows() {
     final cycleStart = DateTime(
       _selectedDate.year,
       _selectedDate.month,
@@ -888,7 +899,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       22,
       30,
     );
-    final shiftWindows = <({String label, DateTime start, DateTime end})>[
+
+    return <({String label, DateTime start, DateTime end})>[
       (
         label: '3ème poste',
         start: cycleStart,
@@ -905,6 +917,17 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
         end: cycleStart.add(const Duration(hours: 24)),
       ),
     ];
+  }
+
+  double _calculateShiftOperatingHours(DateTime shiftStart, DateTime shiftEnd) {
+    final shiftDowntimeMinutes =
+        _calculateDowntimeMinutesBetween(shiftStart, shiftEnd);
+    final shiftDurationMinutes = shiftEnd.difference(shiftStart).inMinutes;
+    return max(0, shiftDurationMinutes - shiftDowntimeMinutes) / 60.0;
+  }
+
+  List<_ShiftCounterBlock> _buildShiftCounterBlocks() {
+    final shiftWindows = _buildShiftWindows();
 
     final result = <_ShiftCounterBlock>[];
 
@@ -918,9 +941,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       final segments = <_ShiftCounterSegment>[];
 
       for (final shift in shiftWindows) {
-        final shiftDowntimeMinutes =
-            _calculateDowntimeMinutesBetween(shift.start, shift.end);
-        final shiftOperatingHours = max(0, 480 - shiftDowntimeMinutes) / 60.0;
+        final shiftOperatingHours =
+            _calculateShiftOperatingHours(shift.start, shift.end);
         final next = current + shiftOperatingHours;
         segments.add(_ShiftCounterSegment(
           shiftLabel: shift.label,

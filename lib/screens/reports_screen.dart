@@ -1612,8 +1612,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         });
                         _sortArretsByStartTime(updatedData['Arrets'] as List);
 
-                        final recalculatedData =
-                            _recalculateActivityTotals(updatedData);
+                        final recalculatedData = _recalculateActivityTotals(
+                          updatedData,
+                          reportDate: report.date,
+                        );
 
                         final updatedReport = Report(
                           id: report.id,
@@ -1908,8 +1910,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         (updatedData['Arrets'] as List)[index] = updatedStop;
                         _sortArretsByStartTime(updatedData['Arrets'] as List);
 
-                        final recalculatedData =
-                            _recalculateActivityTotals(updatedData);
+                        final recalculatedData = _recalculateActivityTotals(
+                          updatedData,
+                          reportDate: report.date,
+                        );
 
                         final updatedReport = Report(
                           id: report.id,
@@ -1979,7 +1983,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
               (updatedData['Arrets'] as List).removeAt(index);
 
               // Recalculate totals for Activity TNB reports
-              final recalculatedData = _recalculateActivityTotals(updatedData);
+              final recalculatedData = _recalculateActivityTotals(
+                updatedData,
+                reportDate: report.date,
+              );
 
               final updatedReport = Report(
                 id: report.id,
@@ -2218,7 +2225,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
             })
         .toList(growable: false);
 
-    final recalculatedData = _recalculateActivityTotals(updatedData);
+    final recalculatedData = _recalculateActivityTotals(
+      updatedData,
+      reportDate: report.date,
+    );
     recalculatedData['T Nr.C'] = filledCounters.length;
 
     return Report(
@@ -5725,7 +5735,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     final updatedData = Map<String, dynamic>.from(data);
     updatedData['Arrets'] = arrets;
-    final recalculatedData = _recalculateActivityTotals(updatedData);
+    final recalculatedData = _recalculateActivityTotals(
+      updatedData,
+      reportDate: report.date,
+    );
     data
       ..clear()
       ..addAll(recalculatedData);
@@ -5977,18 +5990,85 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return (totalHours * 60).round();
   }
 
+  String _calculateTnbCounterEndValue({
+    required String startValue,
+    required List<dynamic> stops,
+    required DateTime reportDate,
+  }) {
+    final parsedStart = double.tryParse(startValue.replaceAll(',', '.').trim());
+    if (parsedStart == null) return '';
+
+    final cycleStart =
+        DateTime(reportDate.year, reportDate.month, reportDate.day, 22, 30);
+    final cycleEnd = cycleStart.add(const Duration(hours: 24));
+    final shifts = _cycleShiftWindows(reportDate);
+
+    var runningValue = parsedStart;
+    for (final shift in shifts) {
+      final downtime = _calculateTnbDowntimeMinutesInWindow(
+        stops: stops,
+        windowStart: shift.start,
+        windowEnd: shift.end,
+        cycleStart: cycleStart,
+        cycleEnd: cycleEnd,
+      );
+      final shiftDurationMinutes = shift.end.difference(shift.start).inMinutes;
+      final operatingHours = math.max(0, shiftDurationMinutes - downtime) / 60;
+      runningValue += operatingHours;
+    }
+
+    return _formatTnbCounterNumber(runningValue);
+  }
+
+  List<Map<String, dynamic>> _rebuildTnbCountersWithComputedEndValues({
+    required List<dynamic> counters,
+    required List<dynamic> stops,
+    required DateTime reportDate,
+  }) {
+    return counters.map((rawCounter) {
+      final counter = rawCounter is Map
+          ? Map<String, dynamic>.from(rawCounter)
+          : <String, dynamic>{};
+      final startValue = (counter['start'] ?? '').toString().trim();
+      counter['start'] = startValue;
+      counter['end'] = startValue.isEmpty
+          ? ''
+          : _calculateTnbCounterEndValue(
+              startValue: startValue,
+              stops: stops,
+              reportDate: reportDate,
+            );
+      return counter;
+    }).toList(growable: false);
+  }
+
   // Recalculate totals for Activity TNB reports
-  Map<String, dynamic> _recalculateActivityTotals(Map<String, dynamic> data) {
+  Map<String, dynamic> _recalculateActivityTotals(
+    Map<String, dynamic> data, {
+    DateTime? reportDate,
+  }) {
     final updatedData = Map<String, dynamic>.from(data);
+    final effectiveReportDate = reportDate ?? DateTime.now();
 
     final stops =
         (updatedData['Arrets'] is List) ? List.from(updatedData['Arrets']) : [];
-    final vibratorCounters = (updatedData['vibrator Counters'] is List)
+    final rawVibratorCounters = (updatedData['vibrator Counters'] is List)
         ? List.from(updatedData['vibrator Counters'])
         : [];
-    final liaisonCounters = (updatedData['liaison Counters'] is List)
+    final rawLiaisonCounters = (updatedData['liaison Counters'] is List)
         ? List.from(updatedData['liaison Counters'])
         : [];
+
+    final vibratorCounters = _rebuildTnbCountersWithComputedEndValues(
+      counters: rawVibratorCounters,
+      stops: stops,
+      reportDate: effectiveReportDate,
+    );
+    final liaisonCounters = _rebuildTnbCountersWithComputedEndValues(
+      counters: rawLiaisonCounters,
+      stops: stops,
+      reportDate: effectiveReportDate,
+    );
 
     final totalDowntime = _calculateDowntimeFromStops(stops);
     const int totalPeriodMinutes = 24 * 60; // 24 hours in minutes
@@ -6002,6 +6082,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     updatedData['T H.M'] = operatingTime;
     updatedData['T H.V'] = totalVibratorMinutes;
     updatedData['T H.L'] = totalLiaisonMinutes;
+    updatedData['vibrator Counters'] = vibratorCounters;
+    updatedData['liaison Counters'] = liaisonCounters;
     updatedData['T Nr.V'] = vibratorCounters.length;
     updatedData['T Nr.L'] = liaisonCounters.length;
     updatedData['T Nr.C'] = vibratorCounters.length + liaisonCounters.length;
