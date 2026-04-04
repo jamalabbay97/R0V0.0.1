@@ -1137,7 +1137,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
             ),
             subtitle: e.value.endTime.isEmpty
                 ? const Text(
-                    'Arrêt en cours • Appuyez sur "Terminer"',
+                    'Arrêt en cours',
                     style: TextStyle(color: AppColors.success),
                   )
                 : null,

@@ -726,7 +726,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                 ),
                 if (e.value.endTime.isEmpty)
                   const Text(
-                    'Arrêt en cours • Appuyez sur "Terminer"',
+                    'Arrêt en cours',
                     style: TextStyle(color: AppColors.success),
                   ),
                 Text(formatMinutesToHoursMinutes(
