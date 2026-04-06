@@ -726,27 +726,60 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                   ),
               ],
             ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+            trailing: PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              tooltip: 'Actions arrêt',
+              onSelected: (value) {
+                if (value == 'end') {
+                  _endPendingModuleStop(module, stops, e.key);
+                  return;
+                }
+
+                if (value == 'edit') {
+                  _showEditStopDialog(module, stops, e.key);
+                  return;
+                }
+
+                setState(() {
+                  stops.removeAt(e.key);
+                  _calculateTotals();
+                });
+              },
+              itemBuilder: (context) => [
                 if (e.value.endTime.isEmpty)
-                  TextButton.icon(
-                    icon: const Icon(Icons.stop_circle_outlined, size: 18),
-                    label: const Text('Terminer'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.success,
+                  const PopupMenuItem<String>(
+                    value: 'end',
+                    child: ListTile(
+                      dense: true,
+                      leading: Icon(
+                        Icons.stop_circle_outlined,
+                        color: AppColors.success,
+                      ),
+                      title: Text('Terminer'),
                     ),
-                    onPressed: () =>
-                        _endPendingModuleStop(module, stops, e.key),
                   ),
-                IconButton(
-                    icon: const Icon(Icons.delete, color: AppColors.error),
-                    onPressed: () {
-                      setState(() {
-                        stops.removeAt(e.key);
-                        _calculateTotals();
-                      });
-                    }),
+                PopupMenuItem<String>(
+                  value: 'edit',
+                  child: ListTile(
+                    dense: true,
+                    leading: Icon(
+                      Icons.edit_outlined,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    title: const Text('Modifier'),
+                  ),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'delete',
+                  child: ListTile(
+                    dense: true,
+                    leading: Icon(
+                      Icons.delete_outline,
+                      color: AppColors.error,
+                    ),
+                    title: Text('Supprimer'),
+                  ),
+                ),
               ],
             ),
           ))),
@@ -1008,6 +1041,169 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                 );
               },
             ));
+  }
+
+  void _showEditStopDialog(int module, List<ModuleStop> stops, int index) {
+    final stop = stops[index];
+    StopCategory? selectedCategory = _tnbStopCategories.firstWhere(
+      (category) => category.label == stop.category,
+      orElse: () => _tnbStopCategories.first,
+    );
+    String? selectedNature = stop.nature.isNotEmpty
+        ? stop.nature
+        : (selectedCategory.types.isNotEmpty
+            ? selectedCategory.types.first
+            : null);
+    final locations = _moduleLocations[module] ?? const <String, String>{};
+    String? selectedLocation;
+    for (final entry in locations.entries) {
+      if (stop.location.isNotEmpty && stop.location.startsWith(entry.key)) {
+        selectedLocation = entry.key;
+        break;
+      }
+    }
+    String stopDetail = stop.detail;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDs) {
+          final availableTypes = selectedCategory?.types ?? const <String>[];
+          final requiresDetail = _tnbStopTypeRequiresDetail(selectedNature);
+          final requiresLocation = _tnbStopTypeRequiresLocation(selectedNature);
+          final canSubmit = selectedCategory != null &&
+              selectedNature != null &&
+              (!requiresLocation || selectedLocation != null) &&
+              (!requiresDetail || stopDetail.trim().isNotEmpty);
+
+          return AlertDialog(
+            title: Text("Modifier Arrêt - Module $module"),
+            content: SingleChildScrollView(
+              child: SizedBox(
+                width: 360,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DropdownButtonFormField<StopCategory>(
+                      initialValue: selectedCategory,
+                      decoration: const InputDecoration(
+                        labelText: "Catégorie d'arrêt",
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _tnbStopCategories
+                          .map((category) => DropdownMenuItem(
+                                value: category,
+                                child: Text(category.label),
+                              ))
+                          .toList(),
+                      onChanged: (value) => setDs(() {
+                        selectedCategory = value;
+                        if (!(selectedCategory?.types
+                                .contains(selectedNature) ??
+                            false)) {
+                          selectedNature = null;
+                        }
+                        if (!_tnbStopTypeRequiresLocation(selectedNature)) {
+                          selectedLocation = null;
+                        }
+                        if (!_tnbStopTypeRequiresDetail(selectedNature)) {
+                          stopDetail = '';
+                        }
+                      }),
+                      hint: const Text('Sélectionner la catégorie d\'arrêt'),
+                      isExpanded: true,
+                    ),
+                    if (selectedCategory != null) ...[
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedNature,
+                        decoration: const InputDecoration(
+                          labelText: 'Type d\'arrêt',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: availableTypes
+                            .map((nature) => DropdownMenuItem(
+                                  value: nature,
+                                  child: Text(nature),
+                                ))
+                            .toList(),
+                        onChanged: (value) => setDs(() {
+                          selectedNature = value;
+                          if (!_tnbStopTypeRequiresLocation(value)) {
+                            selectedLocation = null;
+                          }
+                          if (!_tnbStopTypeRequiresDetail(value)) {
+                            stopDetail = '';
+                          }
+                        }),
+                        hint: const Text('Sélectionner le type d\'arrêt'),
+                        isExpanded: true,
+                      ),
+                    ],
+                    if (selectedNature != null && requiresLocation) ...[
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          labelText: "Lieu d'arrêt",
+                          border: OutlineInputBorder(),
+                        ),
+                        initialValue: selectedLocation,
+                        isExpanded: true,
+                        items: locations.entries
+                            .map((entry) => DropdownMenuItem(
+                                value: entry.key,
+                                child: Text('${entry.key} - ${entry.value}')))
+                            .toList(),
+                        onChanged: (value) =>
+                            setDs(() => selectedLocation = value),
+                        hint: const Text('Sélectionner le lieu'),
+                      ),
+                    ],
+                    if (requiresDetail) ...[
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        initialValue: stopDetail,
+                        decoration: const InputDecoration(
+                          labelText: "Détail de l'arrêt",
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) => setDs(() => stopDetail = value),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Annuler')),
+              ElevatedButton(
+                onPressed: canSubmit
+                    ? () {
+                        final locationLabel = selectedLocation == null
+                            ? ''
+                            : '${selectedLocation ?? ''} - ${locations[selectedLocation] ?? ''}';
+                        setState(() {
+                          stop.category = selectedCategory!.label;
+                          stop.nature = selectedNature!;
+                          stop.location = locationLabel;
+                          stop.detail = stopDetail.trim();
+                          stop.stopType = selectedNature!;
+                          stop.stopLocation = locationLabel;
+                          _calculateTotals();
+                        });
+                        if (context.mounted) Navigator.pop(context);
+                      }
+                    : null,
+                child: const Text('Enregistrer'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   bool _isSharedConveyorLocation(String? locationKey) =>

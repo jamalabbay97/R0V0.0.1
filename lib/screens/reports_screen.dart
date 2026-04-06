@@ -7933,117 +7933,140 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   return ListTile(
                     title: Text('Arrêt ${index + 1}'),
                     subtitle: Text(_formatDailyStopLine(stop)),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_isPendingStop(stop is Map
-                            ? Map<String, dynamic>.from(stop)
-                            : <String, dynamic>{}))
-                          TextButton.icon(
-                            icon: const Icon(Icons.stop_circle_outlined,
-                                size: 18),
-                            label: const Text('Terminer'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppColors.success,
-                            ),
-                            onPressed: () async {
-                              await _endPendingDailyStopForModule(
-                                report,
-                                data,
-                                modulePrefix,
-                                stops,
-                                index,
-                                setState,
-                                setDialogState,
-                                scaffoldMessenger,
-                                l10n,
-                                (int newTotal) {
-                                  setState(() {
-                                    totalDowntime = newTotal;
-                                    operatingTime =
-                                        (24 * 60 - newTotal).clamp(0, 24 * 60);
-                                  });
-                                },
-                              );
-                            },
-                          ),
-                        IconButton(
-                          icon: const Icon(Icons.edit, size: 18),
-                          onPressed: () async {
-                            await _showEditStopDialogForModule(
-                                report,
-                                data,
-                                modulePrefix,
-                                stops,
-                                index,
-                                setState,
-                                setDialogState,
-                                scaffoldMessenger,
-                                l10n, (int newTotal) {
+                    trailing: PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert),
+                      tooltip: 'Actions arrêt',
+                      onSelected: (value) async {
+                        if (value == 'end') {
+                          await _endPendingDailyStopForModule(
+                            report,
+                            data,
+                            modulePrefix,
+                            stops,
+                            index,
+                            setState,
+                            setDialogState,
+                            scaffoldMessenger,
+                            l10n,
+                            (int newTotal) {
                               setState(() {
                                 totalDowntime = newTotal;
                                 operatingTime =
                                     (24 * 60 - newTotal).clamp(0, 24 * 60);
                               });
-                            });
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete,
-                              size: 18, color: Colors.red),
-                          onPressed: () async {
-                            final confirmed = await showDialog<bool>(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: Text(l10n.deleteStopTitle),
-                                content: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(l10n.deleteStopConfirm),
-                                    const SizedBox(height: 12),
-                                    Text(_formatDailyStopLine(stop)),
-                                  ],
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, false),
-                                    child: Text(l10n.cancel),
-                                  ),
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, true),
-                                    child: Text(l10n.delete),
-                                  ),
-                                ],
-                              ),
-                            );
+                            },
+                          );
+                          return;
+                        }
 
-                            if (confirmed != true) return;
-
+                        if (value == 'edit') {
+                          await _showEditStopDialogForModule(
+                              report,
+                              data,
+                              modulePrefix,
+                              stops,
+                              index,
+                              setState,
+                              setDialogState,
+                              scaffoldMessenger,
+                              l10n, (int newTotal) {
                             setState(() {
-                              final removedStop = stops[index] is Map
-                                  ? Map<String, dynamic>.from(stops[index])
-                                  : <String, dynamic>{};
-                              stops.removeAt(index);
-                              _deleteMirroredDailyStopIfLinked(
-                                  data, modulePrefix, removedStop);
-                              _deleteMirroredDailyStopByTypeFallback(
-                                  data, modulePrefix, removedStop);
-                              _updateDailyTotalsForModule(
-                                  data, modulePrefix, stops);
-                              totalDowntime =
-                                  data['${modulePrefix}TotalDowntime'] ?? 0;
+                              totalDowntime = newTotal;
                               operatingTime =
-                                  data['${modulePrefix}OperatingTime'] ??
-                                      (24 * 60 - totalDowntime)
-                                          .clamp(0, 24 * 60);
+                                  (24 * 60 - newTotal).clamp(0, 24 * 60);
                             });
-                            setDialogState(() {});
-                          },
-                        ),
-                      ],
+                          });
+                          return;
+                        }
+
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: Text(l10n.deleteStopTitle),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(l10n.deleteStopConfirm),
+                                const SizedBox(height: 12),
+                                Text(_formatDailyStopLine(stop)),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: Text(l10n.cancel),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: Text(l10n.delete),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirmed != true) return;
+
+                        setState(() {
+                          final removedStop = stops[index] is Map
+                              ? Map<String, dynamic>.from(stops[index])
+                              : <String, dynamic>{};
+                          stops.removeAt(index);
+                          _deleteMirroredDailyStopIfLinked(
+                              data, modulePrefix, removedStop);
+                          _deleteMirroredDailyStopByTypeFallback(
+                              data, modulePrefix, removedStop);
+                          _updateDailyTotalsForModule(
+                              data, modulePrefix, stops);
+                          totalDowntime =
+                              data['${modulePrefix}TotalDowntime'] ?? 0;
+                          operatingTime =
+                              data['${modulePrefix}OperatingTime'] ??
+                                  (24 * 60 - totalDowntime).clamp(0, 24 * 60);
+                        });
+                        setDialogState(() {});
+                      },
+                      itemBuilder: (context) {
+                        final isPending = _isPendingStop(stop is Map
+                            ? Map<String, dynamic>.from(stop)
+                            : <String, dynamic>{});
+                        return [
+                          if (isPending)
+                            const PopupMenuItem<String>(
+                              value: 'end',
+                              child: ListTile(
+                                dense: true,
+                                leading: Icon(
+                                  Icons.stop_circle_outlined,
+                                  color: AppColors.success,
+                                ),
+                                title: Text('Terminer'),
+                              ),
+                            ),
+                          PopupMenuItem<String>(
+                            value: 'edit',
+                            child: ListTile(
+                              dense: true,
+                              leading: Icon(
+                                Icons.edit_outlined,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              title: const Text('Modifier'),
+                            ),
+                          ),
+                          const PopupMenuItem<String>(
+                            value: 'delete',
+                            child: ListTile(
+                              dense: true,
+                              leading: Icon(
+                                Icons.delete_outline,
+                                color: AppColors.error,
+                              ),
+                              title: Text('Supprimer'),
+                            ),
+                          ),
+                        ];
+                      },
                     ),
                   );
                 }),
