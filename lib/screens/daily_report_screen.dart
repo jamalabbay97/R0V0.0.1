@@ -713,24 +713,17 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
             style: TextStyle(color: Colors.grey)),
       ...stops.asMap().entries.map((e) => OCPCard(
               child: ListTile(
-            title: Text(e.value.nature.isNotEmpty ? e.value.nature : '-'),
+            title: Text(_formatModuleStopHeadline(e.value, e.key + 1)),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (e.value.detail.isNotEmpty) Text(e.value.detail),
-                if (e.value.location.isNotEmpty) Text(e.value.location),
-                Text(
-                  "De ${e.value.startTime.isNotEmpty ? e.value.startTime : '--:--'} à "
-                  "${e.value.endTime.isNotEmpty ? e.value.endTime : 'Pending'}",
-                ),
+                Text(_formatModuleStopTimeline(e.value)),
                 if (e.value.endTime.isEmpty)
                   const Text(
                     'Arrêt en cours',
                     style: TextStyle(color: AppColors.success),
                   ),
-                Text(formatMinutesToHoursMinutes(
-                    parseDurationToMinutes(e.value.duration))),
               ],
             ),
             trailing: Row(
@@ -1164,25 +1157,39 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
 
   Widget _row(String l, String v, {Color? color}) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(l),
-        Text(v, style: TextStyle(fontWeight: FontWeight.bold, color: color))
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(
+          flex: 2,
+          child: Text(l),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 3,
+          child: Text(
+            v,
+            style: TextStyle(fontWeight: FontWeight.bold, color: color),
+            textAlign: TextAlign.end,
+          ),
+        ),
       ]));
 
-  String _formatVerificationStopLabel(ModuleStop stop) => [
-        if (stop.category.isNotEmpty) stop.category,
-        stop.nature
-      ].where((value) => value.isNotEmpty).join(' • ');
-
-  String _formatVerificationStopValue(ModuleStop stop) {
-    final details = <String>[
-      if (stop.location.isNotEmpty) 'Lieu: ${stop.location}',
+  String _formatModuleStopHeadline(ModuleStop stop, int index) {
+    final segments = <String>[
+      stop.nature.isNotEmpty ? stop.nature : '-',
       if (_tnbStopTypeRequiresDetail(stop.nature) && stop.detail.isNotEmpty)
-        'Détail: ${stop.detail}',
-      '${stop.startTime} - ${stop.endTime}',
-      '(${formatMinutesToHoursMinutes(parseDurationToMinutes(stop.duration))})',
+        stop.detail,
+      if (_tnbStopTypeRequiresLocation(stop.nature) && stop.location.isNotEmpty)
+        stop.location,
     ];
-    return details.join(' • ');
+    return '$index • ${segments.join(' - ')}';
+  }
+
+  String _formatModuleStopTimeline(ModuleStop stop) {
+    final start = stop.startTime.isNotEmpty ? stop.startTime : '--:--';
+    final end = stop.endTime.isNotEmpty ? stop.endTime : '--:--';
+    final duration = formatMinutesToHoursMinutes(parseDurationToMinutes(
+        stop.duration.isNotEmpty ? stop.duration : '$start - $end'));
+    return 'From $start to $end ($duration)';
   }
 
   // --- Step 3: Stock ---
@@ -1300,9 +1307,15 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
               style: TextStyle(
                   fontWeight: FontWeight.bold, color: AppColors.primary)),
         ),
-        ...module1Stops.map((s) => _row(
-              _formatVerificationStopLabel(s),
-              _formatVerificationStopValue(s),
+        ...module1Stops.asMap().entries.map((entry) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '${_formatModuleStopHeadline(entry.value, entry.key + 1)}\n'
+                  '    ${_formatModuleStopTimeline(entry.value)}',
+                ),
+              ),
             )),
         ...module1Stops
             .asMap()
@@ -1330,9 +1343,15 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
               style: TextStyle(
                   fontWeight: FontWeight.bold, color: AppColors.primary)),
         ),
-        ...module2Stops.map((s) => _row(
-              _formatVerificationStopLabel(s),
-              _formatVerificationStopValue(s),
+        ...module2Stops.asMap().entries.map((entry) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '${_formatModuleStopHeadline(entry.value, entry.key + 1)}\n'
+                  '    ${_formatModuleStopTimeline(entry.value)}',
+                ),
+              ),
             )),
         ...module2Stops
             .asMap()

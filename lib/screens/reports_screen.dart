@@ -1216,55 +1216,86 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                 isSelected ? null : index;
                                           });
                                         },
-                                        trailing: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            if (_isPendingStop(stop))
-                                              TextButton.icon(
-                                                icon: const Icon(
-                                                  Icons.stop_circle_outlined,
-                                                  size: 18,
-                                                ),
-                                                label: const Text('Terminer'),
-                                                style: TextButton.styleFrom(
-                                                  foregroundColor:
-                                                      AppColors.success,
-                                                ),
-                                                onPressed: () =>
-                                                    _endPendingActivityStop(
+                                        trailing: PopupMenuButton<String>(
+                                          icon: const Icon(Icons.more_vert),
+                                          tooltip: 'Actions arrêt',
+                                          padding: EdgeInsets.zero,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          position: PopupMenuPosition.under,
+                                          onSelected: (value) {
+                                            switch (value) {
+                                              case 'end':
+                                                _endPendingActivityStop(
                                                   report,
                                                   data,
                                                   index,
                                                   setDialogState,
                                                   scaffoldMessenger,
                                                   l10n,
+                                                );
+                                                break;
+                                              case 'edit':
+                                                _showEditStopDialog(
+                                                  report,
+                                                  data,
+                                                  index,
+                                                  setDialogState,
+                                                  scaffoldMessenger,
+                                                  l10n,
+                                                );
+                                                break;
+                                              case 'delete':
+                                                _showDeleteStopDialog(
+                                                  report,
+                                                  data,
+                                                  index,
+                                                  setDialogState,
+                                                  scaffoldMessenger,
+                                                  l10n,
+                                                );
+                                                break;
+                                            }
+                                          },
+                                          itemBuilder: (BuildContext context) =>
+                                              [
+                                            if (_isPendingStop(stop))
+                                              const PopupMenuItem<String>(
+                                                value: 'end',
+                                                child: ListTile(
+                                                  dense: true,
+                                                  leading: Icon(
+                                                    Icons.stop_circle_outlined,
+                                                    color: AppColors.success,
+                                                  ),
+                                                  title: Text('Terminer'),
                                                 ),
                                               ),
-                                            IconButton(
-                                              icon: const Icon(Icons.edit,
-                                                  size: 18),
-                                              onPressed: () =>
-                                                  _showEditStopDialog(
-                                                      report,
-                                                      data,
-                                                      index,
-                                                      setDialogState,
-                                                      scaffoldMessenger,
-                                                      l10n),
-                                              tooltip: l10n.editArret,
+                                            PopupMenuItem<String>(
+                                              value: 'edit',
+                                              child: ListTile(
+                                                dense: true,
+                                                leading: Icon(
+                                                  Icons.edit_outlined,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .primary,
+                                                ),
+                                                title: const Text('Modifier'),
+                                              ),
                                             ),
-                                            IconButton(
-                                              icon: const Icon(Icons.delete,
-                                                  size: 18, color: Colors.red),
-                                              onPressed: () =>
-                                                  _showDeleteStopDialog(
-                                                      report,
-                                                      data,
-                                                      index,
-                                                      setDialogState,
-                                                      scaffoldMessenger,
-                                                      l10n),
-                                              tooltip: l10n.deleteArret,
+                                            const PopupMenuItem<String>(
+                                              value: 'delete',
+                                              child: ListTile(
+                                                dense: true,
+                                                leading: Icon(
+                                                  Icons.delete_outline,
+                                                  color: AppColors.error,
+                                                ),
+                                                title: Text('Supprimer'),
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -3845,10 +3876,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                 style: const TextStyle(
                                                     fontWeight:
                                                         FontWeight.bold)),
-                                            ..._buildStopsByShiftSections(
-                                              stops: module1Stops,
-                                              baseDate: report.date,
-                                              formatter: _formatDailyStopLine,
+                                            ..._buildDailyModuleStops(
+                                              module1Stops,
                                               leftPadding: 16,
                                             ),
                                           ],
@@ -3897,10 +3926,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                 style: const TextStyle(
                                                     fontWeight:
                                                         FontWeight.bold)),
-                                            ..._buildStopsByShiftSections(
-                                              stops: module2Stops,
-                                              baseDate: report.date,
-                                              formatter: _formatDailyStopLine,
+                                            ..._buildDailyModuleStops(
+                                              module2Stops,
                                               leftPadding: 16,
                                             ),
                                           ],
@@ -5468,6 +5495,58 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return segments.join('\n');
   }
 
+  List<Widget> _buildDailyModuleStops(
+    List<dynamic> stops, {
+    double leftPadding = 0,
+  }) {
+    return stops.asMap().entries.map((entry) {
+      return Padding(
+        padding: EdgeInsets.only(left: leftPadding, top: 4, bottom: 4),
+        child: Text(
+          _formatDailyModuleStopLine(entry.value, index: entry.key + 1),
+        ),
+      );
+    }).toList();
+  }
+
+  String _formatDailyModuleStopLine(
+    dynamic rawStop, {
+    required int index,
+  }) {
+    final stop = rawStop is Map ? rawStop : <String, dynamic>{};
+    final stopType =
+        (stop['stopType'] ?? stop['nature'] ?? stop['Arret'] ?? '-')
+            .toString()
+            .trim();
+    final stopLocation =
+        (stop['location'] ?? stop['stopLocation'] ?? stop['Lieu'] ?? '')
+            .toString()
+            .trim();
+    final stopDetail = _getTnbStopDetailLabel(Map<String, dynamic>.from(stop));
+    final start =
+        (stop['startTime'] ?? stop['start'] ?? stop['Début'] ?? '').toString();
+    final end =
+        (stop['endTime'] ?? stop['end'] ?? stop['Fin'] ?? '').toString();
+    final parsedDurationMinutes =
+        _parseDurationToMinutes((stop['duration'] ?? '').toString());
+    final durationMinutes = parsedDurationMinutes > 0
+        ? parsedDurationMinutes
+        : _calculateDurationMinutesFromRange(start, end);
+    final duration = _formatMinutesToHoursMinutes(durationMinutes);
+
+    final labelSegments = <String>[
+      stopType.isNotEmpty ? stopType : '-',
+      if (stopDetail.isNotEmpty) stopDetail,
+      if (stopLocation.isNotEmpty) stopLocation,
+    ];
+
+    final startLabel = start.isEmpty ? '--:--' : start;
+    final endLabel = end.isEmpty ? '--:--' : end;
+
+    return '$index • ${labelSegments.join(' - ')}\n'
+        '    From $startLabel to $endLabel ($duration)';
+  }
+
   int _calculateDurationMinutesFromRange(String start, String end) {
     final startMinutes = _toMinutes(start);
     final endMinutes = _toMinutes(end);
@@ -6321,10 +6400,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   const SizedBox(height: 8),
                   Text(l10n.stopsLabel,
                       style: const TextStyle(fontWeight: FontWeight.bold)),
-                  ...module1Stops.map((stop) => Padding(
-                        padding: const EdgeInsets.only(left: 16, top: 4),
-                        child: Text(_formatDailyStopLine(stop)),
-                      )),
+                  ..._buildDailyModuleStops(module1Stops, leftPadding: 16),
                 ],
               ],
             ),
@@ -6351,11 +6427,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   const SizedBox(height: 8),
                   Text(l10n.stopsLabel,
                       style: const TextStyle(fontWeight: FontWeight.bold)),
-                  ...module2Stops.map((stop) => Padding(
-                        padding: const EdgeInsets.only(left: 16, top: 4),
-                        child: Text(
-                            '${_formatMinutesToHoursMinutes(_parseDurationToMinutes(stop['duration'] ?? ''))} - ${stop['nature'] ?? '-'}'),
-                      )),
+                  ..._buildDailyModuleStops(module2Stops, leftPadding: 16),
                 ],
               ],
             ),
