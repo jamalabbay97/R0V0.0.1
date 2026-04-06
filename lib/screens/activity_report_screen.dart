@@ -309,6 +309,8 @@ class _StopTimeSelectionResult {
   const _StopTimeSelectionResult({required this.start, required this.end});
 }
 
+enum _StopCardAction { end, edit, delete }
+
 const List<StopCategory> _tnbStopCategories = [
   StopCategory(
     label: 'Arrêts Extérieures',
@@ -377,20 +379,24 @@ bool _tnbStopTypeRequiresLocation(String? type) {
 bool _tnbStopTypeRequiresDetail(String? type) =>
     const {'AE', 'AM', 'AI', 'AESYS'}.contains(_extractTnbStopTypeCode(type));
 
-String _formatTnbStopResultLine(Stop stop) {
-  final segments = <String>[
+String _formatTnbStopResultLine(
+  Stop stop, {
+  int? index,
+}) {
+  final labelSegments = <String>[
+    if (index != null) '$index',
     stop.nature.isNotEmpty ? stop.nature : '-',
     if (_tnbStopTypeRequiresDetail(stop.nature) && stop.detail.isNotEmpty)
       stop.detail,
     if (_tnbStopTypeRequiresLocation(stop.nature) && stop.location.isNotEmpty)
       stop.location,
-    'De ${stop.startTime.isNotEmpty ? stop.startTime : '--:--'} a ${stop.endTime.isNotEmpty ? stop.endTime : 'Pending'}',
-    stop.duration.isNotEmpty
-        ? formatMinutesToHoursMinutes(parseDurationToMinutes(stop.duration))
-        : '-',
   ];
-
-  return segments.join('\n');
+  final start = stop.startTime.isNotEmpty ? stop.startTime : '--:--';
+  final end = stop.endTime.isNotEmpty ? stop.endTime : '--:--';
+  final duration = stop.duration.isNotEmpty
+      ? formatMinutesToHoursMinutes(parseDurationToMinutes(stop.duration))
+      : '0h 00m';
+  return '${labelSegments.join(' • ')}\n     De $start a $end ($duration)';
 }
 
 const List<StopLocation> _tnbStopLocations = [
@@ -1132,7 +1138,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       ...stops.asMap().entries.map((e) => OCPCard(
               child: ListTile(
             title: Text(
-              _formatTnbStopResultLine(e.value),
+              _formatTnbStopResultLine(e.value, index: e.key + 1),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             subtitle: e.value.endTime.isEmpty
@@ -1144,21 +1150,53 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (e.value.endTime.isEmpty)
-                  TextButton.icon(
-                    icon: const Icon(Icons.stop_circle_outlined, size: 18),
-                    label: const Text('Terminer'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.success,
+                PopupMenuButton<_StopCardAction>(
+                  icon: const Icon(Icons.more_vert),
+                  tooltip: 'Actions arrêt',
+                  onSelected: (action) {
+                    switch (action) {
+                      case _StopCardAction.end:
+                        _endPendingStop(e.key);
+                        break;
+                      case _StopCardAction.edit:
+                        _editStop(e.key);
+                        break;
+                      case _StopCardAction.delete:
+                        setState(() => stops.removeAt(e.key));
+                        recalculateTimes();
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    if (e.value.endTime.isEmpty)
+                      const PopupMenuItem<_StopCardAction>(
+                        value: _StopCardAction.end,
+                        child: ListTile(
+                          dense: true,
+                          leading: Icon(Icons.stop_circle_outlined,
+                              color: AppColors.success),
+                          title: Text('Terminer'),
+                        ),
+                      ),
+                    const PopupMenuItem<_StopCardAction>(
+                      value: _StopCardAction.edit,
+                      child: ListTile(
+                        dense: true,
+                        leading: Icon(Icons.edit_outlined),
+                        title: Text('Modifier'),
+                      ),
                     ),
-                    onPressed: () => _endPendingStop(e.key),
-                  ),
-                IconButton(
-                    icon: const Icon(Icons.delete, color: AppColors.error),
-                    onPressed: () {
-                      setState(() => stops.removeAt(e.key));
-                      recalculateTimes();
-                    }),
+                    const PopupMenuItem<_StopCardAction>(
+                      value: _StopCardAction.delete,
+                      child: ListTile(
+                        dense: true,
+                        leading:
+                            Icon(Icons.delete_outline, color: AppColors.error),
+                        title: Text('Supprimer'),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ))),
@@ -1423,6 +1461,226 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     }
   }
 
+  Future<void> _editStop(int index) async {
+    final stop = stops[index];
+    StopCategory? selectedCategory;
+    for (final category in _tnbStopCategories) {
+      if (category.label == stop.category) {
+        selectedCategory = category;
+        break;
+      }
+    }
+    selectedCategory ??= _tnbStopCategories.firstWhere(
+      (category) =>
+          category.types.any((type) => type.trim() == stop.nature.trim()),
+      orElse: () => _tnbStopCategories.first,
+    );
+
+    String? selectedNature = stop.nature.isEmpty ? null : stop.nature;
+    StopLocation? selectedLocation;
+    if (stop.location.isNotEmpty) {
+      final code = stop.location.split(' - ').first.trim();
+      for (final location in _tnbStopLocations) {
+        if (location.code == code) {
+          selectedLocation = location;
+          break;
+        }
+      }
+    }
+    String stopDetail = stop.detail;
+    TimeOfDay? selectedStart = _parseTimeOfDay(stop.startTime);
+    TimeOfDay? selectedEnd = _parseTimeOfDay(stop.endTime);
+
+    selectedStart ??= TimeOfDay.now();
+
+    String formatTimeOfDay(TimeOfDay value) =>
+        '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDs) {
+          final availableTypes = selectedCategory?.types ?? const <String>[];
+          final requiresLocation = _tnbStopTypeRequiresLocation(selectedNature);
+          final requiresDetail = _tnbStopTypeRequiresDetail(selectedNature);
+          final canSubmit = selectedCategory != null &&
+              selectedNature != null &&
+              selectedStart != null &&
+              (!requiresLocation || selectedLocation != null) &&
+              (!requiresDetail || stopDetail.trim().isNotEmpty);
+
+          return AlertDialog(
+            title: const Text('Modifier arrêt'),
+            content: SingleChildScrollView(
+              child: SizedBox(
+                width: 360,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<StopCategory>(
+                      initialValue: selectedCategory,
+                      decoration: const InputDecoration(
+                        labelText: "Catégorie d'arrêt",
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _tnbStopCategories
+                          .map((category) => DropdownMenuItem(
+                                value: category,
+                                child: Text(category.label),
+                              ))
+                          .toList(),
+                      onChanged: (value) => setDs(() {
+                        selectedCategory = value;
+                        selectedNature = null;
+                        selectedLocation = null;
+                      }),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedNature,
+                      decoration: const InputDecoration(
+                        labelText: "Type d'arrêt",
+                        border: OutlineInputBorder(),
+                      ),
+                      items: availableTypes
+                          .map((nature) => DropdownMenuItem(
+                                value: nature,
+                                child: Text(nature),
+                              ))
+                          .toList(),
+                      onChanged: (value) => setDs(() => selectedNature = value),
+                    ),
+                    if (requiresLocation) ...[
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<StopLocation>(
+                        initialValue: selectedLocation,
+                        decoration: const InputDecoration(
+                          labelText: "Lieu d'arrêt",
+                          border: OutlineInputBorder(),
+                        ),
+                        items: _tnbStopLocations
+                            .map((location) => DropdownMenuItem(
+                                  value: location,
+                                  child: Text(
+                                      '${location.code} - ${location.label}'),
+                                ))
+                            .toList(),
+                        onChanged: (value) =>
+                            setDs(() => selectedLocation = value),
+                      ),
+                    ],
+                    if (requiresDetail) ...[
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        initialValue: stopDetail,
+                        decoration: const InputDecoration(
+                          labelText: "Détail de l'arrêt",
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) => setDs(() => stopDetail = value),
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Heure début'),
+                      subtitle: Text(formatTimeOfDay(selectedStart!)),
+                      trailing: const Icon(Icons.access_time),
+                      onTap: () async {
+                        final picked = await showSpinnerTimePickerDialog(
+                          context: context,
+                          initialTime: selectedStart!,
+                          title: 'Heure début',
+                        );
+                        if (picked != null) {
+                          setDs(() => selectedStart = picked);
+                        }
+                      },
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Heure fin'),
+                      subtitle: Text(
+                        selectedEnd == null
+                            ? 'Pending'
+                            : formatTimeOfDay(selectedEnd!),
+                      ),
+                      trailing: TextButton(
+                        onPressed: () => setDs(() => selectedEnd = null),
+                        child: const Text('Pending'),
+                      ),
+                      onTap: () async {
+                        final picked = await showSpinnerTimePickerDialog(
+                          context: context,
+                          initialTime: selectedEnd ?? TimeOfDay.now(),
+                          title: 'Heure fin',
+                        );
+                        if (picked != null) {
+                          setDs(() => selectedEnd = picked);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Annuler'),
+              ),
+              ElevatedButton(
+                onPressed: !canSubmit
+                    ? null
+                    : () {
+                        final durationMinutes = selectedEnd == null
+                            ? null
+                            : _durationMinutesInCycle(
+                                selectedStart!,
+                                selectedEnd!,
+                              );
+                        if (durationMinutes != null &&
+                            (durationMinutes <= 0 ||
+                                durationMinutes >
+                                    ActivityReportScreen.totalPeriodMinutes)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  "L'arrêt doit rester dans la fenêtre 22:30 → 22:30 (24h max)."),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                          return;
+                        }
+                        setState(() {
+                          stop.category = selectedCategory!.label;
+                          stop.nature = selectedNature!;
+                          stop.location = requiresLocation &&
+                                  selectedLocation != null
+                              ? '${selectedLocation!.code} - ${selectedLocation!.label}'
+                              : '';
+                          stop.detail = requiresDetail ? stopDetail.trim() : '';
+                          stop.startTime = formatTimeOfDay(selectedStart!);
+                          stop.endTime = selectedEnd == null
+                              ? ''
+                              : formatTimeOfDay(selectedEnd!);
+                          stop.duration = durationMinutes == null
+                              ? ''
+                              : '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
+                        });
+                        _sortStopsByStartTime();
+                        recalculateTimes();
+                        Navigator.pop(dialogContext);
+                      },
+                child: const Text('Enregistrer'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   List<Widget> _buildCounterFields() {
     return [
       Text(
@@ -1599,12 +1857,17 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const Divider(height: 16),
-                  ...stops.map(
-                    (stop) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Text(_formatTnbStopResultLine(stop)),
-                    ),
-                  ),
+                  ...stops.asMap().entries.map(
+                        (entry) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Text(
+                            _formatTnbStopResultLine(
+                              entry.value,
+                              index: entry.key + 1,
+                            ),
+                          ),
+                        ),
+                      ),
                 ],
               ),
             ),

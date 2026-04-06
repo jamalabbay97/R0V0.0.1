@@ -1194,11 +1194,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         selectedTileColor:
                                             Colors.green.withValues(alpha: 0.1),
                                         title: Text(
-                                          _formatTnbActivityStopSummary(stop),
+                                          _formatTnbActivityStopSummary(
+                                            stop,
+                                            index: index + 1,
+                                          ),
                                         ),
                                         subtitle: _isPendingStop(stop)
                                             ? const Text(
-                                                'Arrêt en cours • Appuyez sur "Terminer"',
+                                                'Arrêt en cours',
                                                 style: TextStyle(
                                                     color: AppColors.success),
                                               )
@@ -1444,6 +1447,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
           final availableTypes = selectedCategory?.types ?? const <String>[];
           final requiresLocation = _tnbStopTypeRequiresLocation(selectedType);
           final requiresDetail = _tnbStopTypeRequiresDetail(selectedType);
+          final previewLocation = requiresLocation && selectedLocation != null
+              ? '${selectedLocation!.code} - ${selectedLocation!.label}'
+              : '';
+          final previewStop = <String, dynamic>{
+            'nature': selectedType ?? '',
+            'detail': requiresDetail ? stopDetail.trim() : '',
+            'location': previewLocation,
+            'startTime': '',
+            'endTime': '',
+            'duration': '',
+          };
           final canSubmit = selectedCategory != null &&
               selectedType != null &&
               (!requiresLocation || selectedLocation != null) &&
@@ -1549,6 +1563,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             stopDetail = value;
                           });
                         },
+                      ),
+                    ],
+                    if (selectedType != null) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        _formatTnbActivityStopSummary(
+                          previewStop,
+                          index: ((data['Arrets'] as List?)?.length ?? 0) + 1,
+                        ),
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
                   ],
@@ -1737,6 +1761,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
           final availableTypes = selectedCategory?.types ?? const <String>[];
           final requiresLocation = _tnbStopTypeRequiresLocation(selectedType);
           final requiresDetail = _tnbStopTypeRequiresDetail(selectedType);
+          final previewLocation = requiresLocation && selectedLocation != null
+              ? '${selectedLocation!.code} - ${selectedLocation!.label}'
+              : '';
+          final previewStart =
+              selectedStart == null ? '' : formatTimeOfDay(selectedStart!);
+          final previewEnd =
+              selectedEnd == null ? '' : formatTimeOfDay(selectedEnd!);
+          final previewDurationMinutes =
+              selectedStart != null && selectedEnd != null
+                  ? _durationMinutesInCycle(selectedStart!, selectedEnd!)
+                  : null;
+          final previewStop = <String, dynamic>{
+            'nature': selectedType ?? '',
+            'detail': requiresDetail ? stopDetail.trim() : '',
+            'location': previewLocation,
+            'startTime': previewStart,
+            'endTime': previewEnd,
+            'duration': previewDurationMinutes == null
+                ? ''
+                : '${previewDurationMinutes ~/ 60}h ${(previewDurationMinutes % 60).toString().padLeft(2, '0')}',
+          };
           final canSubmit = selectedCategory != null &&
               selectedType != null &&
               (!requiresLocation || selectedLocation != null) &&
@@ -1842,6 +1887,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             stopDetail = value;
                           });
                         },
+                      ),
+                    ],
+                    if (selectedType != null) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        _formatTnbActivityStopSummary(
+                          previewStop,
+                          index: index + 1,
+                        ),
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
                   ],
@@ -1969,7 +2024,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           children: [
             Text(l10n.deleteStopConfirm),
             const SizedBox(height: 12),
-            Text(_formatTnbActivityStopSummary(stop)),
+            Text(_formatTnbActivityStopSummary(stop, index: index + 1)),
           ],
         ),
         actions: [
@@ -5239,13 +5294,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 children: [
                   Text(l10n.arretsLabel,
                       style: const TextStyle(fontWeight: FontWeight.bold)),
-                  ...stops.map((stop) => Padding(
+                  ...stops.asMap().entries.map((entry) => Padding(
                         padding: const EdgeInsets.only(left: 16, top: 4),
                         child: Text(
                           _formatTnbActivityStopSummary(
                             Map<String, dynamic>.from(
-                              stop is Map ? stop : <String, dynamic>{},
+                              entry.value is Map
+                                  ? entry.value
+                                  : <String, dynamic>{},
                             ),
+                            index: entry.key + 1,
                           ),
                         ),
                       )),
@@ -5314,7 +5372,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
   String _getTnbStopDetailLabel(Map<String, dynamic> stop) =>
       (stop['detail'] ?? stop['Détail'] ?? '').toString().trim();
 
-  String _formatTnbActivityStopSummary(Map<String, dynamic> stop) {
+  String _formatTnbActivityStopSummary(
+    Map<String, dynamic> stop, {
+    int? index,
+  }) {
     final type = _getTnbStopTypeLabel(stop);
     final location = _getTnbStopLocationLabel(stop);
     final detail = _getTnbStopDetailLabel(stop);
@@ -5324,18 +5385,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
         (stop['startTime'] ?? stop['start'] ?? stop['Début'] ?? '').toString();
     final end =
         (stop['endTime'] ?? stop['end'] ?? stop['Fin'] ?? '').toString();
-    final duration = _formatMinutesToHoursMinutes(
-      _parseDurationToMinutes((stop['duration'] ?? '').toString()),
-    );
+    final parsedDurationMinutes =
+        _parseDurationToMinutes((stop['duration'] ?? '').toString());
+    final durationMinutes = parsedDurationMinutes > 0
+        ? parsedDurationMinutes
+        : _calculateDurationMinutesFromRange(start, end);
+    final duration = _formatMinutesToHoursMinutes(durationMinutes);
 
-    final segments = <String>[
+    final stopLabelSegments = <String>[
+      if (index != null) '$index',
       type.isNotEmpty ? type : '-',
       if (showDetail && detail.isNotEmpty) detail,
       if (showLocation && location.isNotEmpty) location,
-      'De ${start.isEmpty ? '--:--' : start} a ${end.isEmpty ? '--:--' : end}',
-      duration,
     ];
-    return segments.join('\n');
+    final timeRangeLabel =
+        'De ${start.isEmpty ? '--:--' : start} a ${end.isEmpty ? 'Pinding' : end}';
+    return '${stopLabelSegments.join(' • ')}\n     $timeRangeLabel ($duration)';
   }
 
   static const Map<int, Map<String, String>> _dailyModuleLocations = {
