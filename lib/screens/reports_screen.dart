@@ -3922,181 +3922,52 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       ),
                     ),
                     const Divider(height: 1),
-                    Flexible(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(16),
+                    Expanded(
+                      child: DefaultTabController(
+                        length: 4,
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Date Card
-                            Card(
-                              margin: EdgeInsets.zero,
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      l10n.date,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium,
-                                    ),
-                                    const Divider(height: 16),
-                                    Text(
-                                        '${report.date.day}/${report.date.month}/${report.date.year}'),
-                                  ],
-                                ),
+                            const Material(
+                              color: Colors.transparent,
+                              child: TabBar(
+                                isScrollable: true,
+                                tabs: [
+                                  Tab(text: '3ème'),
+                                  Tab(text: '1er'),
+                                  Tab(text: '2ème'),
+                                  Tab(text: 'Global'),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 16),
-                            // Activity Summary Card
-                            Card(
-                              margin: EdgeInsets.zero,
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      l10n.dataSummary,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium,
-                                    ),
-                                    const Divider(height: 16),
-                                    _buildSummaryRow(
-                                        'T H.A:',
-                                        _formatMinutesToHoursMinutes(
-                                            data['T H.A'] ?? 0)),
-                                    _buildSummaryRow(
-                                        'T H.M:',
-                                        _formatMinutesToHoursMinutes(
-                                            data['T H.M'] ?? 0)),
-                                    const SizedBox(height: 8),
-                                    _buildSummaryRow(
-                                        'T Nr.A:',
-                                        (data['Arrets'] is List
-                                                ? (data['Arrets'] as List)
-                                                    .length
-                                                : 0)
-                                            .toString()),
-                                    _buildSummaryRow(
-                                      'T Nr.C:',
-                                      '${_filledTnbCounterCount(data)} / ${_buildTnbCounterDisplayList(data).length}',
-                                    ),
-                                    _buildSummaryRow(
-                                      'T Nr.T:',
-                                      ((data['truckTrips'] is List)
-                                              ? (data['truckTrips'] as List)
-                                                  .length
-                                              : 0)
-                                          .toString(),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            // Stops Card
-                            Card(
-                              margin: EdgeInsets.zero,
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Arrêts',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium,
-                                    ),
-                                    const Divider(height: 16),
-                                    if (data['Arrets'] is List &&
-                                        (data['Arrets'] as List).isNotEmpty)
-                                      ..._buildStopsByShiftSections(
-                                        stops: List.from(data['Arrets']),
-                                        baseDate: report.date,
-                                        formatter: (stop) =>
-                                            _formatTnbActivityStopSummary(
-                                          Map<String, dynamic>.from(
-                                            stop is Map
-                                                ? stop
-                                                : <String, dynamic>{},
-                                          ),
-                                        ),
-                                      )
-                                    else if (data['Arrets'] is List &&
-                                        (data['Arrets'] as List).isEmpty)
-                                      Text(l10n.aucunArret,
-                                          style: const TextStyle(
-                                              color: Colors.grey))
-                                    else
-                                      Text(l10n.stopDataNotAvailable,
-                                          style: const TextStyle(
-                                              color: Colors.grey)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            // TNB Counters Card
-                            Card(
-                              margin: EdgeInsets.zero,
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Compteurs TNB',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium,
-                                    ),
-                                    const Divider(height: 16),
-                                    ..._buildTnbShiftCounterRows(
-                                      data,
-                                      baseDate: report.date,
-                                      bullet: '• ',
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            // Stock Card
-                            if (data['stock'] is List &&
-                                (data['stock'] as List).isNotEmpty)
-                              Card(
-                                margin: EdgeInsets.zero,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        l10n.stockLabel,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium,
-                                      ),
-                                      const Divider(height: 16),
-                                      ...List.from(data['stock'])
-                                          .map((entry) => Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        vertical: 2),
-                                                child: Text(
-                                                  '${l10n.poste}: ${_getPosteString(entry['poste'], l10n)} | ${l10n.parkLabel}: ${_getParkString(entry['park'], l10n)} | ${l10n.type}: ${_getStockTypeString(entry['type'], l10n)} | ${l10n.quantityLabel}: ${entry['quantity'] ?? '-'} |',
-                                                ),
-                                              )),
-                                    ],
+                            Expanded(
+                              child: TabBarView(
+                                children: [
+                                  _buildTnbReportDetailsPage(
+                                    data: data,
+                                    reportDate: report.date,
+                                    l10n: l10n,
+                                    shiftKey: '3',
                                   ),
-                                ),
+                                  _buildTnbReportDetailsPage(
+                                    data: data,
+                                    reportDate: report.date,
+                                    l10n: l10n,
+                                    shiftKey: '1',
+                                  ),
+                                  _buildTnbReportDetailsPage(
+                                    data: data,
+                                    reportDate: report.date,
+                                    l10n: l10n,
+                                    shiftKey: '2',
+                                  ),
+                                  _buildTnbReportDetailsPage(
+                                    data: data,
+                                    reportDate: report.date,
+                                    l10n: l10n,
+                                  ),
+                                ],
                               ),
+                            ),
                           ],
                         ),
                       ),
@@ -5474,66 +5345,338 @@ class _ReportsScreenState extends State<ReportsScreen> {
     ];
   }
 
-  List<Widget> _buildStopsByShiftSections({
-    required List<dynamic> stops,
+  ({String key, String label, DateTime start, DateTime end})?
+      _cycleShiftWindowByKey(
+    DateTime baseDate,
+    String shiftKey,
+  ) {
+    final cycleStart =
+        DateTime(baseDate.year, baseDate.month, baseDate.day, 22, 30);
+    switch (shiftKey) {
+      case '3':
+        return (
+          key: '3',
+          label: '3ème poste (22:30 - 06:30)',
+          start: cycleStart,
+          end: cycleStart.add(const Duration(hours: 8)),
+        );
+      case '1':
+        return (
+          key: '1',
+          label: '1er poste (06:30 - 14:30)',
+          start: cycleStart.add(const Duration(hours: 8)),
+          end: cycleStart.add(const Duration(hours: 16)),
+        );
+      case '2':
+        return (
+          key: '2',
+          label: '2ème poste (14:30 - 22:30)',
+          start: cycleStart.add(const Duration(hours: 16)),
+          end: cycleStart.add(const Duration(hours: 24)),
+        );
+      default:
+        return null;
+    }
+  }
+
+  List<Map<String, dynamic>> _filterTnbStopsForShift(
+    List<dynamic> stops,
+    DateTime baseDate,
+    String shiftKey,
+  ) {
+    final shift = _cycleShiftWindowByKey(baseDate, shiftKey);
+    if (shift == null) return [];
+
+    final cycleStart =
+        DateTime(baseDate.year, baseDate.month, baseDate.day, 22, 30);
+    final cycleEnd = cycleStart.add(const Duration(hours: 24));
+
+    return stops.whereType<Map>().map(Map<String, dynamic>.from).where((stop) {
+      final rawStart =
+          (stop['startTime'] ?? stop['start'] ?? stop['Début'] ?? '')
+              .toString();
+      if (rawStart.isEmpty) return false;
+      final start =
+          _parseTnbStopDateTimeForCycle(rawStart, cycleStart, cycleEnd);
+      if (start == null) return false;
+
+      final rawEnd =
+          (stop['endTime'] ?? stop['end'] ?? stop['Fin'] ?? '').toString();
+      DateTime? end =
+          _parseTnbStopDateTimeForCycle(rawEnd, cycleStart, cycleEnd);
+      end ??= DateTime.now();
+      if (end.isBefore(start)) {
+        end = end.add(const Duration(days: 1));
+      }
+
+      return end.isAfter(shift.start) && start.isBefore(shift.end);
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> _filterTnbTripsForShift(
+    List<dynamic> trips,
+    String shiftKey,
+  ) {
+    return trips.whereType<Map>().map(Map<String, dynamic>.from).where((trip) {
+      final tripPosteKey = _normalizePosteKey(trip['poste']?.toString());
+      if (tripPosteKey != null) {
+        return tripPosteKey == shiftKey;
+      }
+      return _isTripTimeWithinPoste(trip['time']?.toString(), shiftKey);
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> _filterTnbStockForShift(
+    List<dynamic> stockEntries,
+    String shiftKey,
+  ) {
+    return stockEntries
+        .whereType<Map>()
+        .map(Map<String, dynamic>.from)
+        .where((entry) =>
+            _normalizePosteKey(entry['poste']?.toString()) == shiftKey)
+        .toList();
+  }
+
+  List<Widget> _buildTnbCounterRowsForShift(
+    Map<String, dynamic> data, {
     required DateTime baseDate,
-    required String Function(dynamic stop) formatter,
-    double leftPadding = 0,
+    required String shiftKey,
   }) {
+    final counters = _buildTnbCounterDisplayList(data)
+        .where((counter) => (counter['start'] ?? '').trim().isNotEmpty)
+        .toList();
+    if (counters.isEmpty) {
+      return const [Text('-')];
+    }
+
+    final shift = _cycleShiftWindowByKey(baseDate, shiftKey);
+    if (shift == null) {
+      return const [Text('-')];
+    }
+
+    final stops =
+        (data['Arrets'] is List) ? List.from(data['Arrets']) : <dynamic>[];
     final cycleStart =
         DateTime(baseDate.year, baseDate.month, baseDate.day, 22, 30);
     final cycleEnd = cycleStart.add(const Duration(hours: 24));
     final shifts = _cycleShiftWindows(baseDate);
+    final rows = <Widget>[
+      Text(shift.label, style: const TextStyle(fontWeight: FontWeight.w600)),
+      const SizedBox(height: 6),
+    ];
 
-    final rows = <Widget>[];
-    for (final shift in shifts) {
-      rows.add(Padding(
-        padding: EdgeInsets.only(left: leftPadding, top: 8, bottom: 4),
-        child: Text(
-          shift.label,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-      ));
+    for (final counter in counters) {
+      final startValue =
+          double.tryParse((counter['start'] ?? '').replaceAll(',', '.'));
+      if (startValue == null) continue;
 
-      final shiftStops = stops.where((rawStop) {
-        if (rawStop is! Map) return false;
-        final stop = Map<String, dynamic>.from(rawStop);
-        final rawStart =
-            (stop['startTime'] ?? stop['start'] ?? stop['Début'] ?? '')
-                .toString();
-        if (rawStart.isEmpty) return false;
-        final start =
-            _parseTnbStopDateTimeForCycle(rawStart, cycleStart, cycleEnd);
-        if (start == null) return false;
+      double runningValue = startValue;
+      for (final currentShift in shifts) {
+        final downtime = _calculateTnbDowntimeMinutesInWindow(
+          stops: stops,
+          windowStart: currentShift.start,
+          windowEnd: currentShift.end,
+          cycleStart: cycleStart,
+          cycleEnd: cycleEnd,
+        );
+        final operatingHours = math.max(0, 480 - downtime) / 60.0;
+        final nextValue = runningValue + operatingHours;
 
-        final rawEnd =
-            (stop['endTime'] ?? stop['end'] ?? stop['Fin'] ?? '').toString();
-        DateTime? end =
-            _parseTnbStopDateTimeForCycle(rawEnd, cycleStart, cycleEnd);
-        end ??= DateTime.now();
-        if (end.isBefore(start)) {
-          end = end.add(const Duration(days: 1));
+        if (currentShift.label == shift.label) {
+          rows.add(
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Text(
+                '• ${counter['label']} : ${_formatTnbCounterNumber(runningValue)} → ${_formatTnbCounterNumber(nextValue)}',
+              ),
+            ),
+          );
+          break;
         }
-
-        return end.isAfter(shift.start) && start.isBefore(shift.end);
-      }).toList();
-
-      if (shiftStops.isEmpty) {
-        rows.add(Padding(
-          padding: EdgeInsets.only(left: leftPadding + 16, bottom: 4),
-          child: const Text('-', style: TextStyle(color: Colors.grey)),
-        ));
-      } else {
-        rows.addAll(shiftStops.map(
-          (stop) => Padding(
-            padding: EdgeInsets.only(left: leftPadding + 16, top: 2, bottom: 2),
-            child: Text(formatter(stop)),
-          ),
-        ));
+        runningValue = nextValue;
       }
     }
-
+    if (rows.length <= 2) {
+      rows.add(const Text('-'));
+    }
     return rows;
+  }
+
+  Widget _buildTnbReportDetailsPage({
+    required Map<String, dynamic> data,
+    required DateTime reportDate,
+    required AppLocalizations l10n,
+    String? shiftKey,
+  }) {
+    final allStops =
+        (data['Arrets'] is List) ? List.from(data['Arrets']) : <dynamic>[];
+    final allStock =
+        (data['stock'] is List) ? List.from(data['stock']) : <dynamic>[];
+    final allTrips = (data['truckTrips'] is List)
+        ? List.from(data['truckTrips'])
+        : <dynamic>[];
+
+    final shift =
+        shiftKey == null ? null : _cycleShiftWindowByKey(reportDate, shiftKey);
+    final stops = shiftKey == null
+        ? allStops.whereType<Map>().map(Map<String, dynamic>.from).toList()
+        : _filterTnbStopsForShift(allStops, reportDate, shiftKey);
+    final stockEntries = shiftKey == null
+        ? allStock.whereType<Map>().map(Map<String, dynamic>.from).toList()
+        : _filterTnbStockForShift(allStock, shiftKey);
+    final trips = shiftKey == null
+        ? allTrips.whereType<Map>().map(Map<String, dynamic>.from).toList()
+        : _filterTnbTripsForShift(allTrips, shiftKey);
+
+    final totalDowntime = shift == null
+        ? (data['T H.M'] is int ? data['T H.M'] as int : 0)
+        : _calculateTnbDowntimeMinutesInWindow(
+            stops: allStops,
+            windowStart: shift.start,
+            windowEnd: shift.end,
+            cycleStart: DateTime(
+                reportDate.year, reportDate.month, reportDate.day, 22, 30),
+            cycleEnd: DateTime(
+                    reportDate.year, reportDate.month, reportDate.day, 22, 30)
+                .add(const Duration(hours: 24)),
+          );
+    final totalOperating = shift == null
+        ? (data['T H.A'] is int ? data['T H.A'] as int : 0)
+        : math.max(0, 480 - totalDowntime);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.date,
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const Divider(height: 16),
+                  Text(
+                      '${reportDate.day}/${reportDate.month}/${reportDate.year}'),
+                  if (shift != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      shift.label,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.dataSummary,
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const Divider(height: 16),
+                  _buildSummaryRow(
+                      'T H.A:', _formatMinutesToHoursMinutes(totalOperating)),
+                  _buildSummaryRow(
+                      'T H.M:', _formatMinutesToHoursMinutes(totalDowntime)),
+                  const SizedBox(height: 8),
+                  _buildSummaryRow('T Nr.A:', stops.length.toString()),
+                  _buildSummaryRow(
+                    'T Nr.C:',
+                    '${_filledTnbCounterCount(data)} / ${_buildTnbCounterDisplayList(data).length}',
+                  ),
+                  _buildSummaryRow('T Nr.T:', trips.length.toString()),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Arrêts',
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const Divider(height: 16),
+                  if (stops.isNotEmpty)
+                    ...stops.map((stop) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Text(_formatTnbActivityStopSummary(stop)),
+                        ))
+                  else
+                    Text(l10n.aucunArret,
+                        style: const TextStyle(color: Colors.grey)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Compteurs TNB',
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const Divider(height: 16),
+                  if (shiftKey == null)
+                    ..._buildTnbShiftCounterRows(
+                      data,
+                      baseDate: reportDate,
+                      bullet: '• ',
+                    )
+                  else
+                    ..._buildTnbCounterRowsForShift(
+                      data,
+                      baseDate: reportDate,
+                      shiftKey: shiftKey,
+                    ),
+                ],
+              ),
+            ),
+          ),
+          if (stockEntries.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Card(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.stockLabel,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const Divider(height: 16),
+                    ...stockEntries.map((entry) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Text(
+                            '${l10n.poste}: ${_getPosteString(entry['poste'], l10n)} | ${l10n.parkLabel}: ${_getParkString(entry['park'], l10n)} | ${l10n.type}: ${_getStockTypeString(entry['type'], l10n)} | ${l10n.quantityLabel}: ${entry['quantity'] ?? '-'} |',
+                          ),
+                        )),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   List<Widget> _buildTnbShiftCounterRows(
