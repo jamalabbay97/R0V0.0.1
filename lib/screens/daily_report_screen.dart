@@ -313,6 +313,30 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
   }
 }
 
+class _StopActionMenuItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color iconColor;
+
+  const _StopActionMenuItem({
+    required this.icon,
+    required this.label,
+    required this.iconColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: iconColor, size: 20),
+        const SizedBox(width: 12),
+        Flexible(child: Text(label)),
+      ],
+    );
+  }
+}
+
 // --- Helper Functions ---
 int parseDurationToMinutes(String duration) {
   if (duration.isEmpty) return 0;
@@ -719,7 +743,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(_formatModuleStopTimeline(e.value)),
-                if (e.value.endTime.isEmpty)
+                if (_isPendingModuleStop(e.value))
                   const Text(
                     'Arrêt en cours',
                     style: TextStyle(color: AppColors.success),
@@ -746,38 +770,29 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                 });
               },
               itemBuilder: (context) => [
-                if (e.value.endTime.isEmpty)
+                if (_isPendingModuleStop(e.value))
                   const PopupMenuItem<String>(
                     value: 'end',
-                    child: ListTile(
-                      dense: true,
-                      leading: Icon(
-                        Icons.stop_circle_outlined,
-                        color: AppColors.success,
-                      ),
-                      title: Text('Terminer'),
+                    child: _StopActionMenuItem(
+                      icon: Icons.stop_circle_outlined,
+                      label: 'Terminer',
+                      iconColor: AppColors.success,
                     ),
                   ),
                 PopupMenuItem<String>(
                   value: 'edit',
-                  child: ListTile(
-                    dense: true,
-                    leading: Icon(
-                      Icons.edit_outlined,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    title: const Text('Modifier'),
+                  child: _StopActionMenuItem(
+                    icon: Icons.edit_outlined,
+                    label: 'Modifier',
+                    iconColor: Theme.of(context).colorScheme.primary,
                   ),
                 ),
                 const PopupMenuItem<String>(
                   value: 'delete',
-                  child: ListTile(
-                    dense: true,
-                    leading: Icon(
-                      Icons.delete_outline,
-                      color: AppColors.error,
-                    ),
-                    title: Text('Supprimer'),
+                  child: _StopActionMenuItem(
+                    icon: Icons.delete_outline,
+                    label: 'Supprimer',
+                    iconColor: AppColors.error,
                   ),
                 ),
               ],
@@ -1212,7 +1227,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
   Future<void> _endPendingModuleStop(
       int module, List<ModuleStop> stops, int index) async {
     final stop = stops[index];
-    if (stop.endTime.isNotEmpty) return;
+    if (!_isPendingModuleStop(stop)) return;
     final start = _parseTime(stop.startTime);
     if (start == null) return;
 
@@ -1369,6 +1384,11 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
         ),
       ]));
 
+  bool _isPendingModuleStop(ModuleStop stop) {
+    final end = stop.endTime.trim().toLowerCase();
+    return end.isEmpty || end == 'pending';
+  }
+
   String _formatModuleStopHeadline(ModuleStop stop, int index) {
     final segments = <String>[
       stop.nature.isNotEmpty ? stop.nature : '-',
@@ -1516,7 +1536,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
         ...module1Stops
             .asMap()
             .entries
-            .where((e) => e.value.endTime.isEmpty)
+            .where((e) => _isPendingModuleStop(e.value))
             .map(
               (e) => Align(
                 alignment: Alignment.centerRight,
@@ -1552,7 +1572,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
         ...module2Stops
             .asMap()
             .entries
-            .where((e) => e.value.endTime.isEmpty)
+            .where((e) => _isPendingModuleStop(e.value))
             .map(
               (e) => Align(
                 alignment: Alignment.centerRight,

@@ -82,6 +82,30 @@ class _StopTimeSelectionResult {
   const _StopTimeSelectionResult({required this.start, required this.end});
 }
 
+class _StopActionMenuItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color iconColor;
+
+  const _StopActionMenuItem({
+    required this.icon,
+    required this.label,
+    required this.iconColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: iconColor, size: 20),
+        const SizedBox(width: 12),
+        Flexible(child: Text(label)),
+      ],
+    );
+  }
+}
+
 const List<_TnbStopCategory> _tnbStopCategories = [
   _TnbStopCategory(
     label: 'Arrêts Extérieures',
@@ -6591,7 +6615,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
   bool _isPendingStop(Map<String, dynamic> stop) {
     final endTime =
         (stop['endTime'] ?? stop['Fin'] ?? stop['end'] ?? '').toString().trim();
-    return endTime.isEmpty;
+    final normalized = endTime.toLowerCase();
+    return normalized.isEmpty || normalized == 'pending';
   }
 
   TimeOfDay? _parseStopTimeOfDay(dynamic value) {
@@ -8916,35 +8941,26 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           if (isPending)
                             const PopupMenuItem<String>(
                               value: 'end',
-                              child: ListTile(
-                                dense: true,
-                                leading: Icon(
-                                  Icons.stop_circle_outlined,
-                                  color: AppColors.success,
-                                ),
-                                title: Text('Terminer'),
+                              child: _StopActionMenuItem(
+                                icon: Icons.stop_circle_outlined,
+                                label: 'Terminer',
+                                iconColor: AppColors.success,
                               ),
                             ),
                           PopupMenuItem<String>(
                             value: 'edit',
-                            child: ListTile(
-                              dense: true,
-                              leading: Icon(
-                                Icons.edit_outlined,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                              title: const Text('Modifier'),
+                            child: _StopActionMenuItem(
+                              icon: Icons.edit_outlined,
+                              label: 'Modifier',
+                              iconColor: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                           const PopupMenuItem<String>(
                             value: 'delete',
-                            child: ListTile(
-                              dense: true,
-                              leading: Icon(
-                                Icons.delete_outline,
-                                color: AppColors.error,
-                              ),
-                              title: Text('Supprimer'),
+                            child: _StopActionMenuItem(
+                              icon: Icons.delete_outline,
+                              label: 'Supprimer',
+                              iconColor: AppColors.error,
                             ),
                           ),
                         ];
