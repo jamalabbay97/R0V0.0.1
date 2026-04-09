@@ -1444,6 +1444,104 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             ),
                           ),
                         ),
+                        const SizedBox(height: 16),
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'Voyages Camions',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: () =>
+                                          _showAddTruckTripEntryDialog(
+                                              report,
+                                              data,
+                                              setDialogState,
+                                              scaffoldMessenger,
+                                              l10n),
+                                      icon: const Icon(Icons.add),
+                                      label: Text(l10n.ajButton),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                if (data['truckTrips'] is List &&
+                                    (data['truckTrips'] as List).isNotEmpty)
+                                  ...List.from(data['truckTrips'])
+                                      .asMap()
+                                      .entries
+                                      .map((entry) {
+                                    final index = entry.key;
+                                    final trip = entry.value;
+                                    return Card(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      child: ListTile(
+                                        title: Text('Camion ${index + 1}'),
+                                        subtitle: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                                'Type: ${_getTruckTypeString(trip['truckType'])}'),
+                                            Text(
+                                                'Nombre de voyages: ${trip['tripCount'] ?? '-'}'),
+                                          ],
+                                        ),
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.edit,
+                                                  size: 18),
+                                              onPressed: () =>
+                                                  _showEditTruckTripEntryDialog(
+                                                      report,
+                                                      data,
+                                                      index,
+                                                      setDialogState,
+                                                      scaffoldMessenger,
+                                                      l10n),
+                                              tooltip: 'Modifier voyages',
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete,
+                                                  size: 18, color: Colors.red),
+                                              onPressed: () =>
+                                                  _showDeleteTruckTripEntryDialog(
+                                                      report,
+                                                      data,
+                                                      index,
+                                                      setDialogState,
+                                                      scaffoldMessenger,
+                                                      l10n),
+                                              tooltip: 'Supprimer voyages',
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  })
+                                else
+                                  const Text('Aucun voyage ajouté',
+                                      style: TextStyle(color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -2601,6 +2699,251 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
+  Future<void> _showAddTruckTripEntryDialog(
+      Report report,
+      Map<String, dynamic> data,
+      StateSetter setDialogState,
+      ScaffoldMessengerState scaffoldMessenger,
+      AppLocalizations l10n) async {
+    int? selectedTruckType;
+    String tripCount = '';
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Ajouter Voyages'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<int>(
+                initialValue: selectedTruckType,
+                decoration: const InputDecoration(
+                  labelText: 'Type de camion',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('GAT')),
+                  DropdownMenuItem(value: 1, child: Text('TEREX')),
+                ],
+                onChanged: (value) => setState(() => selectedTruckType = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre de voyages',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => tripCount = value.trim()),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: (selectedTruckType != null && tripCount.isNotEmpty)
+                  ? () {
+                      final updatedData = Map<String, dynamic>.from(data);
+                      if (updatedData['truckTrips'] == null) {
+                        updatedData['truckTrips'] = [];
+                      }
+                      (updatedData['truckTrips'] as List).add({
+                        'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                        'truckType': selectedTruckType,
+                        'tripCount': tripCount,
+                      });
+
+                      updatedData['T Nr.T'] =
+                          (updatedData['truckTrips'] as List).length;
+
+                      final recalculatedData = _recalculateActivityTotals(
+                        updatedData,
+                        reportDate: report.date,
+                      );
+
+                      final updatedReport = Report(
+                        id: report.id,
+                        description: report.description,
+                        type: report.type,
+                        group: report.group,
+                        date: report.date,
+                        additionalData: recalculatedData,
+                      );
+
+                      Navigator.pop(context);
+                      _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                      setDialogState(() {});
+                    }
+                  : null,
+              child: Text(l10n.add),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showEditTruckTripEntryDialog(
+      Report report,
+      Map<String, dynamic> data,
+      int index,
+      StateSetter setDialogState,
+      ScaffoldMessengerState scaffoldMessenger,
+      AppLocalizations l10n) async {
+    final trips =
+        (data['truckTrips'] is List) ? (data['truckTrips'] as List) : [];
+    final trip = trips[index];
+    int? selectedTruckType = int.tryParse((trip['truckType'] ?? '').toString());
+    selectedTruckType ??=
+        (trip['truckType']?.toString().toUpperCase() == 'TEREX') ? 1 : 0;
+    String tripCount = (trip['tripCount'] ?? '').toString();
+    final tripCountController = TextEditingController(text: tripCount);
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Modifier Voyages'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<int>(
+                initialValue: selectedTruckType,
+                decoration: const InputDecoration(
+                  labelText: 'Type de camion',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('GAT')),
+                  DropdownMenuItem(value: 1, child: Text('TEREX')),
+                ],
+                onChanged: (value) => setState(() => selectedTruckType = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: tripCountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre de voyages',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => tripCount = value.trim()),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: (selectedTruckType != null &&
+                      tripCount.trim().isNotEmpty)
+                  ? () {
+                      final updatedData = Map<String, dynamic>.from(data);
+                      final updatedTrips = (updatedData['truckTrips'] as List)
+                          .map((entry) => entry is Map
+                              ? Map<String, dynamic>.from(entry)
+                              : <String, dynamic>{})
+                          .toList();
+
+                      updatedTrips[index] = {
+                        'id': trip['id'] ??
+                            DateTime.now().millisecondsSinceEpoch.toString(),
+                        'truckType': selectedTruckType,
+                        'tripCount': tripCount.trim(),
+                      };
+
+                      updatedData['truckTrips'] = updatedTrips;
+                      updatedData['T Nr.T'] = updatedTrips.length;
+
+                      final recalculatedData = _recalculateActivityTotals(
+                        updatedData,
+                        reportDate: report.date,
+                      );
+
+                      final updatedReport = Report(
+                        id: report.id,
+                        description: report.description,
+                        type: report.type,
+                        group: report.group,
+                        date: report.date,
+                        additionalData: recalculatedData,
+                      );
+
+                      Navigator.pop(context);
+                      _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                      setDialogState(() {});
+                    }
+                  : null,
+              child: Text(l10n.modifyLabel),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showDeleteTruckTripEntryDialog(
+      Report report,
+      Map<String, dynamic> data,
+      int index,
+      StateSetter setDialogState,
+      ScaffoldMessengerState scaffoldMessenger,
+      AppLocalizations l10n) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer Voyages'),
+        content:
+            const Text('Voulez-vous vraiment supprimer cette entrée voyages ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final updatedData = Map<String, dynamic>.from(data);
+              final updatedTrips = (updatedData['truckTrips'] is List)
+                  ? List.from(updatedData['truckTrips'])
+                  : [];
+              if (index >= 0 && index < updatedTrips.length) {
+                updatedTrips.removeAt(index);
+              }
+              updatedData['truckTrips'] = updatedTrips;
+              updatedData['T Nr.T'] = updatedTrips.length;
+
+              final recalculatedData = _recalculateActivityTotals(
+                updatedData,
+                reportDate: report.date,
+              );
+
+              final updatedReport = Report(
+                id: report.id,
+                description: report.description,
+                type: report.type,
+                group: report.group,
+                date: report.date,
+                additionalData: recalculatedData,
+              );
+
+              Navigator.pop(context);
+              _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+              setDialogState(() {});
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEditableField({
     required BuildContext context,
     required String label,
@@ -3641,6 +3984,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     _buildSummaryRow(
                                       'T Nr.C:',
                                       '${_filledTnbCounterCount(data)} / ${_buildTnbCounterDisplayList(data).length}',
+                                    ),
+                                    _buildSummaryRow(
+                                      'T Nr.T:',
+                                      ((data['truckTrips'] is List)
+                                              ? (data['truckTrips'] as List)
+                                                  .length
+                                              : 0)
+                                          .toString(),
                                     ),
                                   ],
                                 ),
@@ -5274,6 +5625,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final tnbCounters = _buildTnbCounterDisplayList(data);
     final stockEntries =
         (data['stock'] is List) ? List.from(data['stock']) : [];
+    final truckTrips =
+        (data['truckTrips'] is List) ? List.from(data['truckTrips']) : [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -5307,6 +5660,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   'T Nr.C:',
                   '${_filledTnbCounterCount(data)} / ${tnbCounters.length}',
                 ),
+                _buildSummaryRow('T Nr.T:', truckTrips.length.toString()),
               ],
             ),
           ),
@@ -5370,6 +5724,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         padding: const EdgeInsets.only(left: 16, top: 4),
                         child: Text(
                             'Poste: ${_getPosteString(entry['poste'], l10n)}, Parc: ${_getParkString(entry['park'], l10n)}, Type: ${_getStockTypeString(entry['type'], l10n)}, Qté: ${entry['quantity'] ?? '-'}'),
+                      )),
+                ],
+              ),
+            ),
+          ),
+        if (truckTrips.isNotEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Voyages Camions',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...truckTrips.map((entry) => Padding(
+                        padding: const EdgeInsets.only(left: 16, top: 4),
+                        child: Text(
+                            'Type: ${_getTruckTypeString(entry['truckType'])}, Voyages: ${entry['tripCount'] ?? '-'}'),
                       )),
                 ],
               ),
@@ -6202,6 +6574,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final rawLiaisonCounters = (updatedData['liaison Counters'] is List)
         ? List.from(updatedData['liaison Counters'])
         : [];
+    final truckTrips = (updatedData['truckTrips'] is List)
+        ? List.from(updatedData['truckTrips'])
+        : [];
 
     final vibratorCounters = _rebuildTnbCountersWithComputedEndValues(
       counters: rawVibratorCounters,
@@ -6231,6 +6606,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     updatedData['T Nr.V'] = vibratorCounters.length;
     updatedData['T Nr.L'] = liaisonCounters.length;
     updatedData['T Nr.C'] = vibratorCounters.length + liaisonCounters.length;
+    updatedData['T Nr.T'] = truckTrips.length;
 
     return updatedData;
   }
@@ -6275,6 +6651,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
         return l10n.stockTypeOceane;
       case 2:
         return l10n.stockTypePb30;
+      default:
+        return '-';
+    }
+  }
+
+  String _getTruckTypeString(dynamic truckType) {
+    final normalized = truckType?.toString().trim().toUpperCase();
+    switch (normalized) {
+      case '0':
+      case 'GAT':
+        return 'GAT';
+      case '1':
+      case 'TEREX':
+        return 'TEREX';
       default:
         return '-';
     }
