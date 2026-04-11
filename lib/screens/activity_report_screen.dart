@@ -34,8 +34,14 @@ String posteToString(Poste? p) {
 
 class _StopTimeEntryPage extends StatefulWidget {
   final String titleSuffix;
+  final TimeOfDay? initialStart;
+  final TimeOfDay? initialEnd;
 
-  const _StopTimeEntryPage({required this.titleSuffix});
+  const _StopTimeEntryPage({
+    required this.titleSuffix,
+    this.initialStart,
+    this.initialEnd,
+  });
 
   @override
   State<_StopTimeEntryPage> createState() => _StopTimeEntryPageState();
@@ -43,10 +49,17 @@ class _StopTimeEntryPage extends StatefulWidget {
 
 class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
   static const int _cycleAnchorMinutes = 22 * 60 + 30;
-  TimeOfDay _startTime = TimeOfDay.now();
-  TimeOfDay _endTime =
-      TimeOfDay.fromDateTime(DateTime.now().add(const Duration(minutes: 1)));
+  late TimeOfDay _startTime;
+  late TimeOfDay _endTime;
   bool _isPending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTime = widget.initialStart ?? TimeOfDay.now();
+    _endTime = widget.initialEnd ??
+        TimeOfDay.fromDateTime(DateTime.now().add(const Duration(minutes: 1)));
+  }
 
   String _formatTime(TimeOfDay value) =>
       '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
@@ -1547,10 +1560,6 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       }
     }
     String stopDetail = stop.detail;
-    TimeOfDay? selectedStart = _parseTimeOfDay(stop.startTime);
-    TimeOfDay? selectedEnd = _parseTimeOfDay(stop.endTime);
-
-    selectedStart ??= TimeOfDay.now();
 
     String formatTimeOfDay(TimeOfDay value) =>
         '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
@@ -1564,7 +1573,6 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
           final requiresDetail = _tnbStopTypeRequiresDetail(selectedNature);
           final canSubmit = selectedCategory != null &&
               selectedNature != null &&
-              selectedStart != null &&
               (!requiresLocation || selectedLocation != null) &&
               (!requiresDetail || stopDetail.trim().isNotEmpty);
 
@@ -1639,61 +1647,6 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                         onChanged: (value) => setDs(() => stopDetail = value),
                       ),
                     ],
-                    const SizedBox(height: 16),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Heure début'),
-                      subtitle: Text(formatTimeOfDay(selectedStart!)),
-                      trailing: const Icon(Icons.access_time),
-                      onTap: () async {
-                        final picked = await showSpinnerTimePickerDialog(
-                          context: context,
-                          initialTime: selectedStart!,
-                          title: 'Heure début',
-                        );
-                        if (picked != null) {
-                          setDs(() => selectedStart = picked);
-                        }
-                      },
-                    ),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Heure fin'),
-                      subtitle: Text(
-                        selectedEnd == null
-                            ? 'Pending'
-                            : formatTimeOfDay(selectedEnd!),
-                      ),
-                      trailing: TextButton(
-                        onPressed: () async {
-                          if (selectedEnd == null) {
-                            final picked = await showSpinnerTimePickerDialog(
-                              context: context,
-                              initialTime: TimeOfDay.now(),
-                              title: 'Heure fin',
-                            );
-                            if (picked != null) {
-                              setDs(() => selectedEnd = picked);
-                            }
-                            return;
-                          }
-                          setDs(() => selectedEnd = null);
-                        },
-                        child: Text(
-                          selectedEnd == null ? 'Choisir heure' : 'Pending',
-                        ),
-                      ),
-                      onTap: () async {
-                        final picked = await showSpinnerTimePickerDialog(
-                          context: context,
-                          initialTime: selectedEnd ?? TimeOfDay.now(),
-                          title: 'Heure fin',
-                        );
-                        if (picked != null) {
-                          setDs(() => selectedEnd = picked);
-                        }
-                      },
-                    ),
                   ],
                 ),
               ),
@@ -1706,24 +1659,43 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
               ElevatedButton(
                 onPressed: !canSubmit
                     ? null
-                    : () {
-                        final durationMinutes = selectedEnd == null
+                    : () async {
+                        final selectedTimeResult =
+                            await showDialog<_StopTimeSelectionResult>(
+                          context: context,
+                          useRootNavigator: true,
+                          barrierDismissible: false,
+                          barrierColor: Colors.black54,
+                          builder: (_) => _StopTimeEntryPage(
+                            titleSuffix: selectedNature ?? '',
+                            initialStart: _parseTimeOfDay(stop.startTime),
+                            initialEnd: _parseTimeOfDay(stop.endTime),
+                          ),
+                        );
+
+                        if (selectedTimeResult == null) {
+                          return;
+                        }
+
+                        final durationMinutes = selectedTimeResult.end == null
                             ? null
                             : _durationMinutesInCycle(
-                                selectedStart!,
-                                selectedEnd!,
+                                selectedTimeResult.start,
+                                selectedTimeResult.end!,
                               );
                         if (durationMinutes != null &&
                             (durationMinutes <= 0 ||
                                 durationMinutes >
                                     ActivityReportScreen.totalPeriodMinutes)) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  "L'arrêt doit rester dans la fenêtre 22:30 → 22:30 (24h max)."),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    "L'arrêt doit rester dans la fenêtre 22:30 → 22:30 (24h max)."),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                          }
                           return;
                         }
                         setState(() {
@@ -1734,17 +1706,20 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                               ? '${selectedLocation!.code} - ${selectedLocation!.label}'
                               : '';
                           stop.detail = requiresDetail ? stopDetail.trim() : '';
-                          stop.startTime = formatTimeOfDay(selectedStart!);
-                          stop.endTime = selectedEnd == null
+                          stop.startTime =
+                              formatTimeOfDay(selectedTimeResult.start);
+                          stop.endTime = selectedTimeResult.end == null
                               ? 'Pending'
-                              : formatTimeOfDay(selectedEnd!);
+                              : formatTimeOfDay(selectedTimeResult.end!);
                           stop.duration = durationMinutes == null
                               ? 'Pending'
                               : '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
                         });
                         _sortStopsByStartTime();
                         recalculateTimes();
-                        Navigator.pop(dialogContext);
+                        if (dialogContext.mounted) {
+                          Navigator.pop(dialogContext);
+                        }
                       },
                 child: const Text('Enregistrer'),
               ),

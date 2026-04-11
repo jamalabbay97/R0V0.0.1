@@ -1930,7 +1930,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         }
                         _saveReportUpdate(
                             updatedReport, scaffoldMessenger, l10n);
-                        setDialogState(() {});
+                        setDialogState(() {
+                          _selectedStopIndex = null;
+                        });
                       }
                     : null,
                 child: Text(l10n.next),
@@ -2036,27 +2038,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
           final availableTypes = selectedCategory?.types ?? const <String>[];
           final requiresLocation = _tnbStopTypeRequiresLocation(selectedType);
           final requiresDetail = _tnbStopTypeRequiresDetail(selectedType);
-          final previewLocation = requiresLocation && selectedLocation != null
-              ? '${selectedLocation!.code} - ${selectedLocation!.label}'
-              : '';
-          final previewStart =
-              selectedStart == null ? '' : formatTimeOfDay(selectedStart!);
-          final previewEnd =
-              selectedEnd == null ? '' : formatTimeOfDay(selectedEnd!);
-          final previewDurationMinutes =
-              selectedStart != null && selectedEnd != null
-                  ? _durationMinutesInCycle(selectedStart!, selectedEnd!)
-                  : null;
-          final previewStop = <String, dynamic>{
-            'nature': selectedType ?? '',
-            'detail': requiresDetail ? stopDetail.trim() : '',
-            'location': previewLocation,
-            'startTime': previewStart,
-            'endTime': previewEnd,
-            'duration': previewDurationMinutes == null
-                ? ''
-                : '${previewDurationMinutes ~/ 60}h ${(previewDurationMinutes % 60).toString().padLeft(2, '0')}',
-          };
           final canSubmit = selectedCategory != null &&
               selectedType != null &&
               (!requiresLocation || selectedLocation != null) &&
@@ -2164,16 +2145,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         },
                       ),
                     ],
-                    if (selectedType != null) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        _formatTnbActivityStopSummary(
-                          previewStop,
-                          index: index + 1,
-                        ),
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -2259,10 +2230,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         }
                         _saveReportUpdate(
                             updatedReport, scaffoldMessenger, l10n);
-                        setDialogState(() {});
+                        setDialogState(() {
+                          _selectedStopIndex = null;
+                        });
                       }
                     : null,
-                child: Text(l10n.modifyLabel),
+                child: Text(l10n.next),
               ),
             ],
           );
@@ -2329,7 +2302,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
               Navigator.pop(context);
               _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-              setDialogState(() {});
+              setDialogState(() {
+                _selectedStopIndex = null;
+              });
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: Text(l10n.delete),
@@ -6223,7 +6198,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       if (showLocation && location.isNotEmpty) location,
     ];
     final timeRangeLabel =
-        'De ${start.isEmpty ? '--:--' : start} a ${end.isEmpty ? 'Pinding' : end}';
+        'De ${start.isEmpty ? '--:--' : start} a ${end.isEmpty ? 'Pending' : end}';
     return '${stopLabelSegments.join(' • ')}\n     $timeRangeLabel ($duration)';
   }
 
