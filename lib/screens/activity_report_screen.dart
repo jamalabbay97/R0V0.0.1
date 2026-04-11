@@ -405,10 +405,14 @@ String _formatTnbStopResultLine(
       stop.location,
   ];
   final start = stop.startTime.isNotEmpty ? stop.startTime : '--:--';
-  final end = stop.endTime.isNotEmpty ? stop.endTime : '--:--';
-  final duration = stop.duration.isNotEmpty
-      ? formatMinutesToHoursMinutes(parseDurationToMinutes(stop.duration))
-      : '0h 00m';
+  final isPendingStop = stop.endTime.trim().isEmpty ||
+      stop.endTime.trim().toLowerCase() == 'pending';
+  final end = isPendingStop ? 'Pending' : stop.endTime;
+  final duration = isPendingStop
+      ? 'Pending'
+      : stop.duration.isNotEmpty
+          ? formatMinutesToHoursMinutes(parseDurationToMinutes(stop.duration))
+          : '0h 00m';
   return '${labelSegments.join(' • ')}\n     De $start a $end ($duration)';
 }
 
@@ -662,7 +666,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
               id: s['id'] ?? const Uuid().v4(),
               category: s['category'] ?? s['Catégorie'] ?? '',
               duration: s['duration'] ?? '',
-              nature: s['nature'] ?? '',
+              nature: s['nature'] ?? s['Arret'] ?? '',
               location: s['location'] ?? s['Lieu'] ?? '',
               detail: s['detail'] ?? s['Détail'] ?? '',
               startTime: s['startTime'] ?? s['Début'] ?? '',
@@ -1192,7 +1196,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
               _formatTnbStopResultLine(e.value, index: e.key + 1),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
-            subtitle: e.value.endTime.isEmpty
+            subtitle: _isPendingStop(e.value)
                 ? const Text(
                     'Arrêt en cours',
                     style: TextStyle(color: AppColors.success),
@@ -1219,7 +1223,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                     }
                   },
                   itemBuilder: (context) => [
-                    if (e.value.endTime.isEmpty)
+                    if (_isPendingStop(e.value))
                       const PopupMenuItem<_StopCardAction>(
                         value: _StopCardAction.end,
                         child: ListTile(
@@ -1427,7 +1431,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                           return;
                         }
                         final durationText = durationMinutes == null
-                            ? ''
+                            ? 'Pending'
                             : '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
 
                         setState(() {
@@ -1443,7 +1447,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                             startTime:
                                 formatTimeOfDay(selectedTimeResult.start),
                             endTime: selectedTimeResult.end == null
-                                ? ''
+                                ? 'Pending'
                                 : formatTimeOfDay(selectedTimeResult.end!),
                           ));
                           _sortStopsByStartTime();
@@ -1461,6 +1465,10 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     );
   }
 
+  bool _isPendingStop(Stop stop) =>
+      stop.endTime.trim().isEmpty ||
+      stop.endTime.trim().toLowerCase() == 'pending';
+
   TimeOfDay? _parseTimeOfDay(String value) {
     final parts = value.split(':');
     if (parts.length != 2) return null;
@@ -1473,7 +1481,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
 
   Future<void> _endPendingStop(int index) async {
     final stop = stops[index];
-    if (stop.endTime.isNotEmpty) return;
+    if (!_isPendingStop(stop)) return;
     final start = _parseTimeOfDay(stop.startTime);
     if (start == null) return;
 
@@ -1657,8 +1665,23 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                             : formatTimeOfDay(selectedEnd!),
                       ),
                       trailing: TextButton(
-                        onPressed: () => setDs(() => selectedEnd = null),
-                        child: const Text('Pending'),
+                        onPressed: () async {
+                          if (selectedEnd == null) {
+                            final picked = await showSpinnerTimePickerDialog(
+                              context: context,
+                              initialTime: TimeOfDay.now(),
+                              title: 'Heure fin',
+                            );
+                            if (picked != null) {
+                              setDs(() => selectedEnd = picked);
+                            }
+                            return;
+                          }
+                          setDs(() => selectedEnd = null);
+                        },
+                        child: Text(
+                          selectedEnd == null ? 'Choisir heure' : 'Pending',
+                        ),
                       ),
                       onTap: () async {
                         final picked = await showSpinnerTimePickerDialog(
@@ -1713,10 +1736,10 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                           stop.detail = requiresDetail ? stopDetail.trim() : '';
                           stop.startTime = formatTimeOfDay(selectedStart!);
                           stop.endTime = selectedEnd == null
-                              ? ''
+                              ? 'Pending'
                               : formatTimeOfDay(selectedEnd!);
                           stop.duration = durationMinutes == null
-                              ? ''
+                              ? 'Pending'
                               : '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
                         });
                         _sortStopsByStartTime();

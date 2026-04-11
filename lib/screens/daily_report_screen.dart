@@ -104,8 +104,16 @@ class _StopTimeSelectionResult {
 
 class _StopTimeEntryPage extends StatefulWidget {
   final String titleSuffix;
+  final TimeOfDay? initialStartTime;
+  final TimeOfDay? initialEndTime;
+  final bool initialPending;
 
-  const _StopTimeEntryPage({required this.titleSuffix});
+  const _StopTimeEntryPage({
+    required this.titleSuffix,
+    this.initialStartTime,
+    this.initialEndTime,
+    this.initialPending = false,
+  });
 
   @override
   State<_StopTimeEntryPage> createState() => _StopTimeEntryPageState();
@@ -116,6 +124,14 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
   TimeOfDay _startTime = TimeOfDay.now();
   TimeOfDay _endTime = TimeOfDay.now();
   bool _isPending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTime = widget.initialStartTime ?? TimeOfDay.now();
+    _endTime = widget.initialEndTime ?? _startTime;
+    _isPending = widget.initialPending;
+  }
 
   String _formatTime(TimeOfDay value) =>
       '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
@@ -539,10 +555,10 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
               id: s['id'] ?? const Uuid().v4(),
               category: s['category'] ?? s['Catégorie'] ?? '',
               duration: s['duration'] ?? '',
-              nature: s['nature'] ?? '',
+              nature: s['nature'] ?? s['Arret'] ?? '',
               location: s['location'] ?? s['Lieu'] ?? s['stopLocation'] ?? '',
               detail: s['detail'] ?? s['Détail'] ?? '',
-              stopType: s['stopType'] ?? '',
+              stopType: s['stopType'] ?? s['nature'] ?? s['Arret'] ?? '',
               stopLocation: s['stopLocation'] ?? '',
               startTime: s['startTime'] ?? '',
               endTime: s['endTime'] ?? ''))
@@ -555,10 +571,10 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
               id: s['id'] ?? const Uuid().v4(),
               category: s['category'] ?? s['Catégorie'] ?? '',
               duration: s['duration'] ?? '',
-              nature: s['nature'] ?? '',
+              nature: s['nature'] ?? s['Arret'] ?? '',
               location: s['location'] ?? s['Lieu'] ?? s['stopLocation'] ?? '',
               detail: s['detail'] ?? s['Détail'] ?? '',
-              stopType: s['stopType'] ?? '',
+              stopType: s['stopType'] ?? s['nature'] ?? s['Arret'] ?? '',
               stopLocation: s['stopLocation'] ?? '',
               startTime: s['startTime'] ?? '',
               endTime: s['endTime'] ?? ''))
@@ -1196,10 +1212,52 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                   child: const Text('Annuler')),
               ElevatedButton(
                 onPressed: canSubmit
-                    ? () {
+                    ? () async {
+                        final selectedTimeResult =
+                            await showDialog<_StopTimeSelectionResult>(
+                          context: context,
+                          useRootNavigator: true,
+                          barrierDismissible: false,
+                          barrierColor: Colors.black54,
+                          builder: (_) => _StopTimeEntryPage(
+                            titleSuffix: selectedNature ?? '',
+                            initialStartTime: _parseTime(stop.startTime),
+                            initialEndTime: _parseTime(stop.endTime),
+                            initialPending: _isPendingModuleStop(stop),
+                          ),
+                        );
+
+                        if (selectedTimeResult == null) {
+                          return;
+                        }
+
+                        final validation = _validateSingleStop(
+                          selectedTimeResult.start,
+                          selectedTimeResult.end,
+                          selectedCategory,
+                          selectedNature,
+                          selectedLocation,
+                          stopDetail,
+                        );
+                        if (validation != null) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(validation),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                          }
+                          return;
+                        }
+
                         final locationLabel = selectedLocation == null
                             ? ''
                             : '${selectedLocation ?? ''} - ${locations[selectedLocation] ?? ''}';
+                        final durationText = selectedTimeResult.end == null
+                            ? ''
+                            : '${_durationMinutesInCycle(selectedTimeResult.start, selectedTimeResult.end!) ~/ 60}h '
+                                '${(_durationMinutesInCycle(selectedTimeResult.start, selectedTimeResult.end!) % 60).toString().padLeft(2, '0')}';
                         setState(() {
                           stop.category = selectedCategory!.label;
                           stop.nature = selectedNature!;
@@ -1207,12 +1265,18 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                           stop.detail = stopDetail.trim();
                           stop.stopType = selectedNature!;
                           stop.stopLocation = locationLabel;
+                          stop.startTime =
+                              '${selectedTimeResult.start.hour.toString().padLeft(2, '0')}:${selectedTimeResult.start.minute.toString().padLeft(2, '0')}';
+                          stop.endTime = selectedTimeResult.end == null
+                              ? 'Pending'
+                              : '${selectedTimeResult.end!.hour.toString().padLeft(2, '0')}:${selectedTimeResult.end!.minute.toString().padLeft(2, '0')}';
+                          stop.duration = durationText;
                           _calculateTotals();
                         });
                         if (context.mounted) Navigator.pop(context);
                       }
                     : null,
-                child: const Text('Enregistrer'),
+                child: const Text('Suivant'),
               ),
             ],
           );

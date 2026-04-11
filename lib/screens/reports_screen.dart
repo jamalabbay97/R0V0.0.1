@@ -1877,7 +1877,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 selectedTimeResult.end!,
                               );
                         final durationText = durationMinutes == null
-                            ? ''
+                            ? 'Pending'
                             : '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
                         final formattedLocation = requiresLocation
                             ? '${selectedLocation!.code} - ${selectedLocation!.label}'
@@ -2206,7 +2206,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 selectedEnd!,
                               );
                         final durationText = durationMinutes == null
-                            ? ''
+                            ? 'Pending'
                             : '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
 
                         final formattedLocation = requiresLocation
@@ -2234,7 +2234,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             : formatTimeOfDay(selectedEnd!);
                         updatedStop['Début'] = formatTimeOfDay(selectedStart!);
                         updatedStop['Fin'] = selectedEnd == null
-                            ? ''
+                            ? 'Pending'
                             : formatTimeOfDay(selectedEnd!);
 
                         (updatedData['Arrets'] as List)[index] = updatedStop;
@@ -6391,7 +6391,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   String _dailyStopTypeValue(Map<String, dynamic> stop) =>
-      (stop['stopType'] ?? stop['nature'] ?? '').toString().trim();
+      (stop['stopType'] ?? stop['nature'] ?? stop['Arret'] ?? '')
+          .toString()
+          .trim();
 
   bool _areDailyStopsEquivalent(dynamic entry, Map<String, dynamic> reference) {
     if (entry is! Map) return false;
@@ -6770,7 +6772,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
 
     final storedType =
-        (stop['stopType'] ?? stop['nature'] ?? '').toString().trim();
+        (stop['stopType'] ?? stop['nature'] ?? stop['Arret'] ?? '')
+            .toString()
+            .trim();
     if (storedType.isEmpty) return null;
 
     for (final category in _tnbStopCategories) {
@@ -9269,7 +9273,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     _TnbStopCategory? selectedCategory = _findDailyStopCategory(stop);
     String? selectedType =
-        (stop['stopType'] ?? stop['nature'] ?? '').toString().trim();
+        (stop['stopType'] ?? stop['nature'] ?? stop['Arret'] ?? '')
+            .toString()
+            .trim();
     if (selectedType.isEmpty) selectedType = null;
     String? selectedLocation =
         ((stop['location'] ?? stop['stopLocation'] ?? '') as String)
@@ -9447,11 +9453,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           }
                           return;
                         }
-                        final durationMinutes = _durationMinutesFromTimeStrings(
-                                startTime, endTime) ??
-                            0;
-                        final durationText =
-                            '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
+                        final durationMinutes =
+                            _durationMinutesFromTimeStrings(startTime, endTime);
+                        final durationText = durationMinutes == null
+                            ? 'Pending'
+                            : '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
                         final locationLabel = requiresLocation &&
                                 selectedLocation != null
                             ? '$selectedLocation - ${locations[selectedLocation] ?? ''}'
