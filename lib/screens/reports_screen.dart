@@ -82,6 +82,234 @@ class _StopTimeSelectionResult {
   const _StopTimeSelectionResult({required this.start, required this.end});
 }
 
+class _StopTimeEntryPage extends StatefulWidget {
+  final String titleSuffix;
+  final TimeOfDay? initialStartTime;
+  final TimeOfDay? initialEndTime;
+  final bool initialPending;
+
+  const _StopTimeEntryPage({
+    required this.titleSuffix,
+    this.initialStartTime,
+    this.initialEndTime,
+    this.initialPending = false,
+  });
+
+  @override
+  State<_StopTimeEntryPage> createState() => _StopTimeEntryPageState();
+}
+
+class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
+  static const int _cycleAnchorMinutes = 22 * 60 + 30;
+  TimeOfDay _startTime = TimeOfDay.now();
+  TimeOfDay _endTime = TimeOfDay.now();
+  bool _isPending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTime = widget.initialStartTime ?? TimeOfDay.now();
+    _endTime = widget.initialEndTime ?? _startTime;
+    _isPending = widget.initialPending;
+  }
+
+  String _formatTime(TimeOfDay value) =>
+      '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+
+  int _toMinutes(TimeOfDay value) => (value.hour * 60) + value.minute;
+
+  int _toCycleMinutes(TimeOfDay value) {
+    final minutes = _toMinutes(value);
+    return minutes < _cycleAnchorMinutes ? minutes + (24 * 60) : minutes;
+  }
+
+  Future<void> _pickStartTime() async {
+    final picked = await showSpinnerTimePickerDialog(
+      context: context,
+      initialTime: _startTime,
+      title: 'Heure début',
+    );
+    if (picked != null) {
+      setState(() => _startTime = picked);
+    }
+  }
+
+  Future<void> _pickEndTime() async {
+    final picked = await showSpinnerTimePickerDialog(
+      context: context,
+      initialTime: _endTime,
+      title: 'Heure fin',
+    );
+    if (picked != null) {
+      setState(() => _endTime = picked);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final durationMinutes =
+        _toCycleMinutes(_endTime) - _toCycleMinutes(_startTime);
+    final hasValidRange =
+        _isPending || (durationMinutes > 0 && durationMinutes <= 24 * 60);
+
+    return Material(
+      color: Colors.transparent,
+      child: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF202820), Color(0xFF1C211D)],
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black45,
+                      blurRadius: 16,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ajouter Arrêt ${widget.titleSuffix}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Saisie des heures',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 30,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text(
+                        'Heure début',
+                        style: TextStyle(color: Colors.white, fontSize: 20),
+                      ),
+                      subtitle: Text(
+                        _formatTime(_startTime),
+                        style: TextStyle(
+                          color: Colors.grey.shade400,
+                          fontSize: 16,
+                        ),
+                      ),
+                      trailing: const Icon(
+                        Icons.access_time,
+                        color: Colors.white70,
+                        size: 34,
+                      ),
+                      onTap: _pickStartTime,
+                    ),
+                    const SizedBox(height: 10),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text(
+                        'Heure fin',
+                        style: TextStyle(color: Colors.white, fontSize: 20),
+                      ),
+                      subtitle: Text(
+                        _isPending ? 'Pending' : _formatTime(_endTime),
+                        style: TextStyle(
+                          color: Colors.grey.shade400,
+                          fontSize: 16,
+                        ),
+                      ),
+                      trailing: const Icon(
+                        Icons.access_time,
+                        color: Colors.white70,
+                        size: 34,
+                      ),
+                      onTap: _isPending ? null : _pickEndTime,
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text(
+                        'Arrêt en cours',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      subtitle: const Text(
+                        "Enregistrer l'heure de début maintenant, puis ajouter l'heure de fin plus tard.",
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                      value: _isPending,
+                      onChanged: (value) => setState(() => _isPending = value),
+                    ),
+                    const SizedBox(height: 16),
+                    if (!hasValidRange)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          "L'arrêt doit rester dans la fenêtre 22:30 → 22:30 (24h max).",
+                          style: TextStyle(color: AppColors.error),
+                        ),
+                      ),
+                    Row(
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text(
+                            'Précédent',
+                            style: TextStyle(
+                                color: AppColors.success, fontSize: 22),
+                          ),
+                        ),
+                        const Spacer(),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.success,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(150, 56),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                          ),
+                          onPressed: hasValidRange
+                              ? () {
+                                  Navigator.of(context).pop(
+                                    _StopTimeSelectionResult(
+                                      start: _startTime,
+                                      end: _isPending ? null : _endTime,
+                                    ),
+                                  );
+                                }
+                              : null,
+                          child: const Text(
+                            'Ajouter',
+                            style: TextStyle(fontSize: 28),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _StopActionMenuItem extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -6487,104 +6715,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
     TimeOfDay? initialStart,
     TimeOfDay? initialEnd,
   }) async {
-    TimeOfDay start = initialStart ?? TimeOfDay.now();
-    TimeOfDay end = initialEnd ?? TimeOfDay.now();
-    bool isPending = initialEnd == null;
-
     return showDialog<_StopTimeSelectionResult>(
       context: context,
       useRootNavigator: true,
       barrierDismissible: false,
       barrierColor: Colors.black54,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('Ajouter Arrêt $titleSuffix'),
-        content: SizedBox(
-          width: 400,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: const Text('Heure début'),
-                subtitle: Text(_formatTimeOfDay(start)),
-                trailing: const Icon(Icons.access_time),
-              ),
-              SizedBox(
-                height: 180,
-                child: TimePickerSpinner(
-                  is24HourMode: true,
-                  isShowSeconds: false,
-                  minutesInterval: 1,
-                  time: DateTime(2000, 1, 1, start.hour, start.minute),
-                  onTimeChange: (dateTime) {
-                    start =
-                        TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
-                  },
-                ),
-              ),
-              const SizedBox(height: 8),
-              ListTile(
-                title: const Text('Heure fin'),
-                subtitle: Text(isPending ? 'Pending' : _formatTimeOfDay(end)),
-                trailing: const Icon(Icons.access_time),
-              ),
-              SizedBox(
-                height: 180,
-                child: TimePickerSpinner(
-                  is24HourMode: true,
-                  isShowSeconds: false,
-                  minutesInterval: 1,
-                  time: DateTime(2000, 1, 1, end.hour, end.minute),
-                  onTimeChange: (dateTime) {
-                    end =
-                        TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
-                  },
-                ),
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Arrêt en cours'),
-                subtitle:
-                    const Text("Sauvegarder avec l'heure de début seulement."),
-                value: isPending,
-                onChanged: (value) {
-                  isPending = value;
-                  (dialogContext as Element).markNeedsBuild();
-                },
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (isPending) {
-                Navigator.of(dialogContext).pop(
-                  _StopTimeSelectionResult(start: start, end: null),
-                );
-                return;
-              }
-              final durationMinutes = _durationMinutesInCycle(start, end);
-              if (durationMinutes <= 0 || durationMinutes > _maxCycleMinutes) {
-                ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                        "L'arrêt doit rester dans la fenêtre 22:30 → 22:30 (24h max)."),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-                return;
-              }
-              Navigator.of(dialogContext).pop(
-                _StopTimeSelectionResult(start: start, end: end),
-              );
-            },
-            child: const Text('Suivant'),
-          ),
-        ],
+      builder: (_) => _StopTimeEntryPage(
+        titleSuffix: titleSuffix,
+        initialStartTime: initialStart,
+        initialEndTime: initialEnd,
+        initialPending: initialEnd == null,
       ),
     );
   }
