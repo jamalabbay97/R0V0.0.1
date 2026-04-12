@@ -1347,571 +1347,31 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         Expanded(
                           child: TabBarView(
                             children: [
-                              _buildTnbReportDetailsPage(
+                              _buildActivityEditorTabContent(
+                                report: report,
                                 data: data,
-                                reportDate: report.date,
+                                setDialogState: setDialogState,
+                                scaffoldMessenger: scaffoldMessenger,
                                 l10n: l10n,
-                                shiftKey: '3',
+                              ),
+                              _buildActivityEditorTabContent(
+                                report: report,
+                                data: data,
+                                setDialogState: setDialogState,
+                                scaffoldMessenger: scaffoldMessenger,
+                                l10n: l10n,
+                              ),
+                              _buildActivityEditorTabContent(
+                                report: report,
+                                data: data,
+                                setDialogState: setDialogState,
+                                scaffoldMessenger: scaffoldMessenger,
+                                l10n: l10n,
                               ),
                               _buildTnbReportDetailsPage(
                                 data: data,
                                 reportDate: report.date,
                                 l10n: l10n,
-                                shiftKey: '1',
-                              ),
-                              _buildTnbReportDetailsPage(
-                                data: data,
-                                reportDate: report.date,
-                                l10n: l10n,
-                                shiftKey: '2',
-                              ),
-                              SingleChildScrollView(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Basic Info Card
-                                    Card(
-                                      margin: EdgeInsets.zero,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(16),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              l10n.infoLabel,
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .titleMedium,
-                                            ),
-                                            const Divider(height: 16),
-                                            _buildEditableField(
-                                              context: context,
-                                              label: l10n.description,
-                                              isEditable: false,
-                                              value: report.description,
-                                              onSave: (value) async {
-                                                final updatedReport = Report(
-                                                  id: report.id,
-                                                  description: value,
-                                                  type: report.type,
-                                                  group: report.group,
-                                                  date: report.date,
-                                                  additionalData:
-                                                      report.additionalData,
-                                                );
-                                                await _saveReportUpdate(
-                                                    updatedReport,
-                                                    scaffoldMessenger,
-                                                    l10n);
-                                              },
-                                            ),
-                                            const SizedBox(height: 8),
-                                            _buildEditableDateField(
-                                              context: context,
-                                              label: l10n.date,
-                                              value: report.date,
-                                              onSave: (value) async {
-                                                final updatedReport = Report(
-                                                  id: report.id,
-                                                  description:
-                                                      report.description,
-                                                  type: report.type,
-                                                  group: report.group,
-                                                  date: value,
-                                                  additionalData:
-                                                      report.additionalData,
-                                                );
-                                                await _saveReportUpdate(
-                                                    updatedReport,
-                                                    scaffoldMessenger,
-                                                    l10n);
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-
-                                    // Stops Management Card
-                                    Card(
-                                      margin: EdgeInsets.zero,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(16),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    l10n.stopsLabel,
-                                                    style: Theme.of(context)
-                                                        .textTheme
-                                                        .titleMedium,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                                ElevatedButton.icon(
-                                                  onPressed: () =>
-                                                      _showAddStopDialog(
-                                                          report,
-                                                          data,
-                                                          setDialogState,
-                                                          scaffoldMessenger,
-                                                          l10n),
-                                                  icon: const Icon(Icons.add),
-                                                  label: Text(l10n.ajButton),
-                                                ),
-                                              ],
-                                            ),
-                                            const Divider(height: 16),
-                                            if (data['Arrets'] is List &&
-                                                (data['Arrets'] as List)
-                                                    .isNotEmpty)
-                                              ...List.from(data['Arrets'])
-                                                  .asMap()
-                                                  .entries
-                                                  .map((entry) {
-                                                final index = entry.key;
-                                                final stop = entry.value is Map
-                                                    ? Map<String, dynamic>.from(
-                                                        entry.value)
-                                                    : <String, dynamic>{};
-                                                final isSelected =
-                                                    _selectedStopIndex == index;
-                                                return Card(
-                                                  margin: const EdgeInsets.only(
-                                                      bottom: 8),
-                                                  color: isSelected
-                                                      ? Colors.green.withValues(
-                                                          alpha: 0.1)
-                                                      : null,
-                                                  elevation: isSelected ? 4 : 1,
-                                                  child: ListTile(
-                                                    selected: isSelected,
-                                                    selectedTileColor: Colors
-                                                        .green
-                                                        .withValues(alpha: 0.1),
-                                                    title: Text(
-                                                      _formatTnbActivityStopSummary(
-                                                        stop,
-                                                        index: index + 1,
-                                                      ),
-                                                    ),
-                                                    subtitle:
-                                                        _isPendingStop(stop)
-                                                            ? const Text(
-                                                                'Arrêt en cours',
-                                                                style: TextStyle(
-                                                                    color: AppColors
-                                                                        .success),
-                                                              )
-                                                            : null,
-                                                    leading: isSelected
-                                                        ? const Icon(
-                                                            Icons.check_circle,
-                                                            color: Colors.green)
-                                                        : null,
-                                                    onTap: () {
-                                                      setState(() {
-                                                        _selectedStopIndex =
-                                                            isSelected
-                                                                ? null
-                                                                : index;
-                                                      });
-                                                    },
-                                                    trailing:
-                                                        PopupMenuButton<String>(
-                                                      icon: const Icon(
-                                                          Icons.more_vert),
-                                                      tooltip: 'Actions arrêt',
-                                                      padding: EdgeInsets.zero,
-                                                      shape:
-                                                          RoundedRectangleBorder(
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(8),
-                                                      ),
-                                                      position:
-                                                          PopupMenuPosition
-                                                              .under,
-                                                      onSelected: (value) {
-                                                        switch (value) {
-                                                          case 'end':
-                                                            _endPendingActivityStop(
-                                                              report,
-                                                              data,
-                                                              index,
-                                                              setDialogState,
-                                                              scaffoldMessenger,
-                                                              l10n,
-                                                            );
-                                                            break;
-                                                          case 'edit':
-                                                            _showEditStopDialog(
-                                                              report,
-                                                              data,
-                                                              index,
-                                                              setDialogState,
-                                                              scaffoldMessenger,
-                                                              l10n,
-                                                            );
-                                                            break;
-                                                          case 'delete':
-                                                            _showDeleteStopDialog(
-                                                              report,
-                                                              data,
-                                                              index,
-                                                              setDialogState,
-                                                              scaffoldMessenger,
-                                                              l10n,
-                                                            );
-                                                            break;
-                                                        }
-                                                      },
-                                                      itemBuilder: (BuildContext
-                                                              context) =>
-                                                          [
-                                                        if (_isPendingStop(
-                                                            stop))
-                                                          const PopupMenuItem<
-                                                              String>(
-                                                            value: 'end',
-                                                            child: ListTile(
-                                                              dense: true,
-                                                              leading: Icon(
-                                                                Icons
-                                                                    .stop_circle_outlined,
-                                                                color: AppColors
-                                                                    .success,
-                                                              ),
-                                                              title: Text(
-                                                                  'Terminer'),
-                                                            ),
-                                                          ),
-                                                        PopupMenuItem<String>(
-                                                          value: 'edit',
-                                                          child: ListTile(
-                                                            dense: true,
-                                                            leading: Icon(
-                                                              Icons
-                                                                  .edit_outlined,
-                                                              color: Theme.of(
-                                                                      context)
-                                                                  .colorScheme
-                                                                  .primary,
-                                                            ),
-                                                            title: const Text(
-                                                                'Modifier'),
-                                                          ),
-                                                        ),
-                                                        const PopupMenuItem<
-                                                            String>(
-                                                          value: 'delete',
-                                                          child: ListTile(
-                                                            dense: true,
-                                                            leading: Icon(
-                                                              Icons
-                                                                  .delete_outline,
-                                                              color: AppColors
-                                                                  .error,
-                                                            ),
-                                                            title: Text(
-                                                                'Supprimer'),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                );
-                                              })
-                                            else
-                                              Text(l10n.aucunArret,
-                                                  style: const TextStyle(
-                                                      color: Colors.grey)),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-
-                                    _buildTnbCounterManagementCard(
-                                      report,
-                                      data,
-                                      setDialogState,
-                                      scaffoldMessenger,
-                                      l10n,
-                                    ),
-                                    const SizedBox(height: 16),
-
-                                    // Stock Entries Management Card
-                                    Card(
-                                      margin: EdgeInsets.zero,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(16),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    l10n.stocksLabel,
-                                                    style: Theme.of(context)
-                                                        .textTheme
-                                                        .titleMedium,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                                ElevatedButton.icon(
-                                                  onPressed: () =>
-                                                      _showAddStockEntryDialog(
-                                                          report,
-                                                          data,
-                                                          setDialogState,
-                                                          scaffoldMessenger,
-                                                          l10n),
-                                                  icon: const Icon(Icons.add),
-                                                  label: Text(l10n.ajButton),
-                                                ),
-                                              ],
-                                            ),
-                                            const Divider(height: 16),
-                                            if (data['stock'] is List &&
-                                                (data['stock'] as List)
-                                                    .isNotEmpty)
-                                              ...List.from(data['stock'])
-                                                  .asMap()
-                                                  .entries
-                                                  .map((entry) {
-                                                final index = entry.key;
-                                                final stock = entry.value;
-                                                final isSelected =
-                                                    _selectedStockIndex ==
-                                                        index;
-                                                return Card(
-                                                  margin: const EdgeInsets.only(
-                                                      bottom: 8),
-                                                  color: isSelected
-                                                      ? Colors.purple
-                                                          .withValues(
-                                                              alpha: 0.1)
-                                                      : null,
-                                                  elevation: isSelected ? 4 : 1,
-                                                  child: ListTile(
-                                                    selected: isSelected,
-                                                    selectedTileColor: Colors
-                                                        .purple
-                                                        .withValues(alpha: 0.1),
-                                                    title: Text(
-                                                        l10n.stockTitleIndex(
-                                                            index + 1)),
-                                                    subtitle: Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        Text(
-                                                            'Poste: ${_getPosteString(stock['poste'], l10n)}'),
-                                                        Text(
-                                                            'Parc: ${_getParkString(stock['park'], l10n)}'),
-                                                        Text(
-                                                            'Type: ${_getStockTypeString(stock['type'], l10n)}'),
-                                                        Text(
-                                                            'Quantité: ${stock['quantity'] ?? '-'}'),
-                                                      ],
-                                                    ),
-                                                    leading: isSelected
-                                                        ? const Icon(
-                                                            Icons.check_circle,
-                                                            color:
-                                                                Colors.purple)
-                                                        : null,
-                                                    onTap: () {
-                                                      setState(() {
-                                                        _selectedStockIndex =
-                                                            isSelected
-                                                                ? null
-                                                                : index;
-                                                      });
-                                                    },
-                                                    trailing: Row(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: [
-                                                        IconButton(
-                                                          icon: const Icon(
-                                                              Icons.edit,
-                                                              size: 18),
-                                                          onPressed: () =>
-                                                              _showEditStockEntryDialog(
-                                                                  report,
-                                                                  data,
-                                                                  index,
-                                                                  setDialogState,
-                                                                  scaffoldMessenger,
-                                                                  l10n),
-                                                          tooltip: l10n
-                                                              .editStockEntryTitle,
-                                                        ),
-                                                        IconButton(
-                                                          icon: const Icon(
-                                                              Icons.delete,
-                                                              size: 18,
-                                                              color:
-                                                                  Colors.red),
-                                                          onPressed: () =>
-                                                              _showDeleteStockEntryDialog(
-                                                                  report,
-                                                                  data,
-                                                                  index,
-                                                                  setDialogState,
-                                                                  scaffoldMessenger,
-                                                                  l10n),
-                                                          tooltip: l10n
-                                                              .deleteStockEntryTitle,
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                );
-                                              })
-                                            else
-                                              Text(l10n.noStockEntriesAdded,
-                                                  style: const TextStyle(
-                                                      color: Colors.grey)),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Card(
-                                      margin: EdgeInsets.zero,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(16),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    'Voyages Camions',
-                                                    style: Theme.of(context)
-                                                        .textTheme
-                                                        .titleMedium,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                                ElevatedButton.icon(
-                                                  onPressed: () =>
-                                                      _showAddTruckTripEntryDialog(
-                                                          report,
-                                                          data,
-                                                          setDialogState,
-                                                          scaffoldMessenger,
-                                                          l10n),
-                                                  icon: const Icon(Icons.add),
-                                                  label: Text(l10n.ajButton),
-                                                ),
-                                              ],
-                                            ),
-                                            const Divider(height: 16),
-                                            if (data['truckTrips'] is List &&
-                                                (data['truckTrips'] as List)
-                                                    .isNotEmpty)
-                                              ...List.from(data['truckTrips'])
-                                                  .asMap()
-                                                  .entries
-                                                  .map((entry) {
-                                                final index = entry.key;
-                                                final trip = entry.value;
-                                                return Card(
-                                                  margin: const EdgeInsets.only(
-                                                      bottom: 8),
-                                                  child: ListTile(
-                                                    title: Text(
-                                                        'Camion ${index + 1}'),
-                                                    subtitle: Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        Text(
-                                                            'Type: ${_getTruckTypeString(trip['truckType'])}'),
-                                                        Text(
-                                                            'Nombre de voyages: ${trip['tripCount'] ?? '-'}'),
-                                                      ],
-                                                    ),
-                                                    trailing: Row(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: [
-                                                        IconButton(
-                                                          icon: const Icon(
-                                                              Icons.edit,
-                                                              size: 18),
-                                                          onPressed: () =>
-                                                              _showEditTruckTripEntryDialog(
-                                                                  report,
-                                                                  data,
-                                                                  index,
-                                                                  setDialogState,
-                                                                  scaffoldMessenger,
-                                                                  l10n),
-                                                          tooltip:
-                                                              'Modifier voyages',
-                                                        ),
-                                                        IconButton(
-                                                          icon: const Icon(
-                                                              Icons.delete,
-                                                              size: 18,
-                                                              color:
-                                                                  Colors.red),
-                                                          onPressed: () =>
-                                                              _showDeleteTruckTripEntryDialog(
-                                                                  report,
-                                                                  data,
-                                                                  index,
-                                                                  setDialogState,
-                                                                  scaffoldMessenger,
-                                                                  l10n),
-                                                          tooltip:
-                                                              'Supprimer voyages',
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                );
-                                              })
-                                            else
-                                              const Text('Aucun voyage ajouté',
-                                                  style: TextStyle(
-                                                      color: Colors.grey)),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
                               ),
                             ],
                           ),
@@ -1924,6 +1384,96 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildActivityEditorTabContent({
+    required Report report,
+    required Map<String, dynamic> data,
+    required StateSetter setDialogState,
+    required ScaffoldMessengerState scaffoldMessenger,
+    required AppLocalizations l10n,
+  }) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.infoLabel,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const Divider(height: 16),
+                  _buildEditableField(
+                    context: context,
+                    label: l10n.description,
+                    isEditable: false,
+                    value: report.description,
+                    onSave: (value) async {},
+                  ),
+                  const SizedBox(height: 8),
+                  _buildEditableDateField(
+                    context: context,
+                    label: l10n.date,
+                    value: report.date,
+                    onSave: (value) async {
+                      final updatedReport = Report(
+                        id: report.id,
+                        description: report.description,
+                        type: report.type,
+                        group: report.group,
+                        date: value,
+                        additionalData: report.additionalData,
+                      );
+                      await _saveReportUpdate(
+                          updatedReport, scaffoldMessenger, l10n);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildTnbStopsManagementCard(
+            report,
+            data,
+            setDialogState,
+            scaffoldMessenger,
+            l10n,
+          ),
+          const SizedBox(height: 16),
+          _buildTnbCounterManagementCard(
+            report,
+            data,
+            setDialogState,
+            scaffoldMessenger,
+            l10n,
+          ),
+          const SizedBox(height: 16),
+          _buildTnbStockManagementCard(
+            report,
+            data,
+            setDialogState,
+            scaffoldMessenger,
+            l10n,
+          ),
+          const SizedBox(height: 16),
+          _buildTnbTripsManagementCard(
+            report,
+            data,
+            setDialogState,
+            scaffoldMessenger,
+            l10n,
+          ),
+        ],
       ),
     );
   }
@@ -2542,6 +2092,161 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
+  Widget _buildTnbStopsManagementCard(
+    Report report,
+    Map<String, dynamic> data,
+    StateSetter setDialogState,
+    ScaffoldMessengerState scaffoldMessenger,
+    AppLocalizations l10n,
+  ) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.stopsLabel,
+                    style: Theme.of(context).textTheme.titleMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () => _showAddStopDialog(
+                      report, data, setDialogState, scaffoldMessenger, l10n),
+                  icon: const Icon(Icons.add),
+                  label: Text(l10n.ajButton),
+                ),
+              ],
+            ),
+            const Divider(height: 16),
+            if (data['Arrets'] is List && (data['Arrets'] as List).isNotEmpty)
+              ...List.from(data['Arrets']).asMap().entries.map((entry) {
+                final index = entry.key;
+                final stop = entry.value is Map
+                    ? Map<String, dynamic>.from(entry.value)
+                    : <String, dynamic>{};
+                final isSelected = _selectedStopIndex == index;
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  color:
+                      isSelected ? Colors.green.withValues(alpha: 0.1) : null,
+                  elevation: isSelected ? 4 : 1,
+                  child: ListTile(
+                    selected: isSelected,
+                    selectedTileColor: Colors.green.withValues(alpha: 0.1),
+                    title: Text(
+                      _formatTnbActivityStopSummary(stop, index: index + 1),
+                    ),
+                    subtitle: _isPendingStop(stop)
+                        ? const Text(
+                            'Arrêt en cours',
+                            style: TextStyle(color: AppColors.success),
+                          )
+                        : null,
+                    leading: isSelected
+                        ? const Icon(Icons.check_circle, color: Colors.green)
+                        : null,
+                    onTap: () {
+                      setState(() {
+                        _selectedStopIndex = isSelected ? null : index;
+                      });
+                    },
+                    trailing: PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert),
+                      tooltip: 'Actions arrêt',
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      position: PopupMenuPosition.under,
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'end':
+                            _endPendingActivityStop(
+                              report,
+                              data,
+                              index,
+                              setDialogState,
+                              scaffoldMessenger,
+                              l10n,
+                            );
+                            break;
+                          case 'edit':
+                            _showEditStopDialog(
+                              report,
+                              data,
+                              index,
+                              setDialogState,
+                              scaffoldMessenger,
+                              l10n,
+                            );
+                            break;
+                          case 'delete':
+                            _showDeleteStopDialog(
+                              report,
+                              data,
+                              index,
+                              setDialogState,
+                              scaffoldMessenger,
+                              l10n,
+                            );
+                            break;
+                        }
+                      },
+                      itemBuilder: (BuildContext context) => [
+                        if (_isPendingStop(stop))
+                          const PopupMenuItem<String>(
+                            value: 'end',
+                            child: ListTile(
+                              dense: true,
+                              leading: Icon(
+                                Icons.stop_circle_outlined,
+                                color: AppColors.success,
+                              ),
+                              title: Text('Terminer'),
+                            ),
+                          ),
+                        PopupMenuItem<String>(
+                          value: 'edit',
+                          child: ListTile(
+                            dense: true,
+                            leading: Icon(
+                              Icons.edit_outlined,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            title: const Text('Modifier'),
+                          ),
+                        ),
+                        const PopupMenuItem<String>(
+                          value: 'delete',
+                          child: ListTile(
+                            dense: true,
+                            leading: Icon(
+                              Icons.delete_outline,
+                              color: AppColors.error,
+                            ),
+                            title: Text('Supprimer'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              })
+            else
+              Text(l10n.aucunArret, style: const TextStyle(color: Colors.grey)),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTnbCounterManagementCard(
     Report report,
     Map<String, dynamic> data,
@@ -2613,6 +2318,200 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ),
               );
             }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTnbStockManagementCard(
+    Report report,
+    Map<String, dynamic> data,
+    StateSetter setDialogState,
+    ScaffoldMessengerState scaffoldMessenger,
+    AppLocalizations l10n,
+  ) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.stocksLabel,
+                    style: Theme.of(context).textTheme.titleMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () => _showAddStockEntryDialog(
+                      report, data, setDialogState, scaffoldMessenger, l10n),
+                  icon: const Icon(Icons.add),
+                  label: Text(l10n.ajButton),
+                ),
+              ],
+            ),
+            const Divider(height: 16),
+            if (data['stock'] is List && (data['stock'] as List).isNotEmpty)
+              ...List.from(data['stock']).asMap().entries.map((entry) {
+                final index = entry.key;
+                final stock = entry.value;
+                final isSelected = _selectedStockIndex == index;
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  color:
+                      isSelected ? Colors.purple.withValues(alpha: 0.1) : null,
+                  elevation: isSelected ? 4 : 1,
+                  child: ListTile(
+                    selected: isSelected,
+                    selectedTileColor: Colors.purple.withValues(alpha: 0.1),
+                    title: Text(l10n.stockTitleIndex(index + 1)),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Poste: ${_getPosteString(stock['poste'], l10n)}'),
+                        Text('Parc: ${_getParkString(stock['park'], l10n)}'),
+                        Text(
+                            'Type: ${_getStockTypeString(stock['type'], l10n)}'),
+                        Text('Quantité: ${stock['quantity'] ?? '-'}'),
+                      ],
+                    ),
+                    leading: isSelected
+                        ? const Icon(Icons.check_circle, color: Colors.purple)
+                        : null,
+                    onTap: () {
+                      setState(() {
+                        _selectedStockIndex = isSelected ? null : index;
+                      });
+                    },
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, size: 18),
+                          onPressed: () => _showEditStockEntryDialog(
+                              report,
+                              data,
+                              index,
+                              setDialogState,
+                              scaffoldMessenger,
+                              l10n),
+                          tooltip: l10n.editStockEntryTitle,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete,
+                              size: 18, color: Colors.red),
+                          onPressed: () => _showDeleteStockEntryDialog(
+                              report,
+                              data,
+                              index,
+                              setDialogState,
+                              scaffoldMessenger,
+                              l10n),
+                          tooltip: l10n.deleteStockEntryTitle,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              })
+            else
+              Text(l10n.noStockEntriesAdded,
+                  style: const TextStyle(color: Colors.grey)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTnbTripsManagementCard(
+    Report report,
+    Map<String, dynamic> data,
+    StateSetter setDialogState,
+    ScaffoldMessengerState scaffoldMessenger,
+    AppLocalizations l10n,
+  ) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Voyages Camions',
+                    style: Theme.of(context).textTheme.titleMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () => _showAddTruckTripEntryDialog(
+                      report, data, setDialogState, scaffoldMessenger, l10n),
+                  icon: const Icon(Icons.add),
+                  label: Text(l10n.ajButton),
+                ),
+              ],
+            ),
+            const Divider(height: 16),
+            if (data['truckTrips'] is List &&
+                (data['truckTrips'] as List).isNotEmpty)
+              ...List.from(data['truckTrips']).asMap().entries.map((entry) {
+                final index = entry.key;
+                final trip = entry.value;
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    title: Text('Camion ${index + 1}'),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Type: ${_getTruckTypeString(trip['truckType'])}'),
+                        Text('Nombre de voyages: ${trip['tripCount'] ?? '-'}'),
+                      ],
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, size: 18),
+                          onPressed: () => _showEditTruckTripEntryDialog(
+                              report,
+                              data,
+                              index,
+                              setDialogState,
+                              scaffoldMessenger,
+                              l10n),
+                          tooltip: 'Modifier voyages',
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete,
+                              size: 18, color: Colors.red),
+                          onPressed: () => _showDeleteTruckTripEntryDialog(
+                              report,
+                              data,
+                              index,
+                              setDialogState,
+                              scaffoldMessenger,
+                              l10n),
+                          tooltip: 'Supprimer voyages',
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              })
+            else
+              const Text('Aucun voyage ajouté',
+                  style: TextStyle(color: Colors.grey)),
           ],
         ),
       ),
@@ -8517,368 +8416,31 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         Expanded(
                           child: TabBarView(
                             children: [
-                              _buildTsudReportDetailsPage(
+                              _buildDailyEditorTabContent(
+                                report: report,
                                 data: data,
-                                reportDate: report.date,
+                                setDialogState: setDialogState,
+                                scaffoldMessenger: scaffoldMessenger,
                                 l10n: l10n,
-                                shiftKey: '3',
+                              ),
+                              _buildDailyEditorTabContent(
+                                report: report,
+                                data: data,
+                                setDialogState: setDialogState,
+                                scaffoldMessenger: scaffoldMessenger,
+                                l10n: l10n,
+                              ),
+                              _buildDailyEditorTabContent(
+                                report: report,
+                                data: data,
+                                setDialogState: setDialogState,
+                                scaffoldMessenger: scaffoldMessenger,
+                                l10n: l10n,
                               ),
                               _buildTsudReportDetailsPage(
                                 data: data,
                                 reportDate: report.date,
                                 l10n: l10n,
-                                shiftKey: '1',
-                              ),
-                              _buildTsudReportDetailsPage(
-                                data: data,
-                                reportDate: report.date,
-                                l10n: l10n,
-                                shiftKey: '2',
-                              ),
-                              SingleChildScrollView(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Basic Info Card
-                                    Card(
-                                      margin: EdgeInsets.zero,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(16),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              l10n.infoLabel,
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .titleMedium,
-                                            ),
-                                            const Divider(height: 16),
-                                            _buildEditableField(
-                                              context: context,
-                                              label: l10n.description,
-                                              value: report.description,
-                                              isEditable: false,
-                                              onSave: (value) async {
-                                                final updatedReport = Report(
-                                                  id: report.id,
-                                                  description: value,
-                                                  type: report.type,
-                                                  group: report.group,
-                                                  date: report.date,
-                                                  additionalData:
-                                                      report.additionalData,
-                                                );
-                                                await _saveReportUpdate(
-                                                    updatedReport,
-                                                    scaffoldMessenger,
-                                                    l10n);
-                                              },
-                                            ),
-                                            const SizedBox(height: 8),
-                                            _buildEditableDateField(
-                                              context: context,
-                                              label: l10n.date,
-                                              value: report.date,
-                                              onSave: (value) async {
-                                                final updatedReport = Report(
-                                                  id: report.id,
-                                                  description:
-                                                      report.description,
-                                                  type: report.type,
-                                                  group: report.group,
-                                                  date: value,
-                                                  additionalData:
-                                                      report.additionalData,
-                                                );
-                                                await _saveReportUpdate(
-                                                    updatedReport,
-                                                    scaffoldMessenger,
-                                                    l10n);
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-
-                                    // Module 1 Management Card
-                                    Card(
-                                      margin: EdgeInsets.zero,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(16),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    l10n.module1Label,
-                                                    style: Theme.of(context)
-                                                        .textTheme
-                                                        .titleMedium,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                                ElevatedButton.icon(
-                                                  onPressed: () =>
-                                                      _showEditModuleDialog(
-                                                          report,
-                                                          data,
-                                                          'module1',
-                                                          setDialogState,
-                                                          scaffoldMessenger,
-                                                          l10n),
-                                                  icon: const Icon(Icons.edit),
-                                                  label: Text(l10n.edit),
-                                                ),
-                                              ],
-                                            ),
-                                            const Divider(height: 16),
-                                            if (data['module1Stops'] is List &&
-                                                (data['module1Stops'] as List)
-                                                    .isNotEmpty) ...[
-                                              const SizedBox(height: 8),
-                                              Text(l10n.stopsLabel,
-                                                  style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold)),
-                                              ...List.from(data['module1Stops'])
-                                                  .map((stop) => Padding(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .only(
-                                                                left: 16,
-                                                                top: 4),
-                                                        child: Text(
-                                                            _formatDailyStopLine(
-                                                                stop)),
-                                                      )),
-                                            ],
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-
-                                    // Module 2 Management Card
-                                    Card(
-                                      margin: EdgeInsets.zero,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(16),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    l10n.module2Label,
-                                                    style: Theme.of(context)
-                                                        .textTheme
-                                                        .titleMedium,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                                ElevatedButton.icon(
-                                                  onPressed: () =>
-                                                      _showEditModuleDialog(
-                                                          report,
-                                                          data,
-                                                          'module2',
-                                                          setDialogState,
-                                                          scaffoldMessenger,
-                                                          l10n),
-                                                  icon: const Icon(Icons.edit),
-                                                  label: Text(l10n.modifyLabel),
-                                                ),
-                                              ],
-                                            ),
-                                            const Divider(height: 16),
-                                            if (data['module2Stops'] is List &&
-                                                (data['module2Stops'] as List)
-                                                    .isNotEmpty) ...[
-                                              const SizedBox(height: 8),
-                                              Text(l10n.stopsWithColon,
-                                                  style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold)),
-                                              ...List.from(data['module2Stops'])
-                                                  .map((stop) => Padding(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .only(
-                                                                left: 16,
-                                                                top: 4),
-                                                        child: Text(
-                                                            _formatDailyStopLine(
-                                                                stop)),
-                                                      )),
-                                            ],
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-
-                                    // Stock Entries Management Card
-                                    Card(
-                                      margin: EdgeInsets.zero,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(16),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Text(
-                                                  'stock',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .titleMedium,
-                                                ),
-                                                ElevatedButton.icon(
-                                                  onPressed: () =>
-                                                      _showAddStockEntryDialog(
-                                                          report,
-                                                          data,
-                                                          setDialogState,
-                                                          scaffoldMessenger,
-                                                          l10n),
-                                                  icon: const Icon(Icons.add),
-                                                  label: Text(l10n.ajButton),
-                                                ),
-                                              ],
-                                            ),
-                                            const Divider(height: 16),
-                                            if (data['stock'] is List &&
-                                                (data['stock'] as List)
-                                                    .isNotEmpty)
-                                              ...List.from(data['stock'])
-                                                  .asMap()
-                                                  .entries
-                                                  .map((entry) {
-                                                final index = entry.key;
-                                                final stock = entry.value;
-                                                final isSelected =
-                                                    _selectedStockIndex ==
-                                                        index;
-                                                return Card(
-                                                  margin: const EdgeInsets.only(
-                                                      bottom: 8),
-                                                  color: isSelected
-                                                      ? Colors.purple
-                                                          .withValues(
-                                                              alpha: 0.1)
-                                                      : null,
-                                                  elevation: isSelected ? 4 : 1,
-                                                  child: ListTile(
-                                                    selected: isSelected,
-                                                    selectedTileColor: Colors
-                                                        .purple
-                                                        .withValues(alpha: 0.1),
-                                                    title: Text(
-                                                        'Stock ${index + 1}'),
-                                                    subtitle: Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        Text(
-                                                            'Poste: ${_getPosteString(stock['poste'], l10n)}'),
-                                                        Text(
-                                                            'Parc: ${_getParkString(stock['park'], l10n)}'),
-                                                        Text(
-                                                            'Type: ${_getStockTypeString(stock['type'], l10n)}'),
-                                                        Text(
-                                                            'Quantité: ${stock['quantity'] ?? '-'}'),
-                                                      ],
-                                                    ),
-                                                    leading: isSelected
-                                                        ? const Icon(
-                                                            Icons.check_circle,
-                                                            color:
-                                                                Colors.purple)
-                                                        : null,
-                                                    onTap: () {
-                                                      setState(() {
-                                                        _selectedStockIndex =
-                                                            isSelected
-                                                                ? null
-                                                                : index;
-                                                      });
-                                                    },
-                                                    trailing: Row(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: [
-                                                        IconButton(
-                                                          icon: const Icon(
-                                                              Icons.edit,
-                                                              size: 18),
-                                                          onPressed: () =>
-                                                              _showEditStockEntryDialog(
-                                                                  report,
-                                                                  data,
-                                                                  index,
-                                                                  setDialogState,
-                                                                  scaffoldMessenger,
-                                                                  l10n),
-                                                          tooltip:
-                                                              'Modifier l\'entrée de stock',
-                                                        ),
-                                                        IconButton(
-                                                          icon: const Icon(
-                                                              Icons.delete,
-                                                              size: 18,
-                                                              color:
-                                                                  Colors.red),
-                                                          onPressed: () =>
-                                                              _showDeleteStockEntryDialog(
-                                                                  report,
-                                                                  data,
-                                                                  index,
-                                                                  setDialogState,
-                                                                  scaffoldMessenger,
-                                                                  l10n),
-                                                          tooltip:
-                                                              'Supprimer l\'entrée de stock',
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                );
-                                              }),
-                                            if (!(data['stock'] is List &&
-                                                (data['stock'] as List)
-                                                    .isNotEmpty))
-                                              Text(l10n.noStockAdded,
-                                                  style: const TextStyle(
-                                                      color: Colors.grey)),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
                               ),
                             ],
                           ),
@@ -8891,6 +8453,154 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildDailyEditorTabContent({
+    required Report report,
+    required Map<String, dynamic> data,
+    required StateSetter setDialogState,
+    required ScaffoldMessengerState scaffoldMessenger,
+    required AppLocalizations l10n,
+  }) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.infoLabel,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const Divider(height: 16),
+                  _buildEditableField(
+                    context: context,
+                    label: l10n.description,
+                    value: report.description,
+                    isEditable: false,
+                    onSave: (value) async {},
+                  ),
+                  const SizedBox(height: 8),
+                  _buildEditableDateField(
+                    context: context,
+                    label: l10n.date,
+                    value: report.date,
+                    onSave: (value) async {
+                      final updatedReport = Report(
+                        id: report.id,
+                        description: report.description,
+                        type: report.type,
+                        group: report.group,
+                        date: value,
+                        additionalData: report.additionalData,
+                      );
+                      await _saveReportUpdate(
+                          updatedReport, scaffoldMessenger, l10n);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.module1Label,
+                          style: Theme.of(context).textTheme.titleMedium,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () => _showEditModuleDialog(report, data,
+                            'module1', setDialogState, scaffoldMessenger, l10n),
+                        icon: const Icon(Icons.edit),
+                        label: Text(l10n.edit),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 16),
+                  if (data['module1Stops'] is List &&
+                      (data['module1Stops'] as List).isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(l10n.stopsLabel,
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ...List.from(data['module1Stops']).map((stop) => Padding(
+                          padding: const EdgeInsets.only(left: 16, top: 4),
+                          child: Text(_formatDailyStopLine(stop)),
+                        )),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.module2Label,
+                          style: Theme.of(context).textTheme.titleMedium,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () => _showEditModuleDialog(report, data,
+                            'module2', setDialogState, scaffoldMessenger, l10n),
+                        icon: const Icon(Icons.edit),
+                        label: Text(l10n.modifyLabel),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 16),
+                  if (data['module2Stops'] is List &&
+                      (data['module2Stops'] as List).isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(l10n.stopsWithColon,
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ...List.from(data['module2Stops']).map((stop) => Padding(
+                          padding: const EdgeInsets.only(left: 16, top: 4),
+                          child: Text(_formatDailyStopLine(stop)),
+                        )),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildTnbStockManagementCard(
+            report,
+            data,
+            setDialogState,
+            scaffoldMessenger,
+            l10n,
+          ),
+        ],
       ),
     );
   }
