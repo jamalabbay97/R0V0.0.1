@@ -490,28 +490,6 @@ class TnbCounter {
   });
 }
 
-class _ShiftCounterSegment {
-  final String shiftLabel;
-  final double startValue;
-  final double endValue;
-
-  _ShiftCounterSegment({
-    required this.shiftLabel,
-    required this.startValue,
-    required this.endValue,
-  });
-}
-
-class _ShiftCounterBlock {
-  final String counterLabel;
-  final List<_ShiftCounterSegment> segments;
-
-  _ShiftCounterBlock({
-    required this.counterLabel,
-    required this.segments,
-  });
-}
-
 class StockEntry {
   String id;
   Poste? poste;
@@ -1000,41 +978,6 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     return max(0, shiftDurationMinutes - shiftDowntimeMinutes) / 60.0;
   }
 
-  List<_ShiftCounterBlock> _buildShiftCounterBlocks() {
-    final shiftWindows = _buildShiftWindows();
-
-    final result = <_ShiftCounterBlock>[];
-
-    for (final counter in tnbCounters) {
-      if (counter.start.trim().isEmpty) continue;
-      final parsedStart =
-          double.tryParse(counter.start.replaceAll(',', '.').trim());
-      if (parsedStart == null) continue;
-
-      var current = parsedStart;
-      final segments = <_ShiftCounterSegment>[];
-
-      for (final shift in shiftWindows) {
-        final shiftOperatingHours =
-            _calculateShiftOperatingHours(shift.start, shift.end);
-        final next = current + shiftOperatingHours;
-        segments.add(_ShiftCounterSegment(
-          shiftLabel: shift.label,
-          startValue: current,
-          endValue: next,
-        ));
-        current = next;
-      }
-
-      result.add(_ShiftCounterBlock(
-        counterLabel: counter.label,
-        segments: segments,
-      ));
-    }
-
-    return result;
-  }
-
   int _calculateDowntimeMinutesBetween(
       DateTime windowStart, DateTime windowEnd) {
     final cycleStart = DateTime(
@@ -1075,11 +1018,6 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       ranges,
       maxMinutes: windowEnd.difference(windowStart).inMinutes,
     );
-  }
-
-  String _formatCounterNumber(double value) {
-    final fixed = value.toStringAsFixed(2);
-    return fixed.endsWith('.00') ? fixed.substring(0, fixed.length - 3) : fixed;
   }
 
   int get _filledCounterCount =>
@@ -1924,7 +1862,6 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
 
   // --- Step 3: Verification ---
   Widget _buildStepVerification() {
-    final shiftCounterBlocks = _buildShiftCounterBlocks();
     return Column(
       children: [
         const Icon(Icons.check_circle_outline,
@@ -1999,40 +1936,13 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const Divider(height: 16),
-                ...[
-                  for (final shiftLabel in const [
-                    '3ème poste',
-                    '1er poste',
-                    '2ème poste',
-                  ]) ...[
-                    Text(
-                      shiftLabel,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                ...tnbCounters.map(
+                  (counter) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Text(
+                      '${counter.label} : ${counter.start.isNotEmpty ? counter.start : '-'}',
                     ),
-                    const SizedBox(height: 6),
-                    ...shiftCounterBlocks.map((block) {
-                      final segment = block.segments.firstWhere(
-                        (s) => s.shiftLabel == shiftLabel,
-                        orElse: () => _ShiftCounterSegment(
-                          shiftLabel: shiftLabel,
-                          startValue: 0,
-                          endValue: 0,
-                        ),
-                      );
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Text(
-                          '${block.counterLabel} : ${_formatCounterNumber(segment.startValue)} → ${_formatCounterNumber(segment.endValue)}',
-                        ),
-                      );
-                    }),
-                    const SizedBox(height: 10),
-                  ]
-                ],
-                const SizedBox(height: 8),
-                const Text(
-                  "La valeur de fin est calculée automatiquement avec T H.M",
-                  style: TextStyle(color: Colors.grey),
+                  ),
                 ),
               ],
             ),

@@ -1353,6 +1353,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 setDialogState: setDialogState,
                                 scaffoldMessenger: scaffoldMessenger,
                                 l10n: l10n,
+                                shiftKey: '3',
                               ),
                               _buildActivityEditorTabContent(
                                 report: report,
@@ -1360,6 +1361,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 setDialogState: setDialogState,
                                 scaffoldMessenger: scaffoldMessenger,
                                 l10n: l10n,
+                                shiftKey: '1',
                               ),
                               _buildActivityEditorTabContent(
                                 report: report,
@@ -1367,6 +1369,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 setDialogState: setDialogState,
                                 scaffoldMessenger: scaffoldMessenger,
                                 l10n: l10n,
+                                shiftKey: '2',
                               ),
                               _buildTnbReportDetailsPage(
                                 data: data,
@@ -1394,6 +1397,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     required StateSetter setDialogState,
     required ScaffoldMessengerState scaffoldMessenger,
     required AppLocalizations l10n,
+    String? shiftKey,
   }) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -1448,6 +1452,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             setDialogState,
             scaffoldMessenger,
             l10n,
+            shiftKey: shiftKey,
           ),
           const SizedBox(height: 16),
           _buildTnbCounterManagementCard(
@@ -1456,6 +1461,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             setDialogState,
             scaffoldMessenger,
             l10n,
+            shiftKey: shiftKey,
           ),
           const SizedBox(height: 16),
           _buildTnbStockManagementCard(
@@ -1464,6 +1470,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             setDialogState,
             scaffoldMessenger,
             l10n,
+            shiftKey: shiftKey,
           ),
           const SizedBox(height: 16),
           _buildTnbTripsManagementCard(
@@ -1472,6 +1479,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             setDialogState,
             scaffoldMessenger,
             l10n,
+            shiftKey: shiftKey,
           ),
         ],
       ),
@@ -2097,8 +2105,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     Map<String, dynamic> data,
     StateSetter setDialogState,
     ScaffoldMessengerState scaffoldMessenger,
-    AppLocalizations l10n,
-  ) {
+    AppLocalizations l10n, {
+    String? shiftKey,
+  }) {
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -2248,12 +2257,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildTnbCounterManagementCard(
-    Report report,
-    Map<String, dynamic> data,
-    StateSetter setDialogState,
-    ScaffoldMessengerState scaffoldMessenger,
-    AppLocalizations l10n,
-  ) {
+      Report report,
+      Map<String, dynamic> data,
+      StateSetter setDialogState,
+      ScaffoldMessengerState scaffoldMessenger,
+      AppLocalizations l10n,
+      {String? shiftKey}) {
     final counters = _buildTnbCounterDisplayList(data);
 
     return Card(
@@ -2273,39 +2282,59 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
             const Divider(height: 16),
             ...counters.map((counter) {
-              final hasValue = (counter['start'] ?? '').trim().isNotEmpty;
               final label = counter['label'] ?? '';
+              final segments = _buildTnbCounterShiftSegments(
+                data: data,
+                label: label,
+                baseDate: report.date,
+              );
+              final selectedSegment = shiftKey == null
+                  ? null
+                  : segments.firstWhere(
+                      (segment) => segment['shiftKey'] == shiftKey,
+                      orElse: () => const {'start': '', 'end': ''},
+                    );
+              final displayStart =
+                  (selectedSegment?['start'] ?? counter['start'] ?? '').trim();
+              final displayEnd =
+                  (selectedSegment?['end'] ?? counter['end'] ?? '').trim();
+              final hasDisplayValue = displayStart.isNotEmpty;
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
                   title: Text(label),
                   subtitle: Text(
-                      '${l10n.start}: ${hasValue ? counter['start'] : '-'}'),
+                    '${l10n.start}: ${hasDisplayValue ? displayStart : '-'}\nEnd: ${hasDisplayValue ? (displayEnd.isNotEmpty ? displayEnd : '-') : '-'}',
+                  ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: Icon(hasValue ? Icons.edit : Icons.add, size: 18),
+                        icon: Icon(hasDisplayValue ? Icons.edit : Icons.add,
+                            size: 18),
                         onPressed: () => _showTnbCounterValueDialog(
                           report: report,
                           data: data,
                           label: label,
                           initialValue: counter['start'] ?? '',
-                          isEditing: hasValue,
+                          isEditing: hasDisplayValue,
+                          shiftKey: shiftKey,
                           setDialogState: setDialogState,
                           scaffoldMessenger: scaffoldMessenger,
                           l10n: l10n,
                         ),
-                        tooltip: hasValue ? l10n.editCounter : l10n.ajButton,
+                        tooltip:
+                            hasDisplayValue ? l10n.editCounter : l10n.ajButton,
                       ),
                       IconButton(
                         icon: const Icon(Icons.delete,
                             size: 18, color: Colors.red),
-                        onPressed: hasValue
+                        onPressed: hasDisplayValue
                             ? () => _showDeleteTnbCounterDialog(
                                   report: report,
                                   data: data,
                                   label: label,
+                                  shiftKey: shiftKey,
                                   setDialogState: setDialogState,
                                   scaffoldMessenger: scaffoldMessenger,
                                   l10n: l10n,
@@ -2329,8 +2358,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     Map<String, dynamic> data,
     StateSetter setDialogState,
     ScaffoldMessengerState scaffoldMessenger,
-    AppLocalizations l10n,
-  ) {
+    AppLocalizations l10n, {
+    String? shiftKey,
+  }) {
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -2358,7 +2388,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
             const Divider(height: 16),
             if (data['stock'] is List && (data['stock'] as List).isNotEmpty)
-              ...List.from(data['stock']).asMap().entries.map((entry) {
+              ...List.from(data['stock']).asMap().entries.where((entry) {
+                if (shiftKey == null) return true;
+                final poste = entry.value['poste'];
+                final targetPoste =
+                    shiftKey == '3' ? 0 : (shiftKey == '1' ? 1 : 2);
+                return poste == targetPoste;
+              }).map((entry) {
                 final index = entry.key;
                 final stock = entry.value;
                 final isSelected = _selectedStockIndex == index;
@@ -2434,8 +2470,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     Map<String, dynamic> data,
     StateSetter setDialogState,
     ScaffoldMessengerState scaffoldMessenger,
-    AppLocalizations l10n,
-  ) {
+    AppLocalizations l10n, {
+    String? shiftKey,
+  }) {
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -2518,64 +2555,270 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
+  List<String> get _tnbShiftKeys => const ['3', '1', '2'];
+
+  List<Map<String, String>> _buildTnbCounterShiftSegments({
+    required Map<String, dynamic> data,
+    required String label,
+    required DateTime baseDate,
+  }) {
+    final storedByCounter = data['tnbShiftCounters'] is Map
+        ? Map<String, dynamic>.from(data['tnbShiftCounters'])
+        : <String, dynamic>{};
+    final storedSegmentsRaw = storedByCounter[label];
+    if (storedSegmentsRaw is List && storedSegmentsRaw.isNotEmpty) {
+      return storedSegmentsRaw
+          .whereType<Map>()
+          .map((raw) => Map<String, String>.from({
+                'shiftKey': (raw['shiftKey'] ?? '').toString(),
+                'shiftLabel': (raw['shiftLabel'] ?? '').toString(),
+                'start': (raw['start'] ?? '').toString(),
+                'end': (raw['end'] ?? '').toString(),
+              }))
+          .toList(growable: false);
+    }
+
+    final counter = _buildTnbCounterDisplayList(data).firstWhere(
+      (entry) => entry['label'] == label,
+      orElse: () => {'label': label, 'start': '', 'end': ''},
+    );
+    final parsedStart =
+        double.tryParse((counter['start'] ?? '').replaceAll(',', '.').trim());
+    if (parsedStart == null) {
+      return _tnbShiftKeys.map((shiftKey) {
+        final shift = _cycleShiftWindowByKey(baseDate, shiftKey);
+        return {
+          'shiftKey': shiftKey,
+          'shiftLabel': shift?.label ?? '-',
+          'start': '',
+          'end': '',
+        };
+      }).toList(growable: false);
+    }
+
+    final stops = (data['Arrets'] is List) ? List.from(data['Arrets']) : [];
+    final cycleStart =
+        DateTime(baseDate.year, baseDate.month, baseDate.day, 22, 30);
+    final cycleEnd = cycleStart.add(const Duration(hours: 24));
+    var running = parsedStart;
+    return _tnbShiftKeys.map((shiftKey) {
+      final shift = _cycleShiftWindowByKey(baseDate, shiftKey);
+      if (shift == null) {
+        return {
+          'shiftKey': shiftKey,
+          'shiftLabel': '-',
+          'start': '',
+          'end': '',
+        };
+      }
+      final downtime = _calculateTnbDowntimeMinutesInWindow(
+        stops: stops,
+        windowStart: shift.start,
+        windowEnd: shift.end,
+        cycleStart: cycleStart,
+        cycleEnd: cycleEnd,
+      );
+      final operatingHours = math.max(0, 480 - downtime) / 60.0;
+      final next = running + operatingHours;
+      final segment = {
+        'shiftKey': shiftKey,
+        'shiftLabel': shift.label,
+        'start': _formatTnbCounterNumber(running),
+        'end': _formatTnbCounterNumber(next),
+      };
+      running = next;
+      return segment;
+    }).toList(growable: false);
+  }
+
+  double _counterShiftHours(String startValue, String endValue) {
+    final start = double.tryParse(startValue.replaceAll(',', '.').trim());
+    final end = double.tryParse(endValue.replaceAll(',', '.').trim());
+    if (start == null || end == null || end < start) return 0;
+    return end - start;
+  }
+
   Future<void> _showTnbCounterValueDialog({
     required Report report,
     required Map<String, dynamic> data,
     required String label,
     required String initialValue,
     required bool isEditing,
+    String? shiftKey,
     required StateSetter setDialogState,
     required ScaffoldMessengerState scaffoldMessenger,
     required AppLocalizations l10n,
   }) async {
-    final controller = TextEditingController(text: initialValue);
+    final allSegments = _buildTnbCounterShiftSegments(
+      data: data,
+      label: label,
+      baseDate: report.date,
+    ).map((e) => Map<String, String>.from(e)).toList(growable: false);
+    final segments = shiftKey == null
+        ? allSegments
+        : allSegments
+            .where((segment) => segment['shiftKey'] == shiftKey)
+            .toList(growable: false);
+    if (segments.isEmpty) return;
+    final startControllers = segments
+        .map((segment) => TextEditingController(text: segment['start'] ?? ''))
+        .toList(growable: false);
+    final endControllers = segments
+        .map((segment) => TextEditingController(text: segment['end'] ?? ''))
+        .toList(growable: false);
 
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(isEditing ? 'Modifier $label' : 'Ajouter $label'),
-        content: TextField(
-          controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(
-            labelText: 'Valeur de départ - $label',
-            border: const OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final value = controller.text.trim();
-              if (value.isEmpty) {
-                return;
-              }
-              final counters = _buildTnbCounterDisplayList(data)
-                  .map((counter) => Map<String, String>.from(counter))
-                  .toList(growable: false);
-              final index =
-                  counters.indexWhere((counter) => counter['label'] == label);
-              if (index == -1) {
-                return;
-              }
-              counters[index]['start'] = value;
-              counters[index]['end'] = '';
-              final updatedReport = _buildUpdatedActivityReportWithTnbCounters(
-                report: report,
-                data: data,
-                counters: counters,
-              );
-              Navigator.pop(context);
-              _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-              setDialogState(() {});
-            },
-            child: Text(isEditing ? l10n.modifyLabel : l10n.add),
-          ),
-        ],
-      ),
+      builder: (context) => StatefulBuilder(
+          builder: (context, setStateDialog) => AlertDialog(
+                title: Text(isEditing ? 'Modifier $label' : 'Ajouter $label'),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(segments.length, (index) {
+                      final segment = segments[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                segment['shiftLabel'] ?? '-',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: startControllers[index],
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                decoration: const InputDecoration(
+                                  labelText: 'Start',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: endControllers[index],
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                decoration: const InputDecoration(
+                                  labelText: 'End',
+                                  border: OutlineInputBorder(),
+                                ),
+                                onChanged: (value) {
+                                  if (index + 1 < startControllers.length) {
+                                    startControllers[index + 1].text =
+                                        value.trim();
+                                  }
+                                  setStateDialog(() {});
+                                },
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Heures de marche: ${_formatTnbCounterNumber(_counterShiftHours(startControllers[index].text, endControllers[index].text))} h',
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(l10n.cancel),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      final normalizedSegments = <Map<String, String>>[];
+                      for (var i = 0; i < segments.length; i++) {
+                        final startValue = startControllers[i].text.trim();
+                        final endValue = endControllers[i].text.trim();
+                        if (startValue.isNotEmpty &&
+                            double.tryParse(startValue.replaceAll(',', '.')) ==
+                                null) {
+                          return;
+                        }
+                        if (endValue.isNotEmpty &&
+                            double.tryParse(endValue.replaceAll(',', '.')) ==
+                                null) {
+                          return;
+                        }
+                        if (startValue.isNotEmpty &&
+                            endValue.isNotEmpty &&
+                            (double.tryParse(endValue.replaceAll(',', '.')) ??
+                                    0) <
+                                (double.tryParse(
+                                        startValue.replaceAll(',', '.')) ??
+                                    0)) {
+                          return;
+                        }
+                        normalizedSegments.add({
+                          'shiftKey': segments[i]['shiftKey'] ?? '',
+                          'shiftLabel': segments[i]['shiftLabel'] ?? '',
+                          'start': startValue,
+                          'end': endValue,
+                        });
+                      }
+                      final mergedSegments = allSegments
+                          .map((e) => Map<String, String>.from(e))
+                          .toList();
+                      for (final edited in normalizedSegments) {
+                        final editedIndex = mergedSegments.indexWhere(
+                            (segment) =>
+                                segment['shiftKey'] == edited['shiftKey']);
+                        if (editedIndex != -1) {
+                          mergedSegments[editedIndex] = edited;
+                        }
+                      }
+                      for (var i = 1; i < mergedSegments.length; i++) {
+                        final previousEnd =
+                            (mergedSegments[i - 1]['end'] ?? '').trim();
+                        if (previousEnd.isNotEmpty) {
+                          mergedSegments[i]['start'] = previousEnd;
+                        }
+                      }
+                      final counters = _buildTnbCounterDisplayList(data)
+                          .map((counter) => Map<String, String>.from(counter))
+                          .toList(growable: false);
+                      final index = counters
+                          .indexWhere((counter) => counter['label'] == label);
+                      if (index == -1) {
+                        return;
+                      }
+                      counters[index]['start'] =
+                          mergedSegments.first['start']?.trim() ?? '';
+                      counters[index]['end'] =
+                          mergedSegments.last['end']?.trim() ?? '';
+                      final updatedReport =
+                          _buildUpdatedActivityReportWithTnbCounters(
+                        report: report,
+                        data: data,
+                        counters: counters,
+                        shiftSegmentsByCounter: {
+                          label: mergedSegments,
+                        },
+                      );
+                      final refreshedData = updatedReport.additionalData ?? {};
+                      data
+                        ..clear()
+                        ..addAll(refreshedData);
+                      Navigator.pop(context);
+                      _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+                      setDialogState(() {});
+                    },
+                    child: Text(isEditing ? l10n.modifyLabel : l10n.add),
+                  ),
+                ],
+              )),
     );
   }
 
@@ -2583,6 +2826,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     required Report report,
     required Map<String, dynamic> data,
     required String label,
+    String? shiftKey,
     required StateSetter setDialogState,
     required ScaffoldMessengerState scaffoldMessenger,
     required AppLocalizations l10n,
@@ -2608,13 +2852,42 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 Navigator.pop(context);
                 return;
               }
-              counters[index]['start'] = '';
-              counters[index]['end'] = '';
+              final segments = _buildTnbCounterShiftSegments(
+                data: data,
+                label: label,
+                baseDate: report.date,
+              ).map((e) => Map<String, String>.from(e)).toList();
+              if (shiftKey == null) {
+                counters[index]['start'] = '';
+                counters[index]['end'] = '';
+              } else {
+                final segmentIndex = segments
+                    .indexWhere((segment) => segment['shiftKey'] == shiftKey);
+                if (segmentIndex != -1) {
+                  segments[segmentIndex]['start'] = '';
+                  segments[segmentIndex]['end'] = '';
+                }
+                for (var i = 1; i < segments.length; i++) {
+                  final previousEnd = (segments[i - 1]['end'] ?? '').trim();
+                  if (previousEnd.isNotEmpty) {
+                    segments[i]['start'] = previousEnd;
+                  }
+                }
+                counters[index]['start'] =
+                    segments.first['start']?.trim() ?? '';
+                counters[index]['end'] = segments.last['end']?.trim() ?? '';
+              }
               final updatedReport = _buildUpdatedActivityReportWithTnbCounters(
                 report: report,
                 data: data,
                 counters: counters,
+                shiftSegmentsByCounter:
+                    shiftKey == null ? const {} : {label: segments},
               );
+              final refreshedData = updatedReport.additionalData ?? {};
+              data
+                ..clear()
+                ..addAll(refreshedData);
               Navigator.pop(context);
               _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
               setDialogState(() {});
@@ -2631,6 +2904,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     required Report report,
     required Map<String, dynamic> data,
     required List<Map<String, String>> counters,
+    Map<String, List<Map<String, String>>> shiftSegmentsByCounter = const {},
   }) {
     final updatedData = Map<String, dynamic>.from(data);
     final filledCounters = counters
@@ -2643,7 +2917,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               'id': 'tnb-vibreur',
               'poste': counter['label'],
               'start': counter['start'],
-              'end': '',
+              'end': counter['end'],
             })
         .toList(growable: false);
 
@@ -2653,9 +2927,34 @@ class _ReportsScreenState extends State<ReportsScreen> {
               'id': 'tnb-${counter['label']}',
               'poste': counter['label'],
               'start': counter['start'],
-              'end': '',
+              'end': counter['end'],
             })
         .toList(growable: false);
+
+    final shiftCountersRaw = updatedData['tnbShiftCounters'] is Map
+        ? Map<String, dynamic>.from(updatedData['tnbShiftCounters'])
+        : <String, dynamic>{};
+    for (final entry in shiftSegmentsByCounter.entries) {
+      shiftCountersRaw[entry.key] = entry.value
+          .map((segment) => {
+                'shiftKey': segment['shiftKey'],
+                'shiftLabel': segment['shiftLabel'],
+                'start': segment['start'],
+                'end': segment['end'],
+                'workingHours': _counterShiftHours(
+                    segment['start'] ?? '', segment['end'] ?? ''),
+              })
+          .toList(growable: false);
+    }
+    for (final counter in counters) {
+      final label = (counter['label'] ?? '').trim();
+      if (label.isEmpty) continue;
+      final hasStart = (counter['start'] ?? '').trim().isNotEmpty;
+      if (!hasStart) {
+        shiftCountersRaw.remove(label);
+      }
+    }
+    updatedData['tnbShiftCounters'] = shiftCountersRaw;
 
     final recalculatedData = _recalculateActivityTotals(
       updatedData,
@@ -6077,12 +6376,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
       return const [Text('-')];
     }
 
-    final stops =
-        (data['Arrets'] is List) ? List.from(data['Arrets']) : <dynamic>[];
-    final cycleStart =
-        DateTime(baseDate.year, baseDate.month, baseDate.day, 22, 30);
-    final cycleEnd = cycleStart.add(const Duration(hours: 24));
-
     final shifts = _cycleShiftWindows(baseDate);
 
     final rows = <Widget>[];
@@ -6094,33 +6387,31 @@ class _ReportsScreenState extends State<ReportsScreen> {
       rows.add(const SizedBox(height: 6));
 
       for (final counter in counters) {
-        final startValue =
-            double.tryParse((counter['start'] ?? '').replaceAll(',', '.'));
-        if (startValue == null) continue;
-
-        double runningValue = startValue;
-        for (final currentShift in shifts) {
-          final downtime = _calculateTnbDowntimeMinutesInWindow(
-            stops: stops,
-            windowStart: currentShift.start,
-            windowEnd: currentShift.end,
-            cycleStart: cycleStart,
-            cycleEnd: cycleEnd,
-          );
-          final operatingHours = math.max(0, 480 - downtime) / 60.0;
-          final nextValue = runningValue + operatingHours;
-
-          if (currentShift.label == shift.label) {
-            rows.add(Padding(
-              padding: rowPadding,
-              child: Text(
-                '$bullet${counter['label']} : ${_formatTnbCounterNumber(runningValue)} → ${_formatTnbCounterNumber(nextValue)}',
-              ),
-            ));
-            break;
-          }
-          runningValue = nextValue;
+        final counterLabel = counter['label'] ?? '';
+        final storedSegments = _buildTnbCounterShiftSegments(
+          data: data,
+          label: counterLabel,
+          baseDate: baseDate,
+        );
+        final segment = storedSegments.firstWhere(
+          (s) => s['shiftLabel'] == shift.label,
+          orElse: () => const {
+            'start': '',
+            'end': '',
+          },
+        );
+        if ((segment['start'] ?? '').isEmpty ||
+            (segment['end'] ?? '').isEmpty) {
+          continue;
         }
+        final hours =
+            _counterShiftHours(segment['start'] ?? '', segment['end'] ?? '');
+        rows.add(Padding(
+          padding: rowPadding,
+          child: Text(
+            '$bullet$counterLabel : ${segment['start']} → ${segment['end']} (${_formatTnbCounterNumber(hours)} h)',
+          ),
+        ));
       }
       rows.add(const SizedBox(height: 10));
     }
@@ -6984,20 +7275,32 @@ class _ReportsScreenState extends State<ReportsScreen> {
     required List<dynamic> counters,
     required List<dynamic> stops,
     required DateTime reportDate,
+    Map<String, dynamic> shiftSegmentsByCounter = const {},
   }) {
     return counters.map((rawCounter) {
       final counter = rawCounter is Map
           ? Map<String, dynamic>.from(rawCounter)
           : <String, dynamic>{};
-      final startValue = (counter['start'] ?? '').toString().trim();
-      counter['start'] = startValue;
-      counter['end'] = startValue.isEmpty
-          ? ''
-          : _calculateTnbCounterEndValue(
-              startValue: startValue,
-              stops: stops,
-              reportDate: reportDate,
-            );
+      final counterLabel = (counter['poste'] ?? '').toString().trim();
+      final storedSegmentsRaw = shiftSegmentsByCounter[counterLabel];
+      if (storedSegmentsRaw is List && storedSegmentsRaw.isNotEmpty) {
+        final storedSegments = storedSegmentsRaw.whereType<Map>().toList();
+        final startValue =
+            (storedSegments.first['start'] ?? '').toString().trim();
+        final endValue = (storedSegments.last['end'] ?? '').toString().trim();
+        counter['start'] = startValue;
+        counter['end'] = endValue;
+      } else {
+        final startValue = (counter['start'] ?? '').toString().trim();
+        counter['start'] = startValue;
+        counter['end'] = startValue.isEmpty
+            ? ''
+            : _calculateTnbCounterEndValue(
+                startValue: startValue,
+                stops: stops,
+                reportDate: reportDate,
+              );
+      }
       return counter;
     }).toList(growable: false);
   }
@@ -7021,16 +7324,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final truckTrips = (updatedData['truckTrips'] is List)
         ? List.from(updatedData['truckTrips'])
         : [];
+    final shiftSegmentsByCounter = updatedData['tnbShiftCounters'] is Map
+        ? Map<String, dynamic>.from(updatedData['tnbShiftCounters'])
+        : <String, dynamic>{};
 
     final vibratorCounters = _rebuildTnbCountersWithComputedEndValues(
       counters: rawVibratorCounters,
       stops: stops,
       reportDate: effectiveReportDate,
+      shiftSegmentsByCounter: shiftSegmentsByCounter,
     );
     final liaisonCounters = _rebuildTnbCountersWithComputedEndValues(
       counters: rawLiaisonCounters,
       stops: stops,
       reportDate: effectiveReportDate,
+      shiftSegmentsByCounter: shiftSegmentsByCounter,
     );
 
     final totalDowntime = _calculateDowntimeFromStops(stops);
