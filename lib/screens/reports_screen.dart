@@ -1492,7 +1492,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
       Map<String, dynamic> data,
       StateSetter setDialogState,
       ScaffoldMessengerState scaffoldMessenger,
-      AppLocalizations l10n) async {
+      AppLocalizations l10n,
+      {String? shiftKey}) async {
     _TnbStopCategory? selectedCategory;
     String? selectedType;
     _TnbStopLocation? selectedLocation;
@@ -1694,6 +1695,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           'Fin': selectedTimeResult.end == null
                               ? 'Pending'
                               : formatTimeOfDay(selectedTimeResult.end!),
+                          'shiftKey': shiftKey ?? '',
                         });
                         _sortArretsByStartTime(updatedData['Arrets'] as List);
 
@@ -1737,7 +1739,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
       int index,
       StateSetter setDialogState,
       ScaffoldMessengerState scaffoldMessenger,
-      AppLocalizations l10n) async {
+      AppLocalizations l10n,
+      {String? shiftKey}) async {
     final rawStop = (data['Arrets'] as List)[index];
     final stop = rawStop is Map
         ? Map<String, dynamic>.from(rawStop)
@@ -1993,6 +1996,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         updatedStop['Fin'] = selectedEnd == null
                             ? 'Pending'
                             : formatTimeOfDay(selectedEnd!);
+                        if (shiftKey != null && shiftKey.isNotEmpty) {
+                          updatedStop['shiftKey'] = shiftKey;
+                        }
 
                         (updatedData['Arrets'] as List)[index] = updatedStop;
                         _sortArretsByStartTime(updatedData['Arrets'] as List);
@@ -2127,7 +2133,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ),
                 ElevatedButton.icon(
                   onPressed: () => _showAddStopDialog(
-                      report, data, setDialogState, scaffoldMessenger, l10n),
+                    report,
+                    data,
+                    setDialogState,
+                    scaffoldMessenger,
+                    l10n,
+                    shiftKey: shiftKey,
+                  ),
                   icon: const Icon(Icons.add),
                   label: Text(l10n.ajButton),
                 ),
@@ -2135,7 +2147,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
             const Divider(height: 16),
             if (data['Arrets'] is List && (data['Arrets'] as List).isNotEmpty)
-              ...List.from(data['Arrets']).asMap().entries.map((entry) {
+              ...List.from(data['Arrets']).asMap().entries.where((entry) {
+                if (shiftKey == null) return true;
+                final raw = entry.value;
+                if (raw is! Map) return false;
+                return _stopMatchesShift(
+                  stop: Map<String, dynamic>.from(raw),
+                  baseDate: report.date,
+                  shiftKey: shiftKey,
+                );
+              }).map((entry) {
                 final index = entry.key;
                 final stop = entry.value is Map
                     ? Map<String, dynamic>.from(entry.value)
@@ -5937,6 +5958,30 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }).toList();
   }
 
+  bool _stopMatchesShift({
+    required Map<String, dynamic> stop,
+    required DateTime baseDate,
+    required String shiftKey,
+  }) {
+    final explicitShift = _normalizePosteKey(stop['shiftKey']?.toString());
+    if (explicitShift != null) {
+      return explicitShift == shiftKey;
+    }
+
+    final shift = _cycleShiftWindowByKey(baseDate, shiftKey);
+    if (shift == null) return false;
+    final cycleStart =
+        DateTime(baseDate.year, baseDate.month, baseDate.day, 22, 30);
+    final cycleEnd = cycleStart.add(const Duration(hours: 24));
+    final rawStart =
+        (stop['startTime'] ?? stop['start'] ?? stop['Début'] ?? '').toString();
+    if (rawStart.isEmpty) return false;
+    final start = _parseTnbStopDateTimeForCycle(rawStart, cycleStart, cycleEnd);
+    if (start == null) return false;
+
+    return !start.isBefore(shift.start) && start.isBefore(shift.end);
+  }
+
   List<Map<String, dynamic>> _filterTnbTripsForShift(
     List<dynamic> trips,
     String shiftKey,
@@ -8730,6 +8775,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 setDialogState: setDialogState,
                                 scaffoldMessenger: scaffoldMessenger,
                                 l10n: l10n,
+                                shiftKey: '3',
                               ),
                               _buildDailyEditorTabContent(
                                 report: report,
@@ -8737,6 +8783,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 setDialogState: setDialogState,
                                 scaffoldMessenger: scaffoldMessenger,
                                 l10n: l10n,
+                                shiftKey: '1',
                               ),
                               _buildDailyEditorTabContent(
                                 report: report,
@@ -8744,6 +8791,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 setDialogState: setDialogState,
                                 scaffoldMessenger: scaffoldMessenger,
                                 l10n: l10n,
+                                shiftKey: '2',
                               ),
                               _buildTsudReportDetailsPage(
                                 data: data,
@@ -8771,7 +8819,43 @@ class _ReportsScreenState extends State<ReportsScreen> {
     required StateSetter setDialogState,
     required ScaffoldMessengerState scaffoldMessenger,
     required AppLocalizations l10n,
+    String? shiftKey,
   }) {
+    final module1Stops = (data['module1Stops'] is List)
+        ? List.from(data['module1Stops'])
+            .whereType<Map>()
+            .map((entry) {
+              final stop = Map<String, dynamic>.from(entry);
+              if (shiftKey == null) return stop;
+              return _stopMatchesShift(
+                stop: stop,
+                baseDate: report.date,
+                shiftKey: shiftKey,
+              )
+                  ? stop
+                  : <String, dynamic>{};
+            })
+            .where((entry) => entry.isNotEmpty)
+            .toList()
+        : <Map<String, dynamic>>[];
+    final module2Stops = (data['module2Stops'] is List)
+        ? List.from(data['module2Stops'])
+            .whereType<Map>()
+            .map((entry) {
+              final stop = Map<String, dynamic>.from(entry);
+              if (shiftKey == null) return stop;
+              return _stopMatchesShift(
+                stop: stop,
+                baseDate: report.date,
+                shiftKey: shiftKey,
+              )
+                  ? stop
+                  : <String, dynamic>{};
+            })
+            .where((entry) => entry.isNotEmpty)
+            .toList()
+        : <Map<String, dynamic>>[];
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -8845,12 +8929,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     ],
                   ),
                   const Divider(height: 16),
-                  if (data['module1Stops'] is List &&
-                      (data['module1Stops'] as List).isNotEmpty) ...[
+                  if (module1Stops.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(l10n.stopsLabel,
                         style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ...List.from(data['module1Stops']).map((stop) => Padding(
+                    ...module1Stops.map((stop) => Padding(
                           padding: const EdgeInsets.only(left: 16, top: 4),
                           child: Text(_formatDailyStopLine(stop)),
                         )),
@@ -8886,12 +8969,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     ],
                   ),
                   const Divider(height: 16),
-                  if (data['module2Stops'] is List &&
-                      (data['module2Stops'] as List).isNotEmpty) ...[
+                  if (module2Stops.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(l10n.stopsWithColon,
                         style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ...List.from(data['module2Stops']).map((stop) => Padding(
+                    ...module2Stops.map((stop) => Padding(
                           padding: const EdgeInsets.only(left: 16, top: 4),
                           child: Text(_formatDailyStopLine(stop)),
                         )),
@@ -8907,6 +8989,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             setDialogState,
             scaffoldMessenger,
             l10n,
+            shiftKey: shiftKey,
           ),
         ],
       ),
