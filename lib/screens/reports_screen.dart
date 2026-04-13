@@ -5929,6 +5929,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ? allTrips.whereType<Map>().map(Map<String, dynamic>.from).toList()
         : _filterTnbTripsForShift(allTrips, shiftKey);
     final quantity = _getTnbQuantityTotal(stockEntries);
+    final totalTrips = _getTnbTotalVoyagesForSummary(
+      stockEntries: stockEntries,
+      trips: trips,
+    );
     final vibreurHours = shiftKey == null
         ? 0.0
         : _getCounterShiftHoursByLabel(
@@ -6011,7 +6015,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     'T Nr.C:',
                     '${_filledTnbCounterCount(data)} / ${_buildTnbCounterDisplayList(data).length}',
                   ),
-                  _buildSummaryRow('T Nr.V:', trips.length.toString()),
+                  _buildSummaryRow('T Nr.V:', totalTrips.toString()),
                   if (shiftKey != null) ...[
                     const SizedBox(height: 8),
                     _buildSummaryRow(
@@ -6349,10 +6353,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
         (data['stock'] is List) ? List.from(data['stock']) : [];
     final truckTrips =
         (data['truckTrips'] is List) ? List.from(data['truckTrips']) : [];
-    final totalTrips = truckTrips.fold<int>(
-      0,
-      (sum, entry) =>
-          sum + _parseTripCount(entry is Map ? entry['tripCount'] : null),
+    final totalTrips = _getTnbTotalVoyagesForSummary(
+      stockEntries:
+          stockEntries.whereType<Map>().map(Map<String, dynamic>.from).toList(),
+      trips:
+          truckTrips.whereType<Map>().map(Map<String, dynamic>.from).toList(),
     );
 
     return Column(
@@ -7200,6 +7205,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
   int _parseTripCount(dynamic value) {
     final parsed = int.tryParse((value ?? '').toString().trim());
     return parsed ?? 0;
+  }
+
+  int _getTnbTotalVoyagesForSummary({
+    required List<Map<String, dynamic>> stockEntries,
+    required List<Map<String, dynamic>> trips,
+  }) {
+    final totalFromStock = stockEntries.fold<int>(
+      0,
+      (sum, entry) =>
+          sum +
+          _parseTripCount(entry['gatTrips']) +
+          _parseTripCount(entry['terexTrips']),
+    );
+    if (totalFromStock > 0) {
+      return totalFromStock;
+    }
+
+    return trips.fold<int>(
+      0,
+      (sum, entry) => sum + _parseTripCount(entry['tripCount']),
+    );
   }
 
   Map<String, dynamic> _syncTruckTripsFromStockEntries(
