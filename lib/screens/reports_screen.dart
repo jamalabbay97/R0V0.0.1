@@ -5971,7 +5971,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     ...stockEntries.map((entry) => Padding(
                           padding: const EdgeInsets.symmetric(vertical: 2),
                           child: Text(
-                            '${l10n.poste}: ${_getPosteString(entry['poste'], l10n)} | ${l10n.parkLabel}: ${_getParkString(entry['park'], l10n)} | ${l10n.type}: ${_getStockTypeString(entry['type'], l10n)} | ${l10n.quantityLabel}: ${_getComputedStockQuantity(Map<String, dynamic>.from(entry))} |',
+                            '${l10n.poste}: ${_getPosteString(entry['poste'], l10n)} | Voyages GAT: ${entry['gatTrips'] ?? '-'} | Voyages TEREX: ${entry['terexTrips'] ?? '-'} | ${l10n.parkLabel}: ${_getParkString(entry['park'], l10n)} | ${l10n.type}: ${_getStockTypeString(entry['type'], l10n)} | ${l10n.quantityLabel}: ${_getComputedStockQuantity(Map<String, dynamic>.from(entry))} |',
                           ),
                         )),
                   ],
