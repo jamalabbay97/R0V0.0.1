@@ -1732,7 +1732,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
             title: Text(
                 "${posteToString(e.value.poste)} - ${parkToString(e.value.park)}"),
             subtitle: Text(
-                "${stockTypeToString(e.value.type)}: ${e.value.quantity} | GAT: ${e.value.gatTrips.isNotEmpty ? e.value.gatTrips : '-'} | TEREX: ${e.value.terexTrips.isNotEmpty ? e.value.terexTrips : '-'}"),
+                "${stockTypeToString(e.value.type)}: ${_calculateTnbQuantity(e.value.gatTrips, e.value.terexTrips)} | GAT: ${e.value.gatTrips.isNotEmpty ? e.value.gatTrips : '-'} | TEREX: ${e.value.terexTrips.isNotEmpty ? e.value.terexTrips : '-'}"),
             trailing: IconButton(
                 icon: const Icon(Icons.delete, color: AppColors.error),
                 onPressed: () {
@@ -1749,13 +1749,19 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     ]);
   }
 
+  String _calculateTnbQuantity(String gatTrips, String terexTrips) {
+    final gat = int.tryParse(gatTrips) ?? 0;
+    final terex = int.tryParse(terexTrips) ?? 0;
+    final quantity = (gat * 78) + (terex * 58);
+    return quantity.toString();
+  }
+
   void _showAddStockDialog() {
     Poste? poste;
     String gatTrips = '';
     String terexTrips = '';
     Park? park;
     StockType? type;
-    String qty = '';
     showDialog(
         context: context,
         builder: (ctx) => StatefulBuilder(
@@ -1794,10 +1800,10 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                                 value: p, child: Text(stockTypeToString(p))))
                             .toList(),
                         onChanged: (v) => setDs(() => type = v)),
-                    TextField(
-                        decoration:
-                            const InputDecoration(labelText: "Quantité"),
-                        onChanged: (v) => qty = v),
+                    InputDecorator(
+                      decoration: const InputDecoration(labelText: "Quantité"),
+                      child: Text(_calculateTnbQuantity(gatTrips, terexTrips)),
+                    ),
                   ])),
                   actions: [
                     TextButton(
@@ -1814,7 +1820,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                                         terexTrips: terexTrips,
                                         park: park,
                                         type: type,
-                                        quantity: qty)));
+                                        quantity: _calculateTnbQuantity(
+                                            gatTrips, terexTrips))));
                                     Navigator.pop(context);
                                   }
                                 : null,
@@ -1931,7 +1938,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                           'Poste: ${entry.poste != null ? posteToString(entry.poste) : '-'} | '
                           'Voyages GAT: ${entry.gatTrips.isNotEmpty ? entry.gatTrips : '-'} | '
                           'Voyages TEREX: ${entry.terexTrips.isNotEmpty ? entry.terexTrips : '-'} | '
-                          'Qte: ${entry.quantity.isNotEmpty ? entry.quantity : '-'} | '
+                          'Qte: ${_calculateTnbQuantity(entry.gatTrips, entry.terexTrips)} | '
                           'Park: ${entry.park != null ? parkToString(entry.park) : '-'} | '
                           'Type: ${entry.type != null ? stockTypeToString(entry.type) : '-'}',
                         ),
@@ -2057,7 +2064,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                       'terexTrips': e.terexTrips,
                       'park': e.park?.index,
                       'type': e.type?.index,
-                      'quantity': e.quantity
+                      'quantity':
+                          _calculateTnbQuantity(e.gatTrips, e.terexTrips)
                     })
                 .toList(),
             'truckTrips': [

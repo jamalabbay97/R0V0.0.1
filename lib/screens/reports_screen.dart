@@ -2426,7 +2426,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         Text('Poste: ${_getPosteString(stock['poste'], l10n)}'),
                         Text('Voyages GAT: ${stock['gatTrips'] ?? '-'}'),
                         Text('Voyages TEREX: ${stock['terexTrips'] ?? '-'}'),
-                        Text('Quantité: ${stock['quantity'] ?? '-'}'),
+                        Text(
+                            'Quantité: ${_getComputedStockQuantity(Map<String, dynamic>.from(stock))}'),
                         Text('Parc: ${_getParkString(stock['park'], l10n)}'),
                         Text(
                             'Type: ${_getStockTypeString(stock['type'], l10n)}'),
@@ -2897,6 +2898,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
+  String _calculateTnbQuantity(String gatTrips, String terexTrips) {
+    final gat = int.tryParse(gatTrips) ?? 0;
+    final terex = int.tryParse(terexTrips) ?? 0;
+    return ((gat * 78) + (terex * 58)).toString();
+  }
+
+  String _getComputedStockQuantity(Map<String, dynamic> stock) {
+    return _calculateTnbQuantity(
+      (stock['gatTrips'] ?? '').toString(),
+      (stock['terexTrips'] ?? '').toString(),
+    );
+  }
+
   // Add Stock Entry Dialog for Activity Report
   Future<void> _showAddStockEntryDialog(
       Report report,
@@ -2909,7 +2923,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     String terexTrips = '';
     int? selectedPark;
     int? selectedType;
-    String quantity = '';
 
     await showDialog(
       context: context,
@@ -2979,12 +2992,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 onChanged: (value) => setState(() => selectedType = value),
               ),
               const SizedBox(height: 16),
-              TextField(
+              InputDecorator(
                 decoration: InputDecoration(
                   labelText: l10n.quantityLabel,
                   border: const OutlineInputBorder(),
                 ),
-                onChanged: (value) => setState(() => quantity = value),
+                child: Text(_calculateTnbQuantity(gatTrips, terexTrips)),
               ),
             ],
           ),
@@ -3007,7 +3020,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     'poste': selectedPoste,
                     'gatTrips': gatTrips,
                     'terexTrips': terexTrips,
-                    'quantity': quantity,
+                    'quantity': _calculateTnbQuantity(gatTrips, terexTrips),
                     'park': selectedPark,
                     'type': selectedType,
                   });
@@ -3053,8 +3066,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     int? selectedPoste = stock['poste'];
     String gatTrips = (stock['gatTrips'] ?? '').toString();
     String terexTrips = (stock['terexTrips'] ?? '').toString();
-    String quantity = stock['quantity'] ?? '';
-    final quantityController = TextEditingController(text: quantity);
     final gatTripsController = TextEditingController(text: gatTrips);
     final terexTripsController = TextEditingController(text: terexTrips);
     int? selectedPark = stock['park'];
@@ -3130,13 +3141,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 onChanged: (value) => setState(() => selectedType = value),
               ),
               const SizedBox(height: 16),
-              TextField(
+              InputDecorator(
                 decoration: InputDecoration(
                   labelText: l10n.quantityLabel,
                   border: const OutlineInputBorder(),
                 ),
-                controller: quantityController,
-                onChanged: (value) => setState(() => quantity = value),
+                child: Text(_calculateTnbQuantity(gatTrips, terexTrips)),
               ),
             ],
           ),
@@ -3156,7 +3166,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     'poste': selectedPoste,
                     'gatTrips': gatTrips,
                     'terexTrips': terexTrips,
-                    'quantity': quantity,
+                    'quantity': _calculateTnbQuantity(gatTrips, terexTrips),
                     'park': selectedPark,
                     'type': selectedType,
                   };
@@ -5963,7 +5973,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     ...stockEntries.map((entry) => Padding(
                           padding: const EdgeInsets.symmetric(vertical: 2),
                           child: Text(
-                            '${l10n.poste}: ${_getPosteString(entry['poste'], l10n)} | ${l10n.parkLabel}: ${_getParkString(entry['park'], l10n)} | ${l10n.type}: ${_getStockTypeString(entry['type'], l10n)} | ${l10n.quantityLabel}: ${entry['quantity'] ?? '-'} |',
+                            '${l10n.poste}: ${_getPosteString(entry['poste'], l10n)} | ${l10n.parkLabel}: ${_getParkString(entry['park'], l10n)} | ${l10n.type}: ${_getStockTypeString(entry['type'], l10n)} | ${l10n.quantityLabel}: ${_getComputedStockQuantity(Map<String, dynamic>.from(entry))} |',
                           ),
                         )),
                   ],
@@ -6123,7 +6133,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     ...stockEntries.map((entry) => Padding(
                           padding: const EdgeInsets.symmetric(vertical: 2),
                           child: Text(
-                            '${l10n.poste}: ${_getPosteString(entry['poste'], l10n)} | ${l10n.parkLabel}: ${_getParkString(entry['park'], l10n)} | ${l10n.type}: ${_getStockTypeString(entry['type'], l10n)} | ${l10n.quantityLabel}: ${entry['quantity'] ?? '-'} |',
+                            '${l10n.poste}: ${_getPosteString(entry['poste'], l10n)} | ${l10n.parkLabel}: ${_getParkString(entry['park'], l10n)} | ${l10n.type}: ${_getStockTypeString(entry['type'], l10n)} | ${l10n.quantityLabel}: ${_getComputedStockQuantity(Map<String, dynamic>.from(entry))} |',
                           ),
                         )),
                   ],
@@ -6319,7 +6329,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ...stockEntries.map((entry) => Padding(
                         padding: const EdgeInsets.only(left: 16, top: 4),
                         child: Text(
-                            'Poste: ${_getPosteString(entry['poste'], l10n)}, Voyages GAT: ${entry['gatTrips'] ?? '-'}, Voyages TEREX: ${entry['terexTrips'] ?? '-'}, Qté: ${entry['quantity'] ?? '-'}, Parc: ${_getParkString(entry['park'], l10n)}, Type: ${_getStockTypeString(entry['type'], l10n)}'),
+                            'Poste: ${_getPosteString(entry['poste'], l10n)}, Voyages GAT: ${entry['gatTrips'] ?? '-'}, Voyages TEREX: ${entry['terexTrips'] ?? '-'}, Qté: ${_getComputedStockQuantity(Map<String, dynamic>.from(entry))}, Parc: ${_getParkString(entry['park'], l10n)}, Type: ${_getStockTypeString(entry['type'], l10n)}'),
                       )),
                 ],
               ),
