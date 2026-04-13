@@ -1745,7 +1745,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
           text: "Ajouter Stock & Voyages",
           icon: Icons.add,
           isSecondary: true,
-          onPressed: _showAddStockDialog),
+          onPressed:
+              _availableStockPostes().isEmpty ? null : _showAddStockDialog),
     ]);
   }
 
@@ -1756,7 +1757,23 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     return quantity.toString();
   }
 
+  Set<Poste> _usedStockPostes() {
+    return stockEntries.map((entry) => entry.poste).whereType<Poste>().toSet();
+  }
+
+  List<Poste> _availableStockPostes() {
+    final usedPostes = _usedStockPostes();
+    return Poste.values.where((poste) => !usedPostes.contains(poste)).toList();
+  }
+
   void _showAddStockDialog() {
+    final availablePostes = _availableStockPostes();
+    if (availablePostes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              "Vous ne pouvez ajouter que 3 stocks (un seul par poste).")));
+      return;
+    }
     Poste? poste;
     String gatTrips = '';
     String terexTrips = '';
@@ -1771,7 +1788,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
                     DropdownButtonFormField<Poste>(
                         hint: const Text("Poste"),
-                        items: Poste.values
+                        items: availablePostes
                             .map((p) => DropdownMenuItem(
                                 value: p, child: Text(posteToString(p))))
                             .toList(),
@@ -1813,6 +1830,14 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                         onPressed:
                             (poste != null && park != null && type != null)
                                 ? () {
+                                    if (stockEntries
+                                        .any((entry) => entry.poste == poste)) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                              content: Text(
+                                                  "Ce poste a déjà un stock.")));
+                                      return;
+                                    }
                                     setState(() => stockEntries.add(StockEntry(
                                         id: const Uuid().v4(),
                                         poste: poste,

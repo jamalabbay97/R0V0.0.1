@@ -2391,8 +2391,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                 ),
                 ElevatedButton.icon(
-                  onPressed: () => _showAddStockEntryDialog(
-                      report, data, setDialogState, scaffoldMessenger, l10n),
+                  onPressed: _availableStockPostesFromData(data).isEmpty
+                      ? null
+                      : () => _showAddStockEntryDialog(report, data,
+                          setDialogState, scaffoldMessenger, l10n),
                   icon: const Icon(Icons.add),
                   label: Text(
                       '${l10n.add} ${l10n.stocksLabel} & ${l10n.voyagesLabel}'),
@@ -2909,6 +2911,33 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
+  Set<int> _usedStockPostesFromData(
+    Map<String, dynamic> data, {
+    int? excludingIndex,
+  }) {
+    final stockEntries = (data['stock'] as List?) ?? const [];
+    final usedPostes = <int>{};
+    for (var i = 0; i < stockEntries.length; i++) {
+      if (excludingIndex != null && i == excludingIndex) continue;
+      final entry = stockEntries[i];
+      if (entry is! Map) continue;
+      final poste = _normalizePosteIndex(entry['poste']);
+      if (poste != null) {
+        usedPostes.add(poste);
+      }
+    }
+    return usedPostes;
+  }
+
+  List<int> _availableStockPostesFromData(
+    Map<String, dynamic> data, {
+    int? excludingIndex,
+  }) {
+    final usedPostes =
+        _usedStockPostesFromData(data, excludingIndex: excludingIndex);
+    return [0, 1, 2].where((poste) => !usedPostes.contains(poste)).toList();
+  }
+
   // Add Stock Entry Dialog for Activity Report
   Future<void> _showAddStockEntryDialog(
       Report report,
@@ -2916,6 +2945,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
       StateSetter setDialogState,
       ScaffoldMessengerState scaffoldMessenger,
       AppLocalizations l10n) async {
+    final availablePostes = _availableStockPostesFromData(data);
+    if (availablePostes.isEmpty) {
+      scaffoldMessenger.showSnackBar(const SnackBar(
+          content: Text(
+              "Vous ne pouvez ajouter que 3 stocks (un seul par poste).")));
+      return;
+    }
+
     int? selectedPoste;
     String gatTrips = '';
     String terexTrips = '';
@@ -2936,11 +2973,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   labelText: l10n.poste,
                   border: const OutlineInputBorder(),
                 ),
-                items: [
-                  DropdownMenuItem(value: 0, child: Text(l10n.poste3eme)),
-                  DropdownMenuItem(value: 1, child: Text(l10n.poste1er)),
-                  DropdownMenuItem(value: 2, child: Text(l10n.poste2eme)),
-                ],
+                items: availablePostes
+                    .map((poste) => DropdownMenuItem(
+                        value: poste,
+                        child: Text(_getPosteString(poste, l10n))))
+                    .toList(),
                 onChanged: (value) => setState(() => selectedPoste = value),
               ),
               const SizedBox(height: 16),
@@ -3009,6 +3046,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 if (selectedPoste != null &&
                     selectedPark != null &&
                     selectedType != null) {
+                  if (_usedStockPostesFromData(data).contains(selectedPoste)) {
+                    scaffoldMessenger.showSnackBar(const SnackBar(
+                        content: Text("Ce poste a déjà un stock.")));
+                    return;
+                  }
                   final updatedData = Map<String, dynamic>.from(data);
                   if (updatedData['stock'] == null) {
                     updatedData['stock'] = [];
@@ -3062,6 +3104,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
       AppLocalizations l10n) async {
     final stock = (data['stock'] as List)[index];
     int? selectedPoste = _normalizePosteIndex(stock['poste']);
+    final availablePostes =
+        _availableStockPostesFromData(data, excludingIndex: index);
+    if (selectedPoste != null && !availablePostes.contains(selectedPoste)) {
+      availablePostes.add(selectedPoste);
+      availablePostes.sort();
+    }
     String gatTrips = (stock['gatTrips'] ?? '').toString();
     String terexTrips = (stock['terexTrips'] ?? '').toString();
     final gatTripsController = TextEditingController(text: gatTrips);
@@ -3083,11 +3131,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   labelText: l10n.poste,
                   border: const OutlineInputBorder(),
                 ),
-                items: [
-                  DropdownMenuItem(value: 0, child: Text(l10n.poste3eme)),
-                  DropdownMenuItem(value: 1, child: Text(l10n.poste1er)),
-                  DropdownMenuItem(value: 2, child: Text(l10n.poste2eme)),
-                ],
+                items: availablePostes
+                    .map((poste) => DropdownMenuItem(
+                        value: poste,
+                        child: Text(_getPosteString(poste, l10n))))
+                    .toList(),
                 onChanged: (value) => setState(() => selectedPoste = value),
               ),
               const SizedBox(height: 16),
@@ -3158,6 +3206,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 if (selectedPoste != null &&
                     selectedPark != null &&
                     selectedType != null) {
+                  if (_usedStockPostesFromData(data, excludingIndex: index)
+                      .contains(selectedPoste)) {
+                    scaffoldMessenger.showSnackBar(const SnackBar(
+                        content: Text("Ce poste a déjà un stock.")));
+                    return;
+                  }
                   final updatedData = Map<String, dynamic>.from(data);
                   (updatedData['stock'] as List)[index] = {
                     'id': stock['id'],
