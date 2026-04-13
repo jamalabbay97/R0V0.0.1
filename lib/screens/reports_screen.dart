@@ -1472,15 +1472,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
             l10n,
             shiftKey: shiftKey,
           ),
-          const SizedBox(height: 16),
-          _buildTnbTripsManagementCard(
-            report,
-            data,
-            setDialogState,
-            scaffoldMessenger,
-            l10n,
-            shiftKey: shiftKey,
-          ),
         ],
       ),
     );
@@ -2394,7 +2385,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    l10n.stocksLabel,
+                    '${l10n.stocksLabel} & ${l10n.voyagesLabel}',
                     style: Theme.of(context).textTheme.titleMedium,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -2403,7 +2394,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   onPressed: () => _showAddStockEntryDialog(
                       report, data, setDialogState, scaffoldMessenger, l10n),
                   icon: const Icon(Icons.add),
-                  label: Text(l10n.ajButton),
+                  label: Text(
+                      '${l10n.add} ${l10n.stocksLabel} & ${l10n.voyagesLabel}'),
                 ),
               ],
             ),
@@ -2432,10 +2424,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Poste: ${_getPosteString(stock['poste'], l10n)}'),
+                        Text('Voyages GAT: ${stock['gatTrips'] ?? '-'}'),
+                        Text('Voyages TEREX: ${stock['terexTrips'] ?? '-'}'),
+                        Text('Quantité: ${stock['quantity'] ?? '-'}'),
                         Text('Parc: ${_getParkString(stock['park'], l10n)}'),
                         Text(
                             'Type: ${_getStockTypeString(stock['type'], l10n)}'),
-                        Text('Quantité: ${stock['quantity'] ?? '-'}'),
                       ],
                     ),
                     leading: isSelected
@@ -2480,96 +2474,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
             else
               Text(l10n.noStockEntriesAdded,
                   style: const TextStyle(color: Colors.grey)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTnbTripsManagementCard(
-    Report report,
-    Map<String, dynamic> data,
-    StateSetter setDialogState,
-    ScaffoldMessengerState scaffoldMessenger,
-    AppLocalizations l10n, {
-    String? shiftKey,
-  }) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    'Voyages Camions',
-                    style: Theme.of(context).textTheme.titleMedium,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () => _showAddTruckTripEntryDialog(
-                      report, data, setDialogState, scaffoldMessenger, l10n),
-                  icon: const Icon(Icons.add),
-                  label: Text(l10n.ajButton),
-                ),
-              ],
-            ),
-            const Divider(height: 16),
-            if (data['truckTrips'] is List &&
-                (data['truckTrips'] as List).isNotEmpty)
-              ...List.from(data['truckTrips']).asMap().entries.map((entry) {
-                final index = entry.key;
-                final trip = entry.value;
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    title: Text('Camion ${index + 1}'),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Type: ${_getTruckTypeString(trip['truckType'])}'),
-                        Text('Nombre de voyages: ${trip['tripCount'] ?? '-'}'),
-                      ],
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit, size: 18),
-                          onPressed: () => _showEditTruckTripEntryDialog(
-                              report,
-                              data,
-                              index,
-                              setDialogState,
-                              scaffoldMessenger,
-                              l10n),
-                          tooltip: 'Modifier voyages',
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete,
-                              size: 18, color: Colors.red),
-                          onPressed: () => _showDeleteTruckTripEntryDialog(
-                              report,
-                              data,
-                              index,
-                              setDialogState,
-                              scaffoldMessenger,
-                              l10n),
-                          tooltip: 'Supprimer voyages',
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              })
-            else
-              const Text('Aucun voyage ajouté',
-                  style: TextStyle(color: Colors.grey)),
           ],
         ),
       ),
@@ -3001,6 +2905,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ScaffoldMessengerState scaffoldMessenger,
       AppLocalizations l10n) async {
     int? selectedPoste;
+    String gatTrips = '';
+    String terexTrips = '';
     int? selectedPark;
     int? selectedType;
     String quantity = '';
@@ -3025,6 +2931,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   DropdownMenuItem(value: 2, child: Text(l10n.poste2eme)),
                 ],
                 onChanged: (value) => setState(() => selectedPoste = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre de voyages GAT',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => gatTrips = value.trim()),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre de voyages TEREX',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => terexTrips = value.trim()),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
@@ -3081,10 +3005,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   (updatedData['stock'] as List).add({
                     'id': DateTime.now().millisecondsSinceEpoch.toString(),
                     'poste': selectedPoste,
+                    'gatTrips': gatTrips,
+                    'terexTrips': terexTrips,
+                    'quantity': quantity,
                     'park': selectedPark,
                     'type': selectedType,
-                    'quantity': quantity,
                   });
+
+                  final syncedData =
+                      _syncTruckTripsFromStockEntries(updatedData);
+                  final recalculatedData = _recalculateActivityTotals(
+                    syncedData,
+                    reportDate: report.date,
+                  );
 
                   final updatedReport = Report(
                     id: report.id,
@@ -3092,7 +3025,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     type: report.type,
                     group: report.group,
                     date: report.date,
-                    additionalData: updatedData,
+                    additionalData: recalculatedData,
                   );
 
                   Navigator.pop(context);
@@ -3118,9 +3051,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
       AppLocalizations l10n) async {
     final stock = (data['stock'] as List)[index];
     int? selectedPoste = stock['poste'];
+    String gatTrips = (stock['gatTrips'] ?? '').toString();
+    String terexTrips = (stock['terexTrips'] ?? '').toString();
+    String quantity = stock['quantity'] ?? '';
+    final quantityController = TextEditingController(text: quantity);
+    final gatTripsController = TextEditingController(text: gatTrips);
+    final terexTripsController = TextEditingController(text: terexTrips);
     int? selectedPark = stock['park'];
     int? selectedType = stock['type'];
-    String quantity = stock['quantity'] ?? '';
 
     await showDialog(
       context: context,
@@ -3142,6 +3080,26 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   DropdownMenuItem(value: 2, child: Text(l10n.poste2eme)),
                 ],
                 onChanged: (value) => setState(() => selectedPoste = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: gatTripsController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre de voyages GAT',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => gatTrips = value.trim()),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: terexTripsController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre de voyages TEREX',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => terexTrips = value.trim()),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
@@ -3177,7 +3135,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   labelText: l10n.quantityLabel,
                   border: const OutlineInputBorder(),
                 ),
-                controller: TextEditingController(text: quantity),
+                controller: quantityController,
                 onChanged: (value) => setState(() => quantity = value),
               ),
             ],
@@ -3196,10 +3154,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   (updatedData['stock'] as List)[index] = {
                     'id': stock['id'],
                     'poste': selectedPoste,
+                    'gatTrips': gatTrips,
+                    'terexTrips': terexTrips,
+                    'quantity': quantity,
                     'park': selectedPark,
                     'type': selectedType,
-                    'quantity': quantity,
                   };
+
+                  final syncedData =
+                      _syncTruckTripsFromStockEntries(updatedData);
+                  final recalculatedData = _recalculateActivityTotals(
+                    syncedData,
+                    reportDate: report.date,
+                  );
 
                   final updatedReport = Report(
                     id: report.id,
@@ -3207,7 +3174,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     type: report.type,
                     group: report.group,
                     date: report.date,
-                    additionalData: updatedData,
+                    additionalData: recalculatedData,
                   );
 
                   Navigator.pop(context);
@@ -3246,248 +3213,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
               final updatedData = Map<String, dynamic>.from(data);
               (updatedData['stock'] as List).removeAt(index);
 
-              final updatedReport = Report(
-                id: report.id,
-                description: report.description,
-                type: report.type,
-                group: report.group,
-                date: report.date,
-                additionalData: updatedData,
-              );
-
-              Navigator.pop(context);
-              _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-              setDialogState(() {});
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text(l10n.delete),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showAddTruckTripEntryDialog(
-      Report report,
-      Map<String, dynamic> data,
-      StateSetter setDialogState,
-      ScaffoldMessengerState scaffoldMessenger,
-      AppLocalizations l10n) async {
-    int? selectedTruckType;
-    String tripCount = '';
-
-    await showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Ajouter Voyages'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<int>(
-                initialValue: selectedTruckType,
-                decoration: const InputDecoration(
-                  labelText: 'Type de camion',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 0, child: Text('GAT')),
-                  DropdownMenuItem(value: 1, child: Text('TEREX')),
-                ],
-                onChanged: (value) => setState(() => selectedTruckType = value),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre de voyages',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (value) => setState(() => tripCount = value.trim()),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.cancel),
-            ),
-            ElevatedButton(
-              onPressed: (selectedTruckType != null && tripCount.isNotEmpty)
-                  ? () {
-                      final updatedData = Map<String, dynamic>.from(data);
-                      if (updatedData['truckTrips'] == null) {
-                        updatedData['truckTrips'] = [];
-                      }
-                      (updatedData['truckTrips'] as List).add({
-                        'id': DateTime.now().millisecondsSinceEpoch.toString(),
-                        'truckType': selectedTruckType,
-                        'tripCount': tripCount,
-                      });
-
-                      updatedData['T Nr.T'] =
-                          (updatedData['truckTrips'] as List).length;
-
-                      final recalculatedData = _recalculateActivityTotals(
-                        updatedData,
-                        reportDate: report.date,
-                      );
-
-                      final updatedReport = Report(
-                        id: report.id,
-                        description: report.description,
-                        type: report.type,
-                        group: report.group,
-                        date: report.date,
-                        additionalData: recalculatedData,
-                      );
-
-                      Navigator.pop(context);
-                      _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                      setDialogState(() {});
-                    }
-                  : null,
-              child: Text(l10n.add),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showEditTruckTripEntryDialog(
-      Report report,
-      Map<String, dynamic> data,
-      int index,
-      StateSetter setDialogState,
-      ScaffoldMessengerState scaffoldMessenger,
-      AppLocalizations l10n) async {
-    final trips =
-        (data['truckTrips'] is List) ? (data['truckTrips'] as List) : [];
-    final trip = trips[index];
-    int? selectedTruckType = int.tryParse((trip['truckType'] ?? '').toString());
-    selectedTruckType ??=
-        (trip['truckType']?.toString().toUpperCase() == 'TEREX') ? 1 : 0;
-    String tripCount = (trip['tripCount'] ?? '').toString();
-    final tripCountController = TextEditingController(text: tripCount);
-
-    await showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Modifier Voyages'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<int>(
-                initialValue: selectedTruckType,
-                decoration: const InputDecoration(
-                  labelText: 'Type de camion',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 0, child: Text('GAT')),
-                  DropdownMenuItem(value: 1, child: Text('TEREX')),
-                ],
-                onChanged: (value) => setState(() => selectedTruckType = value),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: tripCountController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre de voyages',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (value) => setState(() => tripCount = value.trim()),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.cancel),
-            ),
-            ElevatedButton(
-              onPressed: (selectedTruckType != null &&
-                      tripCount.trim().isNotEmpty)
-                  ? () {
-                      final updatedData = Map<String, dynamic>.from(data);
-                      final updatedTrips = (updatedData['truckTrips'] as List)
-                          .map((entry) => entry is Map
-                              ? Map<String, dynamic>.from(entry)
-                              : <String, dynamic>{})
-                          .toList();
-
-                      updatedTrips[index] = {
-                        'id': trip['id'] ??
-                            DateTime.now().millisecondsSinceEpoch.toString(),
-                        'truckType': selectedTruckType,
-                        'tripCount': tripCount.trim(),
-                      };
-
-                      updatedData['truckTrips'] = updatedTrips;
-                      updatedData['T Nr.T'] = updatedTrips.length;
-
-                      final recalculatedData = _recalculateActivityTotals(
-                        updatedData,
-                        reportDate: report.date,
-                      );
-
-                      final updatedReport = Report(
-                        id: report.id,
-                        description: report.description,
-                        type: report.type,
-                        group: report.group,
-                        date: report.date,
-                        additionalData: recalculatedData,
-                      );
-
-                      Navigator.pop(context);
-                      _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                      setDialogState(() {});
-                    }
-                  : null,
-              child: Text(l10n.modifyLabel),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showDeleteTruckTripEntryDialog(
-      Report report,
-      Map<String, dynamic> data,
-      int index,
-      StateSetter setDialogState,
-      ScaffoldMessengerState scaffoldMessenger,
-      AppLocalizations l10n) async {
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Supprimer Voyages'),
-        content:
-            const Text('Voulez-vous vraiment supprimer cette entrée voyages ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final updatedData = Map<String, dynamic>.from(data);
-              final updatedTrips = (updatedData['truckTrips'] is List)
-                  ? List.from(updatedData['truckTrips'])
-                  : [];
-              if (index >= 0 && index < updatedTrips.length) {
-                updatedTrips.removeAt(index);
-              }
-              updatedData['truckTrips'] = updatedTrips;
-              updatedData['T Nr.T'] = updatedTrips.length;
-
+              final syncedData = _syncTruckTripsFromStockEntries(updatedData);
               final recalculatedData = _recalculateActivityTotals(
-                updatedData,
+                syncedData,
                 reportDate: report.date,
               );
 
@@ -6490,6 +6218,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
         (data['stock'] is List) ? List.from(data['stock']) : [];
     final truckTrips =
         (data['truckTrips'] is List) ? List.from(data['truckTrips']) : [];
+    final totalTrips = truckTrips.fold<int>(
+      0,
+      (sum, entry) =>
+          sum + _parseTripCount(entry is Map ? entry['tripCount'] : null),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -6523,7 +6256,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   'T Nr.C:',
                   '${_filledTnbCounterCount(data)} / ${tnbCounters.length}',
                 ),
-                _buildSummaryRow('T Nr.T:', truckTrips.length.toString()),
+                _buildSummaryRow('T Nr.T:', totalTrips.toString()),
               ],
             ),
           ),
@@ -6581,30 +6314,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l10n.stocksLabel,
+                  Text('${l10n.stocksLabel} & ${l10n.voyagesLabel}',
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                   ...stockEntries.map((entry) => Padding(
                         padding: const EdgeInsets.only(left: 16, top: 4),
                         child: Text(
-                            'Poste: ${_getPosteString(entry['poste'], l10n)}, Parc: ${_getParkString(entry['park'], l10n)}, Type: ${_getStockTypeString(entry['type'], l10n)}, Qté: ${entry['quantity'] ?? '-'}'),
-                      )),
-                ],
-              ),
-            ),
-          ),
-        if (truckTrips.isNotEmpty)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Voyages Camions',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  ...truckTrips.map((entry) => Padding(
-                        padding: const EdgeInsets.only(left: 16, top: 4),
-                        child: Text(
-                            'Type: ${_getTruckTypeString(entry['truckType'])}, Voyages: ${entry['tripCount'] ?? '-'}'),
+                            'Poste: ${_getPosteString(entry['poste'], l10n)}, Voyages GAT: ${entry['gatTrips'] ?? '-'}, Voyages TEREX: ${entry['terexTrips'] ?? '-'}, Qté: ${entry['quantity'] ?? '-'}, Parc: ${_getParkString(entry['park'], l10n)}, Type: ${_getStockTypeString(entry['type'], l10n)}'),
                       )),
                 ],
               ),
@@ -7351,6 +7066,44 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   // Recalculate totals for Activity TNB reports
+  int _parseTripCount(dynamic value) {
+    final parsed = int.tryParse((value ?? '').toString().trim());
+    return parsed ?? 0;
+  }
+
+  Map<String, dynamic> _syncTruckTripsFromStockEntries(
+      Map<String, dynamic> data) {
+    final updatedData = Map<String, dynamic>.from(data);
+    final stockEntries =
+        (updatedData['stock'] is List) ? List.from(updatedData['stock']) : [];
+
+    final totalGatTrips = stockEntries.fold<int>(
+      0,
+      (sum, entry) =>
+          sum + _parseTripCount(entry is Map ? entry['gatTrips'] : null),
+    );
+    final totalTerexTrips = stockEntries.fold<int>(
+      0,
+      (sum, entry) =>
+          sum + _parseTripCount(entry is Map ? entry['terexTrips'] : null),
+    );
+
+    updatedData['truckTrips'] = [
+      {
+        'id': DateTime.now().millisecondsSinceEpoch.toString(),
+        'truckType': 0,
+        'tripCount': totalGatTrips.toString(),
+      },
+      {
+        'id': '${DateTime.now().millisecondsSinceEpoch}_terex',
+        'truckType': 1,
+        'tripCount': totalTerexTrips.toString(),
+      },
+    ];
+
+    return updatedData;
+  }
+
   Map<String, dynamic> _recalculateActivityTotals(
     Map<String, dynamic> data, {
     DateTime? reportDate,
@@ -7403,7 +7156,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
     updatedData['T Nr.V'] = vibratorCounters.length;
     updatedData['T Nr.L'] = liaisonCounters.length;
     updatedData['T Nr.C'] = vibratorCounters.length + liaisonCounters.length;
-    updatedData['T Nr.T'] = truckTrips.length;
+    final totalTripsFromList = truckTrips.fold<int>(
+      0,
+      (sum, entry) =>
+          sum + _parseTripCount(entry is Map ? entry['tripCount'] : null),
+    );
+    updatedData['T Nr.T'] = totalTripsFromList;
 
     return updatedData;
   }
@@ -7448,20 +7206,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
         return l10n.stockTypeOceane;
       case 2:
         return l10n.stockTypePb30;
-      default:
-        return '-';
-    }
-  }
-
-  String _getTruckTypeString(dynamic truckType) {
-    final normalized = truckType?.toString().trim().toUpperCase();
-    switch (normalized) {
-      case '0':
-      case 'GAT':
-        return 'GAT';
-      case '1':
-      case 'TEREX':
-        return 'TEREX';
       default:
         return '-';
     }

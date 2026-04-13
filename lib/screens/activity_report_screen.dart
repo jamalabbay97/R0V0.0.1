@@ -493,6 +493,8 @@ class TnbCounter {
 class StockEntry {
   String id;
   Poste? poste;
+  String gatTrips;
+  String terexTrips;
   Park? park;
   StockType? type;
   String quantity;
@@ -500,21 +502,12 @@ class StockEntry {
   StockEntry(
       {required this.id,
       this.poste,
+      this.gatTrips = '',
+      this.terexTrips = '',
       this.park,
       this.type,
       this.quantity = '',
       this.startTime = ''});
-}
-
-class TripEntry {
-  String id;
-  TruckType? truckType;
-  String tripCount;
-  TripEntry({
-    required this.id,
-    this.truckType,
-    this.tripCount = '',
-  });
 }
 
 // --- Logic Helpers ---
@@ -583,7 +576,6 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
   List<Stop> stops = [];
   List<TnbCounter> tnbCounters = [];
   List<StockEntry> stockEntries = [];
-  List<TripEntry> tripEntries = [];
   late DateTime _selectedDate;
 
   int totalDowntime = 0;
@@ -640,7 +632,6 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       stops = [];
       tnbCounters = _buildDefaultTnbCounters();
       stockEntries = [];
-      tripEntries = [];
     }
     recalculateTimes();
   }
@@ -702,6 +693,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
           .map((entry) => StockEntry(
                 id: entry['id'] ?? const Uuid().v4(),
                 poste: _parsePosteFromString(entry['poste']),
+                gatTrips: entry['gatTrips']?.toString() ?? '',
+                terexTrips: entry['terexTrips']?.toString() ?? '',
                 park: _parseParkFromString(entry['park']),
                 type: _parseStockTypeFromString(entry['type']),
                 quantity: entry['quantity'] ?? '',
@@ -711,13 +704,31 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     }
 
     if (data['truckTrips'] is List) {
-      tripEntries = (data['truckTrips'] as List)
-          .map((entry) => TripEntry(
-                id: entry['id'] ?? const Uuid().v4(),
-                truckType: _parseTruckTypeFromString(entry['truckType']),
-                tripCount: entry['tripCount'] ?? '',
-              ))
-          .toList();
+      var gatTrips = '';
+      var terexTrips = '';
+      for (final entry in List<Map<String, dynamic>>.from(data['truckTrips'])) {
+        final truckType = _parseTruckTypeFromString(entry['truckType']);
+        final tripCount = entry['tripCount']?.toString() ?? '';
+        if (truckType == TruckType.gat) gatTrips = tripCount;
+        if (truckType == TruckType.terex) terexTrips = tripCount;
+      }
+      if (stockEntries.isEmpty &&
+          (gatTrips.isNotEmpty || terexTrips.isNotEmpty)) {
+        stockEntries.add(
+          StockEntry(
+            id: const Uuid().v4(),
+            gatTrips: gatTrips,
+            terexTrips: terexTrips,
+          ),
+        );
+      } else if (stockEntries.isNotEmpty) {
+        stockEntries.first.gatTrips = stockEntries.first.gatTrips.isNotEmpty
+            ? stockEntries.first.gatTrips
+            : gatTrips;
+        stockEntries.first.terexTrips = stockEntries.first.terexTrips.isNotEmpty
+            ? stockEntries.first.terexTrips
+            : terexTrips;
+      }
     }
   }
 
@@ -803,7 +814,9 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       hasVibratorErrors = false;
       hasLiaisonErrors = false;
       hasStockErrors = stockEntries.any((entry) =>
-          (entry.park != null ||
+          (entry.gatTrips.isNotEmpty ||
+              entry.terexTrips.isNotEmpty ||
+              entry.park != null ||
               entry.type != null ||
               entry.quantity.isNotEmpty ||
               entry.startTime.isNotEmpty) &&
@@ -1719,7 +1732,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
             title: Text(
                 "${posteToString(e.value.poste)} - ${parkToString(e.value.park)}"),
             subtitle: Text(
-                "${stockTypeToString(e.value.type)}: ${e.value.quantity} (${e.value.startTime})"),
+                "${stockTypeToString(e.value.type)}: ${e.value.quantity} | GAT: ${e.value.gatTrips.isNotEmpty ? e.value.gatTrips : '-'} | TEREX: ${e.value.terexTrips.isNotEmpty ? e.value.terexTrips : '-'}"),
             trailing: IconButton(
                 icon: const Icon(Icons.delete, color: AppColors.error),
                 onPressed: () {
@@ -1727,39 +1740,19 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                   recalculateTimes();
                 }),
           ))),
-      ...tripEntries.asMap().entries.map((e) => OCPCard(
-              child: ListTile(
-            title: Text("Camion: ${truckTypeToString(e.value.truckType)}"),
-            subtitle: Text("Nombre de voyages: ${e.value.tripCount}"),
-            trailing: IconButton(
-                icon: const Icon(Icons.delete, color: AppColors.error),
-                onPressed: () {
-                  setState(() => tripEntries.removeAt(e.key));
-                  recalculateTimes();
-                }),
-          ))),
       const SizedBox(height: 16),
-      Wrap(
-        spacing: 12,
-        runSpacing: 12,
-        children: [
-          OCPButton(
-              text: "Ajouter Stock",
-              icon: Icons.add,
-              isSecondary: true,
-              onPressed: _showAddStockDialog),
-          OCPButton(
-              text: "Ajouter Voyages",
-              icon: Icons.local_shipping_outlined,
-              isSecondary: true,
-              onPressed: _showAddTripDialog),
-        ],
-      )
+      OCPButton(
+          text: "Ajouter Stock & Voyages",
+          icon: Icons.add,
+          isSecondary: true,
+          onPressed: _showAddStockDialog),
     ]);
   }
 
   void _showAddStockDialog() {
     Poste? poste;
+    String gatTrips = '';
+    String terexTrips = '';
     Park? park;
     StockType? type;
     String qty = '';
@@ -1777,6 +1770,16 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                                 value: p, child: Text(posteToString(p))))
                             .toList(),
                         onChanged: (v) => setDs(() => poste = v)),
+                    TextField(
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                            labelText: "Nombre de voyages GAT"),
+                        onChanged: (v) => setDs(() => gatTrips = v.trim())),
+                    TextField(
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                            labelText: "Nombre de voyages TEREX"),
+                        onChanged: (v) => setDs(() => terexTrips = v.trim())),
                     DropdownButtonFormField<Park>(
                         hint: const Text("Park"),
                         items: Park.values
@@ -1807,54 +1810,14 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                                     setState(() => stockEntries.add(StockEntry(
                                         id: const Uuid().v4(),
                                         poste: poste,
+                                        gatTrips: gatTrips,
+                                        terexTrips: terexTrips,
                                         park: park,
                                         type: type,
                                         quantity: qty)));
                                     Navigator.pop(context);
                                   }
                                 : null,
-                        child: const Text("Ajouter"))
-                  ],
-                )));
-  }
-
-  void _showAddTripDialog() {
-    TruckType? truckType;
-    String tripCount = '';
-    showDialog(
-        context: context,
-        builder: (ctx) => StatefulBuilder(
-            builder: (c, setDs) => AlertDialog(
-                  title: const Text("Ajouter Voyages"),
-                  content: SingleChildScrollView(
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    DropdownButtonFormField<TruckType>(
-                        hint: const Text("Type de camion"),
-                        items: TruckType.values
-                            .map((t) => DropdownMenuItem(
-                                value: t, child: Text(truckTypeToString(t))))
-                            .toList(),
-                        onChanged: (v) => setDs(() => truckType = v)),
-                    TextField(
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                            labelText: "Nombre de voyages"),
-                        onChanged: (v) => setDs(() => tripCount = v.trim())),
-                  ])),
-                  actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text("Annuler")),
-                    ElevatedButton(
-                        onPressed: (truckType != null && tripCount.isNotEmpty)
-                            ? () {
-                                setState(() => tripEntries.add(TripEntry(
-                                    id: const Uuid().v4(),
-                                    truckType: truckType,
-                                    tripCount: tripCount.trim())));
-                                Navigator.pop(context);
-                              }
-                            : null,
                         child: const Text("Ajouter"))
                   ],
                 )));
@@ -1966,35 +1929,11 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 2),
                         child: Text(
                           'Poste: ${entry.poste != null ? posteToString(entry.poste) : '-'} | '
+                          'Voyages GAT: ${entry.gatTrips.isNotEmpty ? entry.gatTrips : '-'} | '
+                          'Voyages TEREX: ${entry.terexTrips.isNotEmpty ? entry.terexTrips : '-'} | '
+                          'Qte: ${entry.quantity.isNotEmpty ? entry.quantity : '-'} | '
                           'Park: ${entry.park != null ? parkToString(entry.park) : '-'} | '
-                          'Type: ${entry.type != null ? stockTypeToString(entry.type) : '-'} | '
-                          'Qte: ${entry.quantity.isNotEmpty ? entry.quantity : '-'}',
-                        ),
-                      )),
-                ],
-              ),
-            ),
-          ),
-        ],
-        if (tripEntries.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Card(
-            margin: EdgeInsets.zero,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Voyages',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const Divider(height: 16),
-                  ...tripEntries.map((entry) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Text(
-                          'Camion: ${entry.truckType != null ? truckTypeToString(entry.truckType) : '-'} | '
-                          'Nombre de voyages: ${entry.tripCount.isNotEmpty ? entry.tripCount : '-'}',
+                          'Type: ${entry.type != null ? stockTypeToString(entry.type) : '-'}',
                         ),
                       )),
                 ],
@@ -2074,6 +2013,14 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       final savedLiaisonCounters = _buildSavedCounters(
         tnbCounters.where((counter) => counter.label != 'Vibreur'),
       );
+      final totalGatTrips = stockEntries.fold<int>(
+        0,
+        (sum, entry) => sum + (int.tryParse(entry.gatTrips) ?? 0),
+      );
+      final totalTerexTrips = stockEntries.fold<int>(
+        0,
+        (sum, entry) => sum + (int.tryParse(entry.terexTrips) ?? 0),
+      );
 
       final report = Report(
           id: widget.initialReport?.id,
@@ -2106,18 +2053,25 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                 .map((e) => {
                       'id': e.id,
                       'poste': e.poste?.index,
+                      'gatTrips': e.gatTrips,
+                      'terexTrips': e.terexTrips,
                       'park': e.park?.index,
                       'type': e.type?.index,
                       'quantity': e.quantity
                     })
                 .toList(),
-            'truckTrips': tripEntries
-                .map((e) => {
-                      'id': e.id,
-                      'truckType': e.truckType?.index,
-                      'tripCount': e.tripCount,
-                    })
-                .toList(),
+            'truckTrips': [
+              {
+                'id': const Uuid().v4(),
+                'truckType': TruckType.gat.index,
+                'tripCount': totalGatTrips.toString(),
+              },
+              {
+                'id': const Uuid().v4(),
+                'truckType': TruckType.terex.index,
+                'tripCount': totalTerexTrips.toString(),
+              }
+            ],
             'T H.A': totalDowntime,
             'T H.M': operatingTime,
             'T H.V': totalVibratorMinutes,
@@ -2127,7 +2081,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
             'T Nr.L': savedLiaisonCounters.length,
             'T Nr.C': _filledCounterCount,
             'T Nr.S': stockEntries.length,
-            'T Nr.T': tripEntries.length,
+            'T Nr.T': totalGatTrips + totalTerexTrips,
           });
       if (widget.isEditing && widget.onSave != null) {
         widget.onSave!(report);
