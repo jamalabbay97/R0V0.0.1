@@ -777,7 +777,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
         return StockType.normal;
       case '1':
       case 'OCEANE':
-        return StockType.pb30;
+        return StockType.oceane;
       case '2':
       case 'PB30':
         return StockType.pb30;

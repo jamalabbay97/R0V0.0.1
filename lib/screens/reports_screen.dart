@@ -2403,10 +2403,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
             if (data['stock'] is List && (data['stock'] as List).isNotEmpty)
               ...List.from(data['stock']).asMap().entries.where((entry) {
                 if (shiftKey == null) return true;
-                final poste = entry.value['poste'];
-                final targetPoste =
-                    shiftKey == '3' ? 0 : (shiftKey == '1' ? 1 : 2);
-                return poste == targetPoste;
+                return _normalizePosteKey(entry.value['poste']?.toString()) ==
+                    shiftKey;
               }).map((entry) {
                 final index = entry.key;
                 final stock = entry.value;
@@ -3063,13 +3061,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ScaffoldMessengerState scaffoldMessenger,
       AppLocalizations l10n) async {
     final stock = (data['stock'] as List)[index];
-    int? selectedPoste = stock['poste'];
+    int? selectedPoste = _normalizePosteIndex(stock['poste']);
     String gatTrips = (stock['gatTrips'] ?? '').toString();
     String terexTrips = (stock['terexTrips'] ?? '').toString();
     final gatTripsController = TextEditingController(text: gatTrips);
     final terexTripsController = TextEditingController(text: terexTrips);
-    int? selectedPark = stock['park'];
-    int? selectedType = stock['type'];
+    int? selectedPark = _normalizeParkIndex(stock['park']);
+    int? selectedType = _normalizeStockTypeIndex(stock['type']);
 
     await showDialog(
       context: context,
@@ -7178,24 +7176,26 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   String _getPosteString(dynamic posteIndex, AppLocalizations l10n) {
     if (posteIndex == null) return '-';
+    final normalizedPoste = _normalizePosteIndex(posteIndex);
+    if (normalizedPoste != null) {
+      switch (normalizedPoste) {
+        case 0:
+          return l10n.poste3eme;
+        case 1:
+          return l10n.poste1er;
+        case 2:
+          return l10n.poste2eme;
+      }
+    }
     if (posteIndex is String && posteIndex.trim().isNotEmpty) {
       return posteIndex.trim();
     }
-    switch (posteIndex) {
-      case 0:
-        return l10n.poste3eme;
-      case 1:
-        return l10n.poste1er;
-      case 2:
-        return l10n.poste2eme;
-      default:
-        return '-';
-    }
+    return '-';
   }
 
   String _getParkString(dynamic parkIndex, AppLocalizations l10n) {
     if (parkIndex == null) return '-';
-    switch (parkIndex) {
+    switch (_normalizeParkIndex(parkIndex)) {
       case 0:
         return l10n.park1;
       case 1:
@@ -7209,7 +7209,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   String _getStockTypeString(dynamic typeIndex, AppLocalizations l10n) {
     if (typeIndex == null) return '-';
-    switch (typeIndex) {
+    switch (_normalizeStockTypeIndex(typeIndex)) {
       case 0:
         return l10n.stockTypeNormal;
       case 1:
@@ -7219,6 +7219,36 @@ class _ReportsScreenState extends State<ReportsScreen> {
       default:
         return '-';
     }
+  }
+
+  int? _normalizePosteIndex(dynamic posteValue) {
+    if (posteValue == null) return null;
+    final raw = posteValue.toString().trim().toLowerCase();
+    if (raw.isEmpty) return null;
+    if (raw == '0' || raw.contains('3')) return 0;
+    if (raw == '1' || raw.contains('1')) return 1;
+    if (raw == '2' || raw.contains('2')) return 2;
+    return null;
+  }
+
+  int? _normalizeParkIndex(dynamic parkValue) {
+    if (parkValue == null) return null;
+    final raw = parkValue.toString().trim().toLowerCase();
+    if (raw.isEmpty) return null;
+    if (raw == '0' || raw.contains('park 1')) return 0;
+    if (raw == '1' || raw.contains('park 2')) return 1;
+    if (raw == '2' || raw.contains('park 3')) return 2;
+    return null;
+  }
+
+  int? _normalizeStockTypeIndex(dynamic typeValue) {
+    if (typeValue == null) return null;
+    final raw = typeValue.toString().trim().toLowerCase();
+    if (raw.isEmpty) return null;
+    if (raw == '0' || raw.contains('normal')) return 0;
+    if (raw == '1' || raw.contains('oceane')) return 1;
+    if (raw == '2' || raw.contains('pb30')) return 2;
+    return null;
   }
 
   Widget _buildSummaryRow(String label, String value) {
@@ -7695,6 +7725,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   String? _normalizePosteKey(String? poste) {
     if (poste == null || poste.isEmpty) return null;
     final normalized = poste.toLowerCase();
+    if (normalized == '0') return '3';
     if (normalized.contains('3')) return '3';
     if (normalized.contains('1')) return '1';
     if (normalized.contains('2')) return '2';
