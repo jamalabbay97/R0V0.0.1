@@ -2911,6 +2911,47 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
+  int _getTnbQuantityTotal(List<Map<String, dynamic>> stockEntries) {
+    return stockEntries.fold<int>(
+      0,
+      (sum, entry) =>
+          sum + (int.tryParse(_getComputedStockQuantity(entry)) ?? 0),
+    );
+  }
+
+  double _getCounterShiftHoursByLabel({
+    required Map<String, dynamic> data,
+    required DateTime baseDate,
+    required String shiftKey,
+    required String counterLabel,
+  }) {
+    final shift = _cycleShiftWindowByKey(baseDate, shiftKey);
+    if (shift == null) return 0;
+
+    final segments = _buildTnbCounterShiftSegments(
+      data: data,
+      label: counterLabel,
+      baseDate: baseDate,
+    );
+    final segment = segments.firstWhere(
+      (s) =>
+          (s['shiftKey'] ?? '').toString() == shiftKey ||
+          (s['shiftLabel'] ?? '').toString() == shift.label,
+      orElse: () => const {'start': '', 'end': ''},
+    );
+
+    final start = (segment['start'] ?? '').trim();
+    final end = (segment['end'] ?? '').trim();
+    if (start.isEmpty || end.isEmpty) return 0;
+
+    return _counterShiftHours(start, end);
+  }
+
+  String _formatTnbRendement(int quantity, double workingHours) {
+    if (workingHours <= 0) return '-';
+    return '${(quantity / workingHours).toStringAsFixed(2)} t/p';
+  }
+
   Set<int> _usedStockPostesFromData(
     Map<String, dynamic> data, {
     int? excludingIndex,
@@ -5887,6 +5928,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final trips = shiftKey == null
         ? allTrips.whereType<Map>().map(Map<String, dynamic>.from).toList()
         : _filterTnbTripsForShift(allTrips, shiftKey);
+    final quantity = _getTnbQuantityTotal(stockEntries);
+    final vibreurHours = shiftKey == null
+        ? 0.0
+        : _getCounterShiftHoursByLabel(
+            data: data,
+            baseDate: reportDate,
+            shiftKey: shiftKey,
+            counterLabel: 'Vibreur',
+          );
+    final lnHours = shiftKey == null
+        ? 0.0
+        : _getCounterShiftHoursByLabel(
+            data: data,
+            baseDate: reportDate,
+            shiftKey: shiftKey,
+            counterLabel: 'LN',
+          );
 
     final totalDowntime = shift == null
         ? (data['T H.A'] is int ? data['T H.A'] as int : 0)
@@ -5953,7 +6011,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     'T Nr.C:',
                     '${_filledTnbCounterCount(data)} / ${_buildTnbCounterDisplayList(data).length}',
                   ),
-                  _buildSummaryRow('T Nr.T:', trips.length.toString()),
+                  _buildSummaryRow('T Nr.V:', trips.length.toString()),
+                  if (shiftKey != null) ...[
+                    const SizedBox(height: 8),
+                    _buildSummaryRow(
+                      'Rendement Vibreur:',
+                      _formatTnbRendement(quantity, vibreurHours),
+                    ),
+                    _buildSummaryRow(
+                      'Rendement LN:',
+                      _formatTnbRendement(quantity, lnHours),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -6318,7 +6387,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   'T Nr.C:',
                   '${_filledTnbCounterCount(data)} / ${tnbCounters.length}',
                 ),
-                _buildSummaryRow('T Nr.T:', totalTrips.toString()),
+                _buildSummaryRow('T Nr.V:', totalTrips.toString()),
               ],
             ),
           ),
