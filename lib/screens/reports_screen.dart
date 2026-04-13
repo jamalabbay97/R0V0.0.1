@@ -5889,7 +5889,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         : _filterTnbTripsForShift(allTrips, shiftKey);
 
     final totalDowntime = shift == null
-        ? (data['T H.M'] is int ? data['T H.M'] as int : 0)
+        ? (data['T H.A'] is int ? data['T H.A'] as int : 0)
         : _calculateTnbDowntimeMinutesInWindow(
             stops: allStops,
             windowStart: shift.start,
@@ -5901,7 +5901,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 .add(const Duration(hours: 24)),
           );
     final totalOperating = shift == null
-        ? (data['T H.A'] is int ? data['T H.A'] as int : 0)
+        ? (data['T H.M'] is int ? data['T H.M'] as int : 0)
         : math.max(0, 480 - totalDowntime);
 
     return SingleChildScrollView(
@@ -5944,9 +5944,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       style: Theme.of(context).textTheme.titleMedium),
                   const Divider(height: 16),
                   _buildSummaryRow(
-                      'T H.A:', _formatMinutesToHoursMinutes(totalOperating)),
+                      'T H.A:', _formatMinutesToHoursMinutes(totalDowntime)),
                   _buildSummaryRow(
-                      'T H.M:', _formatMinutesToHoursMinutes(totalDowntime)),
+                      'T H.M:', _formatMinutesToHoursMinutes(totalOperating)),
                   const SizedBox(height: 8),
                   _buildSummaryRow('T Nr.A:', stops.length.toString()),
                   _buildSummaryRow(
