@@ -1741,6 +1741,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         if (context.mounted) {
                           Navigator.pop(context);
                         }
+                        _applyUpdatedReportDataToDialog(data, updatedReport);
                         _saveReportUpdate(
                             updatedReport, scaffoldMessenger, l10n);
                         setDialogState(() {
@@ -2045,6 +2046,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         if (context.mounted) {
                           Navigator.pop(context);
                         }
+                        _applyUpdatedReportDataToDialog(data, updatedReport);
                         _saveReportUpdate(
                             updatedReport, scaffoldMessenger, l10n);
                         setDialogState(() {
@@ -2118,6 +2120,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               );
 
               Navigator.pop(context);
+              _applyUpdatedReportDataToDialog(data, updatedReport);
               _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
               setDialogState(() {
                 _selectedStopIndex = null;
@@ -3157,6 +3160,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   );
 
                   Navigator.pop(context);
+                  _applyUpdatedReportDataToDialog(data, updatedReport);
                   _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
                   setDialogState(() {});
                 }
@@ -3315,6 +3319,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   );
 
                   Navigator.pop(context);
+                  _applyUpdatedReportDataToDialog(data, updatedReport);
                   _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
                   setDialogState(() {});
                 }
@@ -3366,6 +3371,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               );
 
               Navigator.pop(context);
+              _applyUpdatedReportDataToDialog(data, updatedReport);
               _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
               setDialogState(() {});
             },
@@ -8356,6 +8362,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
+  void _applyUpdatedReportDataToDialog(
+    Map<String, dynamic> currentData,
+    Report updatedReport,
+  ) {
+    final refreshedData = updatedReport.additionalData ?? {};
+    currentData
+      ..clear()
+      ..addAll(refreshedData);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -9201,6 +9217,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 );
 
                 Navigator.pop(context);
+                _applyUpdatedReportDataToDialog(data, updatedReport);
                 _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
                 setDialogState(() {});
               },
