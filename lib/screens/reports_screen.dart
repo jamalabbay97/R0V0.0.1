@@ -370,6 +370,40 @@ const List<_TnbStopCategory> _tnbStopCategories = [
   ),
 ];
 
+const List<_TnbStopCategory> _tsudStopCategories = [
+  _TnbStopCategory(
+    label: 'Arrêts Extérieures',
+    types: [
+      'MP - Manque Produit',
+      'CC - Coupure De Courant',
+      'AD - Arrêts Décidés',
+      'STS - Stock Saturée',
+      'DS - Attente Dégagement Stérile',
+      'MB - Manque Bull',
+      'Aut - Autre',
+    ],
+  ),
+  _TnbStopCategory(
+    label: 'Arrêts Materiel',
+    types: [
+      'AE - Arrêts Éléctrique',
+      'AM - Arrêts Mécanique',
+      'AI - Arrêts Installateur',
+      'AESYS - Arrêts Entretien Systématique',
+    ],
+  ),
+  _TnbStopCategory(
+    label: "Arrêts d'Exploitation",
+    types: [
+      'NET - Nettoyage',
+      'NETG - Nettoyage Général',
+      'SURCH - Surcharge',
+      'DEC - Décolmatage',
+      'MO - Manque Opérateur',
+    ],
+  ),
+];
+
 String _normalizeTnbStopValue(String value) =>
     value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
 
@@ -6965,7 +6999,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final storedCategory =
         (stop['category'] ?? stop['Catégorie'] ?? '').toString().trim();
     if (storedCategory.isNotEmpty) {
-      for (final category in _tnbStopCategories) {
+      for (final category in _tsudStopCategories) {
         if (normalizeValue(category.label) == normalizeValue(storedCategory)) {
           return category;
         }
@@ -6978,7 +7012,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             .trim();
     if (storedType.isEmpty) return null;
 
-    for (final category in _tnbStopCategories) {
+    for (final category in _tsudStopCategories) {
       if (category.types
           .any((type) => normalizeValue(type) == normalizeValue(storedType))) {
         return category;
@@ -9178,6 +9212,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final moduleNumber = _moduleNumberFromPrefix(modulePrefix);
     final locations =
         _dailyModuleLocations[moduleNumber] ?? const <String, String>{};
+    const categories = _tsudStopCategories;
 
     await showDialog(
       context: context,
@@ -9207,7 +9242,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         labelText: "Catégorie d'arrêt",
                         border: OutlineInputBorder(),
                       ),
-                      items: _tnbStopCategories
+                      items: categories
                           .map((category) => DropdownMenuItem(
                                 value: category,
                                 child: Text(category.label),
@@ -9446,6 +9481,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final moduleNumber = _moduleNumberFromPrefix(modulePrefix);
     final locations =
         _dailyModuleLocations[moduleNumber] ?? const <String, String>{};
+    const categories = _tsudStopCategories;
 
     await showDialog(
       context: context,
@@ -9475,7 +9511,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         labelText: "Catégorie d'arrêt",
                         border: OutlineInputBorder(),
                       ),
-                      items: _tnbStopCategories
+                      items: categories
                           .map((category) => DropdownMenuItem(
                                 value: category,
                                 child: Text(category.label),

@@ -406,8 +406,6 @@ const List<StopCategory> _tnbStopCategories = [
       'NET - Nettoyage',
       'NETG - Nettoyage Général',
       'SURCH - Surcharge',
-      'Attente Vidange Extracteur',
-      'Attente Vidange Silo',
       'DEC - Décolmatage',
       'MO - Manque Opérateur',
     ],
@@ -432,9 +430,7 @@ bool _tnbStopTypeRequiresLocation(String? type) {
     return true;
   }
 
-  final normalized = (type ?? '').trim().toUpperCase();
-  return normalized == 'ATTENTE VIDANGE EXTRACTEUR' ||
-      normalized == 'ATTENTE VIDANGE SILO';
+  return false;
 }
 
 bool _tnbStopTypeAlwaysMirrors(String? type) {
