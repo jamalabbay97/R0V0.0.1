@@ -87,12 +87,14 @@ class _StopTimeEntryPage extends StatefulWidget {
   final TimeOfDay? initialStartTime;
   final TimeOfDay? initialEndTime;
   final bool initialPending;
+  final String? assignedPoste;
 
   const _StopTimeEntryPage({
     required this.titleSuffix,
     this.initialStartTime,
     this.initialEndTime,
     this.initialPending = false,
+    this.assignedPoste,
   });
 
   @override
@@ -123,15 +125,75 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
     return minutes < _cycleAnchorMinutes ? minutes + (24 * 60) : minutes;
   }
 
+  String? _normalizedPoste() {
+    final raw = widget.assignedPoste?.trim();
+    if (raw == null || raw.isEmpty) return null;
+    final normalized = raw
+        .toLowerCase()
+        .replaceAll('poste', '')
+        .replaceAll('ème', 'eme')
+        .replaceAll('er', 'e')
+        .replaceAll(RegExp(r'[^0-9a-z]'), '');
+    if (normalized == '0' || normalized.startsWith('3')) return '3';
+    if (normalized == '1' || normalized.startsWith('1')) return '1';
+    if (normalized == '2' || normalized.startsWith('2')) return '2';
+    return null;
+  }
+
+  bool _isTimeWithinAssignedPoste(TimeOfDay value) {
+    final normalizedPoste = _normalizedPoste();
+    if (normalizedPoste == null) return true;
+
+    final minutes = _toMinutes(value);
+    switch (normalizedPoste) {
+      case '3':
+        return minutes >= (22 * 60 + 30) || minutes < (6 * 60 + 30);
+      case '1':
+        return minutes >= (6 * 60 + 30) && minutes < (14 * 60 + 30);
+      case '2':
+        return minutes >= (14 * 60 + 30) && minutes < (22 * 60 + 30);
+      default:
+        return true;
+    }
+  }
+
+  String _assignedPosteWindowLabel() {
+    switch (_normalizedPoste()) {
+      case '3':
+        return '22:30 → 06:30';
+      case '1':
+        return '06:30 → 14:30';
+      case '2':
+        return '14:30 → 22:30';
+      default:
+        return '';
+    }
+  }
+
   Future<void> _pickStartTime() async {
     final picked = await showSpinnerTimePickerDialog(
       context: context,
       initialTime: _startTime,
       title: 'Heure début',
     );
-    if (picked != null) {
-      setState(() => _startTime = picked);
+    if (picked == null) return;
+
+    if (!_isTimeWithinAssignedPoste(picked)) {
+      if (!mounted) return;
+      final assignedWindow = _assignedPosteWindowLabel();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            assignedWindow.isEmpty
+                ? "L'heure de début doit être dans le poste affecté."
+                : "L'heure de début doit être comprise dans le poste affecté ($assignedWindow).",
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
     }
+    setState(() => _startTime = picked);
   }
 
   Future<void> _pickEndTime() async {
@@ -219,6 +281,14 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                       ),
                       onTap: _pickStartTime,
                     ),
+                    if (_assignedPosteWindowLabel().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, bottom: 8),
+                        child: Text(
+                          'Début autorisé: ${_assignedPosteWindowLabel()}',
+                          style: const TextStyle(color: Colors.white70),
+                        ),
+                      ),
                     const SizedBox(height: 10),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
@@ -550,6 +620,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   int _durationMinutesInCycle(TimeOfDay start, TimeOfDay end) =>
       _toCycleMinutesFromTimeOfDay(end) - _toCycleMinutesFromTimeOfDay(start);
+
+  int _currentShiftTabIndex() {
+    final now = DateTime.now();
+    final totalMinutes = (now.hour * 60) + now.minute;
+
+    if (totalMinutes >= 1350 || totalMinutes < 390) {
+      return 0; // 3ème (22:30 - 06:30)
+    }
+
+    if (totalMinutes < 870) {
+      return 1; // 1er (06:30 - 14:30)
+    }
+
+    return 2; // 2ème (14:30 - 22:30)
+  }
 
   int _minutesFromStopStart(dynamic rawValue) {
     if (rawValue == null) return (24 * 60) + 1;
@@ -1363,6 +1448,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 const Divider(height: 1),
                 Expanded(
                   child: DefaultTabController(
+                    initialIndex: _currentShiftTabIndex(),
                     length: 4,
                     child: Column(
                       children: [
@@ -1677,6 +1763,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         final selectedTimeResult =
                             await _showStopTimeEntryDialog(
                           titleSuffix: selectedType ?? '',
+                          assignedPoste: _assignedPosteForStopDialog(
+                            data,
+                            shiftKey: shiftKey,
+                          ),
                         );
                         if (selectedTimeResult == null) {
                           return;
@@ -1977,6 +2067,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           titleSuffix: selectedType ?? '',
                           initialStart: selectedStart,
                           initialEnd: selectedEnd,
+                          assignedPoste: _assignedPosteForStopDialog(
+                            data,
+                            shiftKey: shiftKey,
+                          ),
                         );
                         if (selectedTimeResult == null) {
                           return;
@@ -3662,6 +3756,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 const Divider(height: 1),
                 Expanded(
                   child: DefaultTabController(
+                    initialIndex: _currentShiftTabIndex(),
                     length: 4,
                     child: Column(
                       children: [
@@ -4450,6 +4545,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     const Divider(height: 1),
                     Expanded(
                       child: DefaultTabController(
+                        initialIndex: _currentShiftTabIndex(),
                         length: 4,
                         child: Column(
                           children: [
@@ -4560,6 +4656,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       const Divider(height: 1),
                       Expanded(
                         child: DefaultTabController(
+                          initialIndex: _currentShiftTabIndex(),
                           length: 4,
                           child: Column(
                             children: [
@@ -6866,10 +6963,42 @@ class _ReportsScreenState extends State<ReportsScreen> {
   String _formatTimeOfDay(TimeOfDay value) =>
       '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
 
+  String? _normalizeAssignedPoste(dynamic posteValue) {
+    if (posteValue == null) return null;
+    final raw = posteValue.toString().trim();
+    if (raw.isEmpty) return null;
+
+    final normalized = raw
+        .toLowerCase()
+        .replaceAll('poste', '')
+        .replaceAll('ème', 'eme')
+        .replaceAll('er', 'e')
+        .replaceAll(RegExp(r'[^0-9a-z]'), '');
+
+    if (normalized == '0' || normalized.startsWith('3')) return '3ème';
+    if (normalized == '1' || normalized.startsWith('1')) return '1er';
+    if (normalized == '2' || normalized.startsWith('2')) return '2ème';
+    return raw;
+  }
+
+  String? _assignedPosteForStopDialog(
+    Map<String, dynamic> data, {
+    String? shiftKey,
+  }) {
+    final normalizedShiftKey = _normalizePosteKey(shiftKey);
+    if (normalizedShiftKey == '3') return '3ème';
+    if (normalizedShiftKey == '1') return '1er';
+    if (normalizedShiftKey == '2') return '2ème';
+
+    final raw = data['selectedPoste'] ?? data['poste'] ?? data['posteSelected'];
+    return _normalizeAssignedPoste(raw);
+  }
+
   Future<_StopTimeSelectionResult?> _showStopTimeEntryDialog({
     required String titleSuffix,
     TimeOfDay? initialStart,
     TimeOfDay? initialEnd,
+    String? assignedPoste,
   }) async {
     return showDialog<_StopTimeSelectionResult>(
       context: context,
@@ -6881,6 +7010,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         initialStartTime: initialStart,
         initialEndTime: initialEnd,
         initialPending: initialEnd == null,
+        assignedPoste: assignedPoste,
       ),
     );
   }
@@ -8765,6 +8895,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 const Divider(height: 1),
                 Expanded(
                   child: DefaultTabController(
+                    initialIndex: _currentShiftTabIndex(),
                     length: 4,
                     child: Column(
                       children: [
@@ -9376,6 +9507,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         final selectedTimeResult =
                             await _showStopTimeEntryDialog(
                           titleSuffix: selectedType ?? '',
+                          assignedPoste: _assignedPosteForStopDialog(data),
                         );
                         if (selectedTimeResult == null) return;
 
@@ -9651,6 +9783,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               ? TimeOfDay.fromDateTime(
                                   _parseDailyTime(endTime)!)
                               : null,
+                          assignedPoste: _assignedPosteForStopDialog(data),
                         );
                         if (selectedTimeResult == null) return;
 
