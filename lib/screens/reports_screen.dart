@@ -5801,26 +5801,56 @@ class _ReportsScreenState extends State<ReportsScreen> {
         DateTime(baseDate.year, baseDate.month, baseDate.day, 22, 30);
     final cycleEnd = cycleStart.add(const Duration(hours: 24));
 
-    return stops.whereType<Map>().map(Map<String, dynamic>.from).where((stop) {
-      final rawStart =
-          (stop['startTime'] ?? stop['start'] ?? stop['Début'] ?? '')
-              .toString();
-      if (rawStart.isEmpty) return false;
-      final start =
-          _parseTnbStopDateTimeForCycle(rawStart, cycleStart, cycleEnd);
-      if (start == null) return false;
+    return stops
+        .whereType<Map>()
+        .map(Map<String, dynamic>.from)
+        .map((stop) {
+          final rawStart =
+              (stop['startTime'] ?? stop['start'] ?? stop['Début'] ?? '')
+                  .toString();
+          if (rawStart.isEmpty) return null;
+          final start =
+              _parseTnbStopDateTimeForCycle(rawStart, cycleStart, cycleEnd);
+          if (start == null) return null;
 
-      final rawEnd =
-          (stop['endTime'] ?? stop['end'] ?? stop['Fin'] ?? '').toString();
-      DateTime? end =
-          _parseTnbStopDateTimeForCycle(rawEnd, cycleStart, cycleEnd);
-      end ??= DateTime.now();
-      if (end.isBefore(start)) {
-        end = end.add(const Duration(days: 1));
-      }
+          final rawEnd =
+              (stop['endTime'] ?? stop['end'] ?? stop['Fin'] ?? '').toString();
+          DateTime? end =
+              _parseTnbStopDateTimeForCycle(rawEnd, cycleStart, cycleEnd);
+          end ??= DateTime.now();
+          if (end.isBefore(start)) {
+            end = end.add(const Duration(days: 1));
+          }
 
-      return end.isAfter(shift.start) && start.isBefore(shift.end);
-    }).toList();
+          if (!end.isAfter(shift.start) || !start.isBefore(shift.end)) {
+            return null;
+          }
+
+          final clippedStart =
+              start.isBefore(shift.start) ? shift.start : start;
+          final clippedEnd = end.isAfter(shift.end) ? shift.end : end;
+          if (!clippedEnd.isAfter(clippedStart)) {
+            return null;
+          }
+
+          final clippedDurationMinutes =
+              clippedEnd.difference(clippedStart).inMinutes;
+          final clippedDurationText =
+              '${clippedDurationMinutes ~/ 60}h ${(clippedDurationMinutes % 60).toString().padLeft(2, '0')}';
+          final clippedStartText = _formatDateTimeToTimeString(clippedStart);
+          final clippedEndText = _formatDateTimeToTimeString(clippedEnd);
+          final scopedStop = Map<String, dynamic>.from(stop);
+          scopedStop['startTime'] = clippedStartText;
+          scopedStop['start'] = clippedStartText;
+          scopedStop['Début'] = clippedStartText;
+          scopedStop['endTime'] = clippedEndText;
+          scopedStop['end'] = clippedEndText;
+          scopedStop['Fin'] = clippedEndText;
+          scopedStop['duration'] = clippedDurationText;
+          return scopedStop;
+        })
+        .whereType<Map<String, dynamic>>()
+        .toList();
   }
 
   bool _stopMatchesShift({
@@ -8790,38 +8820,28 @@ class _ReportsScreenState extends State<ReportsScreen> {
     String? shiftKey,
   }) {
     final module1Stops = (data['module1Stops'] is List)
-        ? List.from(data['module1Stops'])
-            .whereType<Map>()
-            .map((entry) {
-              final stop = Map<String, dynamic>.from(entry);
-              if (shiftKey == null) return stop;
-              return _stopMatchesShift(
-                stop: stop,
-                baseDate: report.date,
-                shiftKey: shiftKey,
-              )
-                  ? stop
-                  : <String, dynamic>{};
-            })
-            .where((entry) => entry.isNotEmpty)
-            .toList()
+        ? (shiftKey == null
+            ? List.from(data['module1Stops'])
+                .whereType<Map>()
+                .map(Map<String, dynamic>.from)
+                .toList()
+            : _filterTnbStopsForShift(
+                List.from(data['module1Stops']),
+                report.date,
+                shiftKey,
+              ))
         : <Map<String, dynamic>>[];
     final module2Stops = (data['module2Stops'] is List)
-        ? List.from(data['module2Stops'])
-            .whereType<Map>()
-            .map((entry) {
-              final stop = Map<String, dynamic>.from(entry);
-              if (shiftKey == null) return stop;
-              return _stopMatchesShift(
-                stop: stop,
-                baseDate: report.date,
-                shiftKey: shiftKey,
-              )
-                  ? stop
-                  : <String, dynamic>{};
-            })
-            .where((entry) => entry.isNotEmpty)
-            .toList()
+        ? (shiftKey == null
+            ? List.from(data['module2Stops'])
+                .whereType<Map>()
+                .map(Map<String, dynamic>.from)
+                .toList()
+            : _filterTnbStopsForShift(
+                List.from(data['module2Stops']),
+                report.date,
+                shiftKey,
+              ))
         : <Map<String, dynamic>>[];
 
     return SingleChildScrollView(
