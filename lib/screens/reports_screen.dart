@@ -1804,12 +1804,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           assignedPoste,
                         );
                         if (posteValidation != null) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                          if (mounted) {
+                            scaffoldMessenger.showSnackBar(
                               SnackBar(
-                                content: Text(posteValidation),
-                                backgroundColor: AppColors.error,
-                              ),
+                                  content: Text(posteValidation),
+                                  backgroundColor: AppColors.error),
                             );
                           }
                           return;
@@ -10232,8 +10231,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               : _formatTimeOfDay(selectedTimeResult.end!),
                         );
                         if (validation != null) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                          if (mounted) {
+                            scaffoldMessenger.showSnackBar(
                               SnackBar(
                                   content: Text(validation),
                                   backgroundColor: AppColors.error),
@@ -10509,12 +10508,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           assignedPoste,
                         );
                         if (posteValidation != null) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                          if (mounted) {
+                            scaffoldMessenger.showSnackBar(
                               SnackBar(
-                                content: Text(posteValidation),
-                                backgroundColor: AppColors.error,
-                              ),
+                                  content: Text(posteValidation),
+                                  backgroundColor: AppColors.error),
                             );
                           }
                           return;
@@ -10533,8 +10531,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           endTime: endTime,
                         );
                         if (validation != null) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                          if (mounted) {
+                            scaffoldMessenger.showSnackBar(
                               SnackBar(
                                   content: Text(validation),
                                   backgroundColor: AppColors.error),
