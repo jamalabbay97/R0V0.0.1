@@ -7637,7 +7637,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     if (start == null) {
       return "L'heure de début est obligatoire.";
     }
-    if (endTime.trim().isEmpty) {
+    final normalizedEnd = endTime.trim().toLowerCase();
+    if (normalizedEnd.isEmpty || normalizedEnd == 'pending') {
       return null;
     }
     final end = _parseDailyTime(endTime);
