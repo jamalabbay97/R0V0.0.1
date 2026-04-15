@@ -82,6 +82,20 @@ class _StopTimeSelectionResult {
   const _StopTimeSelectionResult({required this.start, required this.end});
 }
 
+class _GroupedStopEntry {
+  final String type;
+  final int totalDurationMinutes;
+  final List<int> sourceIndexes;
+  final bool hasPendingStop;
+
+  const _GroupedStopEntry({
+    required this.type,
+    required this.totalDurationMinutes,
+    required this.sourceIndexes,
+    required this.hasPendingStop,
+  });
+}
+
 class _StopTimeEntryPage extends StatefulWidget {
   final String titleSuffix;
   final TimeOfDay? initialStartTime;
@@ -6203,6 +6217,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final totalOperating = shift == null
         ? (data['T H.M'] is int ? data['T H.M'] as int : 0)
         : math.max(0, 480 - totalDowntime);
+    final groupedTnbStops = shiftKey == null ? _groupStopsByType(stops) : null;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -6280,7 +6295,53 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   Text('Arrêts',
                       style: Theme.of(context).textTheme.titleMedium),
                   const Divider(height: 16),
-                  if (stops.isNotEmpty)
+                  if (shiftKey == null && groupedTnbStops != null)
+                    ...groupedTnbStops.asMap().entries.map((entry) {
+                      final groupedStop = entry.value;
+                      final canEndHere = report != null &&
+                          groupedStop.hasPendingStop &&
+                          groupedStop.sourceIndexes.length == 1;
+                      final sourceIndex = groupedStop.sourceIndexes.isEmpty
+                          ? -1
+                          : groupedStop.sourceIndexes.first;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${entry.key + 1} • ${groupedStop.type.isEmpty ? '-' : groupedStop.type}\n'
+                                '     ${_formatMinutesToHoursMinutes(groupedStop.totalDurationMinutes)}',
+                              ),
+                            ),
+                            if (canEndHere && sourceIndex >= 0) ...[
+                              const SizedBox(width: 8),
+                              TextButton.icon(
+                                onPressed: () async {
+                                  final didEnd =
+                                      await _endPendingActivityStopFromVerification(
+                                    report: report,
+                                    data: data,
+                                    sourceIndex: sourceIndex,
+                                    l10n: l10n,
+                                  );
+                                  if (didEnd) {
+                                    setDialogState?.call(() {});
+                                  }
+                                },
+                                icon: const Icon(
+                                  Icons.stop_circle_outlined,
+                                  size: 18,
+                                ),
+                                label: const Text('Terminer'),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    })
+                  else if (stops.isNotEmpty)
                     ...stops.asMap().entries.map((entry) {
                       final stop = entry.value;
                       final sourceIndex = _sourceStopIndex(stop, entry.key);
@@ -6452,6 +6513,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
         (totalPeriodMinutes - module1Downtime).clamp(0, totalPeriodMinutes);
     final module2OperatingTime =
         (totalPeriodMinutes - module2Downtime).clamp(0, totalPeriodMinutes);
+    final groupedModule1Stops =
+        shiftKey == null ? _groupStopsByType(module1Stops) : null;
+    final groupedModule2Stops =
+        shiftKey == null ? _groupStopsByType(module2Stops) : null;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -6494,7 +6559,58 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       '${l10n.operatingTime}: ${_formatMinutesToHoursMinutes(module1OperatingTime)}'),
                   Text(
                       '${l10n.stopTime}: ${_formatMinutesToHoursMinutes(module1Downtime)}'),
-                  if (module1Stops.isNotEmpty) ...[
+                  if (shiftKey == null && groupedModule1Stops != null) ...[
+                    const SizedBox(height: 8),
+                    Text('${l10n.stopsLabel}:',
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ...groupedModule1Stops.asMap().entries.map((entry) {
+                      final groupedStop = entry.value;
+                      final canEndHere = report != null &&
+                          groupedStop.hasPendingStop &&
+                          groupedStop.sourceIndexes.length == 1;
+                      final sourceIndex = groupedStop.sourceIndexes.isEmpty
+                          ? -1
+                          : groupedStop.sourceIndexes.first;
+                      return Padding(
+                        padding:
+                            const EdgeInsets.only(left: 16, top: 4, bottom: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${entry.key + 1} • ${groupedStop.type.isEmpty ? '-' : groupedStop.type}\n'
+                                '    ${_formatMinutesToHoursMinutes(groupedStop.totalDurationMinutes)}',
+                              ),
+                            ),
+                            if (canEndHere && sourceIndex >= 0) ...[
+                              const SizedBox(width: 8),
+                              TextButton.icon(
+                                onPressed: () async {
+                                  final didEnd =
+                                      await _endPendingDailyStopFromVerification(
+                                    report: report,
+                                    data: data,
+                                    modulePrefix: 'module1',
+                                    sourceIndex: sourceIndex,
+                                    l10n: l10n,
+                                  );
+                                  if (didEnd) {
+                                    setDialogState?.call(() {});
+                                  }
+                                },
+                                icon: const Icon(
+                                  Icons.stop_circle_outlined,
+                                  size: 18,
+                                ),
+                                label: const Text('Terminer'),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }),
+                  ] else if (module1Stops.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text('${l10n.stopsLabel}:',
                         style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -6560,7 +6676,58 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       '${l10n.operatingTime}: ${_formatMinutesToHoursMinutes(module2OperatingTime)}'),
                   Text(
                       '${l10n.stopTime}: ${_formatMinutesToHoursMinutes(module2Downtime)}'),
-                  if (module2Stops.isNotEmpty) ...[
+                  if (shiftKey == null && groupedModule2Stops != null) ...[
+                    const SizedBox(height: 8),
+                    Text(l10n.stopsLabel,
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ...groupedModule2Stops.asMap().entries.map((entry) {
+                      final groupedStop = entry.value;
+                      final canEndHere = report != null &&
+                          groupedStop.hasPendingStop &&
+                          groupedStop.sourceIndexes.length == 1;
+                      final sourceIndex = groupedStop.sourceIndexes.isEmpty
+                          ? -1
+                          : groupedStop.sourceIndexes.first;
+                      return Padding(
+                        padding:
+                            const EdgeInsets.only(left: 16, top: 4, bottom: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${entry.key + 1} • ${groupedStop.type.isEmpty ? '-' : groupedStop.type}\n'
+                                '    ${_formatMinutesToHoursMinutes(groupedStop.totalDurationMinutes)}',
+                              ),
+                            ),
+                            if (canEndHere && sourceIndex >= 0) ...[
+                              const SizedBox(width: 8),
+                              TextButton.icon(
+                                onPressed: () async {
+                                  final didEnd =
+                                      await _endPendingDailyStopFromVerification(
+                                    report: report,
+                                    data: data,
+                                    modulePrefix: 'module2',
+                                    sourceIndex: sourceIndex,
+                                    l10n: l10n,
+                                  );
+                                  if (didEnd) {
+                                    setDialogState?.call(() {});
+                                  }
+                                },
+                                icon: const Icon(
+                                  Icons.stop_circle_outlined,
+                                  size: 18,
+                                ),
+                                label: const Text('Terminer'),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }),
+                  ] else if (module2Stops.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(l10n.stopsLabel,
                         style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -7035,6 +7202,49 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final startLabel = start.isEmpty ? '--:--' : start;
     final endLabel = end.isEmpty ? '--:--' : end;
     return 'De $startLabel a $endLabel ($duration)';
+  }
+
+  List<_GroupedStopEntry> _groupStopsByType(List<dynamic> rawStops) {
+    final grouped = <String, _GroupedStopEntry>{};
+    for (final entry in rawStops) {
+      if (entry is! Map) continue;
+      final stop = Map<String, dynamic>.from(entry);
+      final stopType = _getTnbStopTypeLabel(stop);
+      final normalizedType =
+          stopType.isEmpty ? '-' : stopType.toLowerCase().trim();
+      final start = (stop['startTime'] ?? stop['start'] ?? stop['Début'] ?? '')
+          .toString();
+      final end =
+          (stop['endTime'] ?? stop['end'] ?? stop['Fin'] ?? '').toString();
+      final parsedDurationMinutes =
+          _parseDurationToMinutes((stop['duration'] ?? '').toString());
+      final durationMinutes = parsedDurationMinutes > 0
+          ? parsedDurationMinutes
+          : _calculateDurationMinutesFromRange(start, end);
+      final sourceIndex = _sourceStopIndex(stop, -1);
+      final previous = grouped[normalizedType];
+
+      if (previous == null) {
+        grouped[normalizedType] = _GroupedStopEntry(
+          type: stopType.isEmpty ? '-' : stopType,
+          totalDurationMinutes: durationMinutes,
+          sourceIndexes: sourceIndex >= 0 ? [sourceIndex] : <int>[],
+          hasPendingStop: _isPendingStop(stop),
+        );
+      } else {
+        final updatedIndexes = List<int>.from(previous.sourceIndexes);
+        if (sourceIndex >= 0) {
+          updatedIndexes.add(sourceIndex);
+        }
+        grouped[normalizedType] = _GroupedStopEntry(
+          type: previous.type,
+          totalDurationMinutes: previous.totalDurationMinutes + durationMinutes,
+          sourceIndexes: updatedIndexes,
+          hasPendingStop: previous.hasPendingStop || _isPendingStop(stop),
+        );
+      }
+    }
+    return grouped.values.toList();
   }
 
   int _calculateDurationMinutesFromRange(String start, String end) {
