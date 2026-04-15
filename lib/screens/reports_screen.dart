@@ -9446,11 +9446,34 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      ElevatedButton.icon(
-                        onPressed: () => _showEditModuleDialog(report, data,
-                            'module1', setDialogState, scaffoldMessenger, l10n),
-                        icon: const Icon(Icons.edit),
-                        label: Text(l10n.edit),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined),
+                            tooltip: 'Modifier module 1',
+                            onPressed: () => _showEditModuleDialog(
+                              report,
+                              data,
+                              'module1',
+                              setDialogState,
+                              scaffoldMessenger,
+                              l10n,
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: () => _showAddStopFromModuleCard(
+                              report: report,
+                              data: data,
+                              modulePrefix: 'module1',
+                              setDialogState: setDialogState,
+                              scaffoldMessenger: scaffoldMessenger,
+                              l10n: l10n,
+                            ),
+                            icon: const Icon(Icons.add),
+                            label: Text(l10n.ajButton),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -9486,11 +9509,34 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      ElevatedButton.icon(
-                        onPressed: () => _showEditModuleDialog(report, data,
-                            'module2', setDialogState, scaffoldMessenger, l10n),
-                        icon: const Icon(Icons.edit),
-                        label: Text(l10n.modifyLabel),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined),
+                            tooltip: 'Modifier module 2',
+                            onPressed: () => _showEditModuleDialog(
+                              report,
+                              data,
+                              'module2',
+                              setDialogState,
+                              scaffoldMessenger,
+                              l10n,
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: () => _showAddStopFromModuleCard(
+                              report: report,
+                              data: data,
+                              modulePrefix: 'module2',
+                              setDialogState: setDialogState,
+                              scaffoldMessenger: scaffoldMessenger,
+                              l10n: l10n,
+                            ),
+                            icon: const Icon(Icons.add),
+                            label: Text(l10n.ajButton),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -9520,6 +9566,47 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _showAddStopFromModuleCard({
+    required Report report,
+    required Map<String, dynamic> data,
+    required String modulePrefix,
+    required StateSetter setDialogState,
+    required ScaffoldMessengerState scaffoldMessenger,
+    required AppLocalizations l10n,
+  }) async {
+    if (data['${modulePrefix}Stops'] is! List) {
+      data['${modulePrefix}Stops'] = <Map<String, dynamic>>[];
+    }
+
+    final moduleStops = List.from(data['${modulePrefix}Stops'] as List);
+    final didAddStop = await _showAddStopDialogForModule(
+      report,
+      data,
+      modulePrefix,
+      moduleStops,
+      setDialogState,
+      setDialogState,
+      scaffoldMessenger,
+      l10n,
+      (_) {},
+    );
+
+    if (!didAddStop) return;
+
+    data['${modulePrefix}Stops'] = moduleStops;
+    final updatedReport = Report(
+      id: report.id,
+      description: report.description,
+      type: report.type,
+      group: report.group,
+      date: report.date,
+      additionalData: Map<String, dynamic>.from(data),
+    );
+    _applyUpdatedReportDataToDialog(data, updatedReport);
+    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+    setDialogState(() {});
   }
 
   // Edit Module Dialog for Daily Report
@@ -9752,7 +9839,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   // Add Stop Dialog for Module
-  Future<void> _showAddStopDialogForModule(
+  Future<bool> _showAddStopDialogForModule(
       Report report,
       Map<String, dynamic> data,
       String modulePrefix,
@@ -9762,6 +9849,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ScaffoldMessengerState scaffoldMessenger,
       AppLocalizations l10n,
       Function(int) onTotalDowntimeChanged) async {
+    bool didAddStop = false;
     _TnbStopCategory? selectedCategory;
     String? selectedType;
     String? selectedLocation;
@@ -10005,6 +10093,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           onTotalDowntimeChanged(
                               data['${modulePrefix}TotalDowntime'] ?? 0);
                         });
+                        didAddStop = true;
                         if (context.mounted) Navigator.pop(context);
                       }
                     : null,
@@ -10015,6 +10104,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         },
       ),
     );
+    return didAddStop;
   }
 
   // Edit Stop Dialog for Module
