@@ -9694,6 +9694,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           report: report,
                           data: data,
                           modulePrefix: 'module1',
+                          shiftKey: shiftKey,
                           setDialogState: setDialogState,
                           scaffoldMessenger: scaffoldMessenger,
                           l10n: l10n,
@@ -9724,6 +9725,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 report: report,
                                 data: data,
                                 modulePrefix: 'module1',
+                                shiftKey: shiftKey,
                                 sourceIndex: sourceIndex,
                                 setDialogState: setDialogState,
                                 scaffoldMessenger: scaffoldMessenger,
@@ -9792,6 +9794,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           report: report,
                           data: data,
                           modulePrefix: 'module2',
+                          shiftKey: shiftKey,
                           setDialogState: setDialogState,
                           scaffoldMessenger: scaffoldMessenger,
                           l10n: l10n,
@@ -9822,6 +9825,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 report: report,
                                 data: data,
                                 modulePrefix: 'module2',
+                                shiftKey: shiftKey,
                                 sourceIndex: sourceIndex,
                                 setDialogState: setDialogState,
                                 scaffoldMessenger: scaffoldMessenger,
@@ -9886,6 +9890,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     required Report report,
     required Map<String, dynamic> data,
     required String modulePrefix,
+    String? shiftKey,
     required int sourceIndex,
     required StateSetter setDialogState,
     required ScaffoldMessengerState scaffoldMessenger,
@@ -9925,6 +9930,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         modulePrefix,
         stops,
         sourceIndex,
+        shiftKey,
         setDialogState,
         setDialogState,
         scaffoldMessenger,
@@ -10003,6 +10009,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     required Report report,
     required Map<String, dynamic> data,
     required String modulePrefix,
+    String? shiftKey,
     required StateSetter setDialogState,
     required ScaffoldMessengerState scaffoldMessenger,
     required AppLocalizations l10n,
@@ -10017,6 +10024,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       data,
       modulePrefix,
       moduleStops,
+      shiftKey,
       setDialogState,
       setDialogState,
       scaffoldMessenger,
@@ -10046,6 +10054,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       Map<String, dynamic> data,
       String modulePrefix,
       List stops,
+      String? shiftKey,
       StateSetter setState,
       StateSetter setDialogState,
       ScaffoldMessengerState scaffoldMessenger,
@@ -10185,7 +10194,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ElevatedButton(
                 onPressed: canSubmit
                     ? () async {
-                        final assignedPoste = _assignedPosteForStopDialog(data);
+                        final assignedPoste = _assignedPosteForStopDialog(
+                          data,
+                          shiftKey: report.group,
+                        );
                         final selectedTimeResult =
                             await _showStopTimeEntryDialog(
                           titleSuffix: selectedType ?? '',
@@ -10316,6 +10328,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       String modulePrefix,
       List stops,
       int index,
+      String? shiftKey,
       StateSetter setState,
       StateSetter setDialogState,
       ScaffoldMessengerState scaffoldMessenger,
@@ -10472,6 +10485,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ElevatedButton(
                 onPressed: canSubmit
                     ? () async {
+                        final assignedPoste = _assignedPosteForStopDialog(
+                          data,
+                          shiftKey: report.group,
+                        );
                         final selectedTimeResult =
                             await _showStopTimeEntryDialog(
                           titleSuffix: selectedType ?? '',
@@ -10483,9 +10500,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               ? TimeOfDay.fromDateTime(
                                   _parseDailyTime(endTime)!)
                               : null,
-                          assignedPoste: _assignedPosteForStopDialog(data),
+                          assignedPoste: assignedPoste,
                         );
                         if (selectedTimeResult == null) return;
+                        final posteValidation =
+                            _validateStopStartInAssignedPoste(
+                          selectedTimeResult.start,
+                          assignedPoste,
+                        );
+                        if (posteValidation != null) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(posteValidation),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                          }
+                          return;
+                        }
 
                         startTime = _formatTimeOfDay(selectedTimeResult.start);
                         endTime = selectedTimeResult.end == null
