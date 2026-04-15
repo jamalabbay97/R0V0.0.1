@@ -4598,23 +4598,31 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     reportDate: report.date,
                                     l10n: l10n,
                                     shiftKey: '3',
+                                    report: currentReport,
+                                    setDialogState: setState,
                                   ),
                                   _buildTnbReportDetailsPage(
                                     data: data,
                                     reportDate: report.date,
                                     l10n: l10n,
                                     shiftKey: '1',
+                                    report: currentReport,
+                                    setDialogState: setState,
                                   ),
                                   _buildTnbReportDetailsPage(
                                     data: data,
                                     reportDate: report.date,
                                     l10n: l10n,
                                     shiftKey: '2',
+                                    report: currentReport,
+                                    setDialogState: setState,
                                   ),
                                   _buildTnbReportDetailsPage(
                                     data: data,
                                     reportDate: report.date,
                                     l10n: l10n,
+                                    report: currentReport,
+                                    setDialogState: setState,
                                   ),
                                 ],
                               ),
@@ -4638,106 +4646,122 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final data = report.additionalData ?? {};
       final maxHeight = MediaQuery.of(context).size.height * 0.8;
       await showDialog(
-          context: context,
-          builder: (dialogContext) => Dialog(
-                insetPadding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: 600,
-                    maxHeight: maxHeight,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                l10n.dataVerification,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setState) {
+            Report currentReport = report;
+            return Dialog(
+              insetPadding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 600,
+                  maxHeight: maxHeight,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l10n.dataVerification,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                            Row(
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit),
-                                  onPressed: () => _editReport(report),
-                                  tooltip: 'Modifier le rapport',
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.close),
-                                  onPressed: () => Navigator.pop(dialogContext),
-                                  padding: const EdgeInsets.all(6),
-                                  constraints: const BoxConstraints(),
-                                ),
-                              ],
+                          ),
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit),
+                                onPressed: () async {
+                                  await _editReport(currentReport);
+                                },
+                                tooltip: 'Modifier le rapport',
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed: () => Navigator.pop(dialogContext),
+                                padding: const EdgeInsets.all(6),
+                                constraints: const BoxConstraints(),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    Expanded(
+                      child: DefaultTabController(
+                        initialIndex: _currentShiftTabIndex(),
+                        length: 4,
+                        child: Column(
+                          children: [
+                            const Material(
+                              color: Colors.transparent,
+                              child: TabBar(
+                                isScrollable: true,
+                                tabs: [
+                                  Tab(text: '3ème'),
+                                  Tab(text: '1er'),
+                                  Tab(text: '2ème'),
+                                  Tab(text: 'Global'),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: TabBarView(
+                                children: [
+                                  _buildTsudReportDetailsPage(
+                                    data: data,
+                                    reportDate: currentReport.date,
+                                    l10n: l10n,
+                                    shiftKey: '3',
+                                    report: currentReport,
+                                    setDialogState: setState,
+                                  ),
+                                  _buildTsudReportDetailsPage(
+                                    data: data,
+                                    reportDate: currentReport.date,
+                                    l10n: l10n,
+                                    shiftKey: '1',
+                                    report: currentReport,
+                                    setDialogState: setState,
+                                  ),
+                                  _buildTsudReportDetailsPage(
+                                    data: data,
+                                    reportDate: currentReport.date,
+                                    l10n: l10n,
+                                    shiftKey: '2',
+                                    report: currentReport,
+                                    setDialogState: setState,
+                                  ),
+                                  _buildTsudReportDetailsPage(
+                                    data: data,
+                                    reportDate: currentReport.date,
+                                    l10n: l10n,
+                                    report: currentReport,
+                                    setDialogState: setState,
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
                       ),
-                      const Divider(height: 1),
-                      Expanded(
-                        child: DefaultTabController(
-                          initialIndex: _currentShiftTabIndex(),
-                          length: 4,
-                          child: Column(
-                            children: [
-                              const Material(
-                                color: Colors.transparent,
-                                child: TabBar(
-                                  isScrollable: true,
-                                  tabs: [
-                                    Tab(text: '3ème'),
-                                    Tab(text: '1er'),
-                                    Tab(text: '2ème'),
-                                    Tab(text: 'Global'),
-                                  ],
-                                ),
-                              ),
-                              Expanded(
-                                child: TabBarView(
-                                  children: [
-                                    _buildTsudReportDetailsPage(
-                                      data: data,
-                                      reportDate: report.date,
-                                      l10n: l10n,
-                                      shiftKey: '3',
-                                    ),
-                                    _buildTsudReportDetailsPage(
-                                      data: data,
-                                      reportDate: report.date,
-                                      l10n: l10n,
-                                      shiftKey: '1',
-                                    ),
-                                    _buildTsudReportDetailsPage(
-                                      data: data,
-                                      reportDate: report.date,
-                                      l10n: l10n,
-                                      shiftKey: '2',
-                                    ),
-                                    _buildTsudReportDetailsPage(
-                                      data: data,
-                                      reportDate: report.date,
-                                      l10n: l10n,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ));
+              ),
+            );
+          },
+        ),
+      );
       return;
     }
 
@@ -5934,9 +5958,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final cycleEnd = cycleStart.add(const Duration(hours: 24));
 
     return stops
-        .whereType<Map>()
-        .map(Map<String, dynamic>.from)
-        .map((stop) {
+        .asMap()
+        .entries
+        .where((entry) => entry.value is Map)
+        .map((entry) {
+          final sourceIndex = entry.key;
+          final stop = Map<String, dynamic>.from(entry.value as Map);
           final rawStart =
               (stop['startTime'] ?? stop['start'] ?? stop['Début'] ?? '')
                   .toString();
@@ -5947,9 +5974,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
           final rawEnd =
               (stop['endTime'] ?? stop['end'] ?? stop['Fin'] ?? '').toString();
+          final isPending =
+              rawEnd.trim().isEmpty || rawEnd.toLowerCase() == 'pending';
           DateTime? end =
               _parseTnbStopDateTimeForCycle(rawEnd, cycleStart, cycleEnd);
-          end ??= DateTime.now();
+          end ??= isPending ? cycleEnd : DateTime.now();
           if (end.isBefore(start)) {
             end = end.add(const Duration(days: 1));
           }
@@ -5975,10 +6004,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
           scopedStop['startTime'] = clippedStartText;
           scopedStop['start'] = clippedStartText;
           scopedStop['Début'] = clippedStartText;
-          scopedStop['endTime'] = clippedEndText;
-          scopedStop['end'] = clippedEndText;
-          scopedStop['Fin'] = clippedEndText;
+          if (isPending) {
+            scopedStop['endTime'] = 'Pending';
+            scopedStop['end'] = 'Pending';
+            scopedStop['Fin'] = 'Pending';
+          } else {
+            scopedStop['endTime'] = clippedEndText;
+            scopedStop['end'] = clippedEndText;
+            scopedStop['Fin'] = clippedEndText;
+          }
           scopedStop['duration'] = clippedDurationText;
+          scopedStop['_sourceIndex'] = sourceIndex;
           return scopedStop;
         })
         .whereType<Map<String, dynamic>>()
@@ -6104,6 +6140,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     required DateTime reportDate,
     required AppLocalizations l10n,
     String? shiftKey,
+    Report? report,
+    StateSetter? setDialogState,
   }) {
     final allStops =
         (data['Arrets'] is List) ? List.from(data['Arrets']) : <dynamic>[];
@@ -6116,7 +6154,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final shift =
         shiftKey == null ? null : _cycleShiftWindowByKey(reportDate, shiftKey);
     final stops = shiftKey == null
-        ? allStops.whereType<Map>().map(Map<String, dynamic>.from).toList()
+        ? allStops
+            .asMap()
+            .entries
+            .where((entry) => entry.value is Map)
+            .map((entry) {
+            final stop = Map<String, dynamic>.from(entry.value as Map);
+            stop['_sourceIndex'] = entry.key;
+            return stop;
+          }).toList()
         : _filterTnbStopsForShift(allStops, reportDate, shiftKey);
     final stockEntries = shiftKey == null
         ? allStock.whereType<Map>().map(Map<String, dynamic>.from).toList()
@@ -6239,10 +6285,44 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       style: Theme.of(context).textTheme.titleMedium),
                   const Divider(height: 16),
                   if (stops.isNotEmpty)
-                    ...stops.map((stop) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
-                          child: Text(_formatTnbActivityStopSummary(stop)),
-                        ))
+                    ...stops.asMap().entries.map((entry) {
+                      final stop = entry.value;
+                      final sourceIndex = _sourceStopIndex(stop, entry.key);
+                      final canEndHere = report != null && _isPendingStop(stop);
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(_formatTnbActivityStopSummary(stop)),
+                            ),
+                            if (canEndHere) ...[
+                              const SizedBox(width: 8),
+                              TextButton.icon(
+                                onPressed: () async {
+                                  final didEnd =
+                                      await _endPendingActivityStopFromVerification(
+                                    report: report,
+                                    data: data,
+                                    sourceIndex: sourceIndex,
+                                    l10n: l10n,
+                                  );
+                                  if (didEnd) {
+                                    setDialogState?.call(() {});
+                                  }
+                                },
+                                icon: const Icon(
+                                  Icons.stop_circle_outlined,
+                                  size: 18,
+                                ),
+                                label: const Text('Terminer'),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    })
                   else
                     Text(l10n.aucunArret,
                         style: const TextStyle(color: Colors.grey)),
@@ -6312,6 +6392,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     required DateTime reportDate,
     required AppLocalizations l10n,
     String? shiftKey,
+    Report? report,
+    StateSetter? setDialogState,
   }) {
     final allModule1Stops =
         (data['module1Stops'] is List) ? List.from(data['module1Stops']) : [];
@@ -6326,9 +6408,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     final module1Stops = shiftKey == null
         ? allModule1Stops
+            .asMap()
+            .entries
+            .where((entry) => entry.value is Map)
+            .map((entry) {
+            final stop = Map<String, dynamic>.from(entry.value as Map);
+            stop['_sourceIndex'] = entry.key;
+            return stop;
+          }).toList()
         : _filterTnbStopsForShift(allModule1Stops, reportDate, shiftKey);
     final module2Stops = shiftKey == null
         ? allModule2Stops
+            .asMap()
+            .entries
+            .where((entry) => entry.value is Map)
+            .map((entry) {
+            final stop = Map<String, dynamic>.from(entry.value as Map);
+            stop['_sourceIndex'] = entry.key;
+            return stop;
+          }).toList()
         : _filterTnbStopsForShift(allModule2Stops, reportDate, shiftKey);
     final stockEntries = shiftKey == null
         ? allStock
@@ -6404,10 +6502,49 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     const SizedBox(height: 8),
                     Text('${l10n.stopsLabel}:',
                         style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ..._buildDailyModuleStops(
-                      module1Stops,
-                      leftPadding: 16,
-                    ),
+                    ...module1Stops.asMap().entries.map((entry) {
+                      final stop = entry.value;
+                      final sourceIndex = _sourceStopIndex(stop, entry.key);
+                      final canEndHere = report != null && _isPendingStop(stop);
+                      return Padding(
+                        padding:
+                            const EdgeInsets.only(left: 16, top: 4, bottom: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(_formatDailyModuleStopLine(
+                                stop,
+                                index: entry.key + 1,
+                              )),
+                            ),
+                            if (canEndHere) ...[
+                              const SizedBox(width: 8),
+                              TextButton.icon(
+                                onPressed: () async {
+                                  final didEnd =
+                                      await _endPendingDailyStopFromVerification(
+                                    report: report,
+                                    data: data,
+                                    modulePrefix: 'module1',
+                                    sourceIndex: sourceIndex,
+                                    l10n: l10n,
+                                  );
+                                  if (didEnd) {
+                                    setDialogState?.call(() {});
+                                  }
+                                },
+                                icon: const Icon(
+                                  Icons.stop_circle_outlined,
+                                  size: 18,
+                                ),
+                                label: const Text('Terminer'),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }),
                   ],
                 ],
               ),
@@ -6431,10 +6568,49 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     const SizedBox(height: 8),
                     Text(l10n.stopsLabel,
                         style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ..._buildDailyModuleStops(
-                      module2Stops,
-                      leftPadding: 16,
-                    ),
+                    ...module2Stops.asMap().entries.map((entry) {
+                      final stop = entry.value;
+                      final sourceIndex = _sourceStopIndex(stop, entry.key);
+                      final canEndHere = report != null && _isPendingStop(stop);
+                      return Padding(
+                        padding:
+                            const EdgeInsets.only(left: 16, top: 4, bottom: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(_formatDailyModuleStopLine(
+                                stop,
+                                index: entry.key + 1,
+                              )),
+                            ),
+                            if (canEndHere) ...[
+                              const SizedBox(width: 8),
+                              TextButton.icon(
+                                onPressed: () async {
+                                  final didEnd =
+                                      await _endPendingDailyStopFromVerification(
+                                    report: report,
+                                    data: data,
+                                    modulePrefix: 'module2',
+                                    sourceIndex: sourceIndex,
+                                    l10n: l10n,
+                                  );
+                                  if (didEnd) {
+                                    setDialogState?.call(() {});
+                                  }
+                                },
+                                icon: const Icon(
+                                  Icons.stop_circle_outlined,
+                                  size: 18,
+                                ),
+                                label: const Text('Terminer'),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }),
                   ],
                 ],
               ),
@@ -7109,6 +7285,144 @@ class _ReportsScreenState extends State<ReportsScreen> {
     if (hour == null || minute == null) return null;
     if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
     return TimeOfDay(hour: hour, minute: minute);
+  }
+
+  int _sourceStopIndex(Map<String, dynamic> stop, int fallbackIndex) {
+    final sourceIndex = stop['_sourceIndex'];
+    if (sourceIndex is int) return sourceIndex;
+    if (sourceIndex is String) {
+      final parsed = int.tryParse(sourceIndex);
+      if (parsed != null) return parsed;
+    }
+    return fallbackIndex;
+  }
+
+  Future<bool> _endPendingActivityStopFromVerification({
+    required Report report,
+    required Map<String, dynamic> data,
+    required int sourceIndex,
+    required AppLocalizations l10n,
+  }) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final arrets =
+        (data['Arrets'] is List) ? List.from(data['Arrets']) : <dynamic>[];
+    if (sourceIndex < 0 || sourceIndex >= arrets.length) return false;
+    final stop = arrets[sourceIndex] is Map
+        ? Map<String, dynamic>.from(arrets[sourceIndex])
+        : <String, dynamic>{};
+    if (!_isPendingStop(stop)) return false;
+
+    final start = _parseStopTimeOfDay(stop['startTime'] ?? stop['Début']);
+    if (start == null) return false;
+
+    final selectedEnd = await showSpinnerTimePickerDialog(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      title: 'Heure fin',
+    );
+    if (selectedEnd == null) return false;
+    if (!mounted) return false;
+
+    final durationMinutes = _durationMinutesInCycle(start, selectedEnd);
+    if (durationMinutes <= 0 || durationMinutes > _maxCycleMinutes) {
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text("L'arrêt doit rester dans la fenêtre 22:30 → 22:30."),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return false;
+    }
+
+    final endTime = _formatTimeOfDay(selectedEnd);
+    stop['endTime'] = endTime;
+    stop['Fin'] = endTime;
+    stop['duration'] =
+        '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
+    arrets[sourceIndex] = stop;
+
+    final updatedData = Map<String, dynamic>.from(data);
+    updatedData['Arrets'] = arrets;
+    final recalculatedData = _recalculateActivityTotals(
+      updatedData,
+      reportDate: report.date,
+    );
+
+    data
+      ..clear()
+      ..addAll(recalculatedData);
+    final updatedReport = report.copyWith(additionalData: recalculatedData);
+    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+    if (!mounted) return false;
+    scaffoldMessenger.showSnackBar(
+      const SnackBar(content: Text("Arrêt terminé avec succès.")),
+    );
+    return true;
+  }
+
+  Future<bool> _endPendingDailyStopFromVerification({
+    required Report report,
+    required Map<String, dynamic> data,
+    required String modulePrefix,
+    required int sourceIndex,
+    required AppLocalizations l10n,
+  }) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final stops = (data['${modulePrefix}Stops'] is List)
+        ? List.from(data['${modulePrefix}Stops'])
+        : <dynamic>[];
+    if (sourceIndex < 0 || sourceIndex >= stops.length) return false;
+
+    final stop = stops[sourceIndex] is Map
+        ? Map<String, dynamic>.from(stops[sourceIndex])
+        : <String, dynamic>{};
+    if (!_isPendingStop(stop)) return false;
+
+    final start = _parseStopTimeOfDay(
+        stop['startTime'] ?? stop['start'] ?? stop['Début']);
+    if (start == null) return false;
+
+    final selectedEnd = await showSpinnerTimePickerDialog(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      title: 'Heure fin',
+    );
+    if (selectedEnd == null) return false;
+    if (!mounted) return false;
+
+    final durationMinutes = _durationMinutesInCycle(start, selectedEnd);
+    if (durationMinutes <= 0 || durationMinutes > _maxCycleMinutes) {
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text("L'arrêt doit rester dans la fenêtre 22:30 → 22:30."),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return false;
+    }
+
+    final endTime = _formatTimeOfDay(selectedEnd);
+    stop['endTime'] = endTime;
+    stop['Fin'] = endTime;
+    stop['end'] = endTime;
+    stop['duration'] =
+        '${durationMinutes ~/ 60}h ${(durationMinutes % 60).toString().padLeft(2, '0')}';
+    stops[sourceIndex] = stop;
+
+    final updatedData = Map<String, dynamic>.from(data);
+    updatedData['${modulePrefix}Stops'] = stops;
+    _updateDailyTotalsForModule(updatedData, modulePrefix, stops);
+
+    data
+      ..clear()
+      ..addAll(updatedData);
+    final updatedReport = report.copyWith(additionalData: updatedData);
+    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+    if (!mounted) return false;
+    scaffoldMessenger.showSnackBar(
+      const SnackBar(content: Text("Arrêt terminé avec succès.")),
+    );
+    return true;
   }
 
   Future<void> _endPendingActivityStop(
