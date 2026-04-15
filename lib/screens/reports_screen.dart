@@ -7002,7 +7002,43 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final endLabel = end.isEmpty ? '--:--' : end;
 
     return '$index • ${labelSegments.join(' - ')}\n'
-        '    From $startLabel to $endLabel ($duration)';
+        '    De $startLabel a $endLabel ($duration)';
+  }
+
+  String _formatDailyModuleStopTitle(dynamic rawStop, int index) {
+    final stop = rawStop is Map ? rawStop : <String, dynamic>{};
+    final stopType =
+        (stop['stopType'] ?? stop['nature'] ?? stop['Arret'] ?? '-')
+            .toString()
+            .trim();
+    final stopLocation =
+        (stop['location'] ?? stop['stopLocation'] ?? stop['Lieu'] ?? '')
+            .toString()
+            .trim();
+    final stopDetail = _getTnbStopDetailLabel(Map<String, dynamic>.from(stop));
+    final labelSegments = <String>[
+      stopType.isNotEmpty ? stopType : '-',
+      if (stopDetail.isNotEmpty) stopDetail,
+      if (stopLocation.isNotEmpty) stopLocation,
+    ];
+    return '$index • ${labelSegments.join(' - ')}';
+  }
+
+  String _formatDailyModuleStopTimeline(dynamic rawStop) {
+    final stop = rawStop is Map ? rawStop : <String, dynamic>{};
+    final start =
+        (stop['startTime'] ?? stop['start'] ?? stop['Début'] ?? '').toString();
+    final end =
+        (stop['endTime'] ?? stop['end'] ?? stop['Fin'] ?? '').toString();
+    final parsedDurationMinutes =
+        _parseDurationToMinutes((stop['duration'] ?? '').toString());
+    final durationMinutes = parsedDurationMinutes > 0
+        ? parsedDurationMinutes
+        : _calculateDurationMinutesFromRange(start, end);
+    final duration = _formatMinutesToHoursMinutes(durationMinutes);
+    final startLabel = start.isEmpty ? '--:--' : start;
+    final endLabel = end.isEmpty ? '--:--' : end;
+    return 'De $startLabel a $endLabel ($duration)';
   }
 
   int _calculateDurationMinutesFromRange(String start, String end) {
@@ -9446,47 +9482,82 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined),
-                            tooltip: 'Modifier module 1',
-                            onPressed: () => _showEditModuleDialog(
-                              report,
-                              data,
-                              'module1',
-                              setDialogState,
-                              scaffoldMessenger,
-                              l10n,
-                            ),
-                          ),
-                          ElevatedButton.icon(
-                            onPressed: () => _showAddStopFromModuleCard(
-                              report: report,
-                              data: data,
-                              modulePrefix: 'module1',
-                              setDialogState: setDialogState,
-                              scaffoldMessenger: scaffoldMessenger,
-                              l10n: l10n,
-                            ),
-                            icon: const Icon(Icons.add),
-                            label: Text(l10n.ajButton),
-                          ),
-                        ],
+                      ElevatedButton.icon(
+                        onPressed: () => _showAddStopFromModuleCard(
+                          report: report,
+                          data: data,
+                          modulePrefix: 'module1',
+                          setDialogState: setDialogState,
+                          scaffoldMessenger: scaffoldMessenger,
+                          l10n: l10n,
+                        ),
+                        icon: const Icon(Icons.add),
+                        label: Text(l10n.ajButton),
                       ),
                     ],
                   ),
                   const Divider(height: 16),
-                  if (module1Stops.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(l10n.stopsLabel,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ...module1Stops.map((stop) => Padding(
-                          padding: const EdgeInsets.only(left: 16, top: 4),
-                          child: Text(_formatDailyStopLine(stop)),
-                        )),
-                  ],
+                  if (module1Stops.isNotEmpty)
+                    ...module1Stops.asMap().entries.map((entry) {
+                      final stop = Map<String, dynamic>.from(entry.value);
+                      final sourceIndex = _sourceStopIndex(stop, entry.key);
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          title: Text(
+                            _formatDailyModuleStopTitle(stop, entry.key + 1),
+                          ),
+                          subtitle: Text(_formatDailyModuleStopTimeline(stop)),
+                          trailing: PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert),
+                            tooltip: 'Actions arrêt',
+                            onSelected: (value) async {
+                              await _handleDailyModuleStopCardAction(
+                                action: value,
+                                report: report,
+                                data: data,
+                                modulePrefix: 'module1',
+                                sourceIndex: sourceIndex,
+                                setDialogState: setDialogState,
+                                scaffoldMessenger: scaffoldMessenger,
+                                l10n: l10n,
+                              );
+                            },
+                            itemBuilder: (context) {
+                              final isPending = _isPendingStop(stop);
+                              return [
+                                if (isPending)
+                                  const PopupMenuItem<String>(
+                                    value: 'end',
+                                    child: _StopActionMenuItem(
+                                      icon: Icons.stop_circle_outlined,
+                                      label: 'Terminer',
+                                      iconColor: AppColors.success,
+                                    ),
+                                  ),
+                                PopupMenuItem<String>(
+                                  value: 'edit',
+                                  child: _StopActionMenuItem(
+                                    icon: Icons.edit_outlined,
+                                    label: 'Modifier',
+                                    iconColor:
+                                        Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                                const PopupMenuItem<String>(
+                                  value: 'delete',
+                                  child: _StopActionMenuItem(
+                                    icon: Icons.delete_outline,
+                                    label: 'Supprimer',
+                                    iconColor: AppColors.error,
+                                  ),
+                                ),
+                              ];
+                            },
+                          ),
+                        ),
+                      );
+                    }),
                 ],
               ),
             ),
@@ -9509,47 +9580,82 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined),
-                            tooltip: 'Modifier module 2',
-                            onPressed: () => _showEditModuleDialog(
-                              report,
-                              data,
-                              'module2',
-                              setDialogState,
-                              scaffoldMessenger,
-                              l10n,
-                            ),
-                          ),
-                          ElevatedButton.icon(
-                            onPressed: () => _showAddStopFromModuleCard(
-                              report: report,
-                              data: data,
-                              modulePrefix: 'module2',
-                              setDialogState: setDialogState,
-                              scaffoldMessenger: scaffoldMessenger,
-                              l10n: l10n,
-                            ),
-                            icon: const Icon(Icons.add),
-                            label: Text(l10n.ajButton),
-                          ),
-                        ],
+                      ElevatedButton.icon(
+                        onPressed: () => _showAddStopFromModuleCard(
+                          report: report,
+                          data: data,
+                          modulePrefix: 'module2',
+                          setDialogState: setDialogState,
+                          scaffoldMessenger: scaffoldMessenger,
+                          l10n: l10n,
+                        ),
+                        icon: const Icon(Icons.add),
+                        label: Text(l10n.ajButton),
                       ),
                     ],
                   ),
                   const Divider(height: 16),
-                  if (module2Stops.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(l10n.stopsWithColon,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ...module2Stops.map((stop) => Padding(
-                          padding: const EdgeInsets.only(left: 16, top: 4),
-                          child: Text(_formatDailyStopLine(stop)),
-                        )),
-                  ],
+                  if (module2Stops.isNotEmpty)
+                    ...module2Stops.asMap().entries.map((entry) {
+                      final stop = Map<String, dynamic>.from(entry.value);
+                      final sourceIndex = _sourceStopIndex(stop, entry.key);
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          title: Text(
+                            _formatDailyModuleStopTitle(stop, entry.key + 1),
+                          ),
+                          subtitle: Text(_formatDailyModuleStopTimeline(stop)),
+                          trailing: PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert),
+                            tooltip: 'Actions arrêt',
+                            onSelected: (value) async {
+                              await _handleDailyModuleStopCardAction(
+                                action: value,
+                                report: report,
+                                data: data,
+                                modulePrefix: 'module2',
+                                sourceIndex: sourceIndex,
+                                setDialogState: setDialogState,
+                                scaffoldMessenger: scaffoldMessenger,
+                                l10n: l10n,
+                              );
+                            },
+                            itemBuilder: (context) {
+                              final isPending = _isPendingStop(stop);
+                              return [
+                                if (isPending)
+                                  const PopupMenuItem<String>(
+                                    value: 'end',
+                                    child: _StopActionMenuItem(
+                                      icon: Icons.stop_circle_outlined,
+                                      label: 'Terminer',
+                                      iconColor: AppColors.success,
+                                    ),
+                                  ),
+                                PopupMenuItem<String>(
+                                  value: 'edit',
+                                  child: _StopActionMenuItem(
+                                    icon: Icons.edit_outlined,
+                                    label: 'Modifier',
+                                    iconColor:
+                                        Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                                const PopupMenuItem<String>(
+                                  value: 'delete',
+                                  child: _StopActionMenuItem(
+                                    icon: Icons.delete_outline,
+                                    label: 'Supprimer',
+                                    iconColor: AppColors.error,
+                                  ),
+                                ),
+                              ];
+                            },
+                          ),
+                        ),
+                      );
+                    }),
                 ],
               ),
             ),
@@ -9566,6 +9672,124 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _handleDailyModuleStopCardAction({
+    required String action,
+    required Report report,
+    required Map<String, dynamic> data,
+    required String modulePrefix,
+    required int sourceIndex,
+    required StateSetter setDialogState,
+    required ScaffoldMessengerState scaffoldMessenger,
+    required AppLocalizations l10n,
+  }) async {
+    if (data['${modulePrefix}Stops'] is! List) return;
+    final stops = List.from(data['${modulePrefix}Stops'] as List);
+    if (sourceIndex < 0 || sourceIndex >= stops.length) return;
+
+    if (action == 'end') {
+      await _endPendingDailyStopForModule(
+        report,
+        data,
+        modulePrefix,
+        stops,
+        sourceIndex,
+        setDialogState,
+        setDialogState,
+        scaffoldMessenger,
+        l10n,
+        (_) {},
+      );
+      await _persistDailyModuleStopsChanges(
+        report: report,
+        data: data,
+        setDialogState: setDialogState,
+        scaffoldMessenger: scaffoldMessenger,
+        l10n: l10n,
+      );
+      return;
+    }
+
+    if (action == 'edit') {
+      await _showEditStopDialogForModule(
+        report,
+        data,
+        modulePrefix,
+        stops,
+        sourceIndex,
+        setDialogState,
+        setDialogState,
+        scaffoldMessenger,
+        l10n,
+        (_) {},
+      );
+      await _persistDailyModuleStopsChanges(
+        report: report,
+        data: data,
+        setDialogState: setDialogState,
+        scaffoldMessenger: scaffoldMessenger,
+        l10n: l10n,
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.deleteStopTitle),
+        content: Text(l10n.deleteStopConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final removedStop = stops[sourceIndex] is Map
+        ? Map<String, dynamic>.from(stops[sourceIndex])
+        : <String, dynamic>{};
+    stops.removeAt(sourceIndex);
+    data['${modulePrefix}Stops'] = stops;
+    _deleteMirroredDailyStopIfLinked(data, modulePrefix, removedStop);
+    _deleteMirroredDailyStopByTypeFallback(data, modulePrefix, removedStop);
+    _updateDailyTotalsForModule(data, modulePrefix, stops);
+    setDialogState(() {});
+    await _persistDailyModuleStopsChanges(
+      report: report,
+      data: data,
+      setDialogState: setDialogState,
+      scaffoldMessenger: scaffoldMessenger,
+      l10n: l10n,
+    );
+  }
+
+  Future<void> _persistDailyModuleStopsChanges({
+    required Report report,
+    required Map<String, dynamic> data,
+    required StateSetter setDialogState,
+    required ScaffoldMessengerState scaffoldMessenger,
+    required AppLocalizations l10n,
+  }) async {
+    final updatedReport = Report(
+      id: report.id,
+      description: report.description,
+      type: report.type,
+      group: report.group,
+      date: report.date,
+      additionalData: Map<String, dynamic>.from(data),
+    );
+    _applyUpdatedReportDataToDialog(data, updatedReport);
+    await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+    setDialogState(() {});
   }
 
   Future<void> _showAddStopFromModuleCard({
@@ -9607,235 +9831,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     _applyUpdatedReportDataToDialog(data, updatedReport);
     await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
     setDialogState(() {});
-  }
-
-  // Edit Module Dialog for Daily Report
-  Future<void> _showEditModuleDialog(
-      Report report,
-      Map<String, dynamic> data,
-      String modulePrefix,
-      StateSetter setDialogState,
-      ScaffoldMessengerState scaffoldMessenger,
-      AppLocalizations l10n) async {
-    List stops = List.from(data['${modulePrefix}Stops'] ?? []);
-
-    // Ensure totals are calculated
-    int totalDowntime = data['${modulePrefix}TotalDowntime'] ??
-        _calculateDowntimeFromStops(stops);
-    int operatingTime = data['${modulePrefix}OperatingTime'] ??
-        ((24 * 60) - totalDowntime).clamp(0, 24 * 60);
-
-    // Update data with calculated values
-    data['${modulePrefix}TotalDowntime'] = totalDowntime;
-    data['${modulePrefix}OperatingTime'] = operatingTime;
-
-    await showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(
-              'Modifier ${modulePrefix.replaceFirst('module', 'Module ')}'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Arrêts (${stops.length})'),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      await _showAddStopDialogForModule(
-                          report,
-                          data,
-                          modulePrefix,
-                          stops,
-                          setState,
-                          setDialogState,
-                          scaffoldMessenger,
-                          l10n, (int newTotal) {
-                        setState(() {
-                          totalDowntime = newTotal;
-                          operatingTime =
-                              (24 * 60 - newTotal).clamp(0, 24 * 60);
-                        });
-                      });
-                    },
-                    icon: const Icon(Icons.add),
-                    label: Text(l10n.addButton),
-                  ),
-                ],
-              ),
-              if (stops.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                ...stops.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final stop = entry.value;
-                  return ListTile(
-                    title: Text('Arrêt ${index + 1}'),
-                    subtitle: Text(_formatDailyStopLine(stop)),
-                    trailing: PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert),
-                      tooltip: 'Actions arrêt',
-                      onSelected: (value) async {
-                        if (value == 'end') {
-                          await _endPendingDailyStopForModule(
-                            report,
-                            data,
-                            modulePrefix,
-                            stops,
-                            index,
-                            setState,
-                            setDialogState,
-                            scaffoldMessenger,
-                            l10n,
-                            (int newTotal) {
-                              setState(() {
-                                totalDowntime = newTotal;
-                                operatingTime =
-                                    (24 * 60 - newTotal).clamp(0, 24 * 60);
-                              });
-                            },
-                          );
-                          return;
-                        }
-
-                        if (value == 'edit') {
-                          await _showEditStopDialogForModule(
-                              report,
-                              data,
-                              modulePrefix,
-                              stops,
-                              index,
-                              setState,
-                              setDialogState,
-                              scaffoldMessenger,
-                              l10n, (int newTotal) {
-                            setState(() {
-                              totalDowntime = newTotal;
-                              operatingTime =
-                                  (24 * 60 - newTotal).clamp(0, 24 * 60);
-                            });
-                          });
-                          return;
-                        }
-
-                        final confirmed = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: Text(l10n.deleteStopTitle),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(l10n.deleteStopConfirm),
-                                const SizedBox(height: 12),
-                                Text(_formatDailyStopLine(stop)),
-                              ],
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: Text(l10n.cancel),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: Text(l10n.delete),
-                              ),
-                            ],
-                          ),
-                        );
-
-                        if (confirmed != true) return;
-
-                        setState(() {
-                          final removedStop = stops[index] is Map
-                              ? Map<String, dynamic>.from(stops[index])
-                              : <String, dynamic>{};
-                          stops.removeAt(index);
-                          _deleteMirroredDailyStopIfLinked(
-                              data, modulePrefix, removedStop);
-                          _deleteMirroredDailyStopByTypeFallback(
-                              data, modulePrefix, removedStop);
-                          _updateDailyTotalsForModule(
-                              data, modulePrefix, stops);
-                          totalDowntime =
-                              data['${modulePrefix}TotalDowntime'] ?? 0;
-                          operatingTime =
-                              data['${modulePrefix}OperatingTime'] ??
-                                  (24 * 60 - totalDowntime).clamp(0, 24 * 60);
-                        });
-                        setDialogState(() {});
-                      },
-                      itemBuilder: (context) {
-                        final isPending = _isPendingStop(stop is Map
-                            ? Map<String, dynamic>.from(stop)
-                            : <String, dynamic>{});
-                        return [
-                          if (isPending)
-                            const PopupMenuItem<String>(
-                              value: 'end',
-                              child: _StopActionMenuItem(
-                                icon: Icons.stop_circle_outlined,
-                                label: 'Terminer',
-                                iconColor: AppColors.success,
-                              ),
-                            ),
-                          PopupMenuItem<String>(
-                            value: 'edit',
-                            child: _StopActionMenuItem(
-                              icon: Icons.edit_outlined,
-                              label: 'Modifier',
-                              iconColor: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                          const PopupMenuItem<String>(
-                            value: 'delete',
-                            child: _StopActionMenuItem(
-                              icon: Icons.delete_outline,
-                              label: 'Supprimer',
-                              iconColor: AppColors.error,
-                            ),
-                          ),
-                        ];
-                      },
-                    ),
-                  );
-                }),
-              ],
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.cancel),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final updatedData = Map<String, dynamic>.from(data);
-                updatedData['${modulePrefix}OperatingTime'] = operatingTime;
-                updatedData['${modulePrefix}TotalDowntime'] = totalDowntime;
-                updatedData['${modulePrefix}Stops'] = stops;
-
-                final updatedReport = Report(
-                  id: report.id,
-                  description: report.description,
-                  type: report.type,
-                  group: report.group,
-                  date: report.date,
-                  additionalData: updatedData,
-                );
-
-                Navigator.pop(context);
-                _applyUpdatedReportDataToDialog(data, updatedReport);
-                _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
-                setDialogState(() {});
-              },
-              child: Text(l10n.save),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   // Add Stop Dialog for Module
