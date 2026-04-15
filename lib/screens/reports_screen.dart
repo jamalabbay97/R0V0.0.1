@@ -10196,7 +10196,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     ? () async {
                         final assignedPoste = _assignedPosteForStopDialog(
                           data,
-                          shiftKey: report.group,
+                          shiftKey: shiftKey ?? report.group,
                         );
                         final selectedTimeResult =
                             await _showStopTimeEntryDialog(
@@ -10487,7 +10487,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     ? () async {
                         final assignedPoste = _assignedPosteForStopDialog(
                           data,
-                          shiftKey: report.group,
+                          shiftKey: shiftKey ?? report.group,
                         );
                         final selectedTimeResult =
                             await _showStopTimeEntryDialog(
