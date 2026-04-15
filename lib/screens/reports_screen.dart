@@ -213,6 +213,8 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
         _toCycleMinutes(_endTime) - _toCycleMinutes(_startTime);
     final hasValidRange =
         _isPending || (durationMinutes > 0 && durationMinutes <= 24 * 60);
+    final hasValidStartForPoste = _isTimeWithinAssignedPoste(_startTime);
+    final canSubmit = hasValidRange && hasValidStartForPoste;
 
     return Material(
       color: Colors.transparent,
@@ -332,6 +334,16 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                           style: TextStyle(color: AppColors.error),
                         ),
                       ),
+                    if (!hasValidStartForPoste)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          _assignedPosteWindowLabel().isEmpty
+                              ? "L'heure de début doit être dans le poste affecté."
+                              : "L'heure de début doit être comprise dans le poste affecté (${_assignedPosteWindowLabel()}).",
+                          style: const TextStyle(color: AppColors.error),
+                        ),
+                      ),
                     Row(
                       children: [
                         TextButton(
@@ -352,7 +364,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                               borderRadius: BorderRadius.circular(24),
                             ),
                           ),
-                          onPressed: hasValidRange
+                          onPressed: canSubmit
                               ? () {
                                   Navigator.of(context).pop(
                                     _StopTimeSelectionResult(
@@ -1760,15 +1772,32 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ElevatedButton(
                 onPressed: canSubmit
                     ? () async {
+                        final assignedPoste = _assignedPosteForStopDialog(
+                          data,
+                          shiftKey: shiftKey,
+                        );
                         final selectedTimeResult =
                             await _showStopTimeEntryDialog(
                           titleSuffix: selectedType ?? '',
-                          assignedPoste: _assignedPosteForStopDialog(
-                            data,
-                            shiftKey: shiftKey,
-                          ),
+                          assignedPoste: assignedPoste,
                         );
                         if (selectedTimeResult == null) {
+                          return;
+                        }
+                        final posteValidation =
+                            _validateStopStartInAssignedPoste(
+                          selectedTimeResult.start,
+                          assignedPoste,
+                        );
+                        if (posteValidation != null) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(posteValidation),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                          }
                           return;
                         }
 
@@ -6994,6 +7023,54 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return _normalizeAssignedPoste(raw);
   }
 
+  bool _isStartTimeWithinAssignedPoste(
+    TimeOfDay startTime,
+    String? assignedPoste,
+  ) {
+    final normalizedPoste = _normalizePosteKey(assignedPoste);
+    if (normalizedPoste == null) return true;
+
+    final minutes = (startTime.hour * 60) + startTime.minute;
+    switch (normalizedPoste) {
+      case '3':
+        return minutes >= (22 * 60 + 30) || minutes < (6 * 60 + 30);
+      case '1':
+        return minutes >= (6 * 60 + 30) && minutes < (14 * 60 + 30);
+      case '2':
+        return minutes >= (14 * 60 + 30) && minutes < (22 * 60 + 30);
+      default:
+        return true;
+    }
+  }
+
+  String _assignedPosteWindowLabel(String? assignedPoste) {
+    switch (_normalizePosteKey(assignedPoste)) {
+      case '3':
+        return '22:30 → 06:30';
+      case '1':
+        return '06:30 → 14:30';
+      case '2':
+        return '14:30 → 22:30';
+      default:
+        return '';
+    }
+  }
+
+  String? _validateStopStartInAssignedPoste(
+    TimeOfDay startTime,
+    String? assignedPoste,
+  ) {
+    if (_isStartTimeWithinAssignedPoste(startTime, assignedPoste)) {
+      return null;
+    }
+
+    final assignedWindow = _assignedPosteWindowLabel(assignedPoste);
+    if (assignedWindow.isEmpty) {
+      return "L'heure de début doit être dans le poste affecté.";
+    }
+    return "L'heure de début doit être comprise dans le poste affecté ($assignedWindow).";
+  }
+
   Future<_StopTimeSelectionResult?> _showStopTimeEntryDialog({
     required String titleSuffix,
     TimeOfDay? initialStart,
@@ -9504,12 +9581,29 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ElevatedButton(
                 onPressed: canSubmit
                     ? () async {
+                        final assignedPoste = _assignedPosteForStopDialog(data);
                         final selectedTimeResult =
                             await _showStopTimeEntryDialog(
                           titleSuffix: selectedType ?? '',
-                          assignedPoste: _assignedPosteForStopDialog(data),
+                          assignedPoste: assignedPoste,
                         );
                         if (selectedTimeResult == null) return;
+                        final posteValidation =
+                            _validateStopStartInAssignedPoste(
+                          selectedTimeResult.start,
+                          assignedPoste,
+                        );
+                        if (posteValidation != null) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(posteValidation),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                          }
+                          return;
+                        }
 
                         final validation = _validateDailyStopFields(
                           category: selectedCategory,
