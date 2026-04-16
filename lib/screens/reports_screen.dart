@@ -2742,22 +2742,115 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return end - start;
   }
 
+  Map<String, double> _tnbOperatingHoursByShiftKey({
+    required Map<String, dynamic> data,
+    required DateTime baseDate,
+  }) {
+    final stops = (data['Arrets'] is List) ? List.from(data['Arrets']) : [];
+    final cycleStart =
+        DateTime(baseDate.year, baseDate.month, baseDate.day, 22, 30);
+    final cycleEnd = cycleStart.add(const Duration(hours: 24));
+    final operatingByShift = <String, double>{};
+
+    for (final key in _tnbShiftKeys) {
+      final shift = _cycleShiftWindowByKey(baseDate, key);
+      if (shift == null) {
+        operatingByShift[key] = 0;
+        continue;
+      }
+      final downtime = _calculateTnbDowntimeMinutesInWindow(
+        stops: stops,
+        windowStart: shift.start,
+        windowEnd: shift.end,
+        cycleStart: cycleStart,
+        cycleEnd: cycleEnd,
+      );
+      operatingByShift[key] = math.max(0, 480 - downtime) / 60.0;
+    }
+
+    return operatingByShift;
+  }
+
+  List<Map<String, String>> _normalizeTnbSegments({
+    required List<Map<String, String>> segments,
+    required Map<String, double> operatingByShift,
+  }) {
+    final normalized = segments
+        .map((segment) => Map<String, String>.from(segment))
+        .toList(growable: false);
+
+    for (var i = 0; i < normalized.length; i++) {
+      final current = normalized[i];
+      if (i > 0) {
+        final previousEnd = (normalized[i - 1]['end'] ?? '').trim();
+        if (previousEnd.isNotEmpty) {
+          current['start'] = previousEnd;
+        }
+      }
+
+      final startText = (current['start'] ?? '').trim();
+      final endText = (current['end'] ?? '').trim();
+      if (startText.isEmpty) {
+        current['end'] = '';
+        continue;
+      }
+
+      final start = double.tryParse(startText.replaceAll(',', '.'));
+      if (start == null) continue;
+
+      final shiftKey = current['shiftKey'] ?? '';
+      final maxHours = operatingByShift[shiftKey] ?? 0;
+      final maxEnd = start + maxHours;
+      var end = double.tryParse(endText.replaceAll(',', '.')) ?? start;
+      if (end < start) {
+        end = start;
+      }
+      if (end > maxEnd) {
+        end = maxEnd;
+      }
+      current['start'] = _formatTnbCounterNumber(start);
+      current['end'] = _formatTnbCounterNumber(end);
+    }
+
+    return normalized;
+  }
+
+  void _syncTnbControllerValues({
+    required List<TextEditingController> startControllers,
+    required List<TextEditingController> endControllers,
+    required List<Map<String, String>> normalizedSegments,
+  }) {
+    for (var i = 0; i < normalizedSegments.length; i++) {
+      final normalizedStart = (normalizedSegments[i]['start'] ?? '').trim();
+      final normalizedEnd = (normalizedSegments[i]['end'] ?? '').trim();
+      if (startControllers[i].text.trim() != normalizedStart) {
+        startControllers[i].text = normalizedStart;
+      }
+      if (endControllers[i].text.trim() != normalizedEnd) {
+        endControllers[i].text = normalizedEnd;
+      }
+    }
+  }
+
   bool _validateTnbSegmentsMaxHours(
     List<Map<String, String>> segments, {
     required String label,
+    required Map<String, double> operatingByShift,
     required ScaffoldMessengerState scaffoldMessenger,
   }) {
+    const double roundingToleranceHours = 0.01;
     for (final segment in segments) {
       final startValue = (segment['start'] ?? '').trim();
       final endValue = (segment['end'] ?? '').trim();
       if (startValue.isEmpty || endValue.isEmpty) continue;
 
       final shiftHours = _counterShiftHours(startValue, endValue);
-      if (shiftHours > 8) {
+      final maxShiftHours = operatingByShift[segment['shiftKey'] ?? ''] ?? 8;
+      if ((shiftHours - maxShiftHours) > roundingToleranceHours) {
         scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text(
-              'Le compteur "${segment['shiftLabel'] ?? '-'}" pour $label dépasse 8 heures (${_formatTnbCounterNumber(shiftHours)} h).',
+              'Le compteur "${segment['shiftLabel'] ?? '-'}" pour $label dépasse la marche autorisée (${_formatTnbCounterNumber(maxShiftHours)} h, arrêt déduit).',
             ),
           ),
         );
@@ -2795,6 +2888,40 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final endControllers = segments
         .map((segment) => TextEditingController(text: segment['end'] ?? ''))
         .toList(growable: false);
+    final operatingByShift = _tnbOperatingHoursByShiftKey(
+      data: data,
+      baseDate: report.date,
+    );
+
+    void propagateStartsFromEnds() {
+      for (var i = 1; i < startControllers.length; i++) {
+        final previousEnd = endControllers[i - 1].text.trim();
+        if (previousEnd.isNotEmpty &&
+            startControllers[i].text.trim() != previousEnd) {
+          startControllers[i].text = previousEnd;
+        }
+      }
+    }
+
+    void normalizeAndSyncControllers() {
+      final rawSegments = List.generate(segments.length, (index) {
+        return {
+          'shiftKey': segments[index]['shiftKey'] ?? '',
+          'shiftLabel': segments[index]['shiftLabel'] ?? '',
+          'start': startControllers[index].text.trim(),
+          'end': endControllers[index].text.trim(),
+        };
+      });
+      final normalized = _normalizeTnbSegments(
+        segments: rawSegments,
+        operatingByShift: operatingByShift,
+      );
+      _syncTnbControllerValues(
+        startControllers: startControllers,
+        endControllers: endControllers,
+        normalizedSegments: normalized,
+      );
+    }
 
     await showDialog(
       context: context,
@@ -2828,6 +2955,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   labelText: 'Start',
                                   border: OutlineInputBorder(),
                                 ),
+                                onChanged: (_) {
+                                  setStateDialog(() {});
+                                },
                               ),
                               const SizedBox(height: 8),
                               TextField(
@@ -2839,11 +2969,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   labelText: 'End',
                                   border: OutlineInputBorder(),
                                 ),
-                                onChanged: (value) {
-                                  if (index + 1 < startControllers.length) {
-                                    startControllers[index + 1].text =
-                                        value.trim();
-                                  }
+                                onChanged: (_) {
+                                  propagateStartsFromEnds();
+                                  setStateDialog(() {});
+                                },
+                                onEditingComplete: () {
+                                  normalizeAndSyncControllers();
+                                  setStateDialog(() {});
+                                },
+                                onSubmitted: (_) {
+                                  normalizeAndSyncControllers();
                                   setStateDialog(() {});
                                 },
                               ),
@@ -2867,7 +3002,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                   ElevatedButton(
                     onPressed: () {
-                      final normalizedSegments = <Map<String, String>>[];
+                      var normalizedSegments = <Map<String, String>>[];
                       for (var i = 0; i < segments.length; i++) {
                         final startValue = startControllers[i].text.trim();
                         final endValue = endControllers[i].text.trim();
@@ -2897,6 +3032,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           'end': endValue,
                         });
                       }
+                      normalizedSegments = _normalizeTnbSegments(
+                        segments: normalizedSegments,
+                        operatingByShift: operatingByShift,
+                      );
                       final mergedSegments = allSegments
                           .map((e) => Map<String, String>.from(e))
                           .toList();
@@ -2908,16 +3047,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           mergedSegments[editedIndex] = edited;
                         }
                       }
-                      for (var i = 1; i < mergedSegments.length; i++) {
-                        final previousEnd =
-                            (mergedSegments[i - 1]['end'] ?? '').trim();
-                        if (previousEnd.isNotEmpty) {
-                          mergedSegments[i]['start'] = previousEnd;
-                        }
-                      }
+                      final normalizedMergedSegments = _normalizeTnbSegments(
+                        segments: mergedSegments,
+                        operatingByShift: operatingByShift,
+                      );
                       if (!_validateTnbSegmentsMaxHours(
-                        mergedSegments,
+                        normalizedMergedSegments,
                         label: label,
+                        operatingByShift: operatingByShift,
                         scaffoldMessenger: scaffoldMessenger,
                       )) {
                         return;
@@ -2931,16 +3068,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         return;
                       }
                       counters[index]['start'] =
-                          mergedSegments.first['start']?.trim() ?? '';
+                          normalizedMergedSegments.first['start']?.trim() ?? '';
                       counters[index]['end'] =
-                          mergedSegments.last['end']?.trim() ?? '';
+                          normalizedMergedSegments.last['end']?.trim() ?? '';
                       final updatedReport =
                           _buildUpdatedActivityReportWithTnbCounters(
                         report: report,
                         data: data,
                         counters: counters,
                         shiftSegmentsByCounter: {
-                          label: mergedSegments,
+                          label: normalizedMergedSegments,
                         },
                       );
                       final refreshedData = updatedReport.additionalData ?? {};
