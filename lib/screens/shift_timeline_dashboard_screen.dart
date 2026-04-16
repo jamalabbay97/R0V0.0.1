@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:r0/models/report.dart';
 import 'package:r0/services/database_helper.dart';
 
+typedef _TimelineExtractor = List<_DowntimeEntry> Function(
+  Report report,
+  DateTime timelineStart,
+  DateTime timelineEnd,
+);
+
 class ShiftTimelineDashboardScreen extends StatefulWidget {
   const ShiftTimelineDashboardScreen({super.key});
 
@@ -122,7 +128,12 @@ class _ShiftTimelineDashboardScreenState
                         title: 'R0',
                         productionDay: _selectedProductionDay!,
                         reports: reportsForDay,
-                        timelineExtractor: _extractR0DowntimeSegments,
+                        tracks: const [
+                          _TimelineTrackConfig(
+                            label: 'All reports',
+                            extractor: _extractR0DowntimeSegments,
+                          ),
+                        ],
                       ),
                     if (_selectedProductionDay != null &&
                         tnbReportsForDay.isNotEmpty) ...[
@@ -131,7 +142,12 @@ class _ShiftTimelineDashboardScreenState
                         title: 'TNB',
                         productionDay: _selectedProductionDay!,
                         reports: tnbReportsForDay,
-                        timelineExtractor: _extractTnbDowntimeSegments,
+                        tracks: const [
+                          _TimelineTrackConfig(
+                            label: 'All reports',
+                            extractor: _extractTnbDowntimeSegments,
+                          ),
+                        ],
                       ),
                     ],
                     if (_selectedProductionDay != null &&
@@ -141,7 +157,16 @@ class _ShiftTimelineDashboardScreenState
                         title: 'TSUD',
                         productionDay: _selectedProductionDay!,
                         reports: tsudReportsForDay,
-                        timelineExtractor: _extractTsudDowntimeSegments,
+                        tracks: const [
+                          _TimelineTrackConfig(
+                            label: 'Module 1 model',
+                            extractor: _extractTsudModule1DowntimeSegments,
+                          ),
+                          _TimelineTrackConfig(
+                            label: 'Module 2 model',
+                            extractor: _extractTsudModule2DowntimeSegments,
+                          ),
+                        ],
                       ),
                     ],
                   ],
@@ -195,7 +220,7 @@ class _ShiftTimelineDashboardScreenState
   }
 }
 
-List<_TimelineSegment> _extractR0DowntimeSegments(
+List<_DowntimeEntry> _extractR0DowntimeSegments(
   Report report,
   DateTime timelineStart,
   DateTime timelineEnd,
@@ -212,7 +237,7 @@ List<_TimelineSegment> _extractR0DowntimeSegments(
   );
 }
 
-List<_TimelineSegment> _extractTnbDowntimeSegments(
+List<_DowntimeEntry> _extractTnbDowntimeSegments(
   Report report,
   DateTime timelineStart,
   DateTime timelineEnd,
@@ -229,7 +254,7 @@ List<_TimelineSegment> _extractTnbDowntimeSegments(
   );
 }
 
-List<_TimelineSegment> _extractTsudDowntimeSegments(
+List<_DowntimeEntry> _extractTsudModule1DowntimeSegments(
   Report report,
   DateTime timelineStart,
   DateTime timelineEnd,
@@ -237,10 +262,8 @@ List<_TimelineSegment> _extractTsudDowntimeSegments(
   final data = report.additionalData ?? const <String, dynamic>{};
   final module1 = (data['module1Stops'] as List?)?.whereType<Map>().toList() ??
       const <Map>[];
-  final module2 = (data['module2Stops'] as List?)?.whereType<Map>().toList() ??
-      const <Map>[];
   return _parseDowntimeRanges(
-    [...module1, ...module2],
+    module1,
     timelineStart,
     timelineEnd,
     startKeys: const ['startTime', 'Début', 'debut', 'start'],
@@ -248,14 +271,31 @@ List<_TimelineSegment> _extractTsudDowntimeSegments(
   );
 }
 
-List<_TimelineSegment> _parseDowntimeRanges(
+List<_DowntimeEntry> _extractTsudModule2DowntimeSegments(
+  Report report,
+  DateTime timelineStart,
+  DateTime timelineEnd,
+) {
+  final data = report.additionalData ?? const <String, dynamic>{};
+  final module2 = (data['module2Stops'] as List?)?.whereType<Map>().toList() ??
+      const <Map>[];
+  return _parseDowntimeRanges(
+    module2,
+    timelineStart,
+    timelineEnd,
+    startKeys: const ['startTime', 'Début', 'debut', 'start'],
+    endKeys: const ['endTime', 'Fin', 'fin', 'end'],
+  );
+}
+
+List<_DowntimeEntry> _parseDowntimeRanges(
   List<Map> entries,
   DateTime timelineStart,
   DateTime timelineEnd, {
   required List<String> startKeys,
   required List<String> endKeys,
 }) {
-  final ranges = <_TimelineSegment>[];
+  final ranges = <_DowntimeEntry>[];
   for (final entry in entries) {
     final startStr = _firstText(entry, startKeys);
     final endStr = _firstText(entry, endKeys);
@@ -272,10 +312,11 @@ List<_TimelineSegment> _parseDowntimeRanges(
     final effectiveEnd = end.isAfter(timelineEnd) ? timelineEnd : end;
     if (!effectiveEnd.isAfter(effectiveStart)) continue;
 
-    ranges.add(_TimelineSegment(
+    ranges.add(_DowntimeEntry(
       startMinute: effectiveStart.difference(timelineStart).inMinutes,
       endMinute: effectiveEnd.difference(timelineStart).inMinutes,
-      isDowntime: true,
+      startTime: effectiveStart,
+      endTime: effectiveEnd,
     ));
   }
 
@@ -319,28 +360,33 @@ class _ShiftTimelineCard extends StatelessWidget {
       {required this.title,
       required this.productionDay,
       required this.reports,
-      required this.timelineExtractor});
+      required this.tracks});
 
   final String title;
   final DateTime productionDay;
   final List<Report> reports;
-  final List<_TimelineSegment> Function(
-    Report report,
-    DateTime timelineStart,
-    DateTime timelineEnd,
-  ) timelineExtractor;
+  final List<_TimelineTrackConfig> tracks;
 
   static const List<String> _shiftOrder = ['3ème', '1er', '2ème'];
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final segments = _buildSegments();
-    final totalDownMinutes = segments
-        .where((s) => s.isDowntime)
-        .fold<int>(0, (sum, s) => sum + (s.endMinute - s.startMinute));
+    final timelineStart = DateTime(
+      productionDay.year,
+      productionDay.month,
+      productionDay.day,
+      22,
+      30,
+    );
+    final timelineEnd = timelineStart.add(const Duration(hours: 24));
+    final trackData = tracks
+        .map((track) => _buildTrackData(track, timelineStart, timelineEnd))
+        .toList();
 
     return Card(
+      elevation: 1.5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -363,18 +409,85 @@ class _ShiftTimelineCard extends StatelessWidget {
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 16),
-            SizedBox(
-              height: 62,
-              child: CustomPaint(
-                painter: _TimelinePainter(
-                  segments: segments,
-                  upColor: Colors.green.shade500,
-                  downColor: Colors.red.shade400,
-                  dividerColor: theme.dividerColor,
+            ...trackData.map((track) {
+              final operatingPct =
+                  ((1440 - track.totalDownMinutes) / 1440) * 100;
+              final downtimePct = (track.totalDownMinutes / 1440) * 100;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          track.label,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const Spacer(),
+                        _PercentagePill(
+                          label: 'Operating',
+                          value: '${operatingPct.toStringAsFixed(1)}%',
+                          color: Colors.green.shade600,
+                        ),
+                        const SizedBox(width: 8),
+                        _PercentagePill(
+                          label: 'Down',
+                          value: '${downtimePct.toStringAsFixed(1)}%',
+                          color: Colors.red.shade500,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final width = constraints.maxWidth;
+                        return SizedBox(
+                          height: 62,
+                          child: Stack(
+                            children: [
+                              CustomPaint(
+                                painter: _TimelinePainter(
+                                  segments: track.segments,
+                                  upColor: Colors.green.shade500,
+                                  downColor: Colors.red.shade400,
+                                  dividerColor: theme.dividerColor,
+                                ),
+                                child: const SizedBox.expand(),
+                              ),
+                              ...track.downtime.map((down) {
+                                final startX =
+                                    (down.startMinute / 1440) * width;
+                                final endX = (down.endMinute / 1440) * width;
+                                return Positioned(
+                                  left: startX,
+                                  top: 14,
+                                  width: (endX - startX).clamp(10.0, width),
+                                  height: 22,
+                                  child: GestureDetector(
+                                    onTap: () => _showDowntimeDetails(
+                                        context, down, track.label),
+                                    behavior: HitTestBehavior.opaque,
+                                    child: const SizedBox.expand(),
+                                  ),
+                                );
+                              }),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Operation: ${((1440 - track.totalDownMinutes) / 60).toStringAsFixed(2)}h • Downtime: ${(track.totalDownMinutes / 60).toStringAsFixed(2)}h',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ],
                 ),
-                child: const SizedBox.expand(),
-              ),
-            ),
+              );
+            }),
             const SizedBox(height: 8),
             const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -390,13 +503,10 @@ class _ShiftTimelineCard extends StatelessWidget {
               children: [
                 _LegendChip(color: Colors.green.shade500, text: '🟢 Operation'),
                 const SizedBox(width: 8),
-                _LegendChip(color: Colors.red.shade400, text: '🔴 Downtime'),
+                _LegendChip(
+                    color: Colors.red.shade400,
+                    text: '🔴 Downtime (click for details)'),
               ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Operation: ${((1440 - totalDownMinutes) / 60).toStringAsFixed(2)}h • Downtime: ${(totalDownMinutes / 60).toStringAsFixed(2)}h',
-              style: theme.textTheme.bodyMedium,
             ),
           ],
         ),
@@ -416,26 +526,31 @@ class _ShiftTimelineCard extends StatelessWidget {
     return 'Reports loaded: $coverage';
   }
 
-  List<_TimelineSegment> _buildSegments() {
-    final timelineStart = DateTime(
-      productionDay.year,
-      productionDay.month,
-      productionDay.day,
-      22,
-      30,
-    );
-    final timelineEnd = timelineStart.add(const Duration(hours: 24));
-
-    final ranges = <_TimelineSegment>[];
+  _TimelineTrackData _buildTrackData(
+    _TimelineTrackConfig track,
+    DateTime timelineStart,
+    DateTime timelineEnd,
+  ) {
+    final ranges = <_DowntimeEntry>[];
     for (final report in reports) {
-      ranges.addAll(timelineExtractor(report, timelineStart, timelineEnd));
+      ranges.addAll(track.extractor(report, timelineStart, timelineEnd));
     }
 
     final mergedDowntime = _merge(ranges);
+    final totalDownMinutes = mergedDowntime.fold<int>(
+      0,
+      (sum, item) => sum + (item.endMinute - item.startMinute),
+    );
+
     if (mergedDowntime.isEmpty) {
-      return const [
-        _TimelineSegment(startMinute: 0, endMinute: 1440, isDowntime: false),
-      ];
+      return _TimelineTrackData(
+        label: track.label,
+        segments: const [
+          _TimelineSegment(startMinute: 0, endMinute: 1440, isDowntime: false),
+        ],
+        downtime: const [],
+        totalDownMinutes: 0,
+      );
     }
 
     final segments = <_TimelineSegment>[];
@@ -448,7 +563,13 @@ class _ShiftTimelineCard extends StatelessWidget {
           isDowntime: false,
         ));
       }
-      segments.add(down);
+      segments.add(
+        _TimelineSegment(
+          startMinute: down.startMinute,
+          endMinute: down.endMinute,
+          isDowntime: true,
+        ),
+      );
       cursor = down.endMinute;
     }
     if (cursor < 1440) {
@@ -457,24 +578,32 @@ class _ShiftTimelineCard extends StatelessWidget {
             startMinute: cursor, endMinute: 1440, isDowntime: false),
       );
     }
-    return segments;
+    return _TimelineTrackData(
+      label: track.label,
+      segments: segments,
+      downtime: mergedDowntime,
+      totalDownMinutes: totalDownMinutes,
+    );
   }
 
-  List<_TimelineSegment> _merge(List<_TimelineSegment> ranges) {
+  List<_DowntimeEntry> _merge(List<_DowntimeEntry> ranges) {
     if (ranges.isEmpty) return ranges;
 
     final sorted = [...ranges]
       ..sort((a, b) => a.startMinute.compareTo(b.startMinute));
-    final merged = <_TimelineSegment>[sorted.first];
+    final merged = <_DowntimeEntry>[sorted.first];
     for (final current in sorted.skip(1)) {
       final last = merged.last;
       if (current.startMinute <= last.endMinute) {
-        merged[merged.length - 1] = _TimelineSegment(
+        final endTime =
+            current.endMinute > last.endMinute ? current.endTime : last.endTime;
+        merged[merged.length - 1] = _DowntimeEntry(
           startMinute: last.startMinute,
           endMinute: current.endMinute > last.endMinute
               ? current.endMinute
               : last.endMinute,
-          isDowntime: true,
+          startTime: last.startTime,
+          endTime: endTime,
         );
       } else {
         merged.add(current);
@@ -490,6 +619,71 @@ class _ShiftTimelineCard extends StatelessWidget {
             data['posteSelected'] ??
             '-')
         .toString();
+  }
+
+  void _showDowntimeDetails(
+    BuildContext context,
+    _DowntimeEntry downtime,
+    String trackLabel,
+  ) {
+    final startLabel = _formatDateTime(downtime.startTime);
+    final endLabel = _formatDateTime(downtime.endTime);
+    final duration = downtime.endTime.difference(downtime.startTime);
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Downtime details • $trackLabel',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            const SizedBox(height: 14),
+            _detailRow('Start', startLabel),
+            const SizedBox(height: 8),
+            _detailRow('End', endLabel),
+            const SizedBox(height: 8),
+            _detailRow(
+              'Duration',
+              '${hours.toString().padLeft(2, '0')}h ${minutes.toString().padLeft(2, '0')}m',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 74,
+          child: Text(
+            '$label:',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+        Expanded(child: Text(value)),
+      ],
+    );
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    final day = dateTime.day.toString().padLeft(2, '0');
+    final month = dateTime.month.toString().padLeft(2, '0');
+    final year = dateTime.year;
+    final hour = dateTime.hour.toString().padLeft(2, '0');
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    return '$day/$month/$year $hour:$minute';
   }
 }
 
@@ -556,6 +750,72 @@ class _LegendChip extends StatelessWidget {
       child: Text(text),
     );
   }
+}
+
+class _TimelineTrackConfig {
+  const _TimelineTrackConfig({required this.label, required this.extractor});
+
+  final String label;
+  final _TimelineExtractor extractor;
+}
+
+class _TimelineTrackData {
+  const _TimelineTrackData({
+    required this.label,
+    required this.segments,
+    required this.downtime,
+    required this.totalDownMinutes,
+  });
+
+  final String label;
+  final List<_TimelineSegment> segments;
+  final List<_DowntimeEntry> downtime;
+  final int totalDownMinutes;
+}
+
+class _PercentagePill extends StatelessWidget {
+  const _PercentagePill({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$label $value',
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _DowntimeEntry {
+  const _DowntimeEntry({
+    required this.startMinute,
+    required this.endMinute,
+    required this.startTime,
+    required this.endTime,
+  });
+
+  final int startMinute;
+  final int endMinute;
+  final DateTime startTime;
+  final DateTime endTime;
 }
 
 class _TimelineSegment {
