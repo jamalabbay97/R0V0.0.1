@@ -229,6 +229,7 @@ List<_DowntimeEntry> _extractR0DowntimeSegments(
   final rawArrets =
       (data['Arrets'] as List?)?.whereType<Map>().toList() ?? const <Map>[];
   return _parseDowntimeRanges(
+    report,
     rawArrets,
     timelineStart,
     timelineEnd,
@@ -246,6 +247,7 @@ List<_DowntimeEntry> _extractTnbDowntimeSegments(
   final rawStops =
       (data['Arrets'] as List?)?.whereType<Map>().toList() ?? const <Map>[];
   return _parseDowntimeRanges(
+    report,
     rawStops,
     timelineStart,
     timelineEnd,
@@ -263,6 +265,7 @@ List<_DowntimeEntry> _extractTsudModule1DowntimeSegments(
   final module1 = (data['module1Stops'] as List?)?.whereType<Map>().toList() ??
       const <Map>[];
   return _parseDowntimeRanges(
+    report,
     module1,
     timelineStart,
     timelineEnd,
@@ -280,6 +283,7 @@ List<_DowntimeEntry> _extractTsudModule2DowntimeSegments(
   final module2 = (data['module2Stops'] as List?)?.whereType<Map>().toList() ??
       const <Map>[];
   return _parseDowntimeRanges(
+    report,
     module2,
     timelineStart,
     timelineEnd,
@@ -289,6 +293,7 @@ List<_DowntimeEntry> _extractTsudModule2DowntimeSegments(
 }
 
 List<_DowntimeEntry> _parseDowntimeRanges(
+  report,
   List<Map> entries,
   DateTime timelineStart,
   DateTime timelineEnd, {
@@ -312,11 +317,21 @@ List<_DowntimeEntry> _parseDowntimeRanges(
     final effectiveEnd = end.isAfter(timelineEnd) ? timelineEnd : end;
     if (!effectiveEnd.isAfter(effectiveStart)) continue;
 
+    final source = _DowntimeSource.fromReportEntry(
+      report: report,
+      rawEntry: Map<String, dynamic>.from(entry),
+      effectiveStart: effectiveStart,
+      effectiveEnd: effectiveEnd,
+      startRaw: startStr,
+      endRaw: endStr,
+    );
+
     ranges.add(_DowntimeEntry(
       startMinute: effectiveStart.difference(timelineStart).inMinutes,
       endMinute: effectiveEnd.difference(timelineStart).inMinutes,
       startTime: effectiveStart,
       endTime: effectiveEnd,
+      sources: [source],
     ));
   }
 
@@ -604,6 +619,7 @@ class _ShiftTimelineCard extends StatelessWidget {
               : last.endMinute,
           startTime: last.startTime,
           endTime: endTime,
+          sources: [...last.sources, ...current.sources],
         );
       } else {
         merged.add(current);
@@ -631,32 +647,98 @@ class _ShiftTimelineCard extends StatelessWidget {
     final duration = downtime.endTime.difference(downtime.startTime);
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
+    final detailedSources = [...downtime.sources]
+      ..sort((a, b) => a.effectiveStart.compareTo(b.effectiveStart));
 
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 22),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Downtime details • $trackLabel',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+      builder: (context) => SafeArea(
+        child: FractionallySizedBox(
+          heightFactor: 0.85,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 22),
+            child: Column(
+              mainAxisSize: MainAxisSize.max,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Downtime details • $trackLabel',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 14),
+                _detailRow('Start', startLabel),
+                const SizedBox(height: 8),
+                _detailRow('End', endLabel),
+                const SizedBox(height: 8),
+                _detailRow(
+                  'Duration',
+                  '${hours.toString().padLeft(2, '0')}h ${minutes.toString().padLeft(2, '0')}m',
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Reported events (${detailedSources.length})',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: detailedSources.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final source = detailedSources[index];
+                      final shiftSuffix = source.shiftLabel.isEmpty
+                          ? ''
+                          : ' • ${source.shiftLabel}';
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${index + 1}. ${source.titleLine}$shiftSuffix',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              source.definitionLine,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Saved timing: ${source.startRaw} → ${source.endRaw}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            Text(
+                              'Duree d\'arret: ${source.duration.inHours}h ${source.duration.inMinutes.remainder(60).toString().padLeft(2, '0')}m',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            Text(
+                              'Report: ${source.reportDateLabel}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
+                ),
+              ],
             ),
-            const SizedBox(height: 14),
-            _detailRow('Start', startLabel),
-            const SizedBox(height: 8),
-            _detailRow('End', endLabel),
-            const SizedBox(height: 8),
-            _detailRow(
-              'Duration',
-              '${hours.toString().padLeft(2, '0')}h ${minutes.toString().padLeft(2, '0')}m',
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -810,12 +892,111 @@ class _DowntimeEntry {
     required this.endMinute,
     required this.startTime,
     required this.endTime,
+    required this.sources,
   });
 
   final int startMinute;
   final int endMinute;
   final DateTime startTime;
   final DateTime endTime;
+  final List<_DowntimeSource> sources;
+}
+
+class _DowntimeSource {
+  const _DowntimeSource({
+    required this.titleLine,
+    required this.definitionLine,
+    required this.startRaw,
+    required this.endRaw,
+    required this.effectiveStart,
+    required this.effectiveEnd,
+    required this.shiftLabel,
+    required this.reportDateLabel,
+  });
+
+  final String titleLine;
+  final String definitionLine;
+  final String startRaw;
+  final String endRaw;
+  final DateTime effectiveStart;
+  final DateTime effectiveEnd;
+  final String shiftLabel;
+  final String reportDateLabel;
+
+  Duration get duration => effectiveEnd.difference(effectiveStart);
+  factory _DowntimeSource.fromReportEntry({
+    required Report report,
+    required Map<String, dynamic> rawEntry,
+    required DateTime effectiveStart,
+    required DateTime effectiveEnd,
+    required String startRaw,
+    required String endRaw,
+  }) {
+    final category = _valueOrDash(rawEntry, const [
+      'Catégorie',
+      'category',
+      'Category',
+    ]);
+    final type = _valueOrDash(rawEntry, const [
+      'Arret',
+      'Arrêt',
+      'stopType',
+      'nature',
+      'type',
+      'Type',
+    ]);
+    final definition = _valueOrDash(rawEntry, const [
+      'definition',
+      'Définition',
+      'Definition',
+      'stopDetails',
+      'Détails',
+      'Détail',
+      'detail',
+      'description',
+    ]);
+    final location = _valueOrDash(rawEntry, const [
+      'Lieu',
+      'location',
+      'stopLocation',
+    ]);
+    final shift = (report.additionalData?['selectedPoste'] ??
+            report.additionalData?['poste'] ??
+            report.additionalData?['posteSelected'] ??
+            '')
+        .toString()
+        .trim();
+
+    final day = report.date.day.toString().padLeft(2, '0');
+    final month = report.date.month.toString().padLeft(2, '0');
+    final year = report.date.year;
+    final reportDateLabel = '$day/$month/$year';
+
+    final title = '$category / $type';
+    final details = 'Definition: $definition'
+        '${location == '-' ? '' : ' • Location: $location'}';
+
+    return _DowntimeSource(
+      titleLine: title,
+      definitionLine: details,
+      startRaw: startRaw,
+      endRaw: endRaw,
+      effectiveStart: effectiveStart,
+      effectiveEnd: effectiveEnd,
+      shiftLabel: shift,
+      reportDateLabel: reportDateLabel,
+    );
+  }
+}
+
+String _valueOrDash(Map<String, dynamic> raw, List<String> keys) {
+  for (final key in keys) {
+    final value = raw[key];
+    if (value == null) continue;
+    final text = value.toString().trim();
+    if (text.isNotEmpty) return text;
+  }
+  return '-';
 }
 
 class _TimelineSegment {
