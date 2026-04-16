@@ -2484,12 +2484,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
               final displayEnd =
                   (selectedSegment?['end'] ?? counter['end'] ?? '').trim();
               final hasDisplayValue = displayStart.isNotEmpty;
+              final operatingHours = hasDisplayValue
+                  ? _counterShiftHours(displayStart, displayEnd)
+                  : 0.0;
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
                   title: Text(label),
                   subtitle: Text(
-                    '${l10n.start}: ${hasDisplayValue ? displayStart : '-'}\nEnd: ${hasDisplayValue ? (displayEnd.isNotEmpty ? displayEnd : '-') : '-'}',
+                    '${l10n.start}: ${hasDisplayValue ? displayStart : '-'}\n'
+                    'End: ${hasDisplayValue ? (displayEnd.isNotEmpty ? displayEnd : '-') : '-'}\n'
+                    'Heures de marche: ${hasDisplayValue ? _formatTnbCounterNumber(operatingHours) : '0'} h',
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -2859,6 +2864,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         startValue.replaceAll(',', '.')) ??
                                     0)) {
                           return;
+                        }
+                        if (startValue.isNotEmpty && endValue.isNotEmpty) {
+                          final shiftHours =
+                              _counterShiftHours(startValue, endValue);
+                          if (shiftHours > 8) {
+                            scaffoldMessenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Le compteur "${segments[i]['shiftLabel'] ?? '-'}" pour $label dépasse 8 heures (${_formatTnbCounterNumber(shiftHours)} h).',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
                         }
                         normalizedSegments.add({
                           'shiftKey': segments[i]['shiftKey'] ?? '',
