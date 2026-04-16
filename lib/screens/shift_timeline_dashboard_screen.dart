@@ -16,6 +16,8 @@ class _ShiftTimelineDashboardScreenState
 
   bool _isLoading = true;
   List<Report> _r0Reports = [];
+  List<Report> _tnbReports = [];
+  List<Report> _tsudReports = [];
   DateTime? _selectedProductionDay;
 
   static const List<String> _shiftOrder = ['3ème', '1er', '2ème'];
@@ -34,11 +36,23 @@ class _ShiftTimelineDashboardScreenState
         final poste = _extractPoste(r);
         return _shiftOrder.contains(poste);
       }).toList();
+      final tnbReports = allReports
+          .where((r) => r.type.trim().toLowerCase() == 'activity tnb')
+          .toList();
+      final tsudReports = allReports
+          .where((r) => r.type.trim().toLowerCase() == 'daily tsud')
+          .toList();
 
-      final productionDays = _availableProductionDays(r0Reports);
+      final productionDays = _availableProductionDays([
+        ...r0Reports,
+        ...tnbReports,
+        ...tsudReports,
+      ]);
 
       setState(() {
         _r0Reports = r0Reports;
+        _tnbReports = tnbReports;
+        _tsudReports = tsudReports;
         _selectedProductionDay =
             productionDays.isNotEmpty ? productionDays.first : null;
         _isLoading = false;
@@ -54,6 +68,15 @@ class _ShiftTimelineDashboardScreenState
     final reportsForDay = _selectedProductionDay == null
         ? const <Report>[]
         : _reportsForProductionDay(_selectedProductionDay!);
+    final tnbReportsForDay = _selectedProductionDay == null
+        ? const <Report>[]
+        : _reportsForDay(_tnbReports, _selectedProductionDay!);
+    final tsudReportsForDay = _selectedProductionDay == null
+        ? const <Report>[]
+        : _reportsForDay(_tsudReports, _selectedProductionDay!);
+    final hasAnyTimelineReports = _r0Reports.isNotEmpty ||
+        _tnbReports.isNotEmpty ||
+        _tsudReports.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -61,12 +84,12 @@ class _ShiftTimelineDashboardScreenState
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _r0Reports.isEmpty
+          : !hasAnyTimelineReports
               ? const Center(
                   child: Padding(
                     padding: EdgeInsets.all(20),
                     child: Text(
-                      'No shift reports found yet. Add R0 reports to view the timeline.',
+                      'No timeline reports found yet. Add R0, TNB, or TSUD reports to view the charts.',
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -80,7 +103,11 @@ class _ShiftTimelineDashboardScreenState
                         labelText: 'Select production day',
                         border: OutlineInputBorder(),
                       ),
-                      items: _availableProductionDays(_r0Reports).map((day) {
+                      items: _availableProductionDays([
+                        ..._r0Reports,
+                        ..._tnbReports,
+                        ..._tsudReports,
+                      ]).map((day) {
                         final label =
                             '${day.day.toString().padLeft(2, '0')}/${day.month.toString().padLeft(2, '0')}/${day.year}';
                         return DropdownMenuItem(value: day, child: Text(label));
@@ -92,9 +119,31 @@ class _ShiftTimelineDashboardScreenState
                     const SizedBox(height: 18),
                     if (_selectedProductionDay != null)
                       _ShiftTimelineCard(
+                        title: 'R0',
                         productionDay: _selectedProductionDay!,
                         reports: reportsForDay,
+                        timelineExtractor: _extractR0DowntimeSegments,
                       ),
+                    if (_selectedProductionDay != null &&
+                        tnbReportsForDay.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _ShiftTimelineCard(
+                        title: 'TNB',
+                        productionDay: _selectedProductionDay!,
+                        reports: tnbReportsForDay,
+                        timelineExtractor: _extractTnbDowntimeSegments,
+                      ),
+                    ],
+                    if (_selectedProductionDay != null &&
+                        tsudReportsForDay.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _ShiftTimelineCard(
+                        title: 'TSUD',
+                        productionDay: _selectedProductionDay!,
+                        reports: tsudReportsForDay,
+                        timelineExtractor: _extractTsudDowntimeSegments,
+                      ),
+                    ],
                   ],
                 ),
     );
@@ -107,15 +156,19 @@ class _ShiftTimelineDashboardScreenState
   }
 
   List<Report> _reportsForProductionDay(DateTime productionDay) {
-    final reportsForDay = _r0Reports
-        .where((r) => _isSameDay(_productionDayFromReport(r), productionDay))
-        .toList();
+    final reportsForDay = _reportsForDay(_r0Reports, productionDay);
     reportsForDay.sort((a, b) {
       final ai = _shiftOrder.indexOf(_extractPoste(a));
       final bi = _shiftOrder.indexOf(_extractPoste(b));
       return ai.compareTo(bi);
     });
     return reportsForDay;
+  }
+
+  List<Report> _reportsForDay(List<Report> reports, DateTime productionDay) {
+    return reports
+        .where((r) => _isSameDay(_productionDayFromReport(r), productionDay))
+        .toList();
   }
 
   DateTime _productionDayFromReport(Report report) {
@@ -142,12 +195,140 @@ class _ShiftTimelineDashboardScreenState
   }
 }
 
+List<_TimelineSegment> _extractR0DowntimeSegments(
+  Report report,
+  DateTime timelineStart,
+  DateTime timelineEnd,
+) {
+  final data = report.additionalData ?? const <String, dynamic>{};
+  final rawArrets =
+      (data['Arrets'] as List?)?.whereType<Map>().toList() ?? const <Map>[];
+  return _parseDowntimeRanges(
+    rawArrets,
+    timelineStart,
+    timelineEnd,
+    startKeys: const ['Début', 'debut', 'start', 'startTime'],
+    endKeys: const ['Fin', 'fin', 'end', 'endTime'],
+  );
+}
+
+List<_TimelineSegment> _extractTnbDowntimeSegments(
+  Report report,
+  DateTime timelineStart,
+  DateTime timelineEnd,
+) {
+  final data = report.additionalData ?? const <String, dynamic>{};
+  final rawStops =
+      (data['Arrets'] as List?)?.whereType<Map>().toList() ?? const <Map>[];
+  return _parseDowntimeRanges(
+    rawStops,
+    timelineStart,
+    timelineEnd,
+    startKeys: const ['Début', 'debut', 'start', 'startTime'],
+    endKeys: const ['Fin', 'fin', 'end', 'endTime'],
+  );
+}
+
+List<_TimelineSegment> _extractTsudDowntimeSegments(
+  Report report,
+  DateTime timelineStart,
+  DateTime timelineEnd,
+) {
+  final data = report.additionalData ?? const <String, dynamic>{};
+  final module1 = (data['module1Stops'] as List?)?.whereType<Map>().toList() ??
+      const <Map>[];
+  final module2 = (data['module2Stops'] as List?)?.whereType<Map>().toList() ??
+      const <Map>[];
+  return _parseDowntimeRanges(
+    [...module1, ...module2],
+    timelineStart,
+    timelineEnd,
+    startKeys: const ['startTime', 'Début', 'debut', 'start'],
+    endKeys: const ['endTime', 'Fin', 'fin', 'end'],
+  );
+}
+
+List<_TimelineSegment> _parseDowntimeRanges(
+  List<Map> entries,
+  DateTime timelineStart,
+  DateTime timelineEnd, {
+  required List<String> startKeys,
+  required List<String> endKeys,
+}) {
+  final ranges = <_TimelineSegment>[];
+  for (final entry in entries) {
+    final startStr = _firstText(entry, startKeys);
+    final endStr = _firstText(entry, endKeys);
+    if (startStr.isEmpty || endStr.isEmpty) continue;
+
+    final start = _resolveTimeInWindow(startStr, timelineStart);
+    var end = _resolveTimeInWindow(endStr, timelineStart);
+    if (!end.isAfter(start)) {
+      end = end.add(const Duration(days: 1));
+    }
+
+    final effectiveStart =
+        start.isBefore(timelineStart) ? timelineStart : start;
+    final effectiveEnd = end.isAfter(timelineEnd) ? timelineEnd : end;
+    if (!effectiveEnd.isAfter(effectiveStart)) continue;
+
+    ranges.add(_TimelineSegment(
+      startMinute: effectiveStart.difference(timelineStart).inMinutes,
+      endMinute: effectiveEnd.difference(timelineStart).inMinutes,
+      isDowntime: true,
+    ));
+  }
+
+  ranges.sort((a, b) => a.startMinute.compareTo(b.startMinute));
+  return ranges;
+}
+
+String _firstText(Map<dynamic, dynamic> raw, List<String> keys) {
+  for (final key in keys) {
+    final value = raw[key];
+    if (value == null) continue;
+    final text = value.toString().trim();
+    if (text.isNotEmpty) return text;
+  }
+  return '';
+}
+
+DateTime _resolveTimeInWindow(String value, DateTime timelineStart) {
+  final parts = value.split(':');
+  if (parts.length < 2) return timelineStart;
+
+  final hour = int.tryParse(parts[0].trim()) ?? 0;
+  final minute = int.tryParse(parts[1].trim()) ?? 0;
+
+  var candidate = DateTime(
+    timelineStart.year,
+    timelineStart.month,
+    timelineStart.day,
+    hour,
+    minute,
+  );
+
+  if (candidate.isBefore(timelineStart)) {
+    candidate = candidate.add(const Duration(days: 1));
+  }
+  return candidate;
+}
+
 class _ShiftTimelineCard extends StatelessWidget {
   const _ShiftTimelineCard(
-      {required this.productionDay, required this.reports});
+      {required this.title,
+      required this.productionDay,
+      required this.reports,
+      required this.timelineExtractor});
 
+  final String title;
   final DateTime productionDay;
   final List<Report> reports;
+  final List<_TimelineSegment> Function(
+    Report report,
+    DateTime timelineStart,
+    DateTime timelineEnd,
+  ) timelineExtractor;
 
   static const List<String> _shiftOrder = ['3ème', '1er', '2ème'];
 
@@ -166,7 +347,7 @@ class _ShiftTimelineCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '24h operation timeline',
+              '$title • 24h operation timeline',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
@@ -225,6 +406,10 @@ class _ShiftTimelineCard extends StatelessWidget {
 
   String _coverageText() {
     final present = reports.map(_extractPoste).toSet();
+    final hasShiftMetadata = present.any(_shiftOrder.contains);
+    if (!hasShiftMetadata) {
+      return 'Reports loaded: ${reports.length}';
+    }
     final coverage = _shiftOrder
         .map((shift) => present.contains(shift) ? '$shift ✓' : '$shift ✕')
         .join('   ');
@@ -243,7 +428,7 @@ class _ShiftTimelineCard extends StatelessWidget {
 
     final ranges = <_TimelineSegment>[];
     for (final report in reports) {
-      ranges.addAll(_downtimeSegments(report, timelineStart, timelineEnd));
+      ranges.addAll(timelineExtractor(report, timelineStart, timelineEnd));
     }
 
     final mergedDowntime = _merge(ranges);
@@ -273,69 +458,6 @@ class _ShiftTimelineCard extends StatelessWidget {
       );
     }
     return segments;
-  }
-
-  List<_TimelineSegment> _downtimeSegments(
-    Report report,
-    DateTime timelineStart,
-    DateTime timelineEnd,
-  ) {
-    final data = report.additionalData ?? const <String, dynamic>{};
-    final rawArrets =
-        (data['Arrets'] as List?)?.whereType<Map>().toList() ?? const <Map>[];
-
-    final ranges = <_TimelineSegment>[];
-    for (final arret in rawArrets) {
-      final startStr =
-          (arret['Début'] ?? arret['debut'] ?? arret['start'] ?? '')
-              .toString()
-              .trim();
-      final endStr = (arret['Fin'] ?? arret['fin'] ?? arret['end'] ?? '')
-          .toString()
-          .trim();
-      if (startStr.isEmpty || endStr.isEmpty) continue;
-
-      final start = _resolveTimeInWindow(startStr, timelineStart);
-      var end = _resolveTimeInWindow(endStr, timelineStart);
-      if (!end.isAfter(start)) {
-        end = end.add(const Duration(days: 1));
-      }
-
-      final effectiveStart =
-          start.isBefore(timelineStart) ? timelineStart : start;
-      final effectiveEnd = end.isAfter(timelineEnd) ? timelineEnd : end;
-      if (!effectiveEnd.isAfter(effectiveStart)) continue;
-
-      ranges.add(_TimelineSegment(
-        startMinute: effectiveStart.difference(timelineStart).inMinutes,
-        endMinute: effectiveEnd.difference(timelineStart).inMinutes,
-        isDowntime: true,
-      ));
-    }
-
-    ranges.sort((a, b) => a.startMinute.compareTo(b.startMinute));
-    return ranges;
-  }
-
-  DateTime _resolveTimeInWindow(String value, DateTime timelineStart) {
-    final parts = value.split(':');
-    if (parts.length < 2) return timelineStart;
-
-    final hour = int.tryParse(parts[0].trim()) ?? 0;
-    final minute = int.tryParse(parts[1].trim()) ?? 0;
-
-    var candidate = DateTime(
-      timelineStart.year,
-      timelineStart.month,
-      timelineStart.day,
-      hour,
-      minute,
-    );
-
-    if (candidate.isBefore(timelineStart)) {
-      candidate = candidate.add(const Duration(days: 1));
-    }
-    return candidate;
   }
 
   List<_TimelineSegment> _merge(List<_TimelineSegment> ranges) {
