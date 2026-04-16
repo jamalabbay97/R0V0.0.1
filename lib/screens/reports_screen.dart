@@ -2742,6 +2742,31 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return end - start;
   }
 
+  bool _validateTnbSegmentsMaxHours(
+    List<Map<String, String>> segments, {
+    required String label,
+    required ScaffoldMessengerState scaffoldMessenger,
+  }) {
+    for (final segment in segments) {
+      final startValue = (segment['start'] ?? '').trim();
+      final endValue = (segment['end'] ?? '').trim();
+      if (startValue.isEmpty || endValue.isEmpty) continue;
+
+      final shiftHours = _counterShiftHours(startValue, endValue);
+      if (shiftHours > 8) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Le compteur "${segment['shiftLabel'] ?? '-'}" pour $label dépasse 8 heures (${_formatTnbCounterNumber(shiftHours)} h).',
+            ),
+          ),
+        );
+        return false;
+      }
+    }
+    return true;
+  }
+
   Future<void> _showTnbCounterValueDialog({
     required Report report,
     required Map<String, dynamic> data,
@@ -2865,20 +2890,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     0)) {
                           return;
                         }
-                        if (startValue.isNotEmpty && endValue.isNotEmpty) {
-                          final shiftHours =
-                              _counterShiftHours(startValue, endValue);
-                          if (shiftHours > 8) {
-                            scaffoldMessenger.showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Le compteur "${segments[i]['shiftLabel'] ?? '-'}" pour $label dépasse 8 heures (${_formatTnbCounterNumber(shiftHours)} h).',
-                                ),
-                              ),
-                            );
-                            return;
-                          }
-                        }
                         normalizedSegments.add({
                           'shiftKey': segments[i]['shiftKey'] ?? '',
                           'shiftLabel': segments[i]['shiftLabel'] ?? '',
@@ -2903,6 +2914,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         if (previousEnd.isNotEmpty) {
                           mergedSegments[i]['start'] = previousEnd;
                         }
+                      }
+                      if (!_validateTnbSegmentsMaxHours(
+                        mergedSegments,
+                        label: label,
+                        scaffoldMessenger: scaffoldMessenger,
+                      )) {
+                        return;
                       }
                       final counters = _buildTnbCounterDisplayList(data)
                           .map((counter) => Map<String, String>.from(counter))
@@ -6144,11 +6162,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
         final nextValue = runningValue + operatingHours;
 
         if (currentShift.label == shift.label) {
+          final shiftHours = _counterShiftHours(
+            _formatTnbCounterNumber(runningValue),
+            _formatTnbCounterNumber(nextValue),
+          );
           rows.add(
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: Text(
-                '• ${counter['label']} : ${_formatTnbCounterNumber(runningValue)} → ${_formatTnbCounterNumber(nextValue)}',
+                '• ${counter['label']} : ${_formatTnbCounterNumber(runningValue)} → ${_formatTnbCounterNumber(nextValue)} (${_formatTnbCounterNumber(shiftHours)} h)',
               ),
             ),
           );
