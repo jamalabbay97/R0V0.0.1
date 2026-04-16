@@ -6270,51 +6270,35 @@ class _ReportsScreenState extends State<ReportsScreen> {
       return const [Text('-')];
     }
 
-    final stops =
-        (data['Arrets'] is List) ? List.from(data['Arrets']) : <dynamic>[];
-    final cycleStart =
-        DateTime(baseDate.year, baseDate.month, baseDate.day, 22, 30);
-    final cycleEnd = cycleStart.add(const Duration(hours: 24));
-    final shifts = _cycleShiftWindows(baseDate);
     final rows = <Widget>[
       Text(shift.label, style: const TextStyle(fontWeight: FontWeight.w600)),
       const SizedBox(height: 6),
     ];
 
     for (final counter in counters) {
-      final startValue =
-          double.tryParse((counter['start'] ?? '').replaceAll(',', '.'));
-      if (startValue == null) continue;
-
-      double runningValue = startValue;
-      for (final currentShift in shifts) {
-        final downtime = _calculateTnbDowntimeMinutesInWindow(
-          stops: stops,
-          windowStart: currentShift.start,
-          windowEnd: currentShift.end,
-          cycleStart: cycleStart,
-          cycleEnd: cycleEnd,
-        );
-        final operatingHours = math.max(0, 480 - downtime) / 60.0;
-        final nextValue = runningValue + operatingHours;
-
-        if (currentShift.label == shift.label) {
-          final shiftHours = _counterShiftHours(
-            _formatTnbCounterNumber(runningValue),
-            _formatTnbCounterNumber(nextValue),
-          );
-          rows.add(
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Text(
-                '• ${counter['label']} : ${_formatTnbCounterNumber(runningValue)} → ${_formatTnbCounterNumber(nextValue)} (${_formatTnbCounterNumber(shiftHours)} h)',
-              ),
-            ),
-          );
-          break;
-        }
-        runningValue = nextValue;
+      final segments = _buildTnbCounterShiftSegments(
+        data: data,
+        label: counter['label'] ?? '',
+        baseDate: baseDate,
+      );
+      final segment = segments.firstWhere(
+        (s) => (s['shiftKey'] ?? '') == shiftKey,
+        orElse: () => const {'start': '', 'end': ''},
+      );
+      final start = (segment['start'] ?? '').trim();
+      final end = (segment['end'] ?? '').trim();
+      if (start.isEmpty || end.isEmpty) {
+        continue;
       }
+      final shiftHours = _counterShiftHours(start, end);
+      rows.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Text(
+            '• ${counter['label']} : $start → $end (${_formatTnbCounterNumber(shiftHours)} h)',
+          ),
+        ),
+      );
     }
     if (rows.length <= 2) {
       rows.add(const Text('-'));
