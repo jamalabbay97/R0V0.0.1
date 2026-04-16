@@ -3294,9 +3294,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return _counterShiftHours(start, end);
   }
 
+  double _getCounterDailyOperatingHoursByLabel({
+    required Map<String, dynamic> data,
+    required DateTime baseDate,
+    required String counterLabel,
+  }) {
+    return _tnbShiftKeys.fold<double>(
+      0,
+      (sum, key) =>
+          sum +
+          _getCounterShiftHoursByLabel(
+            data: data,
+            baseDate: baseDate,
+            shiftKey: key,
+            counterLabel: counterLabel,
+          ),
+    );
+  }
+
   String _formatTnbRendement(int quantity, double workingHours) {
     if (workingHours <= 0) return '-';
-    return '${(quantity / workingHours).toStringAsFixed(2)} t/p';
+    return '${(quantity / workingHours).toStringAsFixed(2)} t/h';
   }
 
   Set<int> _usedStockPostesFromData(
@@ -6347,7 +6365,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
       trips: trips,
     );
     final vibreurHours = shiftKey == null
-        ? 0.0
+        ? _getCounterDailyOperatingHoursByLabel(
+            data: data,
+            baseDate: reportDate,
+            counterLabel: 'Vibreur',
+          )
         : _getCounterShiftHoursByLabel(
             data: data,
             baseDate: reportDate,
@@ -6355,7 +6377,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
             counterLabel: 'Vibreur',
           );
     final lnHours = shiftKey == null
-        ? 0.0
+        ? _getCounterDailyOperatingHoursByLabel(
+            data: data,
+            baseDate: reportDate,
+            counterLabel: 'LN',
+          )
         : _getCounterShiftHoursByLabel(
             data: data,
             baseDate: reportDate,
@@ -6430,6 +6456,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     '${_filledTnbCounterCount(data)} / ${_buildTnbCounterDisplayList(data).length}',
                   ),
                   _buildSummaryRow('T Nr.V:', totalTrips.toString()),
+                  if (shiftKey == null) ...[
+                    const SizedBox(height: 8),
+                    _buildSummaryRow('T. Qty:', quantity.toString()),
+                    _buildSummaryRow(
+                      'Rendement Vibreur:',
+                      _formatTnbRendement(quantity, vibreurHours),
+                    ),
+                    _buildSummaryRow(
+                      'Rendement LN:',
+                      _formatTnbRendement(quantity, lnHours),
+                    ),
+                  ],
                   if (shiftKey != null) ...[
                     const SizedBox(height: 8),
                     _buildSummaryRow(
