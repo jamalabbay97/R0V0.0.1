@@ -139,114 +139,158 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
     final theme = Theme.of(context);
 
     return SafeArea(
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-            child: Row(
-              children: [
-                Icon(Icons.insights_rounded, color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Reports',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      offset: const Offset(0, 4),
+                      blurRadius: 12,
                     ),
+                  ],
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(24),
+                    bottomRight: Radius.circular(24),
                   ),
                 ),
-                IconButton(
-                  onPressed: () => _loadRecords(forceRefresh: true),
-                  tooltip: 'Refresh',
-                  icon: const Icon(Icons.refresh_rounded),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search by report name, date, or details',
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: _searchController.text.isEmpty
-                    ? null
-                    : IconButton(
-                        icon: const Icon(Icons.clear_rounded),
-                        onPressed: () => _searchController.clear(),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 58,
+                      height: 58,
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(14),
                       ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-            child: Row(
-              children: [
-                OutlinedButton.icon(
-                  onPressed: _pickDate,
-                  icon: const Icon(Icons.event_outlined),
-                  label: Text(
-                    _selectedDate == null
-                        ? 'Date'
-                        : DateFormat('yyyy-MM-dd').format(_selectedDate!),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                if (_selectedDate != null || _selectedSheet != null)
-                  TextButton(
-                    onPressed: _clearAllFilters,
-                    child: const Text('Reset filters'),
-                  ),
-                const Spacer(),
-                Text(
-                  '${_filteredRecords.length}/${_allRecords.length}',
-                  style: theme.textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-          if (_availableSheets.isNotEmpty)
-            SizedBox(
-              height: 42,
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                scrollDirection: Axis.horizontal,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: ChoiceChip(
-                      label: const Text('All sheets'),
-                      selected: _selectedSheet == null,
-                      onSelected: (_) {
-                        setState(() {
-                          _selectedSheet = null;
-                        });
-                        _applyFilters();
-                      },
+                      child: Icon(Icons.insights_rounded, color: theme.colorScheme.primary, size: 32),
                     ),
-                  ),
-                  ..._availableSheets.map(
-                    (sheet) => Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: ChoiceChip(
-                        label: Text(sheet),
-                        selected: _selectedSheet == sheet,
-                        onSelected: (_) {
-                          setState(() {
-                            _selectedSheet = sheet;
-                          });
-                          _applyFilters();
-                        },
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Reports Archive',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: theme.colorScheme.onSurface,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'View and filter all reports',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
+                    IconButton(
+                      onPressed: () => _loadRecords(forceRefresh: true),
+                      tooltip: 'Refresh',
+                      icon: const Icon(Icons.refresh_outlined),
+                      style: IconButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.05),
+                        foregroundColor: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          const Divider(height: 1),
-          Expanded(child: _buildContent(theme)),
-        ],
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search by report name, date, or details',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    suffixIcon: _searchController.text.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.clear_rounded),
+                            onPressed: () => _searchController.clear(),
+                          ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+                child: Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _pickDate,
+                      icon: const Icon(Icons.event_outlined),
+                      label: Text(
+                        _selectedDate == null
+                            ? 'Date'
+                            : DateFormat('yyyy-MM-dd').format(_selectedDate!),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (_selectedDate != null || _selectedSheet != null)
+                      TextButton(
+                        onPressed: _clearAllFilters,
+                        child: const Text('Reset filters'),
+                      ),
+                    const Spacer(),
+                    Text(
+                      '${_filteredRecords.length}/${_allRecords.length}',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              if (_availableSheets.isNotEmpty)
+                SizedBox(
+                  height: 42,
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: ChoiceChip(
+                          label: const Text('All sheets'),
+                          selected: _selectedSheet == null,
+                          onSelected: (_) {
+                            setState(() {
+                              _selectedSheet = null;
+                            });
+                            _applyFilters();
+                          },
+                        ),
+                      ),
+                      ..._availableSheets.map(
+                        (sheet) => Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: ChoiceChip(
+                            label: Text(sheet),
+                            selected: _selectedSheet == sheet,
+                            onSelected: (_) {
+                              setState(() {
+                                _selectedSheet = sheet;
+                              });
+                              _applyFilters();
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const Divider(height: 1),
+              Expanded(child: _buildContent(theme)),
+            ],
+          ),
+        ),
       ),
     );
   }
