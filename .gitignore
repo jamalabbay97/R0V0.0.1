@@ -28,3 +28,6 @@ log.txt
 # Release credentials
 android/key.properties
 android/app/upload-keystore.jks
+
+# Accidentally committed personal access tokens / key artifacts
+ghp_*

@@ -67,7 +67,7 @@ class _ReportFormState extends State<ReportForm> {
     final TimeOfDay? picked = await showSpinnerTimePickerDialog(
         context: context,
         initialTime: _selectedTime,
-        title: 'Choisir l\'heure');
+        title: AppLocalizations.of(context)!.selectTimeTitle);
     if (picked != null && picked != _selectedTime) {
       setState(() {
         _selectedTime = picked;
@@ -93,7 +93,7 @@ class _ReportFormState extends State<ReportForm> {
             maxLines: 3,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please enter a description';
+                return AppLocalizations.of(context)!.descriptionRequired;
               }
               return null;
             },

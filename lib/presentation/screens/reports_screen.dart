@@ -1280,7 +1280,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(AppLocalizations.of(context)!.delete),
-        content: Text('Delete $count selected report(s)?'),
+        content:
+            Text(AppLocalizations.of(context)!.deleteSelectedReports(count)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -1297,6 +1298,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     if (confirmed != true) return;
 
     try {
+      final count = _selectedReportIds.length;
       for (final reportId in _selectedReportIds) {
         await _reportRepository.deleteReport(reportId);
       }
@@ -1310,13 +1312,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$count report(s) deleted successfully')),
+          SnackBar(
+              content: Text(AppLocalizations.of(context)!
+                  .reportsDeletedSuccessfully(count))),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.errorDeletingReport)),
+          SnackBar(
+              content: Text(AppLocalizations.of(context)!.errorDeletingReport)),
         );
       }
     }
@@ -1330,7 +1335,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     if (report.isSentToSheets) {
       scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.reportSentToSheetsReadOnly)),
+        SnackBar(
+            content:
+                Text(AppLocalizations.of(context)!.reportSentToSheetsReadOnly)),
       );
       return;
     }
@@ -1396,7 +1403,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     if (report.isSentToSheets) {
       scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.reportAlreadySentToSheets)),
+        SnackBar(
+            content:
+                Text(AppLocalizations.of(context)!.reportAlreadySentToSheets)),
       );
       return;
     }
@@ -1412,7 +1421,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
       await _loadReports();
       if (mounted) {
         scaffoldMessenger.showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.reportSentToSheets)),
+          SnackBar(
+              content: Text(AppLocalizations.of(context)!.reportSentToSheets)),
         );
       }
     } catch (e) {
@@ -1477,15 +1487,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     length: 4,
                     child: Column(
                       children: [
-                        const Material(
+                        Material(
                           color: Colors.transparent,
                           child: TabBar(
                             isScrollable: true,
                             tabs: [
-                              Tab(text: '3ème'),
-                              Tab(text: '1er'),
-                              Tab(text: '2ème'),
-                              Tab(text: 'Global'),
+                              Tab(
+                                  text:
+                                      AppLocalizations.of(context)!.thirdPoste),
+                              Tab(
+                                  text:
+                                      AppLocalizations.of(context)!.firstPoste),
+                              Tab(
+                                  text: AppLocalizations.of(context)!
+                                      .secondPoste),
+                              Tab(text: AppLocalizations.of(context)!.global),
                             ],
                           ),
                         ),
@@ -1693,7 +1709,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           stopDetail = '';
                         });
                       },
-                      hint: const Text('Sélectionner la catégorie d\'arrêt'),
+                      hint: Text(
+                          AppLocalizations.of(context)!.selectStopCategory),
                     ),
                     if (selectedCategory != null) ...[
                       const SizedBox(height: 16),
@@ -1745,7 +1762,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             selectedLocation = value;
                           });
                         },
-                        hint: const Text('Sélectionner le lieu'),
+                        hint:
+                            Text(AppLocalizations.of(context)!.selectLocation),
                       ),
                     ],
                     if (requiresDetail) ...[
@@ -2047,7 +2065,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             stopDetail = '';
                           });
                         },
-                        hint: const Text('Sélectionner le type d\'arrêt'),
+                        hint:
+                            Text(AppLocalizations.of(context)!.selectStopType),
                       ),
                     ],
                     if (requiresLocation) ...[
@@ -2073,7 +2092,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             selectedLocation = value;
                           });
                         },
-                        hint: const Text('Sélectionner le lieu'),
+                        hint:
+                            Text(AppLocalizations.of(context)!.selectLocation),
                       ),
                     ],
                     if (requiresDetail) ...[
@@ -2394,15 +2414,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       },
                       itemBuilder: (BuildContext context) => [
                         if (_isPendingStop(stop))
-                          const PopupMenuItem<String>(
+                          PopupMenuItem<String>(
                             value: 'end',
                             child: ListTile(
                               dense: true,
-                              leading: Icon(
+                              leading: const Icon(
                                 Icons.stop_circle_outlined,
                                 color: AppColors.success,
                               ),
-                              title: Text('Terminer'),
+                              title: Text(
+                                  AppLocalizations.of(context)!.finishLabel),
                             ),
                           ),
                         PopupMenuItem<String>(
@@ -2413,18 +2434,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               Icons.edit_outlined,
                               color: Theme.of(context).colorScheme.primary,
                             ),
-                            title: const Text('Modifier'),
+                            title:
+                                Text(AppLocalizations.of(context)!.modifyLabel),
                           ),
                         ),
-                        const PopupMenuItem<String>(
+                        PopupMenuItem<String>(
                           value: 'delete',
                           child: ListTile(
                             dense: true,
-                            leading: Icon(
+                            leading: const Icon(
                               Icons.delete_outline,
                               color: AppColors.error,
                             ),
-                            title: Text('Supprimer'),
+                            title: Text(AppLocalizations.of(context)!.delete),
                           ),
                         ),
                       ],
@@ -2433,7 +2455,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 );
               })
             else
-              Text(AppLocalizations.of(context)!.aucunArret, style: const TextStyle(color: Colors.grey)),
+              Text(AppLocalizations.of(context)!.aucunArret,
+                  style: const TextStyle(color: Colors.grey)),
           ],
         ),
       ),
@@ -2512,8 +2535,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           scaffoldMessenger: scaffoldMessenger,
                           l10n: l10n,
                         ),
-                        tooltip:
-                            hasDisplayValue ? AppLocalizations.of(context)!.editCounter : AppLocalizations.of(context)!.ajButton,
+                        tooltip: hasDisplayValue
+                            ? AppLocalizations.of(context)!.editCounter
+                            : AppLocalizations.of(context)!.ajButton,
                       ),
                       IconButton(
                         icon: const Icon(Icons.delete,
@@ -2596,7 +2620,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   child: ListTile(
                     selected: isSelected,
                     selectedTileColor: Colors.purple.withValues(alpha: 0.1),
-                    title: Text(AppLocalizations.of(context)!.stockTitleIndex(index + 1)),
+                    title: Text(AppLocalizations.of(context)!
+                        .stockTitleIndex(index + 1)),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -2630,7 +2655,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               setDialogState,
                               scaffoldMessenger,
                               l10n),
-                          tooltip: AppLocalizations.of(context)!.editStockEntryTitle,
+                          tooltip:
+                              AppLocalizations.of(context)!.editStockEntryTitle,
                         ),
                         IconButton(
                           icon: const Icon(Icons.delete,
@@ -2642,7 +2668,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               setDialogState,
                               scaffoldMessenger,
                               l10n),
-                          tooltip: AppLocalizations.of(context)!.deleteStockEntryTitle,
+                          tooltip: AppLocalizations.of(context)!
+                              .deleteStockEntryTitle,
                         ),
                       ],
                     ),
@@ -3087,7 +3114,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
                       setDialogState(() {});
                     },
-                    child: Text(isEditing ? AppLocalizations.of(context)!.modifyLabel : AppLocalizations.of(context)!.add),
+                    child: Text(isEditing
+                        ? AppLocalizations.of(context)!.modifyLabel
+                        : AppLocalizations.of(context)!.add),
                   ),
                 ],
               )),
@@ -3106,7 +3135,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Supprimer $label'),
+        title: Text(AppLocalizations.of(context)!.deleteLabel(label)),
         content: Text(AppLocalizations.of(context)!.deleteCounterConfirm),
         actions: [
           TextButton(
@@ -3411,9 +3440,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   border: const OutlineInputBorder(),
                 ),
                 items: [
-                  DropdownMenuItem(value: 0, child: Text(AppLocalizations.of(context)!.park1)),
-                  DropdownMenuItem(value: 1, child: Text(AppLocalizations.of(context)!.park2)),
-                  DropdownMenuItem(value: 2, child: Text(AppLocalizations.of(context)!.park3)),
+                  DropdownMenuItem(
+                      value: 0,
+                      child: Text(AppLocalizations.of(context)!.park1)),
+                  DropdownMenuItem(
+                      value: 1,
+                      child: Text(AppLocalizations.of(context)!.park2)),
+                  DropdownMenuItem(
+                      value: 2,
+                      child: Text(AppLocalizations.of(context)!.park3)),
                 ],
                 onChanged: (value) => setState(() => selectedPark = value),
               ),
@@ -3425,9 +3460,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   border: const OutlineInputBorder(),
                 ),
                 items: [
-                  DropdownMenuItem(value: 0, child: Text(AppLocalizations.of(context)!.stockTypeNormal)),
-                  DropdownMenuItem(value: 1, child: Text(AppLocalizations.of(context)!.stockTypeOceane)),
-                  DropdownMenuItem(value: 2, child: Text(AppLocalizations.of(context)!.stockTypePb30)),
+                  DropdownMenuItem(
+                      value: 0,
+                      child:
+                          Text(AppLocalizations.of(context)!.stockTypeNormal)),
+                  DropdownMenuItem(
+                      value: 1,
+                      child:
+                          Text(AppLocalizations.of(context)!.stockTypeOceane)),
+                  DropdownMenuItem(
+                      value: 2,
+                      child: Text(AppLocalizations.of(context)!.stockTypePb30)),
                 ],
                 onChanged: (value) => setState(() => selectedType = value),
               ),
@@ -3452,8 +3495,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     selectedPark != null &&
                     selectedType != null) {
                   if (_usedStockPostesFromData(data).contains(selectedPoste)) {
-                    scaffoldMessenger.showSnackBar(const SnackBar(
-                        content: Text("Ce poste a déjà un stock.")));
+                    scaffoldMessenger.showSnackBar(SnackBar(
+                        content: Text(AppLocalizations.of(context)!
+                            .shiftHasStockAlready)));
                     return;
                   }
                   final updatedData = Map<String, dynamic>.from(data);
@@ -3572,9 +3616,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   border: const OutlineInputBorder(),
                 ),
                 items: [
-                  DropdownMenuItem(value: 0, child: Text(AppLocalizations.of(context)!.park1)),
-                  DropdownMenuItem(value: 1, child: Text(AppLocalizations.of(context)!.park2)),
-                  DropdownMenuItem(value: 2, child: Text(AppLocalizations.of(context)!.park3)),
+                  DropdownMenuItem(
+                      value: 0,
+                      child: Text(AppLocalizations.of(context)!.park1)),
+                  DropdownMenuItem(
+                      value: 1,
+                      child: Text(AppLocalizations.of(context)!.park2)),
+                  DropdownMenuItem(
+                      value: 2,
+                      child: Text(AppLocalizations.of(context)!.park3)),
                 ],
                 onChanged: (value) => setState(() => selectedPark = value),
               ),
@@ -3586,9 +3636,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   border: const OutlineInputBorder(),
                 ),
                 items: [
-                  DropdownMenuItem(value: 0, child: Text(AppLocalizations.of(context)!.stockTypeNormal)),
-                  DropdownMenuItem(value: 1, child: Text(AppLocalizations.of(context)!.stockTypeOceane)),
-                  DropdownMenuItem(value: 2, child: Text(AppLocalizations.of(context)!.stockTypePb30)),
+                  DropdownMenuItem(
+                      value: 0,
+                      child:
+                          Text(AppLocalizations.of(context)!.stockTypeNormal)),
+                  DropdownMenuItem(
+                      value: 1,
+                      child:
+                          Text(AppLocalizations.of(context)!.stockTypeOceane)),
+                  DropdownMenuItem(
+                      value: 2,
+                      child: Text(AppLocalizations.of(context)!.stockTypePb30)),
                 ],
                 onChanged: (value) => setState(() => selectedType = value),
               ),
@@ -3614,8 +3672,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     selectedType != null) {
                   if (_usedStockPostesFromData(data, excludingIndex: index)
                       .contains(selectedPoste)) {
-                    scaffoldMessenger.showSnackBar(const SnackBar(
-                        content: Text("Ce poste a déjà un stock.")));
+                    scaffoldMessenger.showSnackBar(SnackBar(
+                        content: Text(AppLocalizations.of(context)!
+                            .shiftHasStockAlready)));
                     return;
                   }
                   final updatedData = Map<String, dynamic>.from(data);
@@ -3742,7 +3801,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     await showDialog(
                       context: context,
                       builder: (editContext) => AlertDialog(
-                        title: Text(AppLocalizations.of(context)!.editLabel(label)),
+                        title: Text(
+                            AppLocalizations.of(context)!.editLabel(label)),
                         content: TextField(
                           controller: controller,
                           decoration: InputDecoration(
@@ -3990,15 +4050,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     length: 4,
                     child: Column(
                       children: [
-                        const Material(
+                        Material(
                           color: Colors.transparent,
                           child: TabBar(
                             isScrollable: true,
                             tabs: [
-                              Tab(text: '3ème'),
-                              Tab(text: '1er'),
-                              Tab(text: '2ème'),
-                              Tab(text: 'Global'),
+                              Tab(
+                                  text:
+                                      AppLocalizations.of(context)!.thirdPoste),
+                              Tab(
+                                  text:
+                                      AppLocalizations.of(context)!.firstPoste),
+                              Tab(
+                                  text: AppLocalizations.of(context)!
+                                      .secondPoste),
+                              Tab(text: AppLocalizations.of(context)!.global),
                             ],
                           ),
                         ),
@@ -4038,7 +4104,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              AppLocalizations.of(context)!.reportDateLabel,
+                                              AppLocalizations.of(context)!
+                                                  .reportDateLabel,
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .titleMedium,
@@ -4098,7 +4165,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                         updatedReport;
                                                   });
                                                 },
-                                                tooltip: AppLocalizations.of(context)!.dateLabel,
+                                                tooltip: AppLocalizations.of(
+                                                        context)!
+                                                    .dateLabel,
                                               ),
                                             ),
                                           ],
@@ -4122,7 +4191,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                               children: [
                                                 Expanded(
                                                   child: Text(
-                                                    AppLocalizations.of(context)!.machinesStoppedLabel,
+                                                    AppLocalizations.of(
+                                                            context)!
+                                                        .machinesStoppedLabel,
                                                     style: Theme.of(context)
                                                         .textTheme
                                                         .titleMedium,
@@ -4140,7 +4211,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                           setDialogState,
                                                           scaffoldMessenger,
                                                           l10n),
-                                                  tooltip: AppLocalizations.of(context)!.addEquipment,
+                                                  tooltip: AppLocalizations.of(
+                                                          context)!
+                                                      .addEquipment,
                                                 ),
                                               ],
                                             ),
@@ -4203,7 +4276,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                                 const SizedBox(
                                                                     width: 8),
                                                                 Text(
-                                                                  'Modifier',
+                                                                  AppLocalizations.of(
+                                                                          context)!
+                                                                      .modifyLabel,
                                                                   style:
                                                                       TextStyle(
                                                                     color: Theme.of(
@@ -4236,7 +4311,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                                 const SizedBox(
                                                                     width: 8),
                                                                 Text(
-                                                                  'Supprimer',
+                                                                  AppLocalizations.of(
+                                                                          context)!
+                                                                      .delete,
                                                                   style:
                                                                       TextStyle(
                                                                     color: Theme.of(
@@ -4279,7 +4356,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                               })
                                             else
                                               Text(
-                                                AppLocalizations.of(context)!.noMachinesStopped,
+                                                AppLocalizations.of(context)!
+                                                    .noMachinesStopped,
                                                 style: const TextStyle(
                                                     color: Colors.grey),
                                               ),
@@ -4343,7 +4421,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             ? null
                             : selectedMainCategory,
                         decoration: InputDecoration(
-                            labelText: AppLocalizations.of(context)!.mainCategoryLabel,
+                            labelText:
+                                AppLocalizations.of(context)!.mainCategoryLabel,
                             border: const OutlineInputBorder()),
                         items: equipmentData.keys.map((String category) {
                           return DropdownMenuItem<String>(
@@ -4366,7 +4445,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             ? null
                             : selectedSubCategory,
                         decoration: InputDecoration(
-                            labelText: AppLocalizations.of(context)!.subCategoryLabel,
+                            labelText:
+                                AppLocalizations.of(context)!.subCategoryLabel,
                             border: const OutlineInputBorder()),
                         items: (selectedMainCategory.isNotEmpty
                                 ? equipmentData[selectedMainCategory]!.keys
@@ -4393,7 +4473,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             ? null
                             : selectedEquipment,
                         decoration: InputDecoration(
-                            labelText: AppLocalizations.of(context)!.equipmentLabel,
+                            labelText:
+                                AppLocalizations.of(context)!.equipmentLabel,
                             border: const OutlineInputBorder()),
                         items: (selectedSubCategory.isNotEmpty
                                 ? equipmentData[selectedMainCategory]![
@@ -4418,9 +4499,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       const SizedBox(height: 16),
                       TextFormField(
                         decoration: InputDecoration(
-                          labelText: AppLocalizations.of(context)!.stopReasonLabel,
+                          labelText:
+                              AppLocalizations.of(context)!.stopReasonLabel,
                           border: const OutlineInputBorder(),
-                          hintText: AppLocalizations.of(context)!.enterStopReasonHint,
+                          hintText:
+                              AppLocalizations.of(context)!.enterStopReasonHint,
                         ),
                         maxLines: 3,
                         onChanged: (value) {
@@ -4448,7 +4531,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     });
                                   }
                                 : null,
-                            child: Text(AppLocalizations.of(context)!.finishButton),
+                            child: Text(
+                                AppLocalizations.of(context)!.finishButton),
                           ),
                         ],
                       ),
@@ -4518,16 +4602,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Modifier l\'équipement',
+                      Text(AppLocalizations.of(context)!.editEquipment,
                           style: Theme.of(context).textTheme.titleLarge),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
                         initialValue: selectedMainCategory.isEmpty
                             ? null
                             : selectedMainCategory,
-                        decoration: const InputDecoration(
-                            labelText: 'Catégorie principale',
-                            border: OutlineInputBorder()),
+                        decoration: InputDecoration(
+                            labelText:
+                                AppLocalizations.of(context)!.mainCategoryLabel,
+                            border: const OutlineInputBorder()),
                         items: equipmentData.keys.map((String category) {
                           return DropdownMenuItem<String>(
                             value: category,
@@ -4548,9 +4633,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         initialValue: selectedSubCategory.isEmpty
                             ? null
                             : selectedSubCategory,
-                        decoration: const InputDecoration(
-                            labelText: 'Sous-catégorie',
-                            border: OutlineInputBorder()),
+                        decoration: InputDecoration(
+                            labelText:
+                                AppLocalizations.of(context)!.subCategoryLabel,
+                            border: const OutlineInputBorder()),
                         items: (selectedMainCategory.isNotEmpty
                                 ? equipmentData[selectedMainCategory]!.keys
                                 : <String>[])
@@ -4575,9 +4661,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         initialValue: selectedEquipment.isEmpty
                             ? null
                             : selectedEquipment,
-                        decoration: const InputDecoration(
-                            labelText: 'Équipement',
-                            border: OutlineInputBorder()),
+                        decoration: InputDecoration(
+                            labelText:
+                                AppLocalizations.of(context)!.equipmentLabel,
+                            border: const OutlineInputBorder()),
                         items: (selectedSubCategory.isNotEmpty
                                 ? equipmentData[selectedMainCategory]![
                                     selectedSubCategory]!
@@ -4601,10 +4688,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       const SizedBox(height: 16),
                       TextFormField(
                         initialValue: stopReason,
-                        decoration: const InputDecoration(
-                          labelText: 'Raison de l\'arrêt',
-                          border: OutlineInputBorder(),
-                          hintText: 'Entrez la raison de l\'arrêt...',
+                        decoration: InputDecoration(
+                          labelText:
+                              AppLocalizations.of(context)!.stopReasonLabel,
+                          border: const OutlineInputBorder(),
+                          hintText:
+                              AppLocalizations.of(context)!.enterStopReasonHint,
                         ),
                         maxLines: 3,
                         onChanged: (value) {
@@ -4632,7 +4721,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     });
                                   }
                                 : null,
-                            child: Text(AppLocalizations.of(context)!.finishButton),
+                            child: Text(
+                                AppLocalizations.of(context)!.finishButton),
                           ),
                         ],
                       ),
@@ -4759,7 +4849,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 onPressed: () async {
                                   await _editReport(currentReport);
                                 },
-                                tooltip: AppLocalizations.of(context)!.editReport,
+                                tooltip:
+                                    AppLocalizations.of(context)!.editReport,
                               ),
                               IconButton(
                                 icon: const Icon(Icons.close),
@@ -4779,15 +4870,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         length: 4,
                         child: Column(
                           children: [
-                            const Material(
+                            Material(
                               color: Colors.transparent,
                               child: TabBar(
                                 isScrollable: true,
                                 tabs: [
-                                  Tab(text: '3ème'),
-                                  Tab(text: '1er'),
-                                  Tab(text: '2ème'),
-                                  Tab(text: 'Global'),
+                                  Tab(
+                                      text: AppLocalizations.of(context)!
+                                          .thirdPoste),
+                                  Tab(
+                                      text: AppLocalizations.of(context)!
+                                          .firstPoste),
+                                  Tab(
+                                      text: AppLocalizations.of(context)!
+                                          .secondPoste),
+                                  Tab(
+                                      text:
+                                          AppLocalizations.of(context)!.global),
                                 ],
                               ),
                             ),
@@ -4901,15 +5000,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         length: 4,
                         child: Column(
                           children: [
-                            const Material(
+                            Material(
                               color: Colors.transparent,
                               child: TabBar(
                                 isScrollable: true,
                                 tabs: [
-                                  Tab(text: '3ème'),
-                                  Tab(text: '1er'),
-                                  Tab(text: '2ème'),
-                                  Tab(text: 'Global'),
+                                  Tab(
+                                      text: AppLocalizations.of(context)!
+                                          .thirdPoste),
+                                  Tab(
+                                      text: AppLocalizations.of(context)!
+                                          .firstPoste),
+                                  Tab(
+                                      text: AppLocalizations.of(context)!
+                                          .secondPoste),
+                                  Tab(
+                                      text:
+                                          AppLocalizations.of(context)!.global),
                                 ],
                               ),
                             ),
@@ -5046,7 +5153,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(AppLocalizations.of(context)!.machinesStoppedLabel,
+                                Text(
+                                    AppLocalizations.of(context)!
+                                        .machinesStoppedLabel,
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleMedium),
@@ -5086,7 +5195,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     );
                                   }),
                                 ] else ...[
-                                  Text(AppLocalizations.of(context)!.noEquipmentStopped,
+                                  Text(
+                                      AppLocalizations.of(context)!
+                                          .noEquipmentStopped,
                                       style:
                                           const TextStyle(color: Colors.grey)),
                                 ],
@@ -5202,14 +5313,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
-                                _buildInfoRow(AppLocalizations.of(context)!.mine, data['mine'] ?? '-'),
-                                _buildInfoRow(AppLocalizations.of(context)!.zone, data['zone'] ?? '-'),
-                                _buildInfoRow(AppLocalizations.of(context)!.exit, data['sortie'] ?? '-'),
-                                _buildInfoRow(AppLocalizations.of(context)!.categoryLabel,
-                                    data['Category'] ?? '-'),
-                                _buildInfoRow(AppLocalizations.of(context)!.type, data['Type'] ?? '-'),
                                 _buildInfoRow(
-                                    AppLocalizations.of(context)!.modelLabel, data['Model'] ?? '-'),
+                                    AppLocalizations.of(context)!.mine,
+                                    data['mine'] ?? '-'),
+                                _buildInfoRow(
+                                    AppLocalizations.of(context)!.zone,
+                                    data['zone'] ?? '-'),
+                                _buildInfoRow(
+                                    AppLocalizations.of(context)!.exit,
+                                    data['sortie'] ?? '-'),
+                                _buildInfoRow(
+                                    AppLocalizations.of(context)!.categoryLabel,
+                                    data['Category'] ?? '-'),
+                                _buildInfoRow(
+                                    AppLocalizations.of(context)!.type,
+                                    data['Type'] ?? '-'),
+                                _buildInfoRow(
+                                    AppLocalizations.of(context)!.modelLabel,
+                                    data['Model'] ?? '-'),
                                 _buildInfoRow(
                                     AppLocalizations.of(context)!.poste,
                                     data['selectedPoste'] ??
@@ -5253,9 +5374,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           const SizedBox(height: 8),
-                                          _buildInfoRow(AppLocalizations.of(context)!.start,
+                                          _buildInfoRow(
+                                              AppLocalizations.of(context)!
+                                                  .start,
                                               compteur['duree'] ?? '-'),
-                                          _buildInfoRow(AppLocalizations.of(context)!.end,
+                                          _buildInfoRow(
+                                              AppLocalizations.of(context)!.end,
                                               compteur['note'] ?? '-'),
                                           if (index <
                                               (data['Compteurs'] as List)
@@ -5270,9 +5394,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        _buildInfoRow(AppLocalizations.of(context)!.start,
+                                        _buildInfoRow(
+                                            AppLocalizations.of(context)!.start,
                                             data['Compteurs']['duree'] ?? '-'),
-                                        _buildInfoRow(AppLocalizations.of(context)!.end,
+                                        _buildInfoRow(
+                                            AppLocalizations.of(context)!.end,
                                             data['Compteurs']['note'] ?? '-'),
                                       ],
                                     ),
@@ -5335,16 +5461,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const Divider(height: 16),
-                                  _buildInfoRow(AppLocalizations.of(context)!.heuresMarche,
+                                  _buildInfoRow(
+                                      AppLocalizations.of(context)!
+                                          .heuresMarche,
                                       data['exploitation']['H.M'] ?? '-'),
-                                  _buildInfoRow(AppLocalizations.of(context)!.heuresArret,
+                                  _buildInfoRow(
+                                      AppLocalizations.of(context)!.heuresArret,
                                       data['exploitation']['H.A'] ?? '-'),
                                   _buildInfoRow(
                                       AppLocalizations.of(context)!.metrageFore,
                                       data['exploitation']['metrage fore'] ??
                                           '-'),
                                   _buildInfoRow(
-                                      AppLocalizations.of(context)!.nrTrousFores,
+                                      AppLocalizations.of(context)!
+                                          .nrTrousFores,
                                       data['exploitation']
                                               ['Nr de Trous Fores'] ??
                                           '-'),
@@ -5356,14 +5486,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       AppLocalizations.of(context)!.m3Decapage,
                                       data['exploitation']['M³ Decapages'] ??
                                           '-'),
-                                  _buildInfoRow(AppLocalizations.of(context)!.tonnageLabel,
+                                  _buildInfoRow(
+                                      AppLocalizations.of(context)!
+                                          .tonnageLabel,
                                       data['exploitation']['Tonnage'] ?? '-'),
                                   _buildInfoRow(
                                       AppLocalizations.of(context)!.nombreTKU,
                                       data['exploitation']['Nombre T.K.U'] ??
                                           '-'),
                                   _buildInfoRow(
-                                      AppLocalizations.of(context)!.rendementLabel,
+                                      AppLocalizations.of(context)!
+                                          .rendementLabel,
                                       data['exploitation']['Rendement %'] ??
                                           data['exploitation']['Rendeme'] ??
                                           '-'),
@@ -5386,7 +5519,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    AppLocalizations.of(context)!.repartitionLabel,
+                                    AppLocalizations.of(context)!
+                                        .repartitionLabel,
                                     style:
                                         Theme.of(context).textTheme.titleMedium,
                                   ),
@@ -5402,19 +5536,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                     CrossAxisAlignment.start,
                                                 children: [
                                                   _buildInfoRow(
-                                                      AppLocalizations.of(context)!.chantierLabel,
+                                                      AppLocalizations.of(
+                                                              context)!
+                                                          .chantierLabel,
                                                       repartition['Chantier'] ??
                                                           repartition[
                                                               'chantier'] ??
                                                           '-'),
                                                   _buildInfoRow(
-                                                      AppLocalizations.of(context)!.timeLabel,
+                                                      AppLocalizations.of(
+                                                              context)!
+                                                          .timeLabel,
                                                       repartition['Temps'] ??
                                                           repartition[
                                                               'temps'] ??
                                                           '-'),
                                                   _buildInfoRow(
-                                                      AppLocalizations.of(context)!.imputationLabel,
+                                                      AppLocalizations.of(
+                                                              context)!
+                                                          .imputationLabel,
                                                       repartition[
                                                               'Imputation'] ??
                                                           repartition[
@@ -5473,16 +5613,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    AppLocalizations.of(context)!.personnelLabel,
+                                    AppLocalizations.of(context)!
+                                        .personnelLabel,
                                     style:
                                         Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const Divider(height: 16),
-                                  _buildInfoRow(AppLocalizations.of(context)!.conductorLabel,
+                                  _buildInfoRow(
+                                      AppLocalizations.of(context)!
+                                          .conductorLabel,
                                       data['personnel']['conductr'] ?? '-'),
-                                  _buildInfoRow(AppLocalizations.of(context)!.graisseurLabel,
+                                  _buildInfoRow(
+                                      AppLocalizations.of(context)!
+                                          .graisseurLabel,
                                       data['personnel']['graisseur'] ?? '-'),
-                                  _buildInfoRow(AppLocalizations.of(context)!.matriculeLabel,
+                                  _buildInfoRow(
+                                      AppLocalizations.of(context)!
+                                          .matriculeLabel,
                                       data['personnel']['matricules'] ?? '-'),
                                 ],
                               ),
@@ -5500,14 +5647,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    AppLocalizations.of(context)!.consommationLabel,
+                                    AppLocalizations.of(context)!
+                                        .consommationLabel,
                                     style:
                                         Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const Divider(height: 16),
-                                  _buildInfoRow(AppLocalizations.of(context)!.triconeLabel,
+                                  _buildInfoRow(
+                                      AppLocalizations.of(context)!
+                                          .triconeLabel,
                                       data['consommation']['tricone'] ?? '-'),
-                                  _buildInfoRow(AppLocalizations.of(context)!.gasoilLabel,
+                                  _buildInfoRow(
+                                      AppLocalizations.of(context)!.gasoilLabel,
                                       data['consommation']['gasoil'] ?? '-'),
                                 ],
                               ),
@@ -5554,7 +5705,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
         }
       }
       for (var trip in allTrips) {
-        final eq = trip['equipment'] ?? AppLocalizations.of(context)!.unknownLabel;
+        final eq =
+            trip['equipment'] ?? AppLocalizations.of(context)!.unknownLabel;
         final qualityLabel =
             _resolveQualityLabel(trip['productQualityType'], l10n);
         equipmentQualityTrips.putIfAbsent(eq, () => {});
@@ -5651,25 +5803,37 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
-                                _buildInfoRow(AppLocalizations.of(context)!.mine, data['mine'] ?? '-'),
-                                _buildInfoRow(AppLocalizations.of(context)!.zone, data['zone'] ?? '-'),
-                                _buildInfoRow(AppLocalizations.of(context)!.exit, data['sortie'] ?? '-'),
                                 _buildInfoRow(
-                                    AppLocalizations.of(context)!.distance, data['distance'] ?? '-'),
+                                    AppLocalizations.of(context)!.mine,
+                                    data['mine'] ?? '-'),
+                                _buildInfoRow(
+                                    AppLocalizations.of(context)!.zone,
+                                    data['zone'] ?? '-'),
+                                _buildInfoRow(
+                                    AppLocalizations.of(context)!.exit,
+                                    data['sortie'] ?? '-'),
+                                _buildInfoRow(
+                                    AppLocalizations.of(context)!.distance,
+                                    data['distance'] ?? '-'),
                                 _buildInfoRow(
                                     AppLocalizations.of(context)!.poste,
                                     data['poste'] ??
                                         data['selectedPoste'] ??
                                         '-'),
-                                _buildInfoRow(AppLocalizations.of(context)!.operationLabel,
+                                _buildInfoRow(
+                                    AppLocalizations.of(context)!
+                                        .operationLabel,
                                     data['operationType'] ?? '-'),
                                 _buildInfoRow(
-                                    AppLocalizations.of(context)!.equipmentLabel,
+                                    AppLocalizations.of(context)!
+                                        .equipmentLabel,
                                     data['equipment'] ??
                                         data['selectedEquipment'] ??
                                         '-'),
                                 if (data['selectedQualiteType'] != null)
-                                  _buildInfoRow(AppLocalizations.of(context)!.qualityLabel,
+                                  _buildInfoRow(
+                                      AppLocalizations.of(context)!
+                                          .qualityLabel,
                                       data['selectedQualiteType']),
                               ],
                             ),
@@ -5691,7 +5855,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 ),
                                 const Divider(height: 16),
                                 if (truckData.isEmpty)
-                                  Text(AppLocalizations.of(context)!.noTrucksAdded,
+                                  Text(
+                                      AppLocalizations.of(context)!
+                                          .noTrucksAdded,
                                       style:
                                           const TextStyle(color: Colors.grey)),
                                 if (truckData.isNotEmpty)
@@ -5819,14 +5985,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(AppLocalizations.of(context)!.summaryLabel,
+                                      Text(
+                                          AppLocalizations.of(context)!
+                                              .summaryLabel,
                                           style: const TextStyle(
                                               fontWeight: FontWeight.bold)),
                                       const SizedBox(height: 8),
                                       Text(
                                           'Total de voyages: ${data['totalTrips'] ?? allTrips.length}'),
                                       const SizedBox(height: 8),
-                                      Text(AppLocalizations.of(context)!.tripsByEquipment,
+                                      Text(
+                                          AppLocalizations.of(context)!
+                                              .tripsByEquipment,
                                           style: const TextStyle(
                                               fontWeight: FontWeight.bold)),
                                       const SizedBox(height: 8),
@@ -5834,7 +6004,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           equipmentCounts,
                                           equipmentQualityTrips),
                                       const SizedBox(height: 12),
-                                      Text('${AppLocalizations.of(context)!.total} ${AppLocalizations.of(context)!.qualityLabel}',
+                                      Text(
+                                          '${AppLocalizations.of(context)!.total} ${AppLocalizations.of(context)!.qualityLabel}',
                                           style: const TextStyle(
                                               fontWeight: FontWeight.bold)),
                                       const SizedBox(height: 8),
@@ -5944,7 +6115,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
           return _buildTruckTrackingAdditionalData(data, l10n);
         }
         // Fallback: show all additionalData key-value pairs
-        if (data.isEmpty) return Text(AppLocalizations.of(context)!.noAdditionalData);
+        if (data.isEmpty) {
+          return Text(AppLocalizations.of(context)!.noAdditionalData);
+        }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: data.entries
@@ -6529,7 +6702,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   Icons.stop_circle_outlined,
                                   size: 18,
                                 ),
-                                label: const Text('Terminer'),
+                                label: Text(
+                                    AppLocalizations.of(context)!.finishLabel),
                               ),
                             ],
                           ],
@@ -6568,7 +6742,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   Icons.stop_circle_outlined,
                                   size: 18,
                                 ),
-                                label: const Text('Terminer'),
+                                label: Text(
+                                    AppLocalizations.of(context)!.finishLabel),
                               ),
                             ],
                           ],
@@ -6798,7 +6973,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   Icons.stop_circle_outlined,
                                   size: 18,
                                 ),
-                                label: const Text('Terminer'),
+                                label: Text(
+                                    AppLocalizations.of(context)!.finishLabel),
                               ),
                             ],
                           ],
@@ -6845,7 +7021,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   Icons.stop_circle_outlined,
                                   size: 18,
                                 ),
-                                label: const Text('Terminer'),
+                                label: Text(
+                                    AppLocalizations.of(context)!.finishLabel),
                               ),
                             ],
                           ],
@@ -6915,7 +7092,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   Icons.stop_circle_outlined,
                                   size: 18,
                                 ),
-                                label: const Text('Terminer'),
+                                label: Text(
+                                    AppLocalizations.of(context)!.finishLabel),
                               ),
                             ],
                           ],
@@ -6962,7 +7140,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   Icons.stop_circle_outlined,
                                   size: 18,
                                 ),
-                                label: const Text('Terminer'),
+                                label: Text(
+                                    AppLocalizations.of(context)!.finishLabel),
                               ),
                             ],
                           ],
@@ -7180,7 +7359,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${AppLocalizations.of(context)!.stocksLabel} & ${AppLocalizations.of(context)!.voyagesLabel}',
+                  Text(
+                      '${AppLocalizations.of(context)!.stocksLabel} & ${AppLocalizations.of(context)!.voyagesLabel}',
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                   ...stockEntries.map((entry) => Padding(
                         padding: const EdgeInsets.only(left: 16, top: 4),
@@ -7763,8 +7943,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final durationMinutes = _durationMinutesInCycle(start, selectedEnd);
     if (durationMinutes <= 0 || durationMinutes > _maxCycleMinutes) {
       scaffoldMessenger.showSnackBar(
-        const SnackBar(
-          content: Text("L'arrêt doit rester dans la fenêtre 22:30 → 22:30."),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.stopMustRemainInWindow),
           backgroundColor: AppColors.error,
         ),
       );
@@ -7792,7 +7972,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
     if (!mounted) return false;
     scaffoldMessenger.showSnackBar(
-      const SnackBar(content: Text("Arrêt terminé avec succès.")),
+      SnackBar(
+          content:
+              Text(AppLocalizations.of(context)!.stopFinishedSuccessfully)),
     );
     return true;
   }
@@ -7830,8 +8012,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final durationMinutes = _durationMinutesInCycle(start, selectedEnd);
     if (durationMinutes <= 0 || durationMinutes > _maxCycleMinutes) {
       scaffoldMessenger.showSnackBar(
-        const SnackBar(
-          content: Text("L'arrêt doit rester dans la fenêtre 22:30 → 22:30."),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.stopMustRemainInWindow),
           backgroundColor: AppColors.error,
         ),
       );
@@ -7857,7 +8039,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
     if (!mounted) return false;
     scaffoldMessenger.showSnackBar(
-      const SnackBar(content: Text("Arrêt terminé avec succès.")),
+      SnackBar(
+          content:
+              Text(AppLocalizations.of(context)!.stopFinishedSuccessfully)),
     );
     return true;
   }
@@ -7880,6 +8064,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final start = _parseStopTimeOfDay(stop['startTime'] ?? stop['Début']);
     if (start == null) return;
 
+    final stopWindowMsg = AppLocalizations.of(context)!.stopMustRemainInWindow;
     final selectedEnd = await showSpinnerTimePickerDialog(
       context: context,
       initialTime: TimeOfDay.now(),
@@ -7890,8 +8075,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final durationMinutes = _durationMinutesInCycle(start, selectedEnd);
     if (durationMinutes <= 0 || durationMinutes > _maxCycleMinutes) {
       scaffoldMessenger.showSnackBar(
-        const SnackBar(
-          content: Text("L'arrêt doit rester dans la fenêtre 22:30 → 22:30."),
+        SnackBar(
+          content: Text(stopWindowMsg),
           backgroundColor: AppColors.error,
         ),
       );
@@ -7918,8 +8103,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final updatedReport = report.copyWith(additionalData: recalculatedData);
     await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
     setDialogState(() {});
+    if (!mounted) return;
     scaffoldMessenger.showSnackBar(
-      const SnackBar(content: Text("Arrêt terminé avec succès.")),
+      SnackBar(
+          content:
+              Text(AppLocalizations.of(context)!.stopFinishedSuccessfully)),
     );
   }
 
@@ -7944,6 +8132,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         stop['startTime'] ?? stop['start'] ?? stop['Début']);
     if (start == null) return;
 
+    final stopWindowMsg2 = AppLocalizations.of(context)!.stopMustRemainInWindow;
     final selectedEnd = await showSpinnerTimePickerDialog(
       context: context,
       initialTime: TimeOfDay.now(),
@@ -7954,8 +8143,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final durationMinutes = _durationMinutesInCycle(start, selectedEnd);
     if (durationMinutes <= 0 || durationMinutes > _maxCycleMinutes) {
       scaffoldMessenger.showSnackBar(
-        const SnackBar(
-          content: Text("L'arrêt doit rester dans la fenêtre 22:30 → 22:30."),
+        SnackBar(
+          content: Text(stopWindowMsg2),
           backgroundColor: AppColors.error,
         ),
       );
@@ -7978,8 +8167,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     final updatedReport = report.copyWith(additionalData: data);
     await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+    if (!mounted) return;
     scaffoldMessenger.showSnackBar(
-      const SnackBar(content: Text("Arrêt terminé avec succès.")),
+      SnackBar(
+          content:
+              Text(AppLocalizations.of(context)!.stopFinishedSuccessfully)),
     );
   }
 
@@ -8523,11 +8715,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (data['secteur'] != null) Text('${AppLocalizations.of(context)!.sector}: ${data['secteur']}'),
+        if (data['secteur'] != null)
+          Text('${AppLocalizations.of(context)!.sector}: ${data['secteur']}'),
         if (data['rapportNo'] != null)
-          Text('${AppLocalizations.of(context)!.reportNo}: ${data['rapportNo']}'),
+          Text(
+              '${AppLocalizations.of(context)!.reportNo}: ${data['rapportNo']}'),
         if (data['machineEngins'] != null)
-          Text('${AppLocalizations.of(context)!.machinesEquipment}: ${data['machineEngins']}'),
+          Text(
+              '${AppLocalizations.of(context)!.machinesEquipment}: ${data['machineEngins']}'),
         const SizedBox(height: 16),
         // Module 1 Section
         Card(
@@ -8634,13 +8829,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(AppLocalizations.of(context)!.equipmentLabelWithIndex(index + 1),
+                          Text(
+                              AppLocalizations.of(context)!
+                                  .equipmentLabelWithIndex(index + 1),
                               style:
                                   const TextStyle(fontWeight: FontWeight.bold)),
                           const SizedBox(height: 4),
                           Text(l10n
                               .typeParam(equipment['equipmentType'] ?? '-')),
-                          Text(AppLocalizations.of(context)!.reasonParam(equipment['Reason'] ?? '-')),
+                          Text(AppLocalizations.of(context)!
+                              .reasonParam(equipment['Reason'] ?? '-')),
                           if (index < equipmentList.length - 1) const Divider(),
                         ],
                       ),
@@ -8735,15 +8933,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 Text(AppLocalizations.of(context)!.camionsLabel,
                     style: const TextStyle(fontWeight: FontWeight.bold)),
                 const Divider(height: 16),
-                if (truckData.isEmpty) Text(AppLocalizations.of(context)!.noTrucksAdded),
+                if (truckData.isEmpty)
+                  Text(AppLocalizations.of(context)!.noTrucksAdded),
                 if (truckData.isNotEmpty)
                   ...truckData.map((truck) => Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(AppLocalizations.of(context)!.truckParam(truck['truckNumber'] ?? '-'),
+                          Text(
+                              AppLocalizations.of(context)!
+                                  .truckParam(truck['truckNumber'] ?? '-'),
                               style:
                                   const TextStyle(fontWeight: FontWeight.bold)),
-                          Text(AppLocalizations.of(context)!.driverParam(truck['driver1'] ?? '-')),
+                          Text(AppLocalizations.of(context)!
+                              .driverParam(truck['driver1'] ?? '-')),
                           if (truck['counts'] != null &&
                               (truck['counts'] is List) &&
                               (truck['counts'] as List).isNotEmpty) ...[
@@ -8760,7 +8962,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(AppLocalizations.of(context)!.tripLabelWithIndex(index + 1)),
+                                    Text(AppLocalizations.of(context)!
+                                        .tripLabelWithIndex(index + 1)),
                                     Text(count['time'] ?? '-'),
                                     const SizedBox(width: 12),
                                     const Text('|'),
@@ -8825,7 +9028,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         _buildEquipmentCountsMap(truckData, data),
                         _buildEquipmentQualityTrips(truckData, l10n)),
                     const SizedBox(height: 12),
-                    Text('${AppLocalizations.of(context)!.total} ${AppLocalizations.of(context)!.qualityLabel}',
+                    Text(
+                        '${AppLocalizations.of(context)!.total} ${AppLocalizations.of(context)!.qualityLabel}',
                         style: const TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     ..._buildQualityTotals(truckData, l10n)
@@ -8866,7 +9070,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
         .expand((truck) => (truck['counts'] is List) ? truck['counts'] : [])
         .toList();
     for (var trip in allTrips) {
-      final eq = trip['equipment'] ?? AppLocalizations.of(context)!.unknownLabel;
+      final eq =
+          trip['equipment'] ?? AppLocalizations.of(context)!.unknownLabel;
       final qualityLabel =
           _resolveQualityLabel(trip['productQualityType'], l10n);
       equipmentQualityTrips.putIfAbsent(eq, () => {});
@@ -8956,7 +9161,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
       if (counts == null) continue;
       totalTrips += counts.length;
       for (final trip in counts) {
-        final eq = trip['equipment'] ?? AppLocalizations.of(context)!.unknownLabel;
+        final eq =
+            trip['equipment'] ?? AppLocalizations.of(context)!.unknownLabel;
         equipmentTrips[eq] = (equipmentTrips[eq] ?? 0) + 1;
       }
     }
@@ -8999,11 +9205,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   String _resolveQualityLabel(dynamic value, AppLocalizations l10n) {
     final raw = value?.toString().trim();
-    if (raw == null || raw.isEmpty) return AppLocalizations.of(context)!.unknownLabel;
+    if (raw == null || raw.isEmpty) {
+      return AppLocalizations.of(context)!.unknownLabel;
+    }
     final normalized = raw.toUpperCase();
-    if (normalized.contains('NORMAL')) return AppLocalizations.of(context)!.normal;
-    if (normalized.contains('OCEANE')) return AppLocalizations.of(context)!.oceane;
-    if (normalized.contains('PB30')) return AppLocalizations.of(context)!.pb30;
+    if (normalized.contains('NORMAL')) {
+      return AppLocalizations.of(context)!.normal;
+    }
+    if (normalized.contains('OCEANE')) {
+      return AppLocalizations.of(context)!.oceane;
+    }
+    if (normalized.contains('PB30')) {
+      return AppLocalizations.of(context)!.pb30;
+    }
     return raw;
   }
 
@@ -9034,8 +9248,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 _buildSummaryItem(
                     'Poste', data['selectedPoste'] ?? data['poste'] ?? ''),
                 if (data['carryOverFrom'] != null)
-                  _buildSummaryItem(AppLocalizations.of(context)!.carryOver,
-                      AppLocalizations.of(context)!.carriedOverFrom(data['carryOverFrom'])),
+                  _buildSummaryItem(
+                      AppLocalizations.of(context)!.carryOver,
+                      AppLocalizations.of(context)!
+                          .carriedOverFrom(data['carryOverFrom'])),
               ],
             ),
           ),
@@ -9115,7 +9331,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             if (arret['CarryOver'] == true)
                               Padding(
                                 padding: const EdgeInsets.only(left: 16),
-                                child: Text("(${AppLocalizations.of(context)!.carryOver})",
+                                child: Text(
+                                    "(${AppLocalizations.of(context)!.carryOver})",
                                     style: const TextStyle(
                                         color: Colors.orange,
                                         fontSize: 10,
@@ -9153,8 +9370,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       data['exploitation']['Nr de Voyages'] ?? ''),
                   _buildSummaryItem(AppLocalizations.of(context)!.m3Decapage,
                       data['exploitation']['M³ Decapages'] ?? ''),
-                  _buildSummaryItem(
-                      AppLocalizations.of(context)!.tonnageLabel, data['exploitation']['Tonnage'] ?? ''),
+                  _buildSummaryItem(AppLocalizations.of(context)!.tonnageLabel,
+                      data['exploitation']['Tonnage'] ?? ''),
                   _buildSummaryItem(AppLocalizations.of(context)!.nombreTKU,
                       data['exploitation']['Nombre T.K.U'] ?? ''),
                   _buildSummaryItem(
@@ -9316,7 +9533,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     } catch (e) {
       if (!mounted) return;
       scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.errorUpdatingReport)),
+        SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorUpdatingReport)),
       );
     }
   }
@@ -9423,8 +9641,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           const SizedBox(height: 16),
                           Text(
                             _selectedPosteFilter != null
-                                ? AppLocalizations.of(context)!.noReportsFoundForPoste(
-                                    _selectedPosteFilter!)
+                                ? AppLocalizations.of(context)!
+                                    .noReportsFoundForPoste(
+                                        _selectedPosteFilter!)
                                 : AppLocalizations.of(context)!.noDataMessage,
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
@@ -9432,7 +9651,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             const SizedBox(height: 16),
                             TextButton(
                               onPressed: () => _onPosteFilterChanged(null),
-                              child: Text(AppLocalizations.of(context)!.seeAllReports),
+                              child: Text(
+                                  AppLocalizations.of(context)!.seeAllReports),
                             ),
                           ],
                         ],
@@ -9457,7 +9677,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     size: 20),
                                 const SizedBox(width: 8),
                                 Text(
-                                  AppLocalizations.of(context)!.reportsFound(_filteredReports.length,
+                                  AppLocalizations.of(context)!.reportsFound(
+                                      _filteredReports.length,
                                       _selectedPosteFilter!),
                                   style: TextStyle(
                                     color:
@@ -9482,17 +9703,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 String title = report.description;
                                 final typeLower = report.type.toLowerCase();
                                 if (typeLower == 'activity tnb') {
-                                  title = AppLocalizations.of(context)!.activityReport;
+                                  title = AppLocalizations.of(context)!
+                                      .activityReport;
                                 } else if (typeLower == 'daily tsud') {
-                                  title = AppLocalizations.of(context)!.dailyReport;
+                                  title =
+                                      AppLocalizations.of(context)!.dailyReport;
                                 } else if (typeLower == 'suivi camion') {
-                                  title = AppLocalizations.of(context)!.truckTracking;
+                                  title = AppLocalizations.of(context)!
+                                      .truckTracking;
                                 } else if (typeLower ==
                                     'machine/engin arrêtés') {
-                                  title =
-                                      AppLocalizations.of(context)!.machinesEquipmentStoppedTitleShort;
+                                  title = AppLocalizations.of(context)!
+                                      .machinesEquipmentStoppedTitleShort;
                                 } else if (typeLower == 'r0') {
-                                  title = AppLocalizations.of(context)!.r0Report;
+                                  title =
+                                      AppLocalizations.of(context)!.r0Report;
                                 }
 
                                 return Slidable(
@@ -9522,7 +9747,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                             .colorScheme
                                             .onPrimary,
                                         icon: Icons.send,
-                                        label: AppLocalizations.of(context)!.sendToSheets,
+                                        label: AppLocalizations.of(context)!
+                                            .sendToSheets,
                                       ),
                                     ],
                                   ),
@@ -9611,7 +9837,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                         const SizedBox(
                                                             width: 8),
                                                         Text(
-                                                          AppLocalizations.of(context)!.delete,
+                                                          AppLocalizations.of(
+                                                                  context)!
+                                                              .delete,
                                                           style: TextStyle(
                                                             color: Theme.of(
                                                                     context)
@@ -9631,16 +9859,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                       builder: (context) =>
                                                           AlertDialog(
                                                         title: Text(
-                                                            AppLocalizations.of(context)!.confirmDelete),
+                                                            AppLocalizations.of(
+                                                                    context)!
+                                                                .confirmDelete),
                                                         content: Text(
-                                                            AppLocalizations.of(context)!.confirmDelete),
+                                                            AppLocalizations.of(
+                                                                    context)!
+                                                                .confirmDelete),
                                                         actions: [
                                                           TextButton(
                                                             onPressed: () =>
                                                                 Navigator.pop(
                                                                     context),
                                                             child: Text(
-                                                                AppLocalizations.of(context)!.cancel),
+                                                                AppLocalizations.of(
+                                                                        context)!
+                                                                    .cancel),
                                                           ),
                                                           TextButton(
                                                             onPressed: () {
@@ -9650,7 +9884,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                                   report);
                                                             },
                                                             child: Text(
-                                                                AppLocalizations.of(context)!.delete),
+                                                                AppLocalizations.of(
+                                                                        context)!
+                                                                    .delete),
                                                           ),
                                                         ],
                                                       ),
@@ -9728,15 +9964,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     length: 4,
                     child: Column(
                       children: [
-                        const Material(
+                        Material(
                           color: Colors.transparent,
                           child: TabBar(
                             isScrollable: true,
                             tabs: [
-                              Tab(text: '3ème'),
-                              Tab(text: '1er'),
-                              Tab(text: '2ème'),
-                              Tab(text: 'Global'),
+                              Tab(
+                                  text:
+                                      AppLocalizations.of(context)!.thirdPoste),
+                              Tab(
+                                  text:
+                                      AppLocalizations.of(context)!.firstPoste),
+                              Tab(
+                                  text: AppLocalizations.of(context)!
+                                      .secondPoste),
+                              Tab(text: AppLocalizations.of(context)!.global),
                             ],
                           ),
                         ),
@@ -9943,16 +10185,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   value: 'edit',
                                   child: _StopActionMenuItem(
                                     icon: Icons.edit_outlined,
-                                    label: 'Modifier',
+                                    label: AppLocalizations.of(context)!
+                                        .modifyLabel,
                                     iconColor:
                                         Theme.of(context).colorScheme.primary,
                                   ),
                                 ),
-                                const PopupMenuItem<String>(
+                                PopupMenuItem<String>(
                                   value: 'delete',
                                   child: _StopActionMenuItem(
                                     icon: Icons.delete_outline,
-                                    label: 'Supprimer',
+                                    label: AppLocalizations.of(context)!.delete,
                                     iconColor: AppColors.error,
                                   ),
                                 ),
@@ -10043,16 +10286,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   value: 'edit',
                                   child: _StopActionMenuItem(
                                     icon: Icons.edit_outlined,
-                                    label: 'Modifier',
+                                    label: AppLocalizations.of(context)!
+                                        .modifyLabel,
                                     iconColor:
                                         Theme.of(context).colorScheme.primary,
                                   ),
                                 ),
-                                const PopupMenuItem<String>(
+                                PopupMenuItem<String>(
                                   value: 'delete',
                                   child: _StopActionMenuItem(
                                     icon: Icons.delete_outline,
-                                    label: 'Supprimer',
+                                    label: AppLocalizations.of(context)!.delete,
                                     iconColor: AppColors.error,
                                   ),
                                 ),
@@ -10358,7 +10602,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         _isSharedDailyConveyorLocation(selectedLocation))
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('Appliquer aux deux modules'),
+                        title: Text(
+                            AppLocalizations.of(context)!.applyToBothModules),
                         subtitle: const Text(
                             'Utiliser pour les pannes convoyeurs partagés (G0/G2).'),
                         value: applyToBothModules,
@@ -10649,7 +10894,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         _isSharedDailyConveyorLocation(selectedLocation))
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('Appliquer aux deux modules'),
+                        title: Text(
+                            AppLocalizations.of(context)!.applyToBothModules),
                         subtitle: const Text(
                             'Mettre à jour aussi le module miroir lié.'),
                         value: applyToBothModules,
@@ -11007,7 +11253,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 const SizedBox(height: 8),
                                 _buildEditableField(
                                   context: context,
-                                  label: 'équipement',
+                                  label: AppLocalizations.of(context)!
+                                      .equipmentLabel,
                                   value: data['equipment'] ??
                                       data['selectedEquipment'] ??
                                       '',
@@ -11027,7 +11274,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 const SizedBox(height: 8),
                                 _buildEditableField(
                                   context: context,
-                                  label: 'Opération',
+                                  label:
+                                      AppLocalizations.of(context)!.operation,
                                   value: data['operationType'] ?? '',
                                   isEditable: false,
                                   onSave: (value) async {
@@ -11044,7 +11292,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 const SizedBox(height: 8),
                                 _buildEditableField(
                                   context: context,
-                                  label: 'Type Qualité',
+                                  label: AppLocalizations.of(context)!
+                                      .qualityTypeLabel,
                                   value: data['selectedQualiteType'] ?? '',
                                   isEditable: false,
                                   onSave: (value) async {
@@ -11095,7 +11344,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        'Camions',
+                                        AppLocalizations.of(context)!
+                                            .trucksTitle,
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleMedium,
@@ -11111,7 +11361,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           scaffoldMessenger,
                                           l10n),
                                       icon: const Icon(Icons.add),
-                                      label: Text(AppLocalizations.of(context)!.ajButton),
+                                      label: Text(AppLocalizations.of(context)!
+                                          .ajButton),
                                     ),
                                   ],
                                 ),
@@ -11138,8 +11389,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                             if (truck['counts'] is List &&
                                                 (truck['counts'] as List)
                                                     .isNotEmpty)
-                                              Text(
-                                                  'Voyages: ${(truck['counts'] as List).length}'),
+                                              Text(AppLocalizations.of(context)!
+                                                  .tripsCountLabel(
+                                                      (truck['counts'] as List)
+                                                          .length)),
                                           ],
                                         ),
                                         trailing: Row(
@@ -11156,7 +11409,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                       setDialogState,
                                                       scaffoldMessenger,
                                                       l10n),
-                                              tooltip: 'Modifier le camion',
+                                              tooltip:
+                                                  AppLocalizations.of(context)!
+                                                      .editTruckTitle,
                                             ),
                                             IconButton(
                                               icon: const Icon(Icons.delete,
@@ -11169,7 +11424,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                       setDialogState,
                                                       scaffoldMessenger,
                                                       l10n),
-                                              tooltip: 'Supprimer le camion',
+                                              tooltip:
+                                                  AppLocalizations.of(context)!
+                                                      .deleteTruckTitle,
                                             ),
                                           ],
                                         ),
@@ -11177,7 +11434,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     );
                                   })
                                 else
-                                  Text(AppLocalizations.of(context)!.noTrucksAdded,
+                                  Text(
+                                      AppLocalizations.of(context)!
+                                          .noTrucksAdded,
                                       style:
                                           const TextStyle(color: Colors.grey)),
                               ],
@@ -11245,7 +11504,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
               builder: (context) => StatefulBuilder(
                 builder: (context, setTripState) => AlertDialog(
                   title: Text(isEditingTrip
-                      ? AppLocalizations.of(context)!.editLabel(AppLocalizations.of(context)!.tripLabel)
+                      ? AppLocalizations.of(context)!
+                          .editLabel(AppLocalizations.of(context)!.tripLabel)
                       : AppLocalizations.of(context)!.addButton),
                   content: SingleChildScrollView(
                     child: Column(
@@ -11280,22 +11540,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         DropdownButtonFormField<String>(
                           initialValue: selectedEquipment,
                           decoration: InputDecoration(
-                            labelText: AppLocalizations.of(context)!.equipmentLabel,
+                            labelText:
+                                AppLocalizations.of(context)!.equipmentLabel,
                             border: const OutlineInputBorder(),
                           ),
                           items: [
                             DropdownMenuItem(
                                 value: 'Chargeuse 992K',
-                                child: Text(AppLocalizations.of(context)!.loader992k)),
+                                child: Text(
+                                    AppLocalizations.of(context)!.loader992k)),
                             DropdownMenuItem(
                                 value: 'Chargeuse 994H',
-                                child: Text(AppLocalizations.of(context)!.loader994h)),
+                                child: Text(
+                                    AppLocalizations.of(context)!.loader994h)),
                             DropdownMenuItem(
                                 value: 'Pelle Hy',
-                                child: Text(AppLocalizations.of(context)!.hydraulicShovel)),
+                                child: Text(AppLocalizations.of(context)!
+                                    .hydraulicShovel)),
                             DropdownMenuItem(
                                 value: 'Pelle B1',
-                                child: Text(AppLocalizations.of(context)!.electricShovelB1)),
+                                child: Text(AppLocalizations.of(context)!
+                                    .electricShovelB1)),
                           ],
                           onChanged: (value) => setTripState(() {
                             selectedEquipment = value;
@@ -11305,7 +11570,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         DropdownButtonFormField<String>(
                           initialValue: selectedQuality,
                           decoration: InputDecoration(
-                            labelText: AppLocalizations.of(context)!.qualityLabel,
+                            labelText:
+                                AppLocalizations.of(context)!.qualityLabel,
                             border: const OutlineInputBorder(),
                           ),
                           items: qualityOptions.entries
@@ -11336,15 +11602,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   data['posteSelected']);
                           if (posteKey == null) {
                             scaffoldMessenger.showSnackBar(SnackBar(
-                                content: Text(AppLocalizations.of(context)!.pleaseSelectPoste),
+                                content: Text(AppLocalizations.of(context)!
+                                    .pleaseSelectPoste),
                                 backgroundColor: AppColors.error));
                             return;
                           }
                           if (!_isTripTimeWithinPoste(
                               timeController.text, posteKey)) {
                             scaffoldMessenger.showSnackBar(SnackBar(
-                                content:
-                                    Text(AppLocalizations.of(context)!.invalidStopStartTimeForPoste),
+                                content: Text(AppLocalizations.of(context)!
+                                    .invalidStopStartTimeForPoste),
                                 backgroundColor: AppColors.error));
                             return;
                           }
@@ -11365,7 +11632,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           Navigator.pop(context);
                         }
                       },
-                      child: Text(isEditingTrip ? AppLocalizations.of(context)!.save : AppLocalizations.of(context)!.addButton),
+                      child: Text(isEditingTrip
+                          ? AppLocalizations.of(context)!.save
+                          : AppLocalizations.of(context)!.addButton),
                     ),
                   ],
                 ),
@@ -11398,7 +11667,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   itemBuilder: (context, i) {
                                     final trip = counts[i];
                                     return ListTile(
-                                      title: Text('v${i + 1}'),
+                                      title: Text(AppLocalizations.of(context)!
+                                          .vModule(i + 1)),
                                       subtitle: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
@@ -11503,7 +11773,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 ? truckNumber
                                 : null,
                             decoration: InputDecoration(
-                              labelText: AppLocalizations.of(context)!.truckLabel,
+                              labelText:
+                                  AppLocalizations.of(context)!.truckLabel,
                               border: const OutlineInputBorder(),
                             ),
                             items: predefinedTrucks.map((String value) {
@@ -11525,7 +11796,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           TextField(
                             controller: driverController,
                             decoration: InputDecoration(
-                              labelText: AppLocalizations.of(context)!.driverLabel,
+                              labelText:
+                                  AppLocalizations.of(context)!.driverLabel,
                               border: const OutlineInputBorder(),
                             ),
                             onChanged: (value) => driver1 = value,
@@ -11536,7 +11808,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               Expanded(
                                 child: ElevatedButton.icon(
                                   icon: const Icon(Icons.add),
-                                  label: Text(AppLocalizations.of(context)!.addTrip),
+                                  label: Text(
+                                      AppLocalizations.of(context)!.addTrip),
                                   onPressed: addTrip,
                                 ),
                               ),
@@ -11544,7 +11817,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               Expanded(
                                 child: OutlinedButton.icon(
                                   icon: const Icon(Icons.list),
-                                  label: Text(AppLocalizations.of(context)!.viewTrips),
+                                  label: Text(
+                                      AppLocalizations.of(context)!.viewTrips),
                                   onPressed: viewTrips,
                                 ),
                               ),
@@ -11573,15 +11847,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       data['posteSelected']);
                               if (posteKey == null) {
                                 scaffoldMessenger.showSnackBar(SnackBar(
-                                    content: Text(AppLocalizations.of(context)!.pleaseSelectPoste),
+                                    content: Text(AppLocalizations.of(context)!
+                                        .pleaseSelectPoste),
                                     backgroundColor: AppColors.error));
                                 return;
                               }
                               if (!_areAllTripTimesWithinPoste(
                                   counts, posteKey)) {
                                 scaffoldMessenger.showSnackBar(SnackBar(
-                                    content:
-                                        Text(AppLocalizations.of(context)!.invalidStopStartTimeForPoste),
+                                    content: Text(AppLocalizations.of(context)!
+                                        .invalidStopStartTimeForPoste),
                                     backgroundColor: AppColors.error));
                                 return;
                               }
@@ -11737,14 +12012,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Info',
+                                  AppLocalizations.of(context)!.infoLabel,
                                   style:
                                       Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const Divider(height: 16),
                                 _buildEditableField(
                                   context: dialogContext,
-                                  label: 'Description',
+                                  label:
+                                      AppLocalizations.of(context)!.description,
                                   value: report.description,
                                   isEditable: false,
                                   onSave: (value) async {
@@ -11768,7 +12044,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 const SizedBox(height: 8),
                                 _buildEditableDateField(
                                   context: dialogContext,
-                                  label: 'Date',
+                                  label: AppLocalizations.of(context)!.date,
                                   value: report.date,
                                   isEditable: true,
                                   onSave: (value) async {
@@ -11867,7 +12143,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                 scaffoldMessenger,
                                                 l10n),
                                         icon: const Icon(Icons.add),
-                                        label: Text(AppLocalizations.of(context)!.addButton),
+                                        label: Text(
+                                            AppLocalizations.of(context)!
+                                                .addButton),
                                       ),
                                   ],
                                 ),
@@ -11932,7 +12210,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                         setDialogState,
                                                         scaffoldMessenger,
                                                         l10n),
-                                                tooltip: AppLocalizations.of(context)!.editCounter,
+                                                tooltip: AppLocalizations.of(
+                                                        context)!
+                                                    .editCounter,
                                               ),
                                               IconButton(
                                                 icon: const Icon(Icons.delete,
@@ -11946,8 +12226,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                                         setDialogState,
                                                         scaffoldMessenger,
                                                         l10n),
-                                                tooltip:
-                                                    AppLocalizations.of(context)!.deleteCounterTooltip,
+                                                tooltip: AppLocalizations.of(
+                                                        context)!
+                                                    .deleteCounterTooltip,
                                               ),
                                             ],
                                           ),
@@ -11958,7 +12239,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     Card(
                                       margin: const EdgeInsets.only(bottom: 8),
                                       child: ListTile(
-                                        title: Text(AppLocalizations.of(context)!.counter),
+                                        title: Text(
+                                            AppLocalizations.of(context)!
+                                                .counter),
                                         subtitle: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -11979,12 +12262,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                               setDialogState,
                                               scaffoldMessenger,
                                               l10n),
-                                          tooltip: AppLocalizations.of(context)!.editCounterTooltip,
+                                          tooltip: AppLocalizations.of(context)!
+                                              .editCounterTooltip,
                                         ),
                                       ),
                                     )
                                   else
-                                    Text(AppLocalizations.of(context)!.noCountersAdded,
+                                    Text(
+                                        AppLocalizations.of(context)!
+                                            .noCountersAdded,
                                         style: const TextStyle(
                                             color: Colors.grey)),
                               ],
@@ -12019,7 +12305,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           scaffoldMessenger,
                                           l10n),
                                       icon: const Icon(Icons.add),
-                                      label: Text(AppLocalizations.of(context)!.addButton),
+                                      label: Text(AppLocalizations.of(context)!
+                                          .addButton),
                                     ),
                                   ],
                                 ),
@@ -12044,7 +12331,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         selected: isSelected,
                                         selectedTileColor:
                                             Colors.blue.withValues(alpha: 0.1),
-                                        title: Text(AppLocalizations.of(context)!.stopIndex(index + 1)),
+                                        title: Text(
+                                            AppLocalizations.of(context)!
+                                                .stopIndex(index + 1)),
                                         subtitle: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -12097,7 +12386,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     );
                                   })
                                 else
-                                  Text(AppLocalizations.of(context)!.noStopsAdded,
+                                  Text(
+                                      AppLocalizations.of(context)!
+                                          .noStopsAdded,
                                       style:
                                           const TextStyle(color: Colors.grey)),
                               ],
@@ -12148,7 +12439,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       data['exploitation']['metrage fore'] ??
                                           ''),
                                   _buildSummaryItem(
-                                      AppLocalizations.of(context)!.nrTrousFores,
+                                      AppLocalizations.of(context)!
+                                          .nrTrousFores,
                                       data['exploitation']
                                               ['Nr de Trous Fores'] ??
                                           ''),
@@ -12160,19 +12452,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       AppLocalizations.of(context)!.m3Decapage,
                                       data['exploitation']['M³ Decapages'] ??
                                           ''),
-                                  _buildSummaryItem(AppLocalizations.of(context)!.tonnageLabel,
+                                  _buildSummaryItem(
+                                      AppLocalizations.of(context)!
+                                          .tonnageLabel,
                                       data['exploitation']['Tonnage'] ?? ''),
                                   _buildSummaryItem(
                                       AppLocalizations.of(context)!.nombreTKU,
                                       data['exploitation']['Nombre T.K.U'] ??
                                           ''),
                                   _buildSummaryItem(
-                                      AppLocalizations.of(context)!.rendementLabel,
+                                      AppLocalizations.of(context)!
+                                          .rendementLabel,
                                       data['exploitation']['Rendement %'] ??
                                           data['exploitation']['Rendeme'] ??
                                           ''),
                                 ] else
-                                  Text(AppLocalizations.of(context)!.noExploitationData,
+                                  Text(
+                                      AppLocalizations.of(context)!
+                                          .noExploitationData,
                                       style:
                                           const TextStyle(color: Colors.grey)),
                               ],
@@ -12207,7 +12504,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           scaffoldMessenger,
                                           l10n),
                                       icon: const Icon(Icons.add),
-                                      label: Text(AppLocalizations.of(context)!.addButton),
+                                      label: Text(AppLocalizations.of(context)!
+                                          .addButton),
                                     ),
                                   ],
                                 ),
@@ -12236,7 +12534,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                           selected: isSelected,
                                           selectedTileColor: Colors.blue
                                               .withValues(alpha: 0.1),
-                                          title: Text('Travail ${index + 1}'),
+                                          title: Text(
+                                              AppLocalizations.of(context)!
+                                                  .workLabel(index + 1)),
                                           subtitle: Column(
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
@@ -12298,7 +12598,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     Card(
                                       margin: const EdgeInsets.only(bottom: 8),
                                       child: ListTile(
-                                        title: Text(AppLocalizations.of(context)!.workDistributionLabel),
+                                        title: Text(
+                                            AppLocalizations.of(context)!
+                                                .workDistributionLabel),
                                         subtitle: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -12378,7 +12680,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   _buildSummaryItem('Matricules',
                                       data['personnel']['matricules'] ?? ''),
                                 ] else
-                                  Text(AppLocalizations.of(context)!.noPersonnelData,
+                                  Text(
+                                      AppLocalizations.of(context)!
+                                          .noPersonnelData,
                                       style:
                                           const TextStyle(color: Colors.grey)),
                               ],
@@ -12425,7 +12729,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   _buildSummaryItem('Gasoil',
                                       data['consommation']['gasoil'] ?? ''),
                                 ] else
-                                  Text(AppLocalizations.of(context)!.noConsumptionData,
+                                  Text(
+                                      AppLocalizations.of(context)!
+                                          .noConsumptionData,
                                       style:
                                           const TextStyle(color: Colors.grey)),
                               ],
@@ -12472,7 +12778,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       onChanged: (value) => setState(() => duree = value),
                       enabled: !dureeDefaut,
                       controller: dureeDefaut
-                          ? TextEditingController(text: AppLocalizations.of(context)!.defautLabel)
+                          ? TextEditingController(
+                              text: AppLocalizations.of(context)!.defautLabel)
                           : null,
                     ),
                   ),
@@ -12499,7 +12806,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       onChanged: (value) => setState(() => note = value),
                       enabled: !noteDefaut,
                       controller: noteDefaut
-                          ? TextEditingController(text: AppLocalizations.of(context)!.defautLabel)
+                          ? TextEditingController(
+                              text: AppLocalizations.of(context)!.defautLabel)
                           : null,
                     ),
                   ),
@@ -12523,7 +12831,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             ElevatedButton(
               onPressed: () {
@@ -12553,7 +12861,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   setDialogState(() {});
                 }
               },
-              child: const Text('Ajouter'),
+              child: Text(AppLocalizations.of(context)!.addButton),
             ),
           ],
         ),
@@ -12581,7 +12889,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Modifier le compteur'),
+          title: Text(AppLocalizations.of(context)!.editCounterTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -12594,7 +12902,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       onChanged: (value) => setState(() => duree = value),
                       enabled: !dureeDefaut,
                       controller: dureeDefaut
-                          ? TextEditingController(text: AppLocalizations.of(context)!.defautLabel)
+                          ? TextEditingController(
+                              text: AppLocalizations.of(context)!.defautLabel)
                           : null,
                     ),
                   ),
@@ -12622,7 +12931,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       onChanged: (value) => setState(() => note = value),
                       enabled: !noteDefaut,
                       controller: noteDefaut
-                          ? TextEditingController(text: AppLocalizations.of(context)!.defautLabel)
+                          ? TextEditingController(
+                              text: AppLocalizations.of(context)!.defautLabel)
                           : null,
                     ),
                   ),
@@ -12646,7 +12956,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             ElevatedButton(
               onPressed: () {
@@ -12678,7 +12988,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
                 setDialogState(() {});
               },
-              child: const Text('Modifier'),
+              child: Text(AppLocalizations.of(context)!.modifyLabel),
             ),
           ],
         ),
@@ -12697,8 +13007,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Supprimer le compteur'),
-        content: const Text('Êtes-vous sûr de vouloir supprimer ce compteur ?'),
+        title: Text(AppLocalizations.of(context)!.deleteCounterTitle),
+        content: Text(AppLocalizations.of(context)!.deleteCounterConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -12783,7 +13093,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   initialValue: selectedType,
                   isExpanded: true,
                   decoration: InputDecoration(
-                      labelText: AppLocalizations.of(context)!.selectStopTypeStep,
+                      labelText:
+                          AppLocalizations.of(context)!.selectStopTypeStep,
                       border: const OutlineInputBorder()),
                   items: arretCategories[selectedCategory]!
                       .map((type) =>
@@ -12802,13 +13113,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
           content = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('${AppLocalizations.of(context)!.category}: $selectedCategory'),
+              Text(
+                  '${AppLocalizations.of(context)!.category}: $selectedCategory'),
               Text('${AppLocalizations.of(context)!.type}: $selectedType'),
               const SizedBox(height: 16),
               ListTile(
                 title: Text(AppLocalizations.of(context)!.startTimeLabel),
-                subtitle:
-                    Text(startTime.isEmpty ? AppLocalizations.of(context)!.selectTimeTitle : startTime),
+                subtitle: Text(startTime.isEmpty
+                    ? AppLocalizations.of(context)!.selectTimeTitle
+                    : startTime),
                 trailing: const Icon(Icons.access_time),
                 onTap: () async {
                   final picked = await showDialog<TimeOfDay>(
@@ -12816,7 +13129,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     builder: (context) {
                       TimeOfDay tempTime = TimeOfDay.now();
                       return AlertDialog(
-                        title: Text(AppLocalizations.of(context)!.selectTimeTitle),
+                        title:
+                            Text(AppLocalizations.of(context)!.selectTimeTitle),
                         content: SizedBox(
                           height: 200,
                           child: TimePickerSpinner(
@@ -12868,8 +13182,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
               const SizedBox(height: 16),
               ListTile(
                 title: Text(AppLocalizations.of(context)!.endTimeLabel),
-                subtitle:
-                    Text(endTime.isEmpty ? AppLocalizations.of(context)!.selectTimeTitle : endTime),
+                subtitle: Text(endTime.isEmpty
+                    ? AppLocalizations.of(context)!.selectTimeTitle
+                    : endTime),
                 trailing: const Icon(Icons.access_time),
                 onTap: () async {
                   final picked = await showDialog<TimeOfDay>(
@@ -12877,7 +13192,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     builder: (context) {
                       TimeOfDay tempTime = TimeOfDay.now();
                       return AlertDialog(
-                        title: Text(AppLocalizations.of(context)!.selectTimeTitle),
+                        title:
+                            Text(AppLocalizations.of(context)!.selectTimeTitle),
                         content: SizedBox(
                           height: 200,
                           child: TimePickerSpinner(
@@ -13181,7 +13497,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 TextField(
                   decoration: InputDecoration(
                     labelText: AppLocalizations.of(context)!.hmLabel,
-                    helperText: AppLocalizations.of(context)!.calculatedAutomatically,
+                    helperText:
+                        AppLocalizations.of(context)!.calculatedAutomatically,
                   ),
                   controller: hmController,
                   enabled: false, // Read-only
@@ -13190,40 +13507,48 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 TextField(
                   decoration: InputDecoration(
                     labelText: AppLocalizations.of(context)!.haLabel,
-                    helperText: AppLocalizations.of(context)!.calculatedAutomatically,
+                    helperText:
+                        AppLocalizations.of(context)!.calculatedAutomatically,
                   ),
                   controller: haController,
                   enabled: false, // Read-only
                   style: const TextStyle(color: Colors.grey),
                 ),
                 TextField(
-                  decoration: InputDecoration(labelText: AppLocalizations.of(context)!.metrageFore),
+                  decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.metrageFore),
                   controller: metrageForeController,
                 ),
                 TextField(
-                  decoration: InputDecoration(labelText: AppLocalizations.of(context)!.nrTrousFores),
+                  decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.nrTrousFores),
                   controller: nrTrousForesController,
                 ),
                 TextField(
-                  decoration: InputDecoration(labelText: AppLocalizations.of(context)!.nrVoyages),
+                  decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.nrVoyages),
                   controller: nrVoyagesController,
                 ),
                 TextField(
-                  decoration: InputDecoration(labelText: AppLocalizations.of(context)!.m3Decapage),
+                  decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.m3Decapage),
                   controller: m3DecapageController,
                 ),
                 TextField(
-                  decoration: InputDecoration(labelText: AppLocalizations.of(context)!.tonnageLabel),
+                  decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.tonnageLabel),
                   controller: tonnageController,
                 ),
                 TextField(
-                  decoration: InputDecoration(labelText: AppLocalizations.of(context)!.nombreTKU),
+                  decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.nombreTKU),
                   controller: nombreTKUController,
                 ),
                 TextField(
                   decoration: InputDecoration(
                     labelText: AppLocalizations.of(context)!.rendementLabel,
-                    helperText: AppLocalizations.of(context)!.calculatedAutomatically,
+                    helperText:
+                        AppLocalizations.of(context)!.calculatedAutomatically,
                   ),
                   controller: rendementPctController,
                   enabled: false,
@@ -13294,15 +13619,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
-                decoration: InputDecoration(labelText: AppLocalizations.of(context)!.chantierLabel),
+                decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.chantierLabel),
                 onChanged: (value) => setState(() => chantier = value),
               ),
               TextField(
-                decoration: InputDecoration(labelText: AppLocalizations.of(context)!.tempsLabel),
+                decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.tempsLabel),
                 onChanged: (value) => setState(() => temps = value),
               ),
               TextField(
-                decoration: InputDecoration(labelText: AppLocalizations.of(context)!.imputationLabel),
+                decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.imputationLabel),
                 onChanged: (value) => setState(() => imputation = value),
               ),
             ],
@@ -13380,15 +13708,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
-                  decoration: InputDecoration(labelText: AppLocalizations.of(context)!.chantierLabel),
+                  decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.chantierLabel),
                   controller: chantierController,
                 ),
                 TextField(
-                  decoration: InputDecoration(labelText: AppLocalizations.of(context)!.tempsLabel),
+                  decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.tempsLabel),
                   controller: tempsController,
                 ),
                 TextField(
-                  decoration: InputDecoration(labelText: AppLocalizations.of(context)!.imputationLabel),
+                  decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.imputationLabel),
                   controller: imputationController,
                 ),
               ],
@@ -13443,7 +13774,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(AppLocalizations.of(context)!.deleteWorkDistributionTitle),
-        content: Text(AppLocalizations.of(context)!.deleteWorkDistributionConfirm),
+        content:
+            Text(AppLocalizations.of(context)!.deleteWorkDistributionConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -13494,15 +13826,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
-                  decoration: InputDecoration(labelText: AppLocalizations.of(context)!.conductrLabel),
+                  decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.conductrLabel),
                   controller: conductrController,
                 ),
                 TextField(
-                  decoration: InputDecoration(labelText: AppLocalizations.of(context)!.graisseurLabel),
+                  decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.graisseurLabel),
                   controller: graisseurController,
                 ),
                 TextField(
-                  decoration: InputDecoration(labelText: AppLocalizations.of(context)!.matriculesLabel),
+                  decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.matriculesLabel),
                   controller: matriculesController,
                 ),
               ],
@@ -13560,11 +13895,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
-                  decoration: InputDecoration(labelText: AppLocalizations.of(context)!.triconeLabel),
+                  decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.triconeLabel),
                   controller: triconeController,
                 ),
                 TextField(
-                  decoration: InputDecoration(labelText: AppLocalizations.of(context)!.gasoilLabel),
+                  decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.gasoilLabel),
                   controller: gasoilController,
                 ),
               ],
@@ -13661,7 +13998,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 const Divider(height: 16),
                                 _buildEditableField(
                                   context: dialogContext,
-                                  label: AppLocalizations.of(context)!.description,
+                                  label:
+                                      AppLocalizations.of(context)!.description,
                                   value: report.description,
                                   isEditable: false,
                                   onSave: (value) async {
@@ -13733,7 +14071,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 const SizedBox(height: 8),
                                 _buildEditableField(
                                   context: dialogContext,
-                                  label: AppLocalizations.of(context)!.groupLabel,
+                                  label:
+                                      AppLocalizations.of(context)!.groupLabel,
                                   value: report.group,
                                   isEditable: !isTruckOrR0,
                                   onSave: (value) async {
@@ -13771,7 +14110,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    AppLocalizations.of(context)!.additionalDataLabel,
+                                    AppLocalizations.of(context)!
+                                        .additionalDataLabel,
                                     style:
                                         Theme.of(context).textTheme.titleMedium,
                                   ),

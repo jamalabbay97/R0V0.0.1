@@ -1699,4 +1699,101 @@ class AppLocalizationsFr extends AppLocalizations {
   String workLabel(int index) {
     return 'Travail $index';
   }
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String finishModule1(int index) {
+    return 'Terminer M1 #$index';
+  }
+
+  @override
+  String finishModule2(int index) {
+    return 'Terminer M2 #$index';
+  }
+
+  @override
+  String reportsDeletedSuccessfully(int count) {
+    return '$count rapport(s) supprimé(s) avec succès';
+  }
+
+  @override
+  String get firstPoste => '1er Poste';
+
+  @override
+  String get secondPoste => '2ème Poste';
+
+  @override
+  String get thirdPoste => '3ème Poste';
+
+  @override
+  String get global => 'Global';
+
+  @override
+  String get qualityTypeLabel => 'Type de Qualité';
+
+  @override
+  String get trucksTitle => 'Gestion des Camions';
+
+  @override
+  String get dailyReportTsudTitle => 'Rapport Journalier TSUD';
+
+  @override
+  String get editDailyReportTsudTitle => 'Modifier Rapport Journalier TSUD';
+
+  @override
+  String get stepArretsM1 => 'Arrêts M1';
+
+  @override
+  String get stepArretsM2 => 'Arrêts M2';
+
+  @override
+  String get stepStock => 'Stock';
+
+  @override
+  String get stopInProgress => 'Arrêt en cours';
+
+  @override
+  String get actionsArret => 'Actions arrêt';
+
+  @override
+  String addArretModule(int index) {
+    return 'Ajouter Arrêt (Module $index)';
+  }
+
+  @override
+  String get catArretLabel => 'Catégorie d\'arrêt';
+
+  @override
+  String get typeArretLabel => 'Type d\'arrêt';
+
+  @override
+  String get lieuArretLabel => 'Lieu d\'arrêt';
+
+  @override
+  String get detailArretLabel => 'Détail de l\'arrêt';
+
+  @override
+  String get applyToBothModulesDesc => 'Appliquer aux deux modules 1 et 2.';
+
+  @override
+  String get requiredFieldsTruckError =>
+      'La date, le poste et la machine/engin sont obligatoires pour enregistrer le rapport.';
+
+  @override
+  String get dashboardTab => 'Tableau de Bord';
+
+  @override
+  String get archiveTab => 'Archive';
+
+  @override
+  String get timelineTab => 'Chronologie';
+
+  @override
+  String get swipeLeftHint =>
+      'Glissez vers la gauche (ou appuyez sur Sheets ci-dessus) pour ouvrir les rapports';
+
+  @override
+  String get descriptionRequired => 'La description est obligatoire';
 }

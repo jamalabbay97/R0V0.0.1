@@ -3253,6 +3253,180 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Work {index}'**
   String workLabel(int index);
+
+  /// No description provided for @ok.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get ok;
+
+  /// No description provided for @finishModule1.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish M1 #{index}'**
+  String finishModule1(int index);
+
+  /// No description provided for @finishModule2.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish M2 #{index}'**
+  String finishModule2(int index);
+
+  /// No description provided for @reportsDeletedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} report(s) deleted successfully'**
+  String reportsDeletedSuccessfully(int count);
+
+  /// No description provided for @firstPoste.
+  ///
+  /// In en, this message translates to:
+  /// **'1st Shift'**
+  String get firstPoste;
+
+  /// No description provided for @secondPoste.
+  ///
+  /// In en, this message translates to:
+  /// **'2nd Shift'**
+  String get secondPoste;
+
+  /// No description provided for @thirdPoste.
+  ///
+  /// In en, this message translates to:
+  /// **'3rd Shift'**
+  String get thirdPoste;
+
+  /// No description provided for @global.
+  ///
+  /// In en, this message translates to:
+  /// **'Global'**
+  String get global;
+
+  /// No description provided for @qualityTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quality Type'**
+  String get qualityTypeLabel;
+
+  /// No description provided for @trucksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trucks Management'**
+  String get trucksTitle;
+
+  /// No description provided for @dailyReportTsudTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Report TSUD'**
+  String get dailyReportTsudTitle;
+
+  /// No description provided for @editDailyReportTsudTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Daily Report TSUD'**
+  String get editDailyReportTsudTitle;
+
+  /// No description provided for @stepArretsM1.
+  ///
+  /// In en, this message translates to:
+  /// **'Stops M1'**
+  String get stepArretsM1;
+
+  /// No description provided for @stepArretsM2.
+  ///
+  /// In en, this message translates to:
+  /// **'Stops M2'**
+  String get stepArretsM2;
+
+  /// No description provided for @stepStock.
+  ///
+  /// In en, this message translates to:
+  /// **'Stock'**
+  String get stepStock;
+
+  /// No description provided for @stopInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop in progress'**
+  String get stopInProgress;
+
+  /// No description provided for @actionsArret.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop actions'**
+  String get actionsArret;
+
+  /// No description provided for @addArretModule.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Stop (Module {index})'**
+  String addArretModule(int index);
+
+  /// No description provided for @catArretLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop category'**
+  String get catArretLabel;
+
+  /// No description provided for @typeArretLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop type'**
+  String get typeArretLabel;
+
+  /// No description provided for @lieuArretLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop location'**
+  String get lieuArretLabel;
+
+  /// No description provided for @detailArretLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop detail'**
+  String get detailArretLabel;
+
+  /// No description provided for @applyToBothModulesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply to both modules 1 and 2.'**
+  String get applyToBothModulesDesc;
+
+  /// No description provided for @requiredFieldsTruckError.
+  ///
+  /// In en, this message translates to:
+  /// **'The date, station and machine/engine are mandatory to save the report.'**
+  String get requiredFieldsTruckError;
+
+  /// No description provided for @dashboardTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Dashboard'**
+  String get dashboardTab;
+
+  /// No description provided for @archiveTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive'**
+  String get archiveTab;
+
+  /// No description provided for @timelineTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Timeline'**
+  String get timelineTab;
+
+  /// No description provided for @swipeLeftHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe left (or tap Sheets above) to open reports'**
+  String get swipeLeftHint;
+
+  /// No description provided for @descriptionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Description is required'**
+  String get descriptionRequired;
 }
 
 class _AppLocalizationsDelegate

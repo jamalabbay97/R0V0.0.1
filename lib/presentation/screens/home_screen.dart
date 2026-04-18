@@ -152,7 +152,11 @@ class _PageSwitcher extends StatelessWidget {
       );
     }
 
-    final segments = ['Dashboard', 'Archive', 'Timeline'];
+    final segments = [
+      AppLocalizations.of(context)!.dashboardTab,
+      AppLocalizations.of(context)!.archiveTab,
+      AppLocalizations.of(context)!.timelineTab,
+    ];
 
     return Container(
       padding: const EdgeInsets.all(4),
@@ -250,7 +254,7 @@ class _HomeDashboardPage extends StatelessWidget {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              'Swipe left (or tap Sheets above) to open reports',
+                              AppLocalizations.of(context)!.swipeLeftHint,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurface
                                     .withValues(alpha: 0.6),

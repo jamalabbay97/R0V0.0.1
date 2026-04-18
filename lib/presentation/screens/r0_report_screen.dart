@@ -863,7 +863,7 @@ class R0ReportState extends State<R0Report> {
                 enabled: !formData.indexCompteurs.dureeDefaut,
                 controller: TextEditingController(
                     text: formData.indexCompteurs.dureeDefaut
-                        ? 'Défaut'
+                        ? AppLocalizations.of(context)!.defautLabel
                         : formData.indexCompteurs.duree)
                   ..selection = TextSelection.fromPosition(TextPosition(
                       offset: formData.indexCompteurs.dureeDefaut
@@ -908,7 +908,7 @@ class R0ReportState extends State<R0Report> {
                 enabled: !formData.indexCompteurs.noteDefaut,
                 controller: TextEditingController(
                     text: formData.indexCompteurs.noteDefaut
-                        ? 'Défaut'
+                        ? AppLocalizations.of(context)!.defautLabel
                         : formData.indexCompteurs.note)
                   ..selection = TextSelection.fromPosition(TextPosition(
                       offset: formData.indexCompteurs.noteDefaut

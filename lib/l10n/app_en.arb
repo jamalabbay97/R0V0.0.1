@@ -1313,5 +1313,79 @@
     "placeholders": {
       "index": { "type": "int" }
     }
-  }
+  },
+  "ok": "OK",
+  "@ok": {},
+  "finishModule1": "Finish M1 #{index}",
+  "@finishModule1": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+  "finishModule2": "Finish M2 #{index}",
+  "@finishModule2": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+  "reportsDeletedSuccessfully": "{count} report(s) deleted successfully",
+  "@reportsDeletedSuccessfully": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "firstPoste": "1st Shift",
+  "@firstPoste": {},
+  "secondPoste": "2nd Shift",
+  "@secondPoste": {},
+  "thirdPoste": "3rd Shift",
+  "@thirdPoste": {},
+  "global": "Global",
+  "@global": {},
+  "qualityTypeLabel": "Quality Type",
+  "@qualityTypeLabel": {},
+  "trucksTitle": "Trucks Management",
+  "@trucksTitle": {},
+  "dailyReportTsudTitle": "Daily Report TSUD",
+  "@dailyReportTsudTitle": {},
+  "editDailyReportTsudTitle": "Edit Daily Report TSUD",
+  "@editDailyReportTsudTitle": {},
+  "stepArretsM1": "Stops M1",
+  "@stepArretsM1": {},
+  "stepArretsM2": "Stops M2",
+  "@stepArretsM2": {},
+  "stepStock": "Stock",
+  "@stepStock": {},
+  "stopInProgress": "Stop in progress",
+  "@stopInProgress": {},
+  "actionsArret": "Stop actions",
+  "@actionsArret": {},
+  "addArretModule": "Add Stop (Module {index})",
+  "@addArretModule": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+  "catArretLabel": "Stop category",
+  "@catArretLabel": {},
+  "typeArretLabel": "Stop type",
+  "@typeArretLabel": {},
+  "lieuArretLabel": "Stop location",
+  "@lieuArretLabel": {},
+  "detailArretLabel": "Stop detail",
+  "@detailArretLabel": {},
+  "applyToBothModulesDesc": "Apply to both modules 1 and 2.",
+  "@applyToBothModulesDesc": {},
+  "requiredFieldsTruckError": "The date, station and machine/engine are mandatory to save the report.",
+  "@requiredFieldsTruckError": {},
+  "dashboardTab": "Dashboard",
+  "@dashboardTab": {},
+  "archiveTab": "Archive",
+  "@archiveTab": {},
+  "timelineTab": "Timeline",
+  "@timelineTab": {},
+  "swipeLeftHint": "Swipe left (or tap Sheets above) to open reports",
+  "@swipeLeftHint": {},
+  "descriptionRequired": "Description is required",
+  "@descriptionRequired": {}
 }

@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
+import 'package:r0/l10n/app_localizations.dart';
 
 String _formatTimeOfDay(TimeOfDay value) =>
     '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
@@ -34,7 +35,7 @@ Future<TimeOfDay?> showSpinnerTimePickerDialog({
                 children: [
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Heure'),
+                    title: Text(AppLocalizations.of(context)!.timeLabel),
                     subtitle: Text(_formatTimeOfDay(selected)),
                     trailing: const Icon(Icons.access_time),
                   ),
@@ -79,11 +80,11 @@ Future<TimeOfDay?> showSpinnerTimePickerDialog({
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Annuler'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(dialogContext).pop(selected),
-              child: const Text('OK'),
+              child: Text(AppLocalizations.of(context)!.ok),
             ),
           ],
         ),

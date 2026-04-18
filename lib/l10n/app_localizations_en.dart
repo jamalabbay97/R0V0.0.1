@@ -1702,4 +1702,101 @@ class AppLocalizationsEn extends AppLocalizations {
   String workLabel(int index) {
     return 'Work $index';
   }
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String finishModule1(int index) {
+    return 'Finish M1 #$index';
+  }
+
+  @override
+  String finishModule2(int index) {
+    return 'Finish M2 #$index';
+  }
+
+  @override
+  String reportsDeletedSuccessfully(int count) {
+    return '$count report(s) deleted successfully';
+  }
+
+  @override
+  String get firstPoste => '1st Shift';
+
+  @override
+  String get secondPoste => '2nd Shift';
+
+  @override
+  String get thirdPoste => '3rd Shift';
+
+  @override
+  String get global => 'Global';
+
+  @override
+  String get qualityTypeLabel => 'Quality Type';
+
+  @override
+  String get trucksTitle => 'Trucks Management';
+
+  @override
+  String get dailyReportTsudTitle => 'Daily Report TSUD';
+
+  @override
+  String get editDailyReportTsudTitle => 'Edit Daily Report TSUD';
+
+  @override
+  String get stepArretsM1 => 'Stops M1';
+
+  @override
+  String get stepArretsM2 => 'Stops M2';
+
+  @override
+  String get stepStock => 'Stock';
+
+  @override
+  String get stopInProgress => 'Stop in progress';
+
+  @override
+  String get actionsArret => 'Stop actions';
+
+  @override
+  String addArretModule(int index) {
+    return 'Add Stop (Module $index)';
+  }
+
+  @override
+  String get catArretLabel => 'Stop category';
+
+  @override
+  String get typeArretLabel => 'Stop type';
+
+  @override
+  String get lieuArretLabel => 'Stop location';
+
+  @override
+  String get detailArretLabel => 'Stop detail';
+
+  @override
+  String get applyToBothModulesDesc => 'Apply to both modules 1 and 2.';
+
+  @override
+  String get requiredFieldsTruckError =>
+      'The date, station and machine/engine are mandatory to save the report.';
+
+  @override
+  String get dashboardTab => 'Dashboard';
+
+  @override
+  String get archiveTab => 'Archive';
+
+  @override
+  String get timelineTab => 'Timeline';
+
+  @override
+  String get swipeLeftHint =>
+      'Swipe left (or tap Sheets above) to open reports';
+
+  @override
+  String get descriptionRequired => 'Description is required';
 }

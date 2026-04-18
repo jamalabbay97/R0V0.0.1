@@ -634,9 +634,16 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
   @override
   Widget build(BuildContext context) {
     // Localizations handled naively or assume English/French provided context
-    final title =
-        widget.isEditing ? 'Modifier Daily Report TSUD' : 'Daily Report TSUD';
-    final steps = ['Infos', 'Arrêts M1', 'Arrêts M2', 'Stock', 'Verif.'];
+    final title = widget.isEditing
+        ? AppLocalizations.of(context)!.editDailyReportTsudTitle
+        : AppLocalizations.of(context)!.dailyReportTsudTitle;
+    final steps = [
+      AppLocalizations.of(context)!.stepInfos,
+      AppLocalizations.of(context)!.stepArretsM1,
+      AppLocalizations.of(context)!.stepArretsM2,
+      AppLocalizations.of(context)!.stepStock,
+      AppLocalizations.of(context)!.stepVerif,
+    ];
 
     return Scaffold(
       appBar: AppBar(title: Text(title)),
@@ -690,13 +697,15 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
         if (!isFirst)
           Expanded(
               child: OCPButton(
-                  text: 'Précédent',
+                  text: AppLocalizations.of(context)!.previous,
                   onPressed: () => setState(() => _currentStep--),
                   isSecondary: true)),
         if (!isFirst) const SizedBox(width: 16),
         Expanded(
             child: OCPButton(
-                text: isLast ? 'Soumettre' : 'Suivant',
+                text: isLast
+                    ? AppLocalizations.of(context)!.submit
+                    : AppLocalizations.of(context)!.next,
                 onPressed: () {
                   if (isLast) {
                     _saveReport();
@@ -746,8 +755,8 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
               ?.copyWith(color: AppColors.primary)),
       const SizedBox(height: 16),
       if (stops.isEmpty)
-        const Text("Aucun arrêt enregistré.",
-            style: TextStyle(color: Colors.grey)),
+        Text(AppLocalizations.of(context)!.noStopsRecorded,
+            style: const TextStyle(color: Colors.grey)),
       ...stops.asMap().entries.map((e) => OCPCard(
               child: ListTile(
             title: Text(_formatModuleStopHeadline(e.value, e.key + 1)),
@@ -757,15 +766,15 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
               children: [
                 Text(_formatModuleStopTimeline(e.value)),
                 if (_isPendingModuleStop(e.value))
-                  const Text(
-                    'Arrêt en cours',
-                    style: TextStyle(color: AppColors.success),
+                  Text(
+                    AppLocalizations.of(context)!.stopInProgress,
+                    style: const TextStyle(color: AppColors.success),
                   ),
               ],
             ),
             trailing: PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert),
-              tooltip: 'Actions arrêt',
+              tooltip: AppLocalizations.of(context)!.actionsArret,
               onSelected: (value) {
                 if (value == 'end') {
                   _endPendingModuleStop(module, stops, e.key);
@@ -784,11 +793,11 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
               },
               itemBuilder: (context) => [
                 if (_isPendingModuleStop(e.value))
-                  const PopupMenuItem<String>(
+                  PopupMenuItem<String>(
                     value: 'end',
                     child: _StopActionMenuItem(
                       icon: Icons.stop_circle_outlined,
-                      label: 'Terminer',
+                      label: AppLocalizations.of(context)!.finishLabel,
                       iconColor: AppColors.success,
                     ),
                   ),
@@ -796,15 +805,15 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                   value: 'edit',
                   child: _StopActionMenuItem(
                     icon: Icons.edit_outlined,
-                    label: 'Modifier',
+                    label: AppLocalizations.of(context)!.modifyLabel,
                     iconColor: Theme.of(context).colorScheme.primary,
                   ),
                 ),
-                const PopupMenuItem<String>(
+                PopupMenuItem<String>(
                   value: 'delete',
                   child: _StopActionMenuItem(
                     icon: Icons.delete_outline,
-                    label: 'Supprimer',
+                    label: AppLocalizations.of(context)!.delete,
                     iconColor: AppColors.error,
                   ),
                 ),
@@ -846,7 +855,8 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                     (!requiresDetail || stopDetail.trim().isNotEmpty);
 
                 return AlertDialog(
-                  title: Text(AppLocalizations.of(context)!.addStopForModule(module.toString())),
+                  title: Text(AppLocalizations.of(context)!
+                      .addStopForModule(module.toString())),
                   content: SingleChildScrollView(
                     child: SizedBox(
                       width: 360,
@@ -856,9 +866,10 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                         children: [
                           DropdownButtonFormField<StopCategory>(
                             initialValue: selectedCategory,
-                            decoration: const InputDecoration(
-                              labelText: "Catégorie d'arrêt",
-                              border: OutlineInputBorder(),
+                            decoration: InputDecoration(
+                              labelText:
+                                  AppLocalizations.of(context)!.catArretLabel,
+                              border: const OutlineInputBorder(),
                             ),
                             items: _tnbStopCategories
                                 .map((category) => DropdownMenuItem(
@@ -873,16 +884,18 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                               stopDetail = '';
                               applyToBothModules = true;
                             }),
-                            hint: Text(AppLocalizations.of(context)!.selectStopCategory),
+                            hint: Text(AppLocalizations.of(context)!
+                                .selectStopCategory),
                             isExpanded: true,
                           ),
                           if (selectedCategory != null) ...[
                             const SizedBox(height: 16),
                             DropdownButtonFormField<String>(
                               initialValue: selectedNature,
-                              decoration: const InputDecoration(
-                                labelText: 'Type d\'arrêt',
-                                border: OutlineInputBorder(),
+                              decoration: InputDecoration(
+                                labelText: AppLocalizations.of(context)!
+                                    .typeArretLabel,
+                                border: const OutlineInputBorder(),
                               ),
                               items: availableTypes
                                   .map((nature) => DropdownMenuItem(
@@ -896,16 +909,18 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                                 stopDetail = '';
                                 applyToBothModules = true;
                               }),
-                              hint: Text(AppLocalizations.of(context)!.selectStopType),
+                              hint: Text(
+                                  AppLocalizations.of(context)!.selectStopType),
                               isExpanded: true,
                             ),
                           ],
                           if (selectedNature != null && requiresLocation) ...[
                             const SizedBox(height: 16),
                             DropdownButtonFormField<String>(
-                              decoration: const InputDecoration(
-                                labelText: "Lieu d'arrêt",
-                                border: OutlineInputBorder(),
+                              decoration: InputDecoration(
+                                labelText: AppLocalizations.of(context)!
+                                    .lieuArretLabel,
+                                border: const OutlineInputBorder(),
                               ),
                               initialValue: selectedLocation,
                               isExpanded: true,
@@ -920,16 +935,18 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                                 applyToBothModules =
                                     _isSharedConveyorLocation(value);
                               }),
-                              hint: Text(AppLocalizations.of(context)!.selectLocation),
+                              hint: Text(
+                                  AppLocalizations.of(context)!.selectLocation),
                             ),
                           ],
                           if (requiresLocation &&
                               _isSharedConveyorLocation(selectedLocation))
                             SwitchListTile(
                               contentPadding: EdgeInsets.zero,
-                              title: Text(AppLocalizations.of(context)!.applyToBothModules),
-                              subtitle: const Text(
-                                  'Appliquer aux deux modules 1 et 2.'),
+                              title: Text(AppLocalizations.of(context)!
+                                  .applyToBothModules),
+                              subtitle: Text(AppLocalizations.of(context)!
+                                  .applyToBothModulesDesc),
                               value: applyToBothModules,
                               onChanged: (value) =>
                                   setDs(() => applyToBothModules = value),
@@ -938,9 +955,10 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                             const SizedBox(height: 16),
                             TextFormField(
                               initialValue: stopDetail,
-                              decoration: const InputDecoration(
-                                labelText: "Détail de l'arrêt",
-                                border: OutlineInputBorder(),
+                              decoration: InputDecoration(
+                                labelText: AppLocalizations.of(context)!
+                                    .detailArretLabel,
+                                border: const OutlineInputBorder(),
                               ),
                               onChanged: (value) =>
                                   setDs(() => stopDetail = value),
@@ -1104,7 +1122,8 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
               (!requiresDetail || stopDetail.trim().isNotEmpty);
 
           return AlertDialog(
-            title: Text('${AppLocalizations.of(context)!.editArret} - Module $module'),
+            title: Text(
+                '${AppLocalizations.of(context)!.editArret} - Module $module'),
             content: SingleChildScrollView(
               child: SizedBox(
                 width: 360,
@@ -1114,9 +1133,9 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                   children: [
                     DropdownButtonFormField<StopCategory>(
                       initialValue: selectedCategory,
-                      decoration: const InputDecoration(
-                        labelText: "Catégorie d'arrêt",
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: AppLocalizations.of(context)!.catArretLabel,
+                        border: const OutlineInputBorder(),
                       ),
                       items: _tnbStopCategories
                           .map((category) => DropdownMenuItem(
@@ -1138,16 +1157,18 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                           stopDetail = '';
                         }
                       }),
-                      hint: Text(AppLocalizations.of(context)!.selectStopCategory),
+                      hint: Text(
+                          AppLocalizations.of(context)!.selectStopCategory),
                       isExpanded: true,
                     ),
                     if (selectedCategory != null) ...[
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
                         initialValue: selectedNature,
-                        decoration: const InputDecoration(
-                          labelText: 'Type d\'arrêt',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText:
+                              AppLocalizations.of(context)!.typeArretLabel,
+                          border: const OutlineInputBorder(),
                         ),
                         items: availableTypes
                             .map((nature) => DropdownMenuItem(
@@ -1164,16 +1185,18 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                             stopDetail = '';
                           }
                         }),
-                        hint: Text(AppLocalizations.of(context)!.selectStopType),
+                        hint:
+                            Text(AppLocalizations.of(context)!.selectStopType),
                         isExpanded: true,
                       ),
                     ],
                     if (selectedNature != null && requiresLocation) ...[
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(
-                          labelText: "Lieu d'arrêt",
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText:
+                              AppLocalizations.of(context)!.lieuArretLabel,
+                          border: const OutlineInputBorder(),
                         ),
                         initialValue: selectedLocation,
                         isExpanded: true,
@@ -1184,16 +1207,18 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                             .toList(),
                         onChanged: (value) =>
                             setDs(() => selectedLocation = value),
-                        hint: Text(AppLocalizations.of(context)!.selectLocation),
+                        hint:
+                            Text(AppLocalizations.of(context)!.selectLocation),
                       ),
                     ],
                     if (requiresDetail) ...[
                       const SizedBox(height: 16),
                       TextFormField(
                         initialValue: stopDetail,
-                        decoration: const InputDecoration(
-                          labelText: "Détail de l'arrêt",
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText:
+                              AppLocalizations.of(context)!.detailArretLabel,
+                          border: const OutlineInputBorder(),
                         ),
                         onChanged: (value) => setDs(() => stopDetail = value),
                       ),
@@ -1629,7 +1654,8 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                   onPressed: () =>
                       _endPendingModuleStop(1, module1Stops, e.key),
                   icon: const Icon(Icons.stop_circle_outlined, size: 16),
-                  label: Text('Terminer M1 #${e.key + 1}'),
+                  label: Text(
+                      AppLocalizations.of(context)!.finishModule1(e.key + 1)),
                 ),
               ),
             ),
@@ -1665,7 +1691,8 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                   onPressed: () =>
                       _endPendingModuleStop(2, module2Stops, e.key),
                   icon: const Icon(Icons.stop_circle_outlined, size: 16),
-                  label: Text('Terminer M2 #${e.key + 1}'),
+                  label: Text(
+                      AppLocalizations.of(context)!.finishModule2(e.key + 1)),
                 ),
               ),
             ),
@@ -1768,15 +1795,18 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
       } else {
         await _reportRepository.insertReport(report);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Succès'), backgroundColor: AppColors.success));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(AppLocalizations.of(context)!.success),
+              backgroundColor: AppColors.success));
           Navigator.popUntil(context, (route) => route.isFirst);
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text("Error: $e"), backgroundColor: AppColors.error));
+            content:
+                Text(AppLocalizations.of(context)!.errorMessage(e.toString())),
+            backgroundColor: AppColors.error));
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

@@ -913,10 +913,12 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
         _selectedQualite != null && _selectedQualite!.trim().isNotEmpty;
 
     if (!hasDate || !hasPoste || !hasMachineOrEngin) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text(
-              'La date, le poste et la machine/engin sont obligatoires pour enregistrer le rapport.'),
-          backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.requiredFieldsTruckError),
+          backgroundColor: AppColors.error,
+        ),
+      );
       return;
     }
     if (!_areAllTripTimesWithinSelectedPoste()) {

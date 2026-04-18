@@ -44,16 +44,16 @@ class FirestoreService {
     }
 
     try {
-      final reportData = _reportToFirestore(report);
-
       // If report has a Firestore ID, update it; otherwise create new
       if (report.firestoreId != null) {
+        final reportData = _reportToFirestoreForUpdate(report);
         await _firestore
             .collection(_reportsCollection)
             .doc(report.firestoreId)
             .update(reportData);
         return report.firestoreId!;
       } else {
+        final reportData = _reportToFirestoreForCreate(report);
         final docRef =
             await _firestore.collection(_reportsCollection).add(reportData);
         return docRef.id;
@@ -160,7 +160,7 @@ class FirestoreService {
         if (report.firestoreId == null) {
           // New report - add to batch
           final docRef = _firestore.collection(_reportsCollection).doc();
-          batch.set(docRef, _reportToFirestore(report));
+          batch.set(docRef, _reportToFirestoreForCreate(report));
           batchCount++;
 
           // Firestore batch limit is 500
@@ -180,7 +180,7 @@ class FirestoreService {
   }
 
   /// Convert Report to Firestore document
-  Map<String, dynamic> _reportToFirestore(Report report) {
+  Map<String, dynamic> _reportToFirestoreForCreate(Report report) {
     return {
       'userId': _userId,
       'description': report.description,
@@ -190,6 +190,18 @@ class FirestoreService {
       'additionalData': report.additionalData,
       'localId': report.id, // Keep local SQLite ID for reference
       'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+  }
+
+  /// Convert Report to Firestore update payload
+  Map<String, dynamic> _reportToFirestoreForUpdate(Report report) {
+    return {
+      'description': report.description,
+      'date': Timestamp.fromDate(report.date),
+      'group': report.group,
+      'type': report.type,
+      'additionalData': report.additionalData,
       'updatedAt': FieldValue.serverTimestamp(),
     };
   }

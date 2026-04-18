@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LanguageProvider extends ChangeNotifier {
@@ -16,6 +17,7 @@ class LanguageProvider extends ChangeNotifier {
     final languageCode = prefs.getString(_languageKey);
     if (languageCode != null) {
       _locale = Locale(languageCode);
+      Intl.defaultLocale = languageCode;
       notifyListeners();
     }
   }
@@ -24,6 +26,7 @@ class LanguageProvider extends ChangeNotifier {
     if (_locale == locale) return;
 
     _locale = locale;
+    Intl.defaultLocale = locale.languageCode;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_languageKey, locale.languageCode);
     notifyListeners();

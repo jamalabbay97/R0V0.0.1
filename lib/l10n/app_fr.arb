@@ -1313,5 +1313,79 @@
     "placeholders": {
       "index": { "type": "int" }
     }
-  }
+  },
+  "ok": "OK",
+  "@ok": {},
+  "finishModule1": "Terminer M1 #{index}",
+  "@finishModule1": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+  "finishModule2": "Terminer M2 #{index}",
+  "@finishModule2": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+  "reportsDeletedSuccessfully": "{count} rapport(s) supprimé(s) avec succès",
+  "@reportsDeletedSuccessfully": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "firstPoste": "1er Poste",
+  "@firstPoste": {},
+  "secondPoste": "2ème Poste",
+  "@secondPoste": {},
+  "thirdPoste": "3ème Poste",
+  "@thirdPoste": {},
+  "global": "Global",
+  "@global": {},
+  "qualityTypeLabel": "Type de Qualité",
+  "@qualityTypeLabel": {},
+  "trucksTitle": "Gestion des Camions",
+  "@trucksTitle": {},
+  "dailyReportTsudTitle": "Rapport Journalier TSUD",
+  "@dailyReportTsudTitle": {},
+  "editDailyReportTsudTitle": "Modifier Rapport Journalier TSUD",
+  "@editDailyReportTsudTitle": {},
+  "stepArretsM1": "Arrêts M1",
+  "@stepArretsM1": {},
+  "stepArretsM2": "Arrêts M2",
+  "@stepArretsM2": {},
+  "stepStock": "Stock",
+  "@stepStock": {},
+  "stopInProgress": "Arrêt en cours",
+  "@stopInProgress": {},
+  "actionsArret": "Actions arrêt",
+  "@actionsArret": {},
+  "addArretModule": "Ajouter Arrêt (Module {index})",
+  "@addArretModule": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+  "catArretLabel": "Catégorie d'arrêt",
+  "@catArretLabel": {},
+  "typeArretLabel": "Type d'arrêt",
+  "@typeArretLabel": {},
+  "lieuArretLabel": "Lieu d'arrêt",
+  "@lieuArretLabel": {},
+  "detailArretLabel": "Détail de l'arrêt",
+  "@detailArretLabel": {},
+  "applyToBothModulesDesc": "Appliquer aux deux modules 1 et 2.",
+  "@applyToBothModulesDesc": {},
+  "requiredFieldsTruckError": "La date, le poste et la machine/engin sont obligatoires pour enregistrer le rapport.",
+  "@requiredFieldsTruckError": {},
+  "dashboardTab": "Tableau de Bord",
+  "@dashboardTab": {},
+  "archiveTab": "Archive",
+  "@archiveTab": {},
+  "timelineTab": "Chronologie",
+  "@timelineTab": {},
+  "swipeLeftHint": "Glissez vers la gauche (ou appuyez sur Sheets ci-dessus) pour ouvrir les rapports",
+  "@swipeLeftHint": {},
+  "descriptionRequired": "La description est obligatoire",
+  "@descriptionRequired": {}
 }
