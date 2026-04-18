@@ -1,88 +1,40 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function roleFor(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && roleFor(request.auth.uid) == 'admin';
+    }
+
+    function isManager() {
+      return isSignedIn() && roleFor(request.auth.uid) == 'manager';
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) || isAdmin();
+      allow update: if isAdmin() || (
+        isOwner(userId)
+        && request.resource.data.role == resource.data.role
+      );
+      allow delete: if isAdmin();
+    }
+
     match /reports/{reportId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isOwner() {
-        return isSignedIn() && request.auth.uid == resource.data.userId;
-      }
-
-      function isNewOwner() {
-        return isSignedIn() && request.auth.uid == request.resource.data.userId;
-      }
-
-      function hasValidKeysForCreate() {
-        return request.resource.data.keys().hasOnly([
-          'userId',
-          'description',
-          'date',
-          'group',
-          'type',
-          'additionalData',
-          'localId',
-          'createdAt',
-          'updatedAt',
-        ]);
-      }
-
-      function hasValidKeysForUpdate() {
-        return request.resource.data.keys().hasOnly([
-          'userId',
-          'description',
-          'date',
-          'group',
-          'type',
-          'additionalData',
-          'localId',
-          'createdAt',
-          'updatedAt',
-        ]);
-      }
-
-      function hasValidTypes() {
-        return request.resource.data.description is string
-          && request.resource.data.description.size() > 0
-          && request.resource.data.description.size() <= 5000
-          && request.resource.data.date is timestamp
-          && request.resource.data.group is string
-          && request.resource.data.group.size() > 0
-          && request.resource.data.group.size() <= 100
-          && request.resource.data.type is string
-          && request.resource.data.type.size() > 0
-          && request.resource.data.type.size() <= 100
-          && (
-            !('additionalData' in request.resource.data)
-            || request.resource.data.additionalData == null
-            || request.resource.data.additionalData is map
-          )
-          && (
-            !('localId' in request.resource.data)
-            || request.resource.data.localId == null
-            || request.resource.data.localId is int
-          )
-          && request.resource.data.createdAt is timestamp
-          && request.resource.data.updatedAt is timestamp;
-      }
-
-      function isImmutableOwnerFields() {
-        return request.resource.data.userId == resource.data.userId
-          && request.resource.data.createdAt == resource.data.createdAt
-          && request.resource.data.localId == resource.data.localId;
-      }
-
-      allow read: if isOwner();
-      allow create: if isNewOwner()
-        && hasValidKeysForCreate()
-        && hasValidTypes();
-      allow update: if isOwner()
-        && isNewOwner()
-        && hasValidKeysForUpdate()
-        && hasValidTypes()
-        && isImmutableOwnerFields();
-      allow delete: if isOwner();
+      allow read: if isOwner(resource.data.userId) || isAdmin() || isManager();
+      allow create: if isOwner(request.resource.data.userId);
+      allow update, delete: if isOwner(resource.data.userId) || isAdmin();
     }
   }
 }

@@ -1,0 +1,30 @@
+# Suggested .gitignore security additions
+
+# Firebase / Google Cloud secrets
+**/service-account*.json
+**/*firebase-adminsdk*.json
+**/google-services.json
+**/GoogleService-Info.plist
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Key stores / certificates
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+
+# Personal tokens and dumps
+*.token
+*.bak
+*.backup
+secrets/
+credentials/
+
+# Local generated files
+coverage/
+.dart_tool/

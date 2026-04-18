@@ -31,3 +31,16 @@ android/app/upload-keystore.jks
 
 # Accidentally committed personal access tokens / key artifacts
 ghp_*
+# Security hardening
+**/service-account*.json
+**/*firebase-adminsdk*.json
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+secrets/
+credentials/
