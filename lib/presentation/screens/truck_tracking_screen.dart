@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:r0/l10n/app_localizations.dart';
-import 'package:r0/data/services/database_helper.dart';
+import 'package:provider/provider.dart';
+import 'package:r0/domain/repositories/report_repository.dart';
 import 'package:r0/domain/models/report.dart';
 import 'package:r0/domain/models/mine_data.dart';
 import 'package:intl/intl.dart';
@@ -59,7 +60,7 @@ class TruckTrackingScreen extends StatefulWidget {
 }
 
 class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
-  final DatabaseHelper _databaseHelper = DatabaseHelper();
+  ReportRepository get _reportRepository => context.read<ReportRepository>();
   final TextEditingController _distanceController = TextEditingController();
 
   // State
@@ -128,16 +129,16 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
   ];
   // Predefined lists (Localized via getters if static needed, but simpler to use instance)
   Map<String, String> _getOperationTypes(AppLocalizations l10n) => {
-        'Défeuitage': l10n.defeuitage,
-        'Reprise': l10n.reprise,
-        'Stérile': l10n.sterile,
+        'Défeuitage': AppLocalizations.of(context)!.defeuitage,
+        'Reprise': AppLocalizations.of(context)!.reprise,
+        'Stérile': AppLocalizations.of(context)!.sterile,
       };
 
   Map<String, String> _getQualiteOptions(AppLocalizations l10n) => {
-        'Chargeuse 992K': l10n.chargeuse992k,
-        'Chargeuse 994H': l10n.chargeuse994h,
-        'Pelle hydraulique': l10n.pelleHydraulique,
-        'Pelle electrique B1': l10n.pelleElectriqueB1,
+        'Chargeuse 992K': AppLocalizations.of(context)!.chargeuse992k,
+        'Chargeuse 994H': AppLocalizations.of(context)!.chargeuse994h,
+        'Pelle hydraulique': AppLocalizations.of(context)!.pelleHydraulique,
+        'Pelle electrique B1': AppLocalizations.of(context)!.pelleElectriqueB1,
       };
 
   @override
@@ -254,16 +255,16 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final steps = [
-      l10n.stepInfos,
-      l10n.stepCamions,
-      l10n.stepVoyages,
-      l10n.stepVerif
+      AppLocalizations.of(context)!.stepInfos,
+      AppLocalizations.of(context)!.stepCamions,
+      AppLocalizations.of(context)!.stepVoyages,
+      AppLocalizations.of(context)!.stepVerif
     ];
     return Scaffold(
         appBar: AppBar(
             title: Text(widget.isEditing
-                ? l10n.editTruckTracking
-                : l10n.newTruckTracking)),
+                ? AppLocalizations.of(context)!.editTruckTracking
+                : AppLocalizations.of(context)!.newTruckTracking)),
         body: Center(
           child: Container(
             constraints: const BoxConstraints(maxWidth: 800),
@@ -312,13 +313,13 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
           if (_currentStep > 0)
             Expanded(
                 child: OCPButton(
-                    text: l10n.previous,
+                    text: AppLocalizations.of(context)!.previous,
                     onPressed: () => setState(() => _currentStep--),
                     isSecondary: true)),
           if (_currentStep > 0) const SizedBox(width: 16),
           Expanded(
               child: OCPButton(
-                  text: isLast ? l10n.submit : l10n.next,
+                  text: isLast ? AppLocalizations.of(context)!.submit : AppLocalizations.of(context)!.next,
                   onPressed: () {
                     if (isLast) {
                       _saveReport(l10n);
@@ -347,12 +348,12 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
             const Icon(Icons.calendar_today, color: AppColors.primary),
             const SizedBox(width: 16),
             Text(
-                "${l10n.date}: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
+                "${AppLocalizations.of(context)!.date}: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
                 style: const TextStyle(fontWeight: FontWeight.bold))
           ])),
       const SizedBox(height: 16),
       OCPDropdown<MineData>(
-          label: l10n.mine,
+          label: AppLocalizations.of(context)!.mine,
           value: _selectedMine,
           items: minesData
               .map((m) => DropdownMenuItem(value: m, child: Text(m.name)))
@@ -365,7 +366,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
       const SizedBox(height: 16),
       if (_selectedMine != null) ...[
         OCPDropdown<ZoneData>(
-            label: l10n.zone,
+            label: AppLocalizations.of(context)!.zone,
             value: _selectedZone,
             items: _selectedMine!.zones
                 .map((z) => DropdownMenuItem(value: z, child: Text(z.name)))
@@ -378,7 +379,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
       ],
       if (_selectedZone != null) ...[
         OCPDropdown<String>(
-            label: l10n.exit,
+            label: AppLocalizations.of(context)!.exit,
             value: _selectedSortie,
             items: _selectedZone!.sorties
                 .map((s) => DropdownMenuItem(value: s, child: Text(s)))
@@ -387,7 +388,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
         const SizedBox(height: 16),
       ],
       OCPDropdown<Poste>(
-          label: l10n.poste,
+          label: AppLocalizations.of(context)!.poste,
           value: _selectedPoste,
           items: Poste.values
               .map((p) => DropdownMenuItem(
@@ -396,12 +397,12 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
           onChanged: (v) => setState(() => _selectedPoste = v)),
       const SizedBox(height: 16),
       OCPTextField(
-          label: l10n.distance,
+          label: AppLocalizations.of(context)!.distance,
           controller: _distanceController,
           keyboardType: TextInputType.text),
       const SizedBox(height: 16),
       OCPDropdown<String>(
-          label: l10n.operation,
+          label: AppLocalizations.of(context)!.operation,
           value: _selectedOperationType,
           items: _getOperationTypes(l10n)
               .entries
@@ -410,7 +411,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
           onChanged: (v) => setState(() => _selectedOperationType = v)),
       const SizedBox(height: 16),
       OCPDropdown<String>(
-          label: l10n.equipment,
+          label: AppLocalizations.of(context)!.equipment,
           value: _selectedQualite,
           items: _getQualiteOptions(l10n)
               .entries
@@ -419,7 +420,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
           onChanged: (v) => setState(() => _selectedQualite = v)),
       const SizedBox(height: 16),
       OCPDropdown<QualiteType>(
-          label: l10n.type,
+          label: AppLocalizations.of(context)!.type,
           value: _selectedQualiteType,
           items: QualiteType.values
               .map((t) => DropdownMenuItem(
@@ -435,8 +436,8 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
       ...truckData.asMap().entries.map((e) => OCPCard(
               child: ListTile(
             leading: const Icon(Icons.local_shipping, color: AppColors.primary),
-            title: Text(e.value['truckNumber'] ?? l10n.newTruckLabel),
-            subtitle: Text("${l10n.driverLabel}: ${e.value['driver1'] ?? ''}"),
+            title: Text(e.value['truckNumber'] ?? AppLocalizations.of(context)!.newTruckLabel),
+            subtitle: Text("${AppLocalizations.of(context)!.driverLabel}: ${e.value['driver1'] ?? ''}"),
             trailing: IconButton(
                 icon: const Icon(Icons.delete, color: AppColors.error),
                 onPressed: () => setState(() => truckData.removeAt(e.key))),
@@ -444,7 +445,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
           ))),
       const SizedBox(height: 16),
       OCPButton(
-          text: l10n.addTruckTitle,
+          text: AppLocalizations.of(context)!.addTruckTitle,
           icon: Icons.add,
           isSecondary: true,
           onPressed: () => _showAddTruckDialog(l10n)),
@@ -457,27 +458,27 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
     showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-                title: Text(l10n.addTruckTitle),
+                title: Text(AppLocalizations.of(context)!.addTruckTitle),
                 content: Column(mainAxisSize: MainAxisSize.min, children: [
                   DropdownButtonFormField<String>(
-                      hint: Text(l10n.truckNumberLabel),
+                      hint: Text(AppLocalizations.of(context)!.truckNumberLabel),
                       items: predefinedTrucks
                           .map(
                               (s) => DropdownMenuItem(value: s, child: Text(s)))
                           .toList(),
                       onChanged: (v) => number = v ?? ''),
                   TextField(
-                      decoration: InputDecoration(labelText: l10n.driverLabel),
+                      decoration: InputDecoration(labelText: AppLocalizations.of(context)!.driverLabel),
                       onChanged: (v) => driver = v),
                   TextField(
                       decoration:
-                          InputDecoration(labelText: l10n.locationLabel),
+                          InputDecoration(labelText: AppLocalizations.of(context)!.locationLabel),
                       onChanged: (v) {}),
                 ]),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text(l10n.cancel)),
+                      child: Text(AppLocalizations.of(context)!.cancel)),
                   ElevatedButton(
                       onPressed: () {
                         // Logic to add truck
@@ -491,7 +492,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                         });
                         Navigator.pop(context);
                       },
-                      child: Text(l10n.add))
+                      child: Text(AppLocalizations.of(context)!.add))
                 ]));
   }
 
@@ -509,10 +510,10 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
             child: Column(children: [
           ListTile(
             title: Text(truck['truckNumber']),
-            subtitle: Text(l10n.tripsCountLabel(tripCount)),
+            subtitle: Text(AppLocalizations.of(context)!.tripsCountLabel(tripCount)),
             trailing: ElevatedButton.icon(
               icon: const Icon(Icons.add, size: 16),
-              label: Text(l10n.tripLabel),
+              label: Text(AppLocalizations.of(context)!.tripLabel),
               style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 12)),
               onPressed: () => _addTrip(truck, l10n),
@@ -521,7 +522,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
           if (tripCount > 0) ...[
             const Divider(),
             ExpansionTile(
-                title: Text(l10n.viewDetails),
+                title: Text(AppLocalizations.of(context)!.viewDetails),
                 children: ((truck['counts'] as List)
                     .map((trip) => ListTile(
                           title: Text(trip['time']),
@@ -572,7 +573,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
     showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-                title: Text(l10n.editTrip),
+                title: Text(AppLocalizations.of(context)!.editTrip),
                 content: StatefulBuilder(
                     builder: (c, setDs) =>
                         Column(mainAxisSize: MainAxisSize.min, children: [
@@ -592,7 +593,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                               onTimeChange: (t) => time = t),
                           DropdownButtonFormField<String>(
                               initialValue: initialEquipment,
-                              hint: Text(l10n.equipment),
+                              hint: Text(AppLocalizations.of(context)!.equipment),
                               items: equipmentList
                                   .map((e) => DropdownMenuItem(
                                       value: e, child: Text(e)))
@@ -601,7 +602,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                           const SizedBox(height: 12),
                           DropdownButtonFormField<QualiteType>(
                               initialValue: tripQuality,
-                              hint: Text(l10n.qualityLabel),
+                              hint: Text(AppLocalizations.of(context)!.qualityLabel),
                               items: QualiteType.values
                                   .map((t) => DropdownMenuItem(
                                       value: t,
@@ -613,18 +614,18 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text(l10n.cancel)),
+                      child: Text(AppLocalizations.of(context)!.cancel)),
                   ElevatedButton(
                       onPressed: () {
                         if (_selectedPoste == null) {
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text(l10n.pleaseSelectPoste),
+                              content: Text(AppLocalizations.of(context)!.pleaseSelectPoste),
                               backgroundColor: AppColors.error));
                           return;
                         }
                         if (!_isTripTimeWithinPoste(time, _selectedPoste!)) {
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text(l10n.invalidStopStartTimeForPoste),
+                              content: Text(AppLocalizations.of(context)!.invalidStopStartTimeForPoste),
                               backgroundColor: AppColors.error));
                           return;
                         }
@@ -637,7 +638,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                         });
                         Navigator.pop(context);
                       },
-                      child: Text(l10n.save))
+                      child: Text(AppLocalizations.of(context)!.save))
                 ]));
   }
 
@@ -650,7 +651,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
     showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-                title: Text(l10n.addTrip),
+                title: Text(AppLocalizations.of(context)!.addTrip),
                 content: StatefulBuilder(
                     builder: (c, setDs) =>
                         Column(mainAxisSize: MainAxisSize.min, children: [
@@ -669,7 +670,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                               onTimeChange: (t) => time = t),
                           DropdownButtonFormField<String>(
                               initialValue: initialEquipment,
-                              hint: Text(l10n.equipment),
+                              hint: Text(AppLocalizations.of(context)!.equipment),
                               items: equipmentList
                                   .map((e) => DropdownMenuItem(
                                       value: e, child: Text(e)))
@@ -678,7 +679,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                           const SizedBox(height: 12),
                           DropdownButtonFormField<QualiteType>(
                               initialValue: tripQuality,
-                              hint: Text(l10n.qualityLabel),
+                              hint: Text(AppLocalizations.of(context)!.qualityLabel),
                               items: QualiteType.values
                                   .map((t) => DropdownMenuItem(
                                       value: t,
@@ -690,18 +691,18 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text(l10n.cancel)),
+                      child: Text(AppLocalizations.of(context)!.cancel)),
                   ElevatedButton(
                       onPressed: () {
                         if (_selectedPoste == null) {
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text(l10n.pleaseSelectPoste),
+                              content: Text(AppLocalizations.of(context)!.pleaseSelectPoste),
                               backgroundColor: AppColors.error));
                           return;
                         }
                         if (!_isTripTimeWithinPoste(time, _selectedPoste!)) {
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text(l10n.invalidStopStartTimeForPoste),
+                              content: Text(AppLocalizations.of(context)!.invalidStopStartTimeForPoste),
                               backgroundColor: AppColors.error));
                           return;
                         }
@@ -717,7 +718,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                         });
                         Navigator.pop(context);
                       },
-                      child: Text(l10n.add))
+                      child: Text(AppLocalizations.of(context)!.add))
                 ]));
   }
 
@@ -733,11 +734,11 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
       final counts = truck['counts'] as List?;
       if (counts != null) {
         for (var trip in counts) {
-          String eq = trip['equipment'] ?? l10n.unknownLabel;
+          String eq = trip['equipment'] ?? AppLocalizations.of(context)!.unknownLabel;
           equipmentTrips[eq] = (equipmentTrips[eq] ?? 0) + 1;
           final quality = _parseQualiteType(trip['productQualityType']);
           final qualityLabel = quality == null
-              ? l10n.unknownLabel
+              ? AppLocalizations.of(context)!.unknownLabel
               : qualiteTypeToString(quality, l10n);
           equipmentQualityTrips.putIfAbsent(eq, () => {});
           equipmentQualityTrips[eq]![qualityLabel] =
@@ -753,7 +754,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
         for (var trip in counts) {
           final quality = _parseQualiteType(trip['productQualityType']);
           final label = quality == null
-              ? l10n.unknownLabel
+              ? AppLocalizations.of(context)!.unknownLabel
               : qualiteTypeToString(quality, l10n);
           qualityTrips[label] = (qualityTrips[label] ?? 0) + 1;
         }
@@ -766,37 +767,37 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
               size: 64, color: AppColors.success)),
       const SizedBox(height: 16),
       Center(
-          child: Text(l10n.summaryTitle,
+          child: Text(AppLocalizations.of(context)!.summaryTitle,
               style:
                   const TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
       const SizedBox(height: 24),
 
       // General Info
-      _sectionHeader(l10n.generalInformation),
-      _row(l10n.date,
+      _sectionHeader(AppLocalizations.of(context)!.generalInformation),
+      _row(AppLocalizations.of(context)!.date,
           "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}"),
-      _row(l10n.mineZoneLabel,
+      _row(AppLocalizations.of(context)!.mineZoneLabel,
           "${_selectedMine?.name ?? '-'} / ${_selectedZone?.name ?? '-'}"),
-      _row(l10n.type, qualiteTypeToString(_selectedQualiteType, l10n)),
+      _row(AppLocalizations.of(context)!.type, qualiteTypeToString(_selectedQualiteType, l10n)),
       _row(
-          l10n.distance,
+          AppLocalizations.of(context)!.distance,
           _distanceController.text.trim().isEmpty
               ? '-'
               : _distanceController.text.trim()),
-      _row(l10n.poste, posteToString(_selectedPoste, l10n)),
+      _row(AppLocalizations.of(context)!.poste, posteToString(_selectedPoste, l10n)),
       _row(
-          l10n.operation,
+          AppLocalizations.of(context)!.operation,
           _selectedOperationType != null
               ? _getOperationTypes(l10n)[_selectedOperationType!] ??
                   _selectedOperationType!
               : "-"),
-      _row(l10n.stepCamions, "${truckData.length}"),
-      _row(l10n.total, "$totalTrips"),
+      _row(AppLocalizations.of(context)!.stepCamions, "${truckData.length}"),
+      _row(AppLocalizations.of(context)!.total, "$totalTrips"),
 
       const SizedBox(height: 24),
 
       // Trips per Equipment
-      _sectionHeader(l10n.tripsByEquipment),
+      _sectionHeader(AppLocalizations.of(context)!.tripsByEquipment),
       ...equipmentTrips.entries.map((e) {
         final qualityBreakdown = equipmentQualityTrips[e.key] ?? {};
         return Padding(
@@ -821,20 +822,20 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
 
       const SizedBox(height: 24),
 
-      _sectionHeader("${l10n.total} ${l10n.qualityLabel}"),
+      _sectionHeader("${AppLocalizations.of(context)!.total} ${AppLocalizations.of(context)!.qualityLabel}"),
       ...qualityTrips.entries.map((e) => _row(e.key, "${e.value}")),
 
       const SizedBox(height: 24),
 
       // Trips per Truck
-      _sectionHeader(l10n.tripsByTruck),
+      _sectionHeader(AppLocalizations.of(context)!.tripsByTruck),
       ...truckData.map((t) => _row(t['truckNumber'],
-          l10n.tripsCountLabel((t['counts'] as List?)?.length ?? 0))),
+          AppLocalizations.of(context)!.tripsCountLabel((t['counts'] as List?)?.length ?? 0))),
 
       const SizedBox(height: 24),
 
       // All Voyages Details
-      _sectionHeader(l10n.tripDetailsTitle),
+      _sectionHeader(AppLocalizations.of(context)!.tripDetailsTitle),
       ...truckData.expand((t) {
         final counts = t['counts'] as List?;
         if (counts == null || counts.isEmpty) return <Widget>[];
@@ -873,16 +874,16 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
       Map<String, dynamic> trip, AppLocalizations l10n) {
     final quality = _parseQualiteType(trip['productQualityType']);
     return quality == null
-        ? "${l10n.qualityLabel}: -"
-        : "${l10n.qualityLabel}: ${qualiteTypeToString(quality, l10n)}";
+        ? "${AppLocalizations.of(context)!.qualityLabel}: -"
+        : "${AppLocalizations.of(context)!.qualityLabel}: ${qualiteTypeToString(quality, l10n)}";
   }
 
   String _buildTripSubtitle(Map<String, dynamic> trip, AppLocalizations l10n) {
     final equipment = trip['equipment'] ?? '';
     final quality = _parseQualiteType(trip['productQualityType']);
     final qualityLabel = quality == null
-        ? "${l10n.qualityLabel}: -"
-        : "${l10n.qualityLabel}: ${qualiteTypeToString(quality, l10n)}";
+        ? "${AppLocalizations.of(context)!.qualityLabel}: -"
+        : "${AppLocalizations.of(context)!.qualityLabel}: ${qualiteTypeToString(quality, l10n)}";
     if (equipment.toString().isEmpty) {
       return qualityLabel;
     }
@@ -920,7 +921,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
     }
     if (!_areAllTripTimesWithinSelectedPoste()) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(l10n.invalidStopStartTimeForPoste),
+          content: Text(AppLocalizations.of(context)!.invalidStopStartTimeForPoste),
           backgroundColor: AppColors.error));
       return;
     }
@@ -935,7 +936,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
       final counts = truck['counts'] as List?;
       if (counts != null) {
         for (var trip in counts) {
-          String eq = trip['equipment'] ?? l10n.unknownLabel;
+          String eq = trip['equipment'] ?? AppLocalizations.of(context)!.unknownLabel;
           equipmentTrips[eq] = (equipmentTrips[eq] ?? 0) + 1;
         }
       }
@@ -944,16 +945,16 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
     try {
       final report = Report(
           id: widget.initialReport?.id,
-          description: l10n.reportDescriptionPattern(
+          description: AppLocalizations.of(context)!.reportDescriptionPattern(
               _selectedQualite != null
                   ? _getQualiteOptions(l10n)[_selectedQualite!] ??
                       _selectedQualite!
-                  : l10n.trackingType,
+                  : AppLocalizations.of(context)!.trackingType,
               DateFormat('yyyy-MM-dd').format(_selectedDate),
               posteToString(_selectedPoste, l10n)),
           date: _selectedDate,
           group: posteToString(_selectedPoste, l10n),
-          type: _selectedQualite ?? l10n.trackingType,
+          type: _selectedQualite ?? AppLocalizations.of(context)!.trackingType,
           additionalData: {
             'mine': _selectedMine?.name,
             'zone': _selectedZone?.name,
@@ -974,17 +975,17 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
       if (widget.isEditing && widget.onSave != null) {
         widget.onSave!(report);
       } else {
-        await _databaseHelper.insertReport(report);
+        await _reportRepository.insertReport(report);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(l10n.success), backgroundColor: AppColors.success));
+              content: Text(AppLocalizations.of(context)!.success), backgroundColor: AppColors.success));
           Navigator.popUntil(context, (r) => r.isFirst);
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text("${l10n.errorSavingReport}: $e"),
+            content: Text("${AppLocalizations.of(context)!.errorSavingReport}: $e"),
             backgroundColor: AppColors.error));
       }
     } finally {

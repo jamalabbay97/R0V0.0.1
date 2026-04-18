@@ -232,7 +232,7 @@ class _HomeDashboardPage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        l10n.availableReports,
+                        AppLocalizations.of(context)!.availableReports,
                         style: theme.textTheme.titleMedium?.copyWith(
                           color: theme.colorScheme.onSurface
                               .withValues(alpha: 0.7),
@@ -308,7 +308,7 @@ class _HomeDashboardPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  l10n.ocpReports,
+                  AppLocalizations.of(context)!.ocpReports,
                   style: theme.textTheme.titleLarge?.copyWith(
                     color: theme.colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
@@ -337,7 +337,7 @@ class _HomeDashboardPage extends StatelessWidget {
                 ),
               );
             },
-            tooltip: l10n.settingsTooltip,
+            tooltip: AppLocalizations.of(context)!.settingsTooltip,
           ),
         ],
       ),
@@ -351,43 +351,43 @@ class _HomeDashboardPage extends StatelessWidget {
   ) {
     final reportCards = [
       _ReportCardData(
-        title: l10n.r0Report,
-        description: l10n.r0Description,
+        title: AppLocalizations.of(context)!.r0Report,
+        description: AppLocalizations.of(context)!.r0Description,
         icon: Icons.assignment_outlined,
         color: AppColors.primary,
         onTap: () => _navigateToR0Report(context),
       ),
       _ReportCardData(
-        title: l10n.activityReport,
-        description: l10n.activityReportDescription,
+        title: AppLocalizations.of(context)!.activityReport,
+        description: AppLocalizations.of(context)!.activityReportDescription,
         icon: Icons.work_outline,
         color: AppColors.secondary,
         onTap: () => _navigateToActivityReport(context),
       ),
       _ReportCardData(
-        title: l10n.dailyReport,
-        description: l10n.dailyReportDescription,
+        title: AppLocalizations.of(context)!.dailyReport,
+        description: AppLocalizations.of(context)!.dailyReportDescription,
         icon: Icons.today_outlined,
         color: AppColors.warning,
         onTap: () => _navigateToDailyReport(context),
       ),
       _ReportCardData(
-        title: l10n.truckTracking,
-        description: l10n.truckTrackingDescription,
+        title: AppLocalizations.of(context)!.truckTracking,
+        description: AppLocalizations.of(context)!.truckTrackingDescription,
         icon: Icons.local_shipping_outlined,
         color: const Color(0xFF1976D2),
         onTap: () => _navigateToTruckTracking(context),
       ),
       _ReportCardData(
-        title: l10n.machinesStoppedTitleShort,
-        description: l10n.machinesStoppedDescription,
+        title: AppLocalizations.of(context)!.machinesStoppedTitleShort,
+        description: AppLocalizations.of(context)!.machinesStoppedDescription,
         icon: Icons.build_outlined,
         color: AppColors.error,
         onTap: () => _navigateToMachinesStopped(context),
       ),
       _ReportCardData(
-        title: l10n.reportsArchive,
-        description: l10n.reportsArchiveDescription,
+        title: AppLocalizations.of(context)!.reportsArchive,
+        description: AppLocalizations.of(context)!.reportsArchiveDescription,
         icon: Icons.archive_outlined,
         color: const Color(0xFF757575),
         onTap: () => _navigateToReportsArchive(context),

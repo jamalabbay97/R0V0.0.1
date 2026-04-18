@@ -9,6 +9,9 @@ import 'package:r0/presentation/providers/language_provider.dart';
 import 'package:r0/presentation/providers/theme_provider.dart';
 import 'package:r0/presentation/screens/home_screen.dart';
 import 'package:r0/presentation/theme.dart';
+import 'package:r0/domain/repositories/report_repository.dart';
+import 'package:r0/data/repositories/report_repository_impl.dart';
+import 'package:r0/data/services/database_helper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +39,9 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (context) => LanguageProvider()),
         ChangeNotifierProvider(create: (context) => ThemeProvider()),
+        Provider<ReportRepository>(
+          create: (_) => ReportRepositoryImpl(DatabaseHelper()),
+        ),
       ],
       child: Consumer2<LanguageProvider, ThemeProvider>(
         builder: (context, languageProvider, themeProvider, child) {

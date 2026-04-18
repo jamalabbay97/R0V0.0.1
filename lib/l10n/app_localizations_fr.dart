@@ -1366,9 +1366,6 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get saveChanges => 'Enregistrer les modifications';
-
-  @override
   String stockTitleIndex(int index) {
     return 'Stock $index';
   }
@@ -1614,4 +1611,92 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get reasonLabel => 'Raison';
+
+  @override
+  String get r0ValidationMissingFields =>
+      'La date, le modèle et le poste sont obligatoires pour enregistrer le rapport R0.';
+
+  @override
+  String errorMessage(String message) {
+    return 'Erreur: $message';
+  }
+
+  @override
+  String errorUpdate(String message) {
+    return 'Erreur lors de la mise à jour: $message';
+  }
+
+  @override
+  String get saveChanges => 'Enregistrer les modifications';
+
+  @override
+  String get resetFilters => 'Réinitialiser les filtres';
+
+  @override
+  String get allSheets => 'Toutes les feuilles';
+
+  @override
+  String get tryAgain => 'Réessayer';
+
+  @override
+  String get stopMustRemainInWindow =>
+      'L\'arrêt doit rester dans la fenêtre 22:30 → 22:30.';
+
+  @override
+  String get stopFinishedSuccessfully => 'Arrêt terminé avec succès.';
+
+  @override
+  String get selectStopCategory => 'Sélectionner la catégorie d\'arrêt';
+
+  @override
+  String get selectStopType => 'Sélectionner le type d\'arrêt';
+
+  @override
+  String get selectLocation => 'Sélectionner le lieu';
+
+  @override
+  String get applyToBothModules => 'Appliquer aux deux modules';
+
+  @override
+  String deleteSelectedReports(int count) {
+    return 'Supprimer $count rapport(s) sélectionné(s) ?';
+  }
+
+  @override
+  String posteValue(String poste) {
+    return 'Poste: $poste';
+  }
+
+  @override
+  String gatTripsValue(String trips) {
+    return 'Voyages GAT: $trips';
+  }
+
+  @override
+  String terexTripsValue(String trips) {
+    return 'Voyages TEREX: $trips';
+  }
+
+  @override
+  String parkValue(String park) {
+    return 'Parc: $park';
+  }
+
+  @override
+  String deleteLabel(String label) {
+    return 'Supprimer $label';
+  }
+
+  @override
+  String get shiftHasStockAlready => 'Ce poste a déjà un stock.';
+
+  @override
+  String vModule(int index) {
+    return 'v$index';
+  }
+
+  @override
+  String workLabel(int index) {
+    return 'Travail $index';
+  }
 }

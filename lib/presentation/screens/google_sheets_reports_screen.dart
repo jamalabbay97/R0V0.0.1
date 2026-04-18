@@ -1,3 +1,4 @@
+import 'package:r0/l10n/app_localizations.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -238,7 +239,7 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
                     if (_selectedDate != null || _selectedSheet != null)
                       TextButton(
                         onPressed: _clearAllFilters,
-                        child: const Text('Reset filters'),
+                        child: Text(AppLocalizations.of(context)!.resetFilters),
                       ),
                     const Spacer(),
                     Text(
@@ -258,7 +259,7 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: ChoiceChip(
-                          label: const Text('All sheets'),
+                          label: Text(AppLocalizations.of(context)!.allSheets),
                           selected: _selectedSheet == null,
                           onSelected: (_) {
                             setState(() {
@@ -331,7 +332,7 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
               FilledButton.icon(
                 onPressed: () => _loadRecords(forceRefresh: true),
                 icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Try again'),
+                label: Text(AppLocalizations.of(context)!.tryAgain),
               ),
             ],
           ),

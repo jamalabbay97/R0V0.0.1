@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/domain/models/report.dart';
-import 'package:r0/data/services/database_helper.dart';
+import 'package:r0/domain/repositories/report_repository.dart';
+import 'package:provider/provider.dart';
 import 'package:r0/presentation/screens/activity_report_screen.dart';
 import 'package:r0/presentation/screens/daily_report_screen.dart';
 import 'package:r0/presentation/screens/r0_report_screen.dart';
@@ -24,14 +25,13 @@ class ReportEditorScreen extends StatefulWidget {
 }
 
 class _ReportEditorScreenState extends State<ReportEditorScreen> {
-  final DatabaseHelper _databaseHelper = DatabaseHelper();
   bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Modifier - ${widget.report.type}'),
+        title: Text(AppLocalizations.of(context)!.editReportType(widget.report.type)),
         actions: [
           if (_isLoading)
             const Padding(
@@ -136,7 +136,8 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
             'Report ID is missing. Cannot update report without ID.');
       }
 
-      await _databaseHelper.updateReport(updatedReport);
+      final reportRepository = context.read<ReportRepository>();
+      await reportRepository.updateReport(updatedReport);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -159,7 +160,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
         // Show error message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur lors de la mise à jour: ${e.toString()}'),
+            content: Text(AppLocalizations.of(context)!.errorUpdate(e.toString())),
             backgroundColor: Theme.of(context).colorScheme.error,
             duration: const Duration(seconds: 4),
           ),
@@ -505,7 +506,7 @@ class _GenericReportEditorState extends State<GenericReportEditor> {
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              child: const Text('Enregistrer les modifications'),
+              child: Text(AppLocalizations.of(context)!.saveChanges),
             ),
           ],
         ),

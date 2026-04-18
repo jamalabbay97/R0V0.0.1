@@ -1369,9 +1369,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get saveChanges => 'Save Changes';
-
-  @override
   String stockTitleIndex(int index) {
     return 'Stock $index';
   }
@@ -1617,4 +1614,92 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reasonLabel => 'Reason';
+
+  @override
+  String get r0ValidationMissingFields =>
+      'Date, model, and shift are required to save the R0 report.';
+
+  @override
+  String errorMessage(String message) {
+    return 'Error: $message';
+  }
+
+  @override
+  String errorUpdate(String message) {
+    return 'Error during update: $message';
+  }
+
+  @override
+  String get saveChanges => 'Save changes';
+
+  @override
+  String get resetFilters => 'Reset filters';
+
+  @override
+  String get allSheets => 'All sheets';
+
+  @override
+  String get tryAgain => 'Try again';
+
+  @override
+  String get stopMustRemainInWindow =>
+      'The stop must remain within the 22:30 → 22:30 window.';
+
+  @override
+  String get stopFinishedSuccessfully => 'Stop finished successfully.';
+
+  @override
+  String get selectStopCategory => 'Select stop category';
+
+  @override
+  String get selectStopType => 'Select stop type';
+
+  @override
+  String get selectLocation => 'Select location';
+
+  @override
+  String get applyToBothModules => 'Apply to both modules';
+
+  @override
+  String deleteSelectedReports(int count) {
+    return 'Delete $count selected report(s)?';
+  }
+
+  @override
+  String posteValue(String poste) {
+    return 'Shift: $poste';
+  }
+
+  @override
+  String gatTripsValue(String trips) {
+    return 'GAT Trips: $trips';
+  }
+
+  @override
+  String terexTripsValue(String trips) {
+    return 'TEREX Trips: $trips';
+  }
+
+  @override
+  String parkValue(String park) {
+    return 'Park: $park';
+  }
+
+  @override
+  String deleteLabel(String label) {
+    return 'Delete $label';
+  }
+
+  @override
+  String get shiftHasStockAlready => 'This shift already has a stock.';
+
+  @override
+  String vModule(int index) {
+    return 'v$index';
+  }
+
+  @override
+  String workLabel(int index) {
+    return 'Work $index';
+  }
 }

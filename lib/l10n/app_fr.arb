@@ -1007,8 +1007,6 @@
       }
     }
   },
-  "saveChanges": "Enregistrer les modifications",
-  "@saveChanges": {},
   "stockTitleIndex": "Stock {index}",
   "@stockTitleIndex": {
     "placeholders": {
@@ -1231,5 +1229,89 @@
   "machinesEquipmentStoppedTitleShort": "Machines/Engins arrêtés",
   "@machinesEquipmentStoppedTitleShort": {},
   "conducteurLabel": "Conducteur",
-  "@conducteurLabel": {}
+  "@conducteurLabel": {},
+  "r0ValidationMissingFields": "La date, le modèle et le poste sont obligatoires pour enregistrer le rapport R0.",
+  "@r0ValidationMissingFields": {},
+  "errorMessage": "Erreur: {message}",
+  "@errorMessage": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "errorUpdate": "Erreur lors de la mise à jour: {message}",
+  "@errorUpdate": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "saveChanges": "Enregistrer les modifications",
+  "@saveChanges": {},
+  "resetFilters": "Réinitialiser les filtres",
+  "@resetFilters": {},
+  "allSheets": "Toutes les feuilles",
+  "@allSheets": {},
+  "tryAgain": "Réessayer",
+  "@tryAgain": {},
+  "stopMustRemainInWindow": "L'arrêt doit rester dans la fenêtre 22:30 → 22:30.",
+  "@stopMustRemainInWindow": {},
+  "stopFinishedSuccessfully": "Arrêt terminé avec succès.",
+  "@stopFinishedSuccessfully": {},
+  "selectStopCategory": "Sélectionner la catégorie d'arrêt",
+  "@selectStopCategory": {},
+  "selectStopType": "Sélectionner le type d'arrêt",
+  "@selectStopType": {},
+  "selectLocation": "Sélectionner le lieu",
+  "@selectLocation": {},
+  "applyToBothModules": "Appliquer aux deux modules",
+  "@applyToBothModules": {},
+  "deleteSelectedReports": "Supprimer {count} rapport(s) sélectionné(s) ?",
+  "@deleteSelectedReports": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "posteValue": "Poste: {poste}",
+  "@posteValue": {
+    "placeholders": {
+      "poste": { "type": "String" }
+    }
+  },
+  "gatTripsValue": "Voyages GAT: {trips}",
+  "@gatTripsValue": {
+    "placeholders": {
+      "trips": { "type": "String" }
+    }
+  },
+  "terexTripsValue": "Voyages TEREX: {trips}",
+  "@terexTripsValue": {
+    "placeholders": {
+      "trips": { "type": "String" }
+    }
+  },
+  "parkValue": "Parc: {park}",
+  "@parkValue": {
+    "placeholders": {
+      "park": { "type": "String" }
+    }
+  },
+  "deleteLabel": "Supprimer {label}",
+  "@deleteLabel": {
+    "placeholders": {
+      "label": { "type": "String" }
+    }
+  },
+  "shiftHasStockAlready": "Ce poste a déjà un stock.",
+  "@shiftHasStockAlready": {},
+  "vModule": "v{index}",
+  "@vModule": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+  "workLabel": "Travail {index}",
+  "@workLabel": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  }
 }

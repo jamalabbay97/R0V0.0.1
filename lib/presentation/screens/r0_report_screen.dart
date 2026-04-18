@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:r0/l10n/app_localizations.dart';
-import 'package:r0/data/services/database_helper.dart';
+import 'package:provider/provider.dart';
+import 'package:r0/domain/repositories/report_repository.dart';
 import 'package:r0/domain/services/time_calculation_service.dart';
 import 'package:r0/domain/models/report.dart';
 import 'package:r0/domain/models/mine_data.dart'; // Import the shared model
@@ -144,7 +145,7 @@ class R0Report extends StatefulWidget {
 
 class R0ReportState extends State<R0Report> {
   // final _formKey = GlobalKey<FormState>(); // Unused
-  final _databaseHelper = DatabaseHelper();
+  ReportRepository get _reportRepository => context.read<ReportRepository>();
   R0ReportFormData formData = R0ReportFormData();
   late DateTime _selectedDate;
   int _currentStep = 0;
@@ -479,67 +480,67 @@ class R0ReportState extends State<R0Report> {
 
   String _getLocalizedTypeLabel(String key, AppLocalizations l10n) {
     final map = {
-      'BULLDOZERS': l10n.catBulldozers,
-      'CAMIONS': l10n.catTrucks,
-      'CHARGEUSES': l10n.catLoaders,
-      'NIVELEUSES': l10n.catGraders,
-      'PAYDOZERS': l10n.catPaydozers,
-      'PELLE HYDRAULIQUE': l10n.catHydraulicShovels,
-      'DRAGLINES': l10n.catDraglines,
-      'PELLE ELECTRIQUE': l10n.catElectricShovels,
-      'SONDEUSES': l10n.catDrills,
-      'MINI CHARGEUSES': l10n.catMiniLoaders,
-      'PORT CHAR': l10n.catTruckLoaders
+      'BULLDOZERS': AppLocalizations.of(context)!.catBulldozers,
+      'CAMIONS': AppLocalizations.of(context)!.catTrucks,
+      'CHARGEUSES': AppLocalizations.of(context)!.catLoaders,
+      'NIVELEUSES': AppLocalizations.of(context)!.catGraders,
+      'PAYDOZERS': AppLocalizations.of(context)!.catPaydozers,
+      'PELLE HYDRAULIQUE': AppLocalizations.of(context)!.catHydraulicShovels,
+      'DRAGLINES': AppLocalizations.of(context)!.catDraglines,
+      'PELLE ELECTRIQUE': AppLocalizations.of(context)!.catElectricShovels,
+      'SONDEUSES': AppLocalizations.of(context)!.catDrills,
+      'MINI CHARGEUSES': AppLocalizations.of(context)!.catMiniLoaders,
+      'PORT CHAR': AppLocalizations.of(context)!.catTruckLoaders
     };
     return map[key] ?? key;
   }
 
   String _getLocalizedCategoryLabel(String key, AppLocalizations l10n) {
     final map = {
-      'EXTERIEURS': l10n.catExterior,
-      'MATERIEL': l10n.catMaterial,
-      'EXPLOITATION': l10n.catExploitation,
+      'EXTERIEURS': AppLocalizations.of(context)!.catExterior,
+      'MATERIEL': AppLocalizations.of(context)!.catMaterial,
+      'EXPLOITATION': AppLocalizations.of(context)!.catExploitation,
     };
     return map[key] ?? key;
   }
 
   String _getLocalizedReasonLabel(String key, AppLocalizations l10n) {
     final map = {
-      'ARRET CARREAU INDUSTRIEL': l10n.stopIndustrialArea,
-      'COUPURE GENERALE DU COURANT': l10n.stopPowerCut,
-      'GREVE': l10n.stopStrike,
-      'INTEMPERIES': l10n.stopWeather,
-      'STOCKS PLEINS': l10n.stopFullStocks,
-      'J. FERIES OU HEBDOMADAIRES': l10n.stopHolidays,
-      'ARRET PAR LA CENTRALE (M.ENERGIE)': l10n.stopPowerPlant,
-      'CONTROLE': l10n.stopControl,
-      'DEFAUT ELEC. (C.CRAME, RESEAU)': l10n.stopElecFault,
-      'PANNE MECANIQUE': l10n.stopMechBreakdown,
-      'PANNE ELECTRIQUE': l10n.stopElecBreakdown,
-      'INTERVENTION ATELIER PNEUMATIQUE': l10n.stopTireWorkshop,
-      'ENTRETIEN SYSTEMATIQUE': l10n.stopMaintenance,
-      'APPOINT (HUILE, GAZOL, EAU)': l10n.stopRefill,
-      'GRAISSAGE': l10n.stopGreasing,
-      'ARRET ELEC. INSTALATION FIXES': l10n.stopFixedInstallElec,
-      'MANQUE CAMIONS': l10n.stopNoTrucks,
-      'MANQUE BULL': l10n.stopNoBull,
-      'MANQUE MECANICIEN': l10n.stopNoMechanic,
-      'MANQUE D\'OUTILS DE TRAVAIL': l10n.stopNoTools,
-      'MACHINE A L\'ARRET': l10n.stopMachineStopped,
-      'PANNE ENGIN DEVANT MACHINE': l10n.stopBreakdownFront,
-      'RELEVE': l10n.stopShiftChange,
-      'EXECUTION PLATE FORME': l10n.stopPlatformExec,
-      'DEPLACEMENT': l10n.stopMove,
-      'TIR ET SAUTAGE': l10n.stopBlasting,
-      'MOUV. DE CABLE': l10n.stopCableMove,
-      'ARRET DECIDE': l10n.stopDecidedStop,
-      'MANQUE CONDUCTEUR': l10n.stopNoDriver,
-      'BRIQUET': l10n.stopBreak,
-      'PISTES (INTEMPERIES EXCLUES)': l10n.stopTracks,
-      'ARRETS MECA. INSTALATIONS FIXES': l10n.stopFixedInstallMech,
-      'TELESCOPAGE': l10n.stopTelescoping,
-      'EXCAVATION PURE': l10n.stopPureExcavation,
-      'TERASSEMENT PUR': l10n.stopPureEarthworks,
+      'ARRET CARREAU INDUSTRIEL': AppLocalizations.of(context)!.stopIndustrialArea,
+      'COUPURE GENERALE DU COURANT': AppLocalizations.of(context)!.stopPowerCut,
+      'GREVE': AppLocalizations.of(context)!.stopStrike,
+      'INTEMPERIES': AppLocalizations.of(context)!.stopWeather,
+      'STOCKS PLEINS': AppLocalizations.of(context)!.stopFullStocks,
+      'J. FERIES OU HEBDOMADAIRES': AppLocalizations.of(context)!.stopHolidays,
+      'ARRET PAR LA CENTRALE (M.ENERGIE)': AppLocalizations.of(context)!.stopPowerPlant,
+      'CONTROLE': AppLocalizations.of(context)!.stopControl,
+      'DEFAUT ELEC. (C.CRAME, RESEAU)': AppLocalizations.of(context)!.stopElecFault,
+      'PANNE MECANIQUE': AppLocalizations.of(context)!.stopMechBreakdown,
+      'PANNE ELECTRIQUE': AppLocalizations.of(context)!.stopElecBreakdown,
+      'INTERVENTION ATELIER PNEUMATIQUE': AppLocalizations.of(context)!.stopTireWorkshop,
+      'ENTRETIEN SYSTEMATIQUE': AppLocalizations.of(context)!.stopMaintenance,
+      'APPOINT (HUILE, GAZOL, EAU)': AppLocalizations.of(context)!.stopRefill,
+      'GRAISSAGE': AppLocalizations.of(context)!.stopGreasing,
+      'ARRET ELEC. INSTALATION FIXES': AppLocalizations.of(context)!.stopFixedInstallElec,
+      'MANQUE CAMIONS': AppLocalizations.of(context)!.stopNoTrucks,
+      'MANQUE BULL': AppLocalizations.of(context)!.stopNoBull,
+      'MANQUE MECANICIEN': AppLocalizations.of(context)!.stopNoMechanic,
+      'MANQUE D\'OUTILS DE TRAVAIL': AppLocalizations.of(context)!.stopNoTools,
+      'MACHINE A L\'ARRET': AppLocalizations.of(context)!.stopMachineStopped,
+      'PANNE ENGIN DEVANT MACHINE': AppLocalizations.of(context)!.stopBreakdownFront,
+      'RELEVE': AppLocalizations.of(context)!.stopShiftChange,
+      'EXECUTION PLATE FORME': AppLocalizations.of(context)!.stopPlatformExec,
+      'DEPLACEMENT': AppLocalizations.of(context)!.stopMove,
+      'TIR ET SAUTAGE': AppLocalizations.of(context)!.stopBlasting,
+      'MOUV. DE CABLE': AppLocalizations.of(context)!.stopCableMove,
+      'ARRET DECIDE': AppLocalizations.of(context)!.stopDecidedStop,
+      'MANQUE CONDUCTEUR': AppLocalizations.of(context)!.stopNoDriver,
+      'BRIQUET': AppLocalizations.of(context)!.stopBreak,
+      'PISTES (INTEMPERIES EXCLUES)': AppLocalizations.of(context)!.stopTracks,
+      'ARRETS MECA. INSTALATIONS FIXES': AppLocalizations.of(context)!.stopFixedInstallMech,
+      'TELESCOPAGE': AppLocalizations.of(context)!.stopTelescoping,
+      'EXCAVATION PURE': AppLocalizations.of(context)!.stopPureExcavation,
+      'TERASSEMENT PUR': AppLocalizations.of(context)!.stopPureEarthworks,
     };
     return map[key] ?? key;
   }
@@ -548,19 +549,19 @@ class R0ReportState extends State<R0Report> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final steps = [
-      l10n.stepInfos,
-      l10n.stepCompteur,
-      l10n.stepArrets,
-      l10n.stepExploit,
-      l10n.stepRepartition,
-      l10n.stepPersonnel,
-      l10n.stepConsom,
-      l10n.stepVerif,
+      AppLocalizations.of(context)!.stepInfos,
+      AppLocalizations.of(context)!.stepCompteur,
+      AppLocalizations.of(context)!.stepArrets,
+      AppLocalizations.of(context)!.stepExploit,
+      AppLocalizations.of(context)!.stepRepartition,
+      AppLocalizations.of(context)!.stepPersonnel,
+      AppLocalizations.of(context)!.stepConsom,
+      AppLocalizations.of(context)!.stepVerif,
     ];
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isEditing ? l10n.modifierR0 : l10n.nouveauRapportR0),
+        title: Text(widget.isEditing ? AppLocalizations.of(context)!.modifierR0 : AppLocalizations.of(context)!.nouveauRapportR0),
       ),
       body: Center(
         child: Container(
@@ -626,7 +627,7 @@ class R0ReportState extends State<R0Report> {
           if (!isFirst)
             Expanded(
               child: OCPButton(
-                text: l10n.previous,
+                text: AppLocalizations.of(context)!.previous,
                 onPressed: () => setState(() => _currentStep--),
                 isSecondary: true,
               ),
@@ -634,7 +635,7 @@ class R0ReportState extends State<R0Report> {
           if (!isFirst) const SizedBox(width: 16),
           Expanded(
             child: OCPButton(
-              text: isLast ? l10n.submit : l10n.next,
+              text: isLast ? AppLocalizations.of(context)!.submit : AppLocalizations.of(context)!.next,
               onPressed: () => _validateAndProceed(l10n),
               isLoading: _isLoading && isLast,
             ),
@@ -649,9 +650,8 @@ class R0ReportState extends State<R0Report> {
       if (formData.selectedMine.isEmpty ||
           formData.selectedPoste.isEmpty ||
           formData.selectedModel.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text(
-                'La date, le modèle et le poste sont obligatoires pour enregistrer le rapport R0.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(AppLocalizations.of(context)!.r0ValidationMissingFields)));
         return;
       }
     }
@@ -665,7 +665,7 @@ class R0ReportState extends State<R0Report> {
         if (end - start > 8.0) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content:
-                Text(l10n.operatingHoursExceeded((end - start).toInt(), 8)),
+                Text(AppLocalizations.of(context)!.operatingHoursExceeded((end - start).toInt(), 8)),
             backgroundColor: AppColors.error,
           ));
           return;
@@ -702,7 +702,7 @@ class R0ReportState extends State<R0Report> {
               const Icon(Icons.calendar_today, color: AppColors.primary),
               const SizedBox(width: 16),
               Text(
-                '${l10n.date}: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                '${AppLocalizations.of(context)!.date}: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
                 style:
                     const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
@@ -715,7 +715,7 @@ class R0ReportState extends State<R0Report> {
 
         // Mine Selection
         OCPDropdown<String>(
-            label: l10n.mine,
+            label: AppLocalizations.of(context)!.mine,
             value:
                 formData.selectedMine.isNotEmpty ? formData.selectedMine : null,
             items: minesData
@@ -734,7 +734,7 @@ class R0ReportState extends State<R0Report> {
         // Zone Selection
         if (formData.selectedMine.isNotEmpty) ...[
           OCPDropdown<String>(
-              label: l10n.zone,
+              label: AppLocalizations.of(context)!.zone,
               value: formData.selectedZone.isNotEmpty
                   ? formData.selectedZone
                   : null,
@@ -756,7 +756,7 @@ class R0ReportState extends State<R0Report> {
         // Sortie Selection
         if (formData.selectedZone.isNotEmpty) ...[
           OCPDropdown<String>(
-            label: l10n.exit,
+            label: AppLocalizations.of(context)!.exit,
             value: formData.selectedSortie.isNotEmpty
                 ? formData.selectedSortie
                 : null,
@@ -774,11 +774,11 @@ class R0ReportState extends State<R0Report> {
 
         // Category/Type/Model Selection
         OCPDropdown<String>(
-            label: l10n.categoryLabel,
+            label: AppLocalizations.of(context)!.categoryLabel,
             value: formData.selectedCategory.isNotEmpty
                 ? formData.selectedCategory
                 : null,
-            items: [l10n.engines, l10n.machines]
+            items: [AppLocalizations.of(context)!.engines, AppLocalizations.of(context)!.machines]
                 .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                 .toList(),
             onChanged: (val) => setState(() {
@@ -790,11 +790,11 @@ class R0ReportState extends State<R0Report> {
 
         if (formData.selectedCategory.isNotEmpty) ...[
           OCPDropdown<String>(
-              label: l10n.type,
+              label: AppLocalizations.of(context)!.type,
               value: formData.selectedType.isNotEmpty
                   ? formData.selectedType
                   : null,
-              items: (formData.selectedCategory == l10n.engines
+              items: (formData.selectedCategory == AppLocalizations.of(context)!.engines
                       ? enginsData.keys
                       : machinesData.keys)
                   .map((s) => DropdownMenuItem(
@@ -809,11 +809,11 @@ class R0ReportState extends State<R0Report> {
 
         if (formData.selectedType.isNotEmpty) ...[
           OCPDropdown<String>(
-              label: l10n.modelLabel,
+              label: AppLocalizations.of(context)!.modelLabel,
               value: formData.selectedModel.isNotEmpty
                   ? formData.selectedModel
                   : null,
-              items: (formData.selectedCategory == l10n.engines
+              items: (formData.selectedCategory == AppLocalizations.of(context)!.engines
                       ? enginsData[formData.selectedType]
                       : machinesData[formData.selectedType])!
                   .map((s) => DropdownMenuItem(value: s, child: Text(s)))
@@ -825,7 +825,7 @@ class R0ReportState extends State<R0Report> {
 
         // Poste Selection
         OCPDropdown<String>(
-            label: l10n.poste,
+            label: AppLocalizations.of(context)!.poste,
             value: formData.selectedPoste.isNotEmpty
                 ? formData.selectedPoste
                 : null,
@@ -844,13 +844,13 @@ class R0ReportState extends State<R0Report> {
     if (selectedPosteIndex == -1) {
       return Padding(
           padding: const EdgeInsets.all(16),
-          child: Text(l10n.selectPosteMessage));
+          child: Text(AppLocalizations.of(context)!.selectPosteMessage));
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.counterEntryTitle(formData.selectedPoste),
+        Text(AppLocalizations.of(context)!.counterEntryTitle(formData.selectedPoste),
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 16),
         Row(
@@ -858,7 +858,7 @@ class R0ReportState extends State<R0Report> {
           children: [
             Expanded(
               child: OCPTextField(
-                label: l10n.startCounterLabel,
+                label: AppLocalizations.of(context)!.startCounterLabel,
                 keyboardType: TextInputType.number,
                 enabled: !formData.indexCompteurs.dureeDefaut,
                 controller: TextEditingController(
@@ -892,7 +892,7 @@ class R0ReportState extends State<R0Report> {
                     });
                   },
                 ),
-                Text(l10n.defautLabel, style: const TextStyle(fontSize: 12)),
+                Text(AppLocalizations.of(context)!.defautLabel, style: const TextStyle(fontSize: 12)),
               ],
             ),
           ],
@@ -903,7 +903,7 @@ class R0ReportState extends State<R0Report> {
           children: [
             Expanded(
               child: OCPTextField(
-                label: l10n.endCounterLabel,
+                label: AppLocalizations.of(context)!.endCounterLabel,
                 keyboardType: TextInputType.number,
                 enabled: !formData.indexCompteurs.noteDefaut,
                 controller: TextEditingController(
@@ -937,7 +937,7 @@ class R0ReportState extends State<R0Report> {
                     });
                   },
                 ),
-                Text(l10n.defautLabel, style: const TextStyle(fontSize: 12)),
+                Text(AppLocalizations.of(context)!.defautLabel, style: const TextStyle(fontSize: 12)),
               ],
             ),
           ],
@@ -953,7 +953,7 @@ class R0ReportState extends State<R0Report> {
         if (formData.ventilation.isEmpty)
           Padding(
               padding: const EdgeInsets.all(32),
-              child: Text(l10n.noStopsRecorded,
+              child: Text(AppLocalizations.of(context)!.noStopsRecorded,
                   style: const TextStyle(color: Colors.grey))),
         ...formData.ventilation.asMap().entries.map((entry) {
           final idx = entry.key;
@@ -993,7 +993,7 @@ class R0ReportState extends State<R0Report> {
         }),
         const SizedBox(height: 16),
         OCPButton(
-          text: l10n.addArretTitle,
+          text: AppLocalizations.of(context)!.addArretTitle,
           icon: Icons.add,
           onPressed: () => _showAddArretDialog(l10n),
           isSecondary: true,
@@ -1019,7 +1019,7 @@ class R0ReportState extends State<R0Report> {
           Widget content;
           if (step == 0) {
             content = DropdownButtonFormField<String>(
-              hint: Text(l10n.category),
+              hint: Text(AppLocalizations.of(context)!.category),
               items: arretCategories.keys
                   .map((c) => DropdownMenuItem(
                       value: c,
@@ -1033,7 +1033,7 @@ class R0ReportState extends State<R0Report> {
             );
           } else if (step == 1 && selectedCategory != null) {
             content = DropdownButtonFormField<String>(
-              hint: Text(l10n.type),
+              hint: Text(AppLocalizations.of(context)!.type),
               initialValue: selectedType,
               isExpanded: true,
               items: arretCategories[selectedCategory]!
@@ -1047,12 +1047,12 @@ class R0ReportState extends State<R0Report> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                    '${l10n.category}: ${_getLocalizedCategoryLabel(selectedCategory!, l10n)}'),
+                    '${AppLocalizations.of(context)!.category}: ${_getLocalizedCategoryLabel(selectedCategory!, l10n)}'),
                 Text(
-                    '${l10n.type}: ${_getLocalizedReasonLabel(selectedType!, l10n)}'),
+                    '${AppLocalizations.of(context)!.type}: ${_getLocalizedReasonLabel(selectedType!, l10n)}'),
                 const SizedBox(height: 16),
                 ListTile(
-                  title: Text(l10n.startTimeLabel),
+                  title: Text(AppLocalizations.of(context)!.startTimeLabel),
                   subtitle: Text(
                       "${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}"),
                   trailing: const Icon(Icons.access_time),
@@ -1062,7 +1062,7 @@ class R0ReportState extends State<R0Report> {
                       builder: (context) {
                         TimeOfDay tempTime = TimeOfDay.fromDateTime(startTime);
                         return AlertDialog(
-                          title: Text(l10n.selectTimeTitle),
+                          title: Text(AppLocalizations.of(context)!.selectTimeTitle),
                           content: SizedBox(
                             height: 200,
                             child: TimePickerSpinner(
@@ -1087,12 +1087,12 @@ class R0ReportState extends State<R0Report> {
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.of(context).pop(),
-                              child: Text(l10n.cancel),
+                              child: Text(AppLocalizations.of(context)!.cancel),
                             ),
                             ElevatedButton(
                               onPressed: () =>
                                   Navigator.of(context).pop(tempTime),
-                              child: Text(l10n.okButton),
+                              child: Text(AppLocalizations.of(context)!.okButton),
                             ),
                           ],
                         );
@@ -1108,7 +1108,7 @@ class R0ReportState extends State<R0Report> {
                 ),
                 const SizedBox(height: 8),
                 ListTile(
-                  title: Text(l10n.endTimeLabel),
+                  title: Text(AppLocalizations.of(context)!.endTimeLabel),
                   subtitle: Text(
                       "${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}"),
                   trailing: const Icon(Icons.access_time),
@@ -1118,7 +1118,7 @@ class R0ReportState extends State<R0Report> {
                       builder: (context) {
                         TimeOfDay tempTime = TimeOfDay.fromDateTime(endTime);
                         return AlertDialog(
-                          title: Text(l10n.selectTimeTitle),
+                          title: Text(AppLocalizations.of(context)!.selectTimeTitle),
                           content: SizedBox(
                             height: 200,
                             child: TimePickerSpinner(
@@ -1143,12 +1143,12 @@ class R0ReportState extends State<R0Report> {
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.of(context).pop(),
-                              child: Text(l10n.cancel),
+                              child: Text(AppLocalizations.of(context)!.cancel),
                             ),
                             ElevatedButton(
                               onPressed: () =>
                                   Navigator.of(context).pop(tempTime),
-                              child: Text(l10n.okButton),
+                              child: Text(AppLocalizations.of(context)!.okButton),
                             ),
                           ],
                         );
@@ -1169,7 +1169,7 @@ class R0ReportState extends State<R0Report> {
           }
 
           return AlertDialog(
-            title: Text(l10n.addArretTitle),
+            title: Text(AppLocalizations.of(context)!.addArretTitle),
             content: SingleChildScrollView(
               child: SizedBox(
                 width: 300,
@@ -1178,17 +1178,17 @@ class R0ReportState extends State<R0Report> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (step == 0) ...[
-                      Text(l10n.selectCategoryStep,
+                      Text(AppLocalizations.of(context)!.selectCategoryStep,
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 16),
                       content,
                     ] else if (step == 1) ...[
-                      Text(l10n.selectStopTypeStep,
+                      Text(AppLocalizations.of(context)!.selectStopTypeStep,
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 16),
                       content,
                     ] else if (step == 2) ...[
-                      Text(l10n.enterDetailsStep,
+                      Text(AppLocalizations.of(context)!.enterDetailsStep,
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 16),
                       content,
@@ -1204,18 +1204,18 @@ class R0ReportState extends State<R0Report> {
                   if (step > 0)
                     TextButton(
                       onPressed: () => setDs(() => step--),
-                      child: Text(l10n.previous),
+                      child: Text(AppLocalizations.of(context)!.previous),
                     )
                   else
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text(l10n.cancel),
+                      child: Text(AppLocalizations.of(context)!.cancel),
                     ),
                   if ((step == 0 && selectedCategory != null) ||
                       (step == 1 && selectedType != null))
                     ElevatedButton(
                       onPressed: () => setDs(() => step++),
-                      child: Text(l10n.next),
+                      child: Text(AppLocalizations.of(context)!.next),
                     ),
                   if (step == 2 && selectedType != null)
                     ElevatedButton(
@@ -1225,7 +1225,7 @@ class R0ReportState extends State<R0Report> {
                             !_isTimeWithinShift(
                                 startTod, formData.selectedPoste)) {
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text(l10n.invalidStopStartTimeForPoste),
+                              content: Text(AppLocalizations.of(context)!.invalidStopStartTimeForPoste),
                               backgroundColor: AppColors.error));
                           return;
                         }
@@ -1247,7 +1247,7 @@ class R0ReportState extends State<R0Report> {
                         });
                         Navigator.pop(context);
                       },
-                      child: Text(l10n.add),
+                      child: Text(AppLocalizations.of(context)!.add),
                     ),
                 ],
               ),
@@ -1262,28 +1262,28 @@ class R0ReportState extends State<R0Report> {
   Widget _buildStepExploitation(AppLocalizations l10n) {
     return Column(
       children: [
-        _exploitRow(l10n.heuresMarche, formData.exploitation['H.M']!,
+        _exploitRow(AppLocalizations.of(context)!.heuresMarche, formData.exploitation['H.M']!,
             readOnly: true),
-        _exploitRow(l10n.heuresArret, formData.exploitation['H.A']!,
+        _exploitRow(AppLocalizations.of(context)!.heuresArret, formData.exploitation['H.A']!,
             readOnly: true),
         const Divider(),
-        _exploitRow(l10n.metrageFore, formData.exploitation['metrage fore']!,
+        _exploitRow(AppLocalizations.of(context)!.metrageFore, formData.exploitation['metrage fore']!,
             onChanged: (v) => formData.exploitation['metrage fore'] = v),
         _exploitRow(
-            l10n.nrTrousFores, formData.exploitation['Nr de Trous Fores']!,
+            AppLocalizations.of(context)!.nrTrousFores, formData.exploitation['Nr de Trous Fores']!,
             onChanged: (v) => formData.exploitation['Nr de Trous Fores'] = v),
-        _exploitRow(l10n.nrVoyages, formData.exploitation['Nr de Voyages']!,
+        _exploitRow(AppLocalizations.of(context)!.nrVoyages, formData.exploitation['Nr de Voyages']!,
             onChanged: (v) => formData.exploitation['Nr de Voyages'] = v),
-        _exploitRow(l10n.m3Decapage, formData.exploitation['M³ Decapages']!,
+        _exploitRow(AppLocalizations.of(context)!.m3Decapage, formData.exploitation['M³ Decapages']!,
             onChanged: (v) => formData.exploitation['M³ Decapages'] = v),
-        _exploitRow(l10n.tonnageLabel, formData.exploitation['Tonnage']!,
+        _exploitRow(AppLocalizations.of(context)!.tonnageLabel, formData.exploitation['Tonnage']!,
             onChanged: (v) {
           formData.exploitation['Tonnage'] = v;
           _calculateHours();
         }),
-        _exploitRow(l10n.nombreTKU, formData.exploitation['Nombre T.K.U']!,
+        _exploitRow(AppLocalizations.of(context)!.nombreTKU, formData.exploitation['Nombre T.K.U']!,
             onChanged: (v) => formData.exploitation['Nombre T.K.U'] = v),
-        _exploitRow(l10n.rendementLabel, formData.exploitation['Rendement %']!,
+        _exploitRow(AppLocalizations.of(context)!.rendementLabel, formData.exploitation['Rendement %']!,
             readOnly: true),
       ],
     );
@@ -1309,32 +1309,32 @@ class R0ReportState extends State<R0Report> {
   Widget _buildStepRepartition(AppLocalizations l10n) {
     return Column(
       children: [
-        Text(l10n.repartitionTravail,
+        Text(AppLocalizations.of(context)!.repartitionTravail,
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 16),
         OCPCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(l10n.details,
+              Text(AppLocalizations.of(context)!.details,
                   style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               OCPTextField(
-                label: l10n.chantierLabel,
+                label: AppLocalizations.of(context)!.chantierLabel,
                 controller: TextEditingController(
                     text: formData.repartitionTravail.chantier),
                 onChanged: (v) => formData.repartitionTravail.chantier = v,
               ),
               const SizedBox(height: 8),
               OCPTextField(
-                label: l10n.duration,
+                label: AppLocalizations.of(context)!.duration,
                 controller: TextEditingController(
                     text: formData.repartitionTravail.temps),
                 onChanged: (v) => formData.repartitionTravail.temps = v,
               ),
               const SizedBox(height: 8),
               OCPTextField(
-                label: l10n.imputationLabel,
+                label: AppLocalizations.of(context)!.imputationLabel,
                 controller: TextEditingController(
                     text: formData.repartitionTravail.imputation),
                 onChanged: (v) => formData.repartitionTravail.imputation = v,
@@ -1351,19 +1351,19 @@ class R0ReportState extends State<R0Report> {
     return Column(
       children: [
         OCPTextField(
-            label: l10n.conducteurLabel,
+            label: AppLocalizations.of(context)!.conducteurLabel,
             controller:
                 TextEditingController(text: formData.personnel.conducteur),
             onChanged: (v) => formData.personnel.conducteur = v),
         const SizedBox(height: 16),
         OCPTextField(
-            label: l10n.graisseurLabel,
+            label: AppLocalizations.of(context)!.graisseurLabel,
             controller:
                 TextEditingController(text: formData.personnel.graisseur),
             onChanged: (v) => formData.personnel.graisseur = v),
         const SizedBox(height: 16),
         OCPTextField(
-            label: l10n.matriculesLabel,
+            label: AppLocalizations.of(context)!.matriculesLabel,
             controller:
                 TextEditingController(text: formData.personnel.matricules),
             onChanged: (v) => formData.personnel.matricules = v),
@@ -1376,13 +1376,13 @@ class R0ReportState extends State<R0Report> {
     return Column(
       children: [
         OCPTextField(
-            label: l10n.triconeLabel,
+            label: AppLocalizations.of(context)!.triconeLabel,
             controller:
                 TextEditingController(text: formData.consommation.tricone),
             onChanged: (v) => formData.consommation.tricone = v),
         const SizedBox(height: 16),
         OCPTextField(
-            label: l10n.gasoilLabel,
+            label: AppLocalizations.of(context)!.gasoilLabel,
             controller:
                 TextEditingController(text: formData.consommation.gasoil),
             onChanged: (v) => formData.consommation.gasoil = v),
@@ -1397,23 +1397,23 @@ class R0ReportState extends State<R0Report> {
         const Icon(Icons.check_circle_outline,
             size: 64, color: AppColors.success),
         const SizedBox(height: 16),
-        Text(l10n.summary,
+        Text(AppLocalizations.of(context)!.summary,
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 24),
         _row("Date",
             "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}"),
-        _row(l10n.mineSortie,
+        _row(AppLocalizations.of(context)!.mineSortie,
             "${formData.selectedMine} / ${formData.selectedSortie}"),
-        _row(l10n.engin,
+        _row(AppLocalizations.of(context)!.engin,
             "${_getLocalizedTypeLabel(formData.selectedType, l10n)} - ${formData.selectedModel}"),
-        _row(l10n.poste, formData.selectedPoste),
-        _row(l10n.counter,
+        _row(AppLocalizations.of(context)!.poste, formData.selectedPoste),
+        _row(AppLocalizations.of(context)!.counter,
             "${formData.indexCompteurs.duree} -> ${formData.indexCompteurs.note}"),
         const Divider(),
         if (formData.ventilation.isNotEmpty) ...[
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(l10n.detailsArrets,
+            child: Text(AppLocalizations.of(context)!.detailsArrets,
                 style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
           ...formData.ventilation.map((item) => Padding(
@@ -1431,30 +1431,30 @@ class R0ReportState extends State<R0Report> {
                 ),
               )),
         ] else
-          _row(l10n.stops, l10n.aucunArret),
+          _row(AppLocalizations.of(context)!.stops, AppLocalizations.of(context)!.aucunArret),
         const Divider(),
-        _row(l10n.heuresMarche, formData.exploitation['H.M']!),
-        _row(l10n.heuresArret, formData.exploitation['H.A']!),
+        _row(AppLocalizations.of(context)!.heuresMarche, formData.exploitation['H.M']!),
+        _row(AppLocalizations.of(context)!.heuresArret, formData.exploitation['H.A']!),
         const Divider(),
-        _row(l10n.metrageFore, formData.exploitation['metrage fore']!),
-        _row(l10n.nrTrousFores, formData.exploitation['Nr de Trous Fores']!),
-        _row(l10n.nrVoyages, formData.exploitation['Nr de Voyages']!),
-        _row(l10n.m3Decapage, formData.exploitation['M³ Decapages']!),
-        _row(l10n.tonnageLabel, formData.exploitation['Tonnage']!),
-        _row(l10n.nombreTKU, formData.exploitation['Nombre T.K.U']!),
-        _row(l10n.rendementLabel, formData.exploitation['Rendement %'] ?? ''),
+        _row(AppLocalizations.of(context)!.metrageFore, formData.exploitation['metrage fore']!),
+        _row(AppLocalizations.of(context)!.nrTrousFores, formData.exploitation['Nr de Trous Fores']!),
+        _row(AppLocalizations.of(context)!.nrVoyages, formData.exploitation['Nr de Voyages']!),
+        _row(AppLocalizations.of(context)!.m3Decapage, formData.exploitation['M³ Decapages']!),
+        _row(AppLocalizations.of(context)!.tonnageLabel, formData.exploitation['Tonnage']!),
+        _row(AppLocalizations.of(context)!.nombreTKU, formData.exploitation['Nombre T.K.U']!),
+        _row(AppLocalizations.of(context)!.rendementLabel, formData.exploitation['Rendement %'] ?? ''),
         const Divider(),
-        _row("${l10n.conducteurLabel}:", formData.personnel.conducteur),
-        _row("${l10n.graisseurLabel}:", formData.personnel.graisseur),
-        _row("${l10n.matriculesLabel}:", formData.personnel.matricules),
+        _row("${AppLocalizations.of(context)!.conducteurLabel}:", formData.personnel.conducteur),
+        _row("${AppLocalizations.of(context)!.graisseurLabel}:", formData.personnel.graisseur),
+        _row("${AppLocalizations.of(context)!.matriculesLabel}:", formData.personnel.matricules),
         const Divider(),
-        _row("${l10n.chantierLabel}:", formData.repartitionTravail.chantier),
-        _row("${l10n.duration}:", formData.repartitionTravail.temps),
+        _row("${AppLocalizations.of(context)!.chantierLabel}:", formData.repartitionTravail.chantier),
+        _row("${AppLocalizations.of(context)!.duration}:", formData.repartitionTravail.temps),
         _row(
-            "${l10n.imputationLabel}:", formData.repartitionTravail.imputation),
+            "${AppLocalizations.of(context)!.imputationLabel}:", formData.repartitionTravail.imputation),
         const Divider(),
-        _row("${l10n.triconeLabel}:", formData.consommation.tricone),
-        _row("${l10n.gasoilLabel}:", formData.consommation.gasoil),
+        _row("${AppLocalizations.of(context)!.triconeLabel}:", formData.consommation.tricone),
+        _row("${AppLocalizations.of(context)!.gasoilLabel}:", formData.consommation.gasoil),
       ],
     );
   }
@@ -1699,7 +1699,7 @@ class R0ReportState extends State<R0Report> {
       if (widget.isEditing && widget.onSave != null) {
         widget.onSave!(report);
       } else {
-        await _databaseHelper.insertReport(report);
+        await _reportRepository.insertReport(report);
 
         // Handle Carry Over to Next Poste
         final carryOverShifts = carryOverByShift.values.toList()
@@ -1761,7 +1761,7 @@ class R0ReportState extends State<R0Report> {
                 'carryOverFrom': formData.selectedPoste
               },
             );
-            await _databaseHelper.insertReport(nextReport);
+            await _reportRepository.insertReport(nextReport);
           }
         }
 
@@ -1770,8 +1770,8 @@ class R0ReportState extends State<R0Report> {
               carryOverShifts.any((shift) => shift.date.isAfter(_selectedDate));
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(shouldNotifyLongStop
-                  ? l10n.longStopCarryOverNotice
-                  : l10n.success),
+                  ? AppLocalizations.of(context)!.longStopCarryOverNotice
+                  : AppLocalizations.of(context)!.success),
               backgroundColor: AppColors.success));
           Navigator.popUntil(context, (r) => r.isFirst);
         }
@@ -1779,7 +1779,7 @@ class R0ReportState extends State<R0Report> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text("Error: $e"), backgroundColor: AppColors.error));
+            content: Text(AppLocalizations.of(context)!.errorMessage(e.toString())), backgroundColor: AppColors.error));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

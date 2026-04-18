@@ -1,10 +1,12 @@
+import 'package:r0/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
 import 'package:uuid/uuid.dart';
 import 'package:r0/domain/models/report.dart';
-import 'package:r0/data/services/database_helper.dart';
+import 'package:provider/provider.dart';
+import 'package:r0/domain/repositories/report_repository.dart';
 import 'package:r0/domain/services/time_calculation_service.dart';
 import 'package:r0/presentation/theme.dart';
 import 'package:r0/presentation/widgets/custom_widgets.dart';
@@ -571,7 +573,7 @@ class ActivityReportScreen extends StatefulWidget {
 }
 
 class _ActivityReportScreenState extends State<ActivityReportScreen> {
-  final DatabaseHelper _databaseHelper = DatabaseHelper();
+  ReportRepository get _reportRepository => context.read<ReportRepository>();
   static const int _cycleAnchorMinutes = 22 * 60 + 30;
   List<Stop> stops = [];
   List<TnbCounter> tnbCounters = [];
@@ -1188,30 +1190,30 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                   },
                   itemBuilder: (context) => [
                     if (_isPendingStop(e.value))
-                      const PopupMenuItem<_StopCardAction>(
+                      PopupMenuItem<_StopCardAction>(
                         value: _StopCardAction.end,
                         child: ListTile(
                           dense: true,
-                          leading: Icon(Icons.stop_circle_outlined,
+                          leading: const Icon(Icons.stop_circle_outlined,
                               color: AppColors.success),
-                          title: Text('Terminer'),
+                          title: Text(AppLocalizations.of(context)!.finishButton),
                         ),
                       ),
-                    const PopupMenuItem<_StopCardAction>(
+                    PopupMenuItem<_StopCardAction>(
                       value: _StopCardAction.edit,
                       child: ListTile(
                         dense: true,
-                        leading: Icon(Icons.edit_outlined),
-                        title: Text('Modifier'),
+                        leading: const Icon(Icons.edit_outlined),
+                        title: Text(AppLocalizations.of(context)!.edit),
                       ),
                     ),
-                    const PopupMenuItem<_StopCardAction>(
+                    PopupMenuItem<_StopCardAction>(
                       value: _StopCardAction.delete,
                       child: ListTile(
                         dense: true,
                         leading:
-                            Icon(Icons.delete_outline, color: AppColors.error),
-                        title: Text('Supprimer'),
+                            const Icon(Icons.delete_outline, color: AppColors.error),
+                        title: Text(AppLocalizations.of(context)!.delete),
                       ),
                     ),
                   ],
@@ -1250,7 +1252,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
               (!requiresDetail || stopDetail.trim().isNotEmpty);
 
           return AlertDialog(
-            title: const Text('Ajouter un arrêt'),
+            title: Text(AppLocalizations.of(context)!.addStop),
             content: SingleChildScrollView(
               child: SizedBox(
                 width: 360,
@@ -1278,7 +1280,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                           stopDetail = '';
                         });
                       },
-                      hint: const Text('Sélectionner la catégorie d\'arrêt'),
+                      hint: Text(AppLocalizations.of(context)!.selectStopCategory),
                       isExpanded: true,
                     ),
                     if (selectedCategory != null) ...[
@@ -1302,7 +1304,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                             stopDetail = '';
                           });
                         },
-                        hint: const Text('Sélectionner le type d\'arrêt'),
+                        hint: Text(AppLocalizations.of(context)!.selectStopType),
                         isExpanded: true,
                       ),
                     ],
@@ -1327,7 +1329,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                             selectedLocation = value;
                           });
                         },
-                        hint: const Text('Sélectionner le lieu'),
+                        hint: Text(AppLocalizations.of(context)!.selectLocation),
                       ),
                     ],
                     if (requiresDetail) ...[
@@ -1352,7 +1354,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
+                child: Text(AppLocalizations.of(context)!.cancel),
               ),
               ElevatedButton(
                 onPressed: canSubmit
@@ -1420,7 +1422,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                         if (context.mounted) Navigator.pop(context);
                       }
                     : null,
-                child: const Text('Suivant'),
+                child: Text(AppLocalizations.of(context)!.next),
               ),
             ],
           );
@@ -1461,8 +1463,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
         durationMinutes > ActivityReportScreen.totalPeriodMinutes) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("L'arrêt doit rester dans la fenêtre 22:30 → 22:30."),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.stopMustRemainInWindow),
             backgroundColor: AppColors.error,
           ),
         );
@@ -1479,7 +1481,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     recalculateTimes();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Arrêt terminé avec succès.")),
+        SnackBar(content: Text(AppLocalizations.of(context)!.stopFinishedSuccessfully)),
       );
     }
   }
@@ -1528,7 +1530,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
               (!requiresDetail || stopDetail.trim().isNotEmpty);
 
           return AlertDialog(
-            title: const Text('Modifier arrêt'),
+            title: Text(AppLocalizations.of(context)!.editArret),
             content: SingleChildScrollView(
               child: SizedBox(
                 width: 360,
@@ -1605,7 +1607,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Annuler'),
+                child: Text(AppLocalizations.of(context)!.cancel),
               ),
               ElevatedButton(
                 onPressed: !canSubmit
@@ -1672,7 +1674,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                           Navigator.pop(dialogContext);
                         }
                       },
-                child: const Text('Enregistrer'),
+                child: Text(AppLocalizations.of(context)!.save),
               ),
             ],
           );
@@ -1783,11 +1785,11 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
         context: context,
         builder: (ctx) => StatefulBuilder(
             builder: (c, setDs) => AlertDialog(
-                  title: const Text("Ajouter Stock"),
+                  title: Text(AppLocalizations.of(context)!.addStock),
                   content: SingleChildScrollView(
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
                     DropdownButtonFormField<Poste>(
-                        hint: const Text("Poste"),
+                        hint: Text(AppLocalizations.of(context)!.poste),
                         items: availablePostes
                             .map((p) => DropdownMenuItem(
                                 value: p, child: Text(posteToString(p))))
@@ -1804,14 +1806,14 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                             labelText: "Nombre de voyages TEREX"),
                         onChanged: (v) => setDs(() => terexTrips = v.trim())),
                     DropdownButtonFormField<Park>(
-                        hint: const Text("Park"),
+                        hint: Text(AppLocalizations.of(context)!.parkLabel),
                         items: Park.values
                             .map((p) => DropdownMenuItem(
                                 value: p, child: Text(parkToString(p))))
                             .toList(),
                         onChanged: (v) => setDs(() => park = v)),
                     DropdownButtonFormField<StockType>(
-                        hint: const Text("Type"),
+                        hint: Text(AppLocalizations.of(context)!.type),
                         items: StockType.values
                             .map((p) => DropdownMenuItem(
                                 value: p, child: Text(stockTypeToString(p))))
@@ -1825,7 +1827,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                   actions: [
                     TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text("Annuler")),
+                        child: Text(AppLocalizations.of(context)!.cancel)),
                     ElevatedButton(
                         onPressed:
                             (poste != null && park != null && type != null)
@@ -1850,7 +1852,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                                     Navigator.pop(context);
                                   }
                                 : null,
-                        child: const Text("Ajouter"))
+                        child: Text(AppLocalizations.of(context)!.add))
                   ],
                 )));
   }
@@ -2119,17 +2121,17 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       if (widget.isEditing && widget.onSave != null) {
         widget.onSave!(report);
       } else {
-        await _databaseHelper.insertReport(report);
+        await _reportRepository.insertReport(report);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Succès'), backgroundColor: AppColors.success));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(AppLocalizations.of(context)!.success), backgroundColor: AppColors.success));
           Navigator.popUntil(context, (route) => route.isFirst);
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text("Error: $e"), backgroundColor: AppColors.error));
+            content: Text(AppLocalizations.of(context)!.errorMessage(e.toString())), backgroundColor: AppColors.error));
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

@@ -9,12 +9,11 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final languageProvider = Provider.of<LanguageProvider>(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.settings),
+        title: Text(AppLocalizations.of(context)!.settings),
       ),
       body: Center(
         child: Container(
@@ -22,7 +21,7 @@ class SettingsScreen extends StatelessWidget {
           child: ListView(
             children: [
               ListTile(
-                title: Text(l10n.language),
+                title: Text(AppLocalizations.of(context)!.language),
                 trailing: DropdownButton<Locale>(
                   value: languageProvider.locale,
                   underline: Container(),
@@ -30,11 +29,11 @@ class SettingsScreen extends StatelessWidget {
                   items: [
                     DropdownMenuItem(
                       value: const Locale('en'),
-                      child: Text(l10n.english),
+                      child: Text(AppLocalizations.of(context)!.english),
                     ),
                     DropdownMenuItem(
                       value: const Locale('fr'),
-                      child: Text(l10n.french),
+                      child: Text(AppLocalizations.of(context)!.french),
                     ),
                   ],
                   onChanged: (Locale? newLocale) {
@@ -46,7 +45,7 @@ class SettingsScreen extends StatelessWidget {
               ),
               const Divider(),
               ListTile(
-                title: Text(l10n.darkMode),
+                title: Text(AppLocalizations.of(context)!.darkMode),
                 trailing: Switch(
                   value: Provider.of<ThemeProvider>(context).themeMode ==
                       ThemeMode.dark,

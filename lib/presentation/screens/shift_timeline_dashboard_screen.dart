@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:r0/domain/models/report.dart';
-import 'package:r0/data/services/database_helper.dart';
+import 'package:provider/provider.dart';
+import 'package:r0/domain/repositories/report_repository.dart';
 
 typedef _TimelineExtractor = List<_DowntimeEntry> Function(
   Report report,
@@ -18,7 +19,7 @@ class ShiftTimelineDashboardScreen extends StatefulWidget {
 
 class _ShiftTimelineDashboardScreenState
     extends State<ShiftTimelineDashboardScreen> {
-  final DatabaseHelper _databaseHelper = DatabaseHelper();
+  ReportRepository get _reportRepository => context.read<ReportRepository>();
 
   bool _isLoading = true;
   List<Report> _r0Reports = [];
@@ -37,7 +38,7 @@ class _ShiftTimelineDashboardScreenState
   Future<void> _loadReports() async {
     setState(() => _isLoading = true);
     try {
-      final allReports = await _databaseHelper.getReports();
+      final allReports = await _reportRepository.getReports();
       final r0Reports = allReports.where((r) {
         final poste = _extractPoste(r);
         return _shiftOrder.contains(poste);

@@ -2672,12 +2672,6 @@ abstract class AppLocalizations {
   /// **'Error updating: {error}'**
   String updateError(String error);
 
-  /// No description provided for @saveChanges.
-  ///
-  /// In en, this message translates to:
-  /// **'Save Changes'**
-  String get saveChanges;
-
   /// No description provided for @stockTitleIndex.
   ///
   /// In en, this message translates to:
@@ -3127,6 +3121,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reason'**
   String get reasonLabel;
+
+  /// No description provided for @r0ValidationMissingFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Date, model, and shift are required to save the R0 report.'**
+  String get r0ValidationMissingFields;
+
+  /// No description provided for @errorMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {message}'**
+  String errorMessage(String message);
+
+  /// No description provided for @errorUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Error during update: {message}'**
+  String errorUpdate(String message);
+
+  /// No description provided for @saveChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Save changes'**
+  String get saveChanges;
+
+  /// No description provided for @resetFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset filters'**
+  String get resetFilters;
+
+  /// No description provided for @allSheets.
+  ///
+  /// In en, this message translates to:
+  /// **'All sheets'**
+  String get allSheets;
+
+  /// No description provided for @tryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get tryAgain;
+
+  /// No description provided for @stopMustRemainInWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'The stop must remain within the 22:30 → 22:30 window.'**
+  String get stopMustRemainInWindow;
+
+  /// No description provided for @stopFinishedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop finished successfully.'**
+  String get stopFinishedSuccessfully;
+
+  /// No description provided for @selectStopCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Select stop category'**
+  String get selectStopCategory;
+
+  /// No description provided for @selectStopType.
+  ///
+  /// In en, this message translates to:
+  /// **'Select stop type'**
+  String get selectStopType;
+
+  /// No description provided for @selectLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Select location'**
+  String get selectLocation;
+
+  /// No description provided for @applyToBothModules.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply to both modules'**
+  String get applyToBothModules;
+
+  /// No description provided for @deleteSelectedReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {count} selected report(s)?'**
+  String deleteSelectedReports(int count);
+
+  /// No description provided for @posteValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Shift: {poste}'**
+  String posteValue(String poste);
+
+  /// No description provided for @gatTripsValue.
+  ///
+  /// In en, this message translates to:
+  /// **'GAT Trips: {trips}'**
+  String gatTripsValue(String trips);
+
+  /// No description provided for @terexTripsValue.
+  ///
+  /// In en, this message translates to:
+  /// **'TEREX Trips: {trips}'**
+  String terexTripsValue(String trips);
+
+  /// No description provided for @parkValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Park: {park}'**
+  String parkValue(String park);
+
+  /// No description provided for @deleteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {label}'**
+  String deleteLabel(String label);
+
+  /// No description provided for @shiftHasStockAlready.
+  ///
+  /// In en, this message translates to:
+  /// **'This shift already has a stock.'**
+  String get shiftHasStockAlready;
+
+  /// No description provided for @vModule.
+  ///
+  /// In en, this message translates to:
+  /// **'v{index}'**
+  String vModule(int index);
+
+  /// No description provided for @workLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Work {index}'**
+  String workLabel(int index);
 }
 
 class _AppLocalizationsDelegate

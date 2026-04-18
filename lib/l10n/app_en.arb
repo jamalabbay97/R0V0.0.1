@@ -1005,8 +1005,6 @@
       }
     }
   },
-  "saveChanges": "Save Changes",
-  "@saveChanges": {},
   "stockTitleIndex": "Stock {index}",
   "@stockTitleIndex": {
     "placeholders": {
@@ -1231,5 +1229,89 @@
   "conducteurLabel": "Conductor",
   "@conducteurLabel": {},
   "reasonLabel": "Reason",
-  "@reasonLabel": {}
+  "@reasonLabel": {},
+  "r0ValidationMissingFields": "Date, model, and shift are required to save the R0 report.",
+  "@r0ValidationMissingFields": {},
+  "errorMessage": "Error: {message}",
+  "@errorMessage": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "errorUpdate": "Error during update: {message}",
+  "@errorUpdate": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "saveChanges": "Save changes",
+  "@saveChanges": {},
+  "resetFilters": "Reset filters",
+  "@resetFilters": {},
+  "allSheets": "All sheets",
+  "@allSheets": {},
+  "tryAgain": "Try again",
+  "@tryAgain": {},
+  "stopMustRemainInWindow": "The stop must remain within the 22:30 → 22:30 window.",
+  "@stopMustRemainInWindow": {},
+  "stopFinishedSuccessfully": "Stop finished successfully.",
+  "@stopFinishedSuccessfully": {},
+  "selectStopCategory": "Select stop category",
+  "@selectStopCategory": {},
+  "selectStopType": "Select stop type",
+  "@selectStopType": {},
+  "selectLocation": "Select location",
+  "@selectLocation": {},
+  "applyToBothModules": "Apply to both modules",
+  "@applyToBothModules": {},
+  "deleteSelectedReports": "Delete {count} selected report(s)?",
+  "@deleteSelectedReports": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "posteValue": "Shift: {poste}",
+  "@posteValue": {
+    "placeholders": {
+      "poste": { "type": "String" }
+    }
+  },
+  "gatTripsValue": "GAT Trips: {trips}",
+  "@gatTripsValue": {
+    "placeholders": {
+      "trips": { "type": "String" }
+    }
+  },
+  "terexTripsValue": "TEREX Trips: {trips}",
+  "@terexTripsValue": {
+    "placeholders": {
+      "trips": { "type": "String" }
+    }
+  },
+  "parkValue": "Park: {park}",
+  "@parkValue": {
+    "placeholders": {
+      "park": { "type": "String" }
+    }
+  },
+  "deleteLabel": "Delete {label}",
+  "@deleteLabel": {
+    "placeholders": {
+      "label": { "type": "String" }
+    }
+  },
+  "shiftHasStockAlready": "This shift already has a stock.",
+  "@shiftHasStockAlready": {},
+  "vModule": "v{index}",
+  "@vModule": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+  "workLabel": "Work {index}",
+  "@workLabel": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  }
 }

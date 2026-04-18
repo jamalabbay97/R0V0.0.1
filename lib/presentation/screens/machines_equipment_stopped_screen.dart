@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:r0/l10n/app_localizations.dart';
-import 'package:r0/data/services/database_helper.dart';
+import 'package:provider/provider.dart';
+import 'package:r0/domain/repositories/report_repository.dart';
 import 'package:r0/domain/models/report.dart';
 import 'package:r0/presentation/widgets/custom_widgets.dart';
 import 'package:r0/presentation/theme.dart';
@@ -26,7 +27,7 @@ class MachinesEquipmentStoppedScreen extends StatefulWidget {
 
 class _MachinesEquipmentStoppedScreenState
     extends State<MachinesEquipmentStoppedScreen> {
-  final DatabaseHelper _databaseHelper = DatabaseHelper();
+  ReportRepository get _reportRepository => context.read<ReportRepository>();
   DateTime _selectedDate = DateTime.now();
   int _currentStep = 0;
   bool _isSaving = false;
@@ -228,12 +229,12 @@ class _MachinesEquipmentStoppedScreenState
         context: context,
         builder: (ctx) => StatefulBuilder(
             builder: (c, setDs) => AlertDialog(
-                    title: const Text("Ajouter Équipement"),
+                    title: Text(AppLocalizations.of(context)!.addEquipment),
                     content: SingleChildScrollView(
                         child:
                             Column(mainAxisSize: MainAxisSize.min, children: [
                       DropdownButtonFormField<String>(
-                          hint: const Text("Catégorie"),
+                          hint: Text(AppLocalizations.of(context)!.category),
                           isExpanded: true,
                           items: _equipmentData.keys
                               .map((k) =>
@@ -249,7 +250,7 @@ class _MachinesEquipmentStoppedScreenState
                       if (mainCat != null)
                         DropdownButtonFormField<String>(
                             key: ValueKey(mainCat),
-                            hint: const Text("Sous-catégorie"),
+                            hint: Text(AppLocalizations.of(context)!.subCategory),
                             isExpanded: true,
                             items: _equipmentData[mainCat]!
                                 .keys
@@ -265,7 +266,7 @@ class _MachinesEquipmentStoppedScreenState
                       if (subCat != null)
                         DropdownButtonFormField<String>(
                             key: ValueKey(subCat),
-                            hint: const Text("Equipement"),
+                            hint: Text(AppLocalizations.of(context)!.equipment),
                             isExpanded: true,
                             items: _equipmentData[mainCat]![subCat]!
                                 .map((k) =>
@@ -283,7 +284,7 @@ class _MachinesEquipmentStoppedScreenState
                     actions: [
                       TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text("Annuler")),
+                          child: Text(AppLocalizations.of(context)!.cancel)),
                       ElevatedButton(
                           onPressed: (equip != null && reason.isNotEmpty)
                               ? () {
@@ -295,7 +296,7 @@ class _MachinesEquipmentStoppedScreenState
                                   Navigator.pop(context);
                                 }
                               : null,
-                          child: const Text("Ajouter"))
+                          child: Text(AppLocalizations.of(context)!.add))
                     ])));
   }
 
@@ -352,7 +353,7 @@ class _MachinesEquipmentStoppedScreenState
       if (widget.isEditing && widget.onSave != null) {
         widget.onSave!(report);
       } else {
-        await _databaseHelper.insertReport(report);
+        await _reportRepository.insertReport(report);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(AppLocalizations.of(context)!.reportSaved),
