@@ -10,6 +10,7 @@ class RoleProvider extends ChangeNotifier {
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _roleSubscription;
+  String? _currentUserId;
 
   String? _role;
   bool _isLoading = false;
@@ -21,6 +22,12 @@ class RoleProvider extends ChangeNotifier {
   bool get isAdmin => _role == 'admin';
 
   void onAuthStateChanged(User? user) {
+    final nextUserId = user?.uid;
+    if (_currentUserId == nextUserId) {
+      return;
+    }
+
+    _currentUserId = nextUserId;
     _roleSubscription?.cancel();
     _roleSubscription = null;
 
