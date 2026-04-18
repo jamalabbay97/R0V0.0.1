@@ -2,18 +2,18 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:r0/l10n/app_localizations.dart';
-import 'package:r0/screens/activity_report_screen.dart';
-import 'package:r0/screens/daily_report_screen.dart';
-import 'package:r0/screens/google_sheets_reports_screen.dart';
-import 'package:r0/screens/machines_equipment_stopped_screen.dart';
-import 'package:r0/screens/r0_report_screen.dart';
-import 'package:r0/screens/reports_screen.dart';
-import 'package:r0/screens/settings_screen.dart';
-import 'package:r0/screens/shift_timeline_dashboard_screen.dart';
-import 'package:r0/screens/truck_tracking_screen.dart';
-import 'package:r0/widgets/custom_widgets.dart';
-import 'package:r0/widgets/logo_widget.dart';
-import 'package:r0/theme.dart';
+import 'package:r0/presentation/screens/activity_report_screen.dart';
+import 'package:r0/presentation/screens/daily_report_screen.dart';
+import 'package:r0/presentation/screens/google_sheets_reports_screen.dart';
+import 'package:r0/presentation/screens/machines_equipment_stopped_screen.dart';
+import 'package:r0/presentation/screens/r0_report_screen.dart';
+import 'package:r0/presentation/screens/reports_screen.dart';
+import 'package:r0/presentation/screens/settings_screen.dart';
+import 'package:r0/presentation/screens/shift_timeline_dashboard_screen.dart';
+import 'package:r0/presentation/screens/truck_tracking_screen.dart';
+import 'package:r0/presentation/widgets/custom_widgets.dart';
+import 'package:r0/presentation/widgets/logo_widget.dart';
+import 'package:r0/presentation/theme.dart';
 
 /// Home Dashboard Screen with horizontal swipe navigation.
 ///

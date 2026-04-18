@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:r0/l10n/app_localizations.dart';
-import 'package:r0/models/report.dart';
-import 'package:r0/widgets/spinner_time_picker_dialog.dart';
+import 'package:r0/domain/models/report.dart';
+import 'package:r0/presentation/widgets/spinner_time_picker_dialog.dart';
 
 class ReportForm extends StatefulWidget {
   final Report? initialReport;

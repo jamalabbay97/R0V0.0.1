@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:r0/l10n/app_localizations.dart';
-import 'package:r0/models/report.dart';
-import 'package:r0/services/database_helper.dart';
-import 'package:r0/screens/activity_report_screen.dart';
-import 'package:r0/screens/daily_report_screen.dart';
-import 'package:r0/screens/r0_report_screen.dart';
-import 'package:r0/screens/truck_tracking_screen.dart';
-import 'package:r0/screens/machines_equipment_stopped_screen.dart';
-import 'package:r0/widgets/spinner_time_picker_dialog.dart';
+import 'package:r0/domain/models/report.dart';
+import 'package:r0/data/services/database_helper.dart';
+import 'package:r0/presentation/screens/activity_report_screen.dart';
+import 'package:r0/presentation/screens/daily_report_screen.dart';
+import 'package:r0/presentation/screens/r0_report_screen.dart';
+import 'package:r0/presentation/screens/truck_tracking_screen.dart';
+import 'package:r0/presentation/screens/machines_equipment_stopped_screen.dart';
+import 'package:r0/presentation/widgets/spinner_time_picker_dialog.dart';
 
 /// ReportEditorScreen provides a comprehensive editing interface for all report types.
 /// It opens the appropriate form based on the report type, pre-populated with existing data.

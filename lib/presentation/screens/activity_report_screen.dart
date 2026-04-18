@@ -3,12 +3,12 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
 import 'package:uuid/uuid.dart';
-import 'package:r0/models/report.dart';
-import 'package:r0/services/database_helper.dart';
-import 'package:r0/services/time_calculation_service.dart';
-import 'package:r0/theme.dart';
-import 'package:r0/widgets/custom_widgets.dart';
-import 'package:r0/widgets/spinner_time_picker_dialog.dart';
+import 'package:r0/domain/models/report.dart';
+import 'package:r0/data/services/database_helper.dart';
+import 'package:r0/domain/services/time_calculation_service.dart';
+import 'package:r0/presentation/theme.dart';
+import 'package:r0/presentation/widgets/custom_widgets.dart';
+import 'package:r0/presentation/widgets/spinner_time_picker_dialog.dart';
 
 // --- Enums and Helpers ---
 enum Poste { premier, deuxieme, troisieme }

@@ -5,10 +5,10 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:r0/l10n/app_localizations.dart';
-import 'package:r0/providers/language_provider.dart';
-import 'package:r0/providers/theme_provider.dart';
-import 'package:r0/screens/home_screen.dart';
-import 'package:r0/theme.dart';
+import 'package:r0/presentation/providers/language_provider.dart';
+import 'package:r0/presentation/providers/theme_provider.dart';
+import 'package:r0/presentation/screens/home_screen.dart';
+import 'package:r0/presentation/theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

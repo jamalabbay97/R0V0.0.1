@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:r0/services/google_sheets_service.dart';
+import 'package:r0/data/services/google_sheets_service.dart';
 
 class GoogleSheetsReportsScreen extends StatefulWidget {
   const GoogleSheetsReportsScreen({super.key});

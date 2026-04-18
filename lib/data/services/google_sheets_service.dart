@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:googleapis/sheets/v4.dart';
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:intl/intl.dart';
-import 'package:r0/models/report.dart';
+import 'package:r0/domain/models/report.dart';
 
 class GoogleSheetsService {
   GoogleSheetsService({

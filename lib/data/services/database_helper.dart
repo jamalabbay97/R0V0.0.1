@@ -5,8 +5,8 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:r0/models/report.dart';
-import 'package:r0/services/google_sheets_service.dart';
+import 'package:r0/domain/models/report.dart';
+import 'package:r0/data/services/google_sheets_service.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();

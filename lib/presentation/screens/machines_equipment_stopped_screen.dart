@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:r0/l10n/app_localizations.dart';
-import 'package:r0/services/database_helper.dart';
-import 'package:r0/models/report.dart';
-import 'package:r0/widgets/custom_widgets.dart';
-import 'package:r0/theme.dart';
+import 'package:r0/data/services/database_helper.dart';
+import 'package:r0/domain/models/report.dart';
+import 'package:r0/presentation/widgets/custom_widgets.dart';
+import 'package:r0/presentation/theme.dart';
 
 class MachinesEquipmentStoppedScreen extends StatefulWidget {
   final DateTime? selectedDate;

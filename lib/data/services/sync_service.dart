@@ -1,6 +1,6 @@
-import 'package:r0/services/database_helper.dart';
-import 'package:r0/services/firestore_service.dart';
-import 'package:r0/models/report.dart';
+import 'package:r0/data/services/database_helper.dart';
+import 'package:r0/data/services/firestore_service.dart';
+import 'package:r0/domain/models/report.dart';
 import 'package:flutter/foundation.dart';
 
 /// Service for syncing between local SQLite and Firestore

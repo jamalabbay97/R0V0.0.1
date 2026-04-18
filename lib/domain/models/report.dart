@@ -1,7 +1,7 @@
 import 'package:intl/intl.dart';
 import 'dart:convert';
-import 'package:r0/services/stop_sorting_service.dart';
-import 'package:r0/services/trip_sorting_service.dart';
+import 'package:r0/domain/services/stop_sorting_service.dart';
+import 'package:r0/domain/services/trip_sorting_service.dart';
 
 class Report {
   final int? id; // Local SQLite ID

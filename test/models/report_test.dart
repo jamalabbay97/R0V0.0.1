@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:r0/models/report.dart';
+import 'package:r0/domain/models/report.dart';
 import 'dart:convert';
 
 void main() {

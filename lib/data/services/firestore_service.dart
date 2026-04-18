@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:r0/models/report.dart';
+import 'package:r0/domain/models/report.dart';
 import 'package:flutter/foundation.dart';
 
 /// Service for syncing reports with Firestore

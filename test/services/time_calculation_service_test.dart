@@ -1,7 +1,7 @@
 // ignore_for_file: avoid_relative_lib_imports
 
 import 'package:flutter_test/flutter_test.dart';
-import '../../lib/services/time_calculation_service.dart';
+import 'package:r0/domain/services/time_calculation_service.dart';
 
 void main() {
   group('TimeCalculationService', () {

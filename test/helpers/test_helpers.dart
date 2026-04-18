@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:r0/providers/language_provider.dart';
+import 'package:r0/presentation/providers/language_provider.dart';
 import 'package:r0/l10n/app_localizations.dart';
-import 'package:r0/theme.dart';
-import 'package:r0/models/report.dart';
+import 'package:r0/presentation/theme.dart';
+import 'package:r0/domain/models/report.dart';
 
 /// Helper function to create a test app with necessary providers
 Widget createTestApp({

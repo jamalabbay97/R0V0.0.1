@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:r0/l10n/app_localizations.dart';
-import 'package:r0/services/database_helper.dart';
-import 'package:r0/models/report.dart';
-import 'package:r0/models/mine_data.dart';
+import 'package:r0/data/services/database_helper.dart';
+import 'package:r0/domain/models/report.dart';
+import 'package:r0/domain/models/mine_data.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
-import 'package:r0/theme.dart';
-import 'package:r0/widgets/custom_widgets.dart';
+import 'package:r0/presentation/theme.dart';
+import 'package:r0/presentation/widgets/custom_widgets.dart';
 
 // --- Enums ---
 enum QualiteType { normal, oceane, pb30 }

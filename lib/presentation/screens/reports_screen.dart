@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:r0/l10n/app_localizations.dart';
-import 'package:r0/models/report.dart';
-import 'package:r0/services/database_helper.dart';
-import 'package:r0/services/google_sheets_service.dart';
-import 'package:r0/services/time_calculation_service.dart';
+import 'package:r0/domain/models/report.dart';
+import 'package:r0/data/services/database_helper.dart';
+import 'package:r0/data/services/google_sheets_service.dart';
+import 'package:r0/domain/services/time_calculation_service.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 import 'package:uuid/uuid.dart';
-import 'package:r0/data/r0_arrets_data.dart';
-import 'package:r0/theme.dart';
-import 'package:r0/widgets/spinner_time_picker_dialog.dart';
+import 'package:r0/data/constants/r0_arrets_data.dart';
+import 'package:r0/presentation/theme.dart';
+import 'package:r0/presentation/widgets/spinner_time_picker_dialog.dart';
 import 'dart:math' as math;
 
 class _ShiftWindow {
