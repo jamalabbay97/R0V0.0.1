@@ -39,6 +39,7 @@ declare module 'firebase-functions' {
 
         export function user(): {
             onCreate(handler: (user: UserRecord, context: any) => Promise<void> | void): any;
+            onDelete(handler: (user: UserRecord, context: any) => Promise<void> | void): any;
         };
     }
 
@@ -59,17 +60,35 @@ declare module 'firebase-admin' {
         export interface Firestore {
             collection(path: string): CollectionReference;
             doc(path: string): DocumentReference;
+            batch(): WriteBatch;
         }
 
-        export interface CollectionReference {
+        export interface Query {
+            where(fieldPath: string, opStr: string, value: any): Query;
+            orderBy(fieldPath: string, directionStr?: 'asc' | 'desc'): Query;
+            limit(limit: number): Query;
+            startAfter(snapshot: any): Query;
+            get(): Promise<{ docs: any[]; empty: boolean; size: number }>;
+        }
+
+        export interface CollectionReference extends Query {
             doc(path?: string): DocumentReference;
+            add(data: any): Promise<DocumentReference>;
         }
 
         export interface DocumentReference {
+            id: string;
             set(data: any, options?: { merge?: boolean }): Promise<any>;
             update(data: any): Promise<any>;
             delete(): Promise<any>;
             get(): Promise<any>;
+        }
+
+        export interface WriteBatch {
+            set(ref: DocumentReference, data: any, options?: { merge?: boolean }): WriteBatch;
+            update(ref: DocumentReference, data: any): WriteBatch;
+            delete(ref: DocumentReference): WriteBatch;
+            commit(): Promise<any>;
         }
 
         export class FieldValue {
