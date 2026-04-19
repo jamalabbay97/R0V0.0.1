@@ -34,6 +34,8 @@ class GoogleSheetsService {
   static const String _detailsSuffix = ' - Détails';
   static const String _activitySheet = 'TNB';
   static const String _dailySheet = 'TSUD';
+  static const String _ifDowntimeDetailsSheet =
+      "détail d'arrêts IF (TNB, TSUD)";
   static const String _truckSheet = 'Poser les camions';
   static const String _machinesSheet = 'Machines et engins à l\'arrêt';
   static const String _r0Sheet = 'R0';
@@ -135,6 +137,12 @@ class GoogleSheetsService {
         }
 
         await _appendRowsToTemplate(api, templateRows);
+        await _syncIfDowntimeDetailsSheet(
+          api,
+          report: report,
+          reportDateLocal: reportLocalDate,
+          data: data,
+        );
         return true;
       }
 
@@ -204,6 +212,220 @@ class GoogleSheetsService {
     }
 
     return false;
+  }
+
+  Future<void> _syncIfDowntimeDetailsSheet(
+    SheetsApi api, {
+    required Report report,
+    required DateTime reportDateLocal,
+    required Map<String, dynamic> data,
+  }) async {
+    final category = _categorizeReport(report, data);
+    if (category != _ReportCategory.activityTnb &&
+        category != _ReportCategory.dailyTsud) {
+      return;
+    }
+
+    await _ensureSheetExists(api, _ifDowntimeDetailsSheet);
+    await _ensureIfDowntimeDetailsLayout(api, _ifDowntimeDetailsSheet);
+
+    if (category == _ReportCategory.activityTnb) {
+      final rows = _listOfMaps(data['Arrets'])
+          .map((stop) => _buildIfDowntimeRow(reportDateLocal, stop))
+          .toList();
+      await _appendIfDowntimeRows(
+        api,
+        sheetName: _ifDowntimeDetailsSheet,
+        rangePrefix: 'A',
+        rangeSuffix: 'G',
+        rows: rows,
+      );
+      return;
+    }
+
+    final module1Rows = _listOfMaps(data['module1Stops'])
+        .map((stop) => _buildIfDowntimeRow(reportDateLocal, stop))
+        .toList();
+    final module2Rows = _listOfMaps(data['module2Stops'])
+        .map((stop) => _buildIfDowntimeRow(reportDateLocal, stop))
+        .toList();
+
+    await _appendIfDowntimeRows(
+      api,
+      sheetName: _ifDowntimeDetailsSheet,
+      rangePrefix: 'I',
+      rangeSuffix: 'O',
+      rows: module1Rows,
+    );
+    await _appendIfDowntimeRows(
+      api,
+      sheetName: _ifDowntimeDetailsSheet,
+      rangePrefix: 'Q',
+      rangeSuffix: 'W',
+      rows: module2Rows,
+    );
+  }
+
+  Future<void> _ensureIfDowntimeDetailsLayout(
+    SheetsApi api,
+    String sheetName,
+  ) async {
+    const headers = [
+      'jour',
+      "Debut d'arret",
+      "Fin d'arret",
+      "durée d'arret",
+      'STS',
+      'equipement',
+      'designation',
+    ];
+
+    await api.spreadsheets.values.update(
+      ValueRange(values: const [
+        ['TNB'],
+        [],
+      ]),
+      _spreadsheetId,
+      '$sheetName!A3',
+      valueInputOption: 'RAW',
+    );
+    await api.spreadsheets.values.update(
+      ValueRange(values: const [
+        ['TSUD M1'],
+        [],
+      ]),
+      _spreadsheetId,
+      '$sheetName!I3',
+      valueInputOption: 'RAW',
+    );
+    await api.spreadsheets.values.update(
+      ValueRange(values: const [
+        ['TSUD M2'],
+        [],
+      ]),
+      _spreadsheetId,
+      '$sheetName!Q3',
+      valueInputOption: 'RAW',
+    );
+
+    await api.spreadsheets.values.update(
+      ValueRange(values: [headers]),
+      _spreadsheetId,
+      '$sheetName!A4:G4',
+      valueInputOption: 'RAW',
+    );
+    await api.spreadsheets.values.update(
+      ValueRange(values: [headers]),
+      _spreadsheetId,
+      '$sheetName!I4:O4',
+      valueInputOption: 'RAW',
+    );
+    await api.spreadsheets.values.update(
+      ValueRange(values: [headers]),
+      _spreadsheetId,
+      '$sheetName!Q4:W4',
+      valueInputOption: 'RAW',
+    );
+  }
+
+  Future<void> _appendIfDowntimeRows(
+    SheetsApi api, {
+    required String sheetName,
+    required String rangePrefix,
+    required String rangeSuffix,
+    required List<List<Object?>> rows,
+  }) async {
+    if (rows.isEmpty) {
+      return;
+    }
+
+    final existingRange = await api.spreadsheets.values.get(
+      _spreadsheetId,
+      '$sheetName!${rangePrefix}5:$rangeSuffix',
+    );
+    final existingRows = existingRange.values ?? const [];
+    final nonEmptyRows = existingRows.where(_hasContent).length;
+    final startRow = 5 + nonEmptyRows;
+    final endRow = startRow + rows.length - 1;
+
+    await api.spreadsheets.values.update(
+      ValueRange(values: rows),
+      _spreadsheetId,
+      '$sheetName!$rangePrefix$startRow:$rangeSuffix$endRow',
+      valueInputOption: 'RAW',
+    );
+  }
+
+  List<Object?> _buildIfDowntimeRow(
+    DateTime reportDateLocal,
+    Map<String, dynamic> stop,
+  ) {
+    final sts = _firstNonEmpty(stop, const ['Catégorie', 'category']);
+    final equipment =
+        _firstNonEmpty(stop, const ['location', 'Lieu', 'stopLocation']);
+    final designation = _firstNonEmpty(
+      stop,
+      const ['detail', 'Détail', 'nature'],
+    );
+
+    return [
+      DateFormat('M/d/yyyy').format(reportDateLocal),
+      _formatStopClockTime(stop['startTime'] ?? stop['Début']),
+      _formatStopClockTime(stop['endTime'] ?? stop['Fin']),
+      _formatStopDurationClock(stop['duration']),
+      sts,
+      equipment,
+      designation,
+    ];
+  }
+
+  String _firstNonEmpty(Map<String, dynamic> map, List<String> keys) {
+    for (final key in keys) {
+      final value = map[key];
+      if (value != null && value.toString().trim().isNotEmpty) {
+        return value.toString().trim();
+      }
+    }
+    return '';
+  }
+
+  String _formatStopClockTime(Object? raw) {
+    final value = raw?.toString().trim() ?? '';
+    if (value.isEmpty || value.toLowerCase() == 'pending') {
+      return value;
+    }
+    if (RegExp(r'^\d{1,2}:\d{2}:\d{2}$').hasMatch(value)) {
+      return value;
+    }
+    if (RegExp(r'^\d{1,2}:\d{2}$').hasMatch(value)) {
+      return '$value:00';
+    }
+    return value;
+  }
+
+  String _formatStopDurationClock(Object? raw) {
+    final value = raw?.toString().trim() ?? '';
+    if (value.isEmpty) {
+      return '0:00:00';
+    }
+    if (RegExp(r'^\d{1,2}:\d{2}:\d{2}$').hasMatch(value)) {
+      return value;
+    }
+    final hourMinuteMatch =
+        RegExp(r'^(\d+)\s*h\s*(\d+)\s*m$', caseSensitive: false)
+            .firstMatch(value);
+    if (hourMinuteMatch != null) {
+      final hours = int.tryParse(hourMinuteMatch.group(1) ?? '0') ?? 0;
+      final minutes = int.tryParse(hourMinuteMatch.group(2) ?? '0') ?? 0;
+      return '$hours:${minutes.toString().padLeft(2, '0')}:00';
+    }
+    final asInt = int.tryParse(value);
+    if (asInt != null) {
+      final hours = asInt ~/ 60;
+      final minutes = asInt % 60;
+      return '$hours:${minutes.toString().padLeft(2, '0')}:00';
+    }
+    return value;
   }
 
   Future<bool> _sheetHasExistingR0Report(
@@ -1468,6 +1690,30 @@ class GoogleSheetsService {
         valueInputOption: 'RAW',
       );
     }
+  }
+
+  Future<void> _ensureSheetExists(SheetsApi api, String sheetName) async {
+    await _loadSheetNames(api);
+
+    if (_resolveSheetName(sheetName) != null) {
+      return;
+    }
+
+    await api.spreadsheets.batchUpdate(
+      BatchUpdateSpreadsheetRequest(
+        requests: [
+          Request(
+            addSheet: AddSheetRequest(
+              properties: SheetProperties(title: sheetName),
+            ),
+          ),
+        ],
+      ),
+      _spreadsheetId,
+    );
+    _knownSheets.add(sheetName);
+    _loadedSheets = false;
+    await _loadSheetNames(api);
   }
 
   Future<void> _loadSheetNames(SheetsApi api) async {
