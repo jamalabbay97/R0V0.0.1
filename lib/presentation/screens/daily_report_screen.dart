@@ -200,7 +200,8 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      AppLocalizations.of(context)!.addStopWithSuffix(widget.titleSuffix),
+                      AppLocalizations.of(context)!
+                          .addStopWithSuffix(widget.titleSuffix),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 26,
@@ -223,7 +224,8 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(
                         AppLocalizations.of(context)!.startTimeLabel,
-                        style: const TextStyle(color: Colors.white, fontSize: 20),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 20),
                       ),
                       subtitle: Text(
                         _formatTime(_startTime),
@@ -244,7 +246,8 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(
                         AppLocalizations.of(context)!.endTimeLabel,
-                        style: const TextStyle(color: Colors.white, fontSize: 20),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 20),
                       ),
                       subtitle: Text(
                         _isPending ? 'Pending' : _formatTime(_endTime),
@@ -359,7 +362,8 @@ String _getLocalizedCategoryLabel(BuildContext context, String internalLabel) {
   if (internalLabel == 'Arrêts Extérieures') {
     return l10n.externalStopsCategory;
   }
-  if (internalLabel == 'Arrêts Materiel' || internalLabel == 'Arrêts Matériel') {
+  if (internalLabel == 'Arrêts Materiel' ||
+      internalLabel == 'Arrêts Matériel') {
     return l10n.equipmentStopsCategory;
   }
   if (internalLabel == "Arrêts d'Exploitation") {
@@ -888,7 +892,8 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                             items: _tnbStopCategories
                                 .map((category) => DropdownMenuItem(
                                       value: category,
-                                      child: Text(_getLocalizedCategoryLabel(context, category.label)),
+                                      child: Text(_getLocalizedCategoryLabel(
+                                          context, category.label)),
                                     ))
                                 .toList(),
                             onChanged: (value) => setDs(() {

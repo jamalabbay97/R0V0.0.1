@@ -85,171 +85,178 @@ class _ShiftTimelineDashboardScreenState
         _tnbReports.isNotEmpty ||
         _tsudReports.isNotEmpty;
 
-    return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 1200),
-        child: Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          body: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      offset: const Offset(0, 4),
-                      blurRadius: 12,
+    return SafeArea(
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: Scaffold(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            body: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        offset: const Offset(0, 4),
+                        blurRadius: 12,
+                      ),
+                    ],
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(24),
+                      bottomRight: Radius.circular(24),
                     ),
-                  ],
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(24),
-                    bottomRight: Radius.circular(24),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 58,
+                        height: 58,
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(
+                          Icons.timeline_rounded,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Timeline',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            Text(
+                              '24h operation',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.6),
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 58,
-                      height: 58,
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Icon(Icons.timeline_rounded,
-                          color: Theme.of(context).colorScheme.primary,
-                          size: 32),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Timeline',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
-                                  fontWeight: FontWeight.bold,
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : !hasAnyTimelineReports
+                          ? const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(20),
+                                child: Text(
+                                  'No timeline reports found yet. Add R0, TNB, or TSUD reports to view the charts.',
+                                  textAlign: TextAlign.center,
                                 ),
-                          ),
-                          Text(
-                            '24h operation',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.6),
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : !hasAnyTimelineReports
-                        ? const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(20),
-                              child: Text(
-                                'No timeline reports found yet. Add R0, TNB, or TSUD reports to view the charts.',
-                                textAlign: TextAlign.center,
                               ),
+                            )
+                          : ListView(
+                              padding: const EdgeInsets.all(16),
+                              children: [
+                                DropdownButtonFormField<DateTime>(
+                                  initialValue: _selectedProductionDay,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Select production day',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  items: _availableProductionDays([
+                                    ..._r0Reports,
+                                    ..._tnbReports,
+                                    ..._tsudReports,
+                                  ]).map((day) {
+                                    final label =
+                                        '${day.day.toString().padLeft(2, '0')}/${day.month.toString().padLeft(2, '0')}/${day.year}';
+                                    return DropdownMenuItem(
+                                      value: day,
+                                      child: Text(label),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    setState(
+                                      () => _selectedProductionDay = value,
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 18),
+                                if (_selectedProductionDay != null &&
+                                    reportsForDay.isNotEmpty)
+                                  _ShiftTimelineCard(
+                                    title: 'R0',
+                                    productionDay: _selectedProductionDay!,
+                                    reports: reportsForDay,
+                                    tracks: const [
+                                      _TimelineTrackConfig(
+                                        label: 'All reports',
+                                        extractor: _extractR0DowntimeSegments,
+                                      ),
+                                    ],
+                                  ),
+                                if (_selectedProductionDay != null &&
+                                    tnbReportsForDay.isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  _ShiftTimelineCard(
+                                    title: 'TNB',
+                                    productionDay: _selectedProductionDay!,
+                                    reports: tnbReportsForDay,
+                                    tracks: const [
+                                      _TimelineTrackConfig(
+                                        label: 'All reports',
+                                        extractor: _extractTnbDowntimeSegments,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                                if (_selectedProductionDay != null &&
+                                    tsudReportsForDay.isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  _ShiftTimelineCard(
+                                    title: 'TSUD',
+                                    productionDay: _selectedProductionDay!,
+                                    reports: tsudReportsForDay,
+                                    tracks: const [
+                                      _TimelineTrackConfig(
+                                        label: 'Module 1 model',
+                                        extractor:
+                                            _extractTsudModule1DowntimeSegments,
+                                      ),
+                                      _TimelineTrackConfig(
+                                        label: 'Module 2 model',
+                                        extractor:
+                                            _extractTsudModule2DowntimeSegments,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ],
                             ),
-                          )
-                        : ListView(
-                            padding: const EdgeInsets.all(16),
-                            children: [
-                              DropdownButtonFormField<DateTime>(
-                                initialValue: _selectedProductionDay,
-                                decoration: const InputDecoration(
-                                  labelText: 'Select production day',
-                                  border: OutlineInputBorder(),
-                                ),
-                                items: _availableProductionDays([
-                                  ..._r0Reports,
-                                  ..._tnbReports,
-                                  ..._tsudReports,
-                                ]).map((day) {
-                                  final label =
-                                      '${day.day.toString().padLeft(2, '0')}/${day.month.toString().padLeft(2, '0')}/${day.year}';
-                                  return DropdownMenuItem(
-                                      value: day, child: Text(label));
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(
-                                      () => _selectedProductionDay = value);
-                                },
-                              ),
-                              const SizedBox(height: 18),
-                              if (_selectedProductionDay != null &&
-                                  reportsForDay.isNotEmpty)
-                                _ShiftTimelineCard(
-                                  title: 'R0',
-                                  productionDay: _selectedProductionDay!,
-                                  reports: reportsForDay,
-                                  tracks: const [
-                                    _TimelineTrackConfig(
-                                      label: 'All reports',
-                                      extractor: _extractR0DowntimeSegments,
-                                    ),
-                                  ],
-                                ),
-                              if (_selectedProductionDay != null &&
-                                  tnbReportsForDay.isNotEmpty) ...[
-                                const SizedBox(height: 12),
-                                _ShiftTimelineCard(
-                                  title: 'TNB',
-                                  productionDay: _selectedProductionDay!,
-                                  reports: tnbReportsForDay,
-                                  tracks: const [
-                                    _TimelineTrackConfig(
-                                      label: 'All reports',
-                                      extractor: _extractTnbDowntimeSegments,
-                                    ),
-                                  ],
-                                ),
-                              ],
-                              if (_selectedProductionDay != null &&
-                                  tsudReportsForDay.isNotEmpty) ...[
-                                const SizedBox(height: 12),
-                                _ShiftTimelineCard(
-                                  title: 'TSUD',
-                                  productionDay: _selectedProductionDay!,
-                                  reports: tsudReportsForDay,
-                                  tracks: const [
-                                    _TimelineTrackConfig(
-                                      label: 'Module 1 model',
-                                      extractor:
-                                          _extractTsudModule1DowntimeSegments,
-                                    ),
-                                    _TimelineTrackConfig(
-                                      label: 'Module 2 model',
-                                      extractor:
-                                          _extractTsudModule2DowntimeSegments,
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ],
-                          ),
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -259,7 +259,8 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      AppLocalizations.of(context)!.addStopWithSuffix(widget.titleSuffix),
+                      AppLocalizations.of(context)!
+                          .addStopWithSuffix(widget.titleSuffix),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 26,
@@ -282,7 +283,8 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(
                         AppLocalizations.of(context)!.startTimeLabel,
-                        style: const TextStyle(color: Colors.white, fontSize: 20),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 20),
                       ),
                       subtitle: Text(
                         _formatTime(_startTime),
@@ -302,7 +304,8 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                       Padding(
                         padding: const EdgeInsets.only(top: 4, bottom: 8),
                         child: Text(
-                          AppLocalizations.of(context)!.allowedStartRange(_assignedPosteWindowLabel()),
+                          AppLocalizations.of(context)!
+                              .allowedStartRange(_assignedPosteWindowLabel()),
                           style: const TextStyle(color: Colors.white70),
                         ),
                       ),
@@ -311,7 +314,8 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(
                         AppLocalizations.of(context)!.endTimeLabel,
-                        style: const TextStyle(color: Colors.white, fontSize: 20),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 20),
                       ),
                       subtitle: Text(
                         _isPending ? 'Pending' : _formatTime(_endTime),
@@ -354,7 +358,8 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                         padding: const EdgeInsets.only(bottom: 8),
                         child: Text(
                           _assignedPosteWindowLabel().isEmpty
-                              ? AppLocalizations.of(context)!.startTimeInShiftError
+                              ? AppLocalizations.of(context)!
+                                  .startTimeInShiftError
                               : "${AppLocalizations.of(context)!.startTimeInShiftError} (${_assignedPosteWindowLabel()}).",
                           style: const TextStyle(color: AppColors.error),
                         ),
@@ -412,7 +417,8 @@ String _getLocalizedCategoryLabel(BuildContext context, String internalLabel) {
   if (internalLabel == 'Arrêts Extérieures') {
     return l10n.externalStopsCategory;
   }
-  if (internalLabel == 'Arrêts Materiel' || internalLabel == 'Arrêts Matériel') {
+  if (internalLabel == 'Arrêts Materiel' ||
+      internalLabel == 'Arrêts Matériel') {
     return l10n.equipmentStopsCategory;
   }
   if (internalLabel == "Arrêts d'Exploitation") {
@@ -1711,7 +1717,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           .map(
                             (category) => DropdownMenuItem(
                               value: category,
-                              child: Text(_getLocalizedCategoryLabel(context, category.label)),
+                              child: Text(_getLocalizedCategoryLabel(
+                                  context, category.label)),
                             ),
                           )
                           .toList(),
@@ -2041,7 +2048,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           .map(
                             (category) => DropdownMenuItem(
                               value: category,
-                              child: Text(_getLocalizedCategoryLabel(context, category.label)),
+                              child: Text(_getLocalizedCategoryLabel(
+                                  context, category.label)),
                             ),
                           )
                           .toList(),
