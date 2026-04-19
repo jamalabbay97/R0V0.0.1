@@ -210,9 +210,9 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       AppLocalizations.of(context)!.timeEntryTitle,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 30,
                         fontWeight: FontWeight.w700,
@@ -221,9 +221,9 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                     const SizedBox(height: 20),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text(
+                      title: Text(
                         AppLocalizations.of(context)!.startTimeLabel,
-                        style: TextStyle(color: Colors.white, fontSize: 20),
+                        style: const TextStyle(color: Colors.white, fontSize: 20),
                       ),
                       subtitle: Text(
                         _formatTime(_startTime),
@@ -242,9 +242,9 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                     const SizedBox(height: 10),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text(
+                      title: Text(
                         AppLocalizations.of(context)!.endTimeLabel,
-                        style: TextStyle(color: Colors.white, fontSize: 20),
+                        style: const TextStyle(color: Colors.white, fontSize: 20),
                       ),
                       subtitle: Text(
                         _isPending ? 'Pending' : _formatTime(_endTime),
@@ -262,33 +262,33 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                     ),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text(
+                      title: Text(
                         AppLocalizations.of(context)!.stopInProgress,
-                        style: TextStyle(color: Colors.white),
+                        style: const TextStyle(color: Colors.white),
                       ),
-                      subtitle: const Text(
+                      subtitle: Text(
                         AppLocalizations.of(context)!.stopInProgressDescription,
-                        style: TextStyle(color: Colors.white70),
+                        style: const TextStyle(color: Colors.white70),
                       ),
                       value: _isPending,
                       onChanged: (value) => setState(() => _isPending = value),
                     ),
                     const SizedBox(height: 16),
                     if (!hasValidRange)
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
                         child: Text(
                           AppLocalizations.of(context)!.stopTimeRangeError,
-                          style: TextStyle(color: AppColors.error),
+                          style: const TextStyle(color: AppColors.error),
                         ),
                       ),
                     Row(
                       children: [
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          child: const Text(
+                          child: Text(
                             AppLocalizations.of(context)!.previous,
-                            style: TextStyle(
+                            style: const TextStyle(
                                 color: AppColors.success, fontSize: 22),
                           ),
                         ),
@@ -312,9 +312,9 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                                   );
                                 }
                               : null,
-                          child: const Text(
+                          child: Text(
                             AppLocalizations.of(context)!.add,
-                            style: TextStyle(fontSize: 28),
+                            style: const TextStyle(fontSize: 28),
                           ),
                         ),
                       ],
