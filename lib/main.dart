@@ -4,6 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:r0/core/config/app_config_flavors.dart';
+import 'package:r0/data/repositories/report_repository_impl.dart';
+import 'package:r0/data/services/database_helper.dart';
+import 'package:r0/domain/repositories/report_repository.dart';
 import 'package:r0/firebase_options.dart';
 import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/presentation/providers/auth_provider.dart';
@@ -36,6 +39,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        Provider<ReportRepository>(
+          create: (_) => ReportRepositoryImpl(DatabaseHelper()),
+        ),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
