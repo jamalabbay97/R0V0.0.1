@@ -4921,6 +4921,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     data: data,
                                     reportDate: report.date,
                                     l10n: l10n,
+                                    report: currentReport,
                                   ),
                                 ],
                               ),
@@ -5051,6 +5052,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     data: data,
                                     reportDate: currentReport.date,
                                     l10n: l10n,
+                                    report: currentReport,
                                   ),
                                 ],
                               ),
@@ -6809,6 +6811,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
             ),
           ],
+          if (shiftKey == null && report != null) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: report.isSentToSheets
+                    ? null
+                    : () => _sendReportToSheets(report),
+                icon: const Icon(Icons.cloud_upload_outlined),
+                label: Text(AppLocalizations.of(context)!.sendToSheets),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -7174,6 +7189,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ),
               ),
             ),
+          if (shiftKey == null && report != null) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: report.isSentToSheets
+                    ? null
+                    : () => _sendReportToSheets(report),
+                icon: const Icon(Icons.cloud_upload_outlined),
+                label: Text(AppLocalizations.of(context)!.sendToSheets),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -10013,6 +10041,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 data: data,
                                 reportDate: report.date,
                                 l10n: l10n,
+                                report: report,
                               ),
                             ],
                           ),
