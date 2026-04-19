@@ -1799,4 +1799,43 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get descriptionRequired => 'Description is required';
+
+  @override
+  String addStopWithSuffix(String suffix) {
+    return 'Add Stop $suffix';
+  }
+
+  @override
+  String get timeEntryTitle => 'Time Entry';
+
+  @override
+  String get stopInProgressDescription =>
+      'Record the start time now, then add the end time later.';
+
+  @override
+  String allowedStartRange(String window) {
+    return 'Allowed start: $window';
+  }
+
+  @override
+  String get startTimeInShiftError =>
+      'The start time must be within the assigned shift.';
+
+  @override
+  String get stopTimeRangeError =>
+      'The stop must remain within the window 22:30 → 22:30 (24h max).';
+
+  @override
+  String get externalStopsCategory => 'External Stops';
+
+  @override
+  String get equipmentStopsCategory => 'Equipment Stops';
+
+  @override
+  String get exploitationStopsCategory => 'Exploitation Stops';
+
+  @override
+  String timeRangeWithDuration(String start, String end, String duration) {
+    return 'From $start to $end ($duration)';
+  }
 }

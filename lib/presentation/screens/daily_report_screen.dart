@@ -147,7 +147,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
     final picked = await showSpinnerTimePickerDialog(
       context: context,
       initialTime: _startTime,
-      title: 'Heure début',
+      title: AppLocalizations.of(context)!.startTimeLabel,
     );
     if (picked != null) {
       setState(() => _startTime = picked);
@@ -158,7 +158,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
     final picked = await showSpinnerTimePickerDialog(
       context: context,
       initialTime: _endTime,
-      title: 'Heure fin',
+      title: AppLocalizations.of(context)!.endTimeLabel,
     );
     if (picked != null) {
       setState(() => _endTime = picked);
@@ -200,7 +200,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Ajouter Arrêt ${widget.titleSuffix}',
+                      AppLocalizations.of(context)!.addStopWithSuffix(widget.titleSuffix),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 26,
@@ -211,7 +211,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'Saisie des heures',
+                      AppLocalizations.of(context)!.timeEntryTitle,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 30,
@@ -222,7 +222,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text(
-                        'Heure début',
+                        AppLocalizations.of(context)!.startTimeLabel,
                         style: TextStyle(color: Colors.white, fontSize: 20),
                       ),
                       subtitle: Text(
@@ -243,7 +243,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text(
-                        'Heure fin',
+                        AppLocalizations.of(context)!.endTimeLabel,
                         style: TextStyle(color: Colors.white, fontSize: 20),
                       ),
                       subtitle: Text(
@@ -263,11 +263,11 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text(
-                        'Arrêt en cours',
+                        AppLocalizations.of(context)!.stopInProgress,
                         style: TextStyle(color: Colors.white),
                       ),
                       subtitle: const Text(
-                        "Enregistrer l'heure de début maintenant, puis ajouter l'heure de fin plus tard.",
+                        AppLocalizations.of(context)!.stopInProgressDescription,
                         style: TextStyle(color: Colors.white70),
                       ),
                       value: _isPending,
@@ -278,7 +278,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                       const Padding(
                         padding: EdgeInsets.only(bottom: 8),
                         child: Text(
-                          "L'arrêt doit rester dans la fenêtre 22:30 → 22:30 (24h max).",
+                          AppLocalizations.of(context)!.stopTimeRangeError,
                           style: TextStyle(color: AppColors.error),
                         ),
                       ),
@@ -287,7 +287,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(),
                           child: const Text(
-                            'Précédent',
+                            AppLocalizations.of(context)!.previous,
                             style: TextStyle(
                                 color: AppColors.success, fontSize: 22),
                           ),
@@ -313,7 +313,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                                 }
                               : null,
                           child: const Text(
-                            'Ajouter',
+                            AppLocalizations.of(context)!.add,
                             style: TextStyle(fontSize: 28),
                           ),
                         ),
@@ -352,6 +352,20 @@ class _StopActionMenuItem extends StatelessWidget {
       ],
     );
   }
+}
+
+String _getLocalizedCategoryLabel(BuildContext context, String internalLabel) {
+  final l10n = AppLocalizations.of(context)!;
+  if (internalLabel == 'Arrêts Extérieures') {
+    return l10n.externalStopsCategory;
+  }
+  if (internalLabel == 'Arrêts Materiel' || internalLabel == 'Arrêts Matériel') {
+    return l10n.equipmentStopsCategory;
+  }
+  if (internalLabel == "Arrêts d'Exploitation") {
+    return l10n.exploitationStopsCategory;
+  }
+  return internalLabel;
 }
 
 // --- Helper Functions ---
@@ -822,7 +836,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
           ))),
       const SizedBox(height: 16),
       OCPButton(
-          text: "Ajouter Arrêt (Module $module)",
+          text: AppLocalizations.of(context)!.addArretModule(module),
           icon: Icons.add,
           isSecondary: true,
           onPressed: () => _showAddStopDialog(module))
@@ -874,7 +888,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                             items: _tnbStopCategories
                                 .map((category) => DropdownMenuItem(
                                       value: category,
-                                      child: Text(category.label),
+                                      child: Text(_getLocalizedCategoryLabel(context, category.label)),
                                     ))
                                 .toList(),
                             onChanged: (value) => setDs(() {

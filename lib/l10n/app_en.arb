@@ -1387,5 +1387,44 @@
   "swipeLeftHint": "Swipe left (or tap Sheets above) to open reports",
   "@swipeLeftHint": {},
   "descriptionRequired": "Description is required",
-  "@descriptionRequired": {}
+  "@descriptionRequired": {},
+  "addStopWithSuffix": "Add Stop {suffix}",
+  "@addStopWithSuffix": {
+    "placeholders": {
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "timeEntryTitle": "Time Entry",
+  "@timeEntryTitle": {},
+  "stopInProgressDescription": "Record the start time now, then add the end time later.",
+  "@stopInProgressDescription": {},
+  "allowedStartRange": "Allowed start: {window}",
+  "@allowedStartRange": {
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "startTimeInShiftError": "The start time must be within the assigned shift.",
+  "@startTimeInShiftError": {},
+  "stopTimeRangeError": "The stop must remain within the window 22:30 → 22:30 (24h max).",
+  "@stopTimeRangeError": {},
+  "externalStopsCategory": "External Stops",
+  "@externalStopsCategory": {},
+  "equipmentStopsCategory": "Equipment Stops",
+  "@equipmentStopsCategory": {},
+  "exploitationStopsCategory": "Exploitation Stops",
+  "@exploitationStopsCategory": {},
+  "timeRangeWithDuration": "From {start} to {end} ({duration})",
+  "@timeRangeWithDuration": {
+    "placeholders": {
+      "start": { "type": "String" },
+      "end": { "type": "String" },
+      "duration": { "type": "String" }
+    }
+  }
 }
+

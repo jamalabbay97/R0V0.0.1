@@ -189,7 +189,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
     final picked = await showSpinnerTimePickerDialog(
       context: context,
       initialTime: _startTime,
-      title: 'Heure début',
+      title: AppLocalizations.of(context)!.startTimeLabel,
     );
     if (picked == null) return;
 
@@ -200,8 +200,8 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
         SnackBar(
           content: Text(
             assignedWindow.isEmpty
-                ? "L'heure de début doit être dans le poste affecté."
-                : "L'heure de début doit être comprise dans le poste affecté ($assignedWindow).",
+                ? AppLocalizations.of(context)!.startTimeInShiftError
+                : "${AppLocalizations.of(context)!.startTimeInShiftError} ($assignedWindow).",
           ),
           backgroundColor: AppColors.error,
         ),
@@ -215,7 +215,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
     final picked = await showSpinnerTimePickerDialog(
       context: context,
       initialTime: _endTime,
-      title: 'Heure fin',
+      title: AppLocalizations.of(context)!.endTimeLabel,
     );
     if (picked != null) {
       setState(() => _endTime = picked);
@@ -259,7 +259,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Ajouter Arrêt ${widget.titleSuffix}',
+                      AppLocalizations.of(context)!.addStopWithSuffix(widget.titleSuffix),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 26,
@@ -270,7 +270,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'Saisie des heures',
+                      AppLocalizations.of(context)!.timeEntryTitle,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 30,
@@ -281,7 +281,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text(
-                        'Heure début',
+                        AppLocalizations.of(context)!.startTimeLabel,
                         style: TextStyle(color: Colors.white, fontSize: 20),
                       ),
                       subtitle: Text(
@@ -302,7 +302,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                       Padding(
                         padding: const EdgeInsets.only(top: 4, bottom: 8),
                         child: Text(
-                          'Début autorisé: ${_assignedPosteWindowLabel()}',
+                          AppLocalizations.of(context)!.allowedStartRange(_assignedPosteWindowLabel()),
                           style: const TextStyle(color: Colors.white70),
                         ),
                       ),
@@ -310,7 +310,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text(
-                        'Heure fin',
+                        AppLocalizations.of(context)!.endTimeLabel,
                         style: TextStyle(color: Colors.white, fontSize: 20),
                       ),
                       subtitle: Text(
@@ -334,7 +334,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                         style: TextStyle(color: Colors.white),
                       ),
                       subtitle: const Text(
-                        "Enregistrer l'heure de début maintenant, puis ajouter l'heure de fin plus tard.",
+                        AppLocalizations.of(context)!.stopInProgressDescription,
                         style: TextStyle(color: Colors.white70),
                       ),
                       value: _isPending,
@@ -345,7 +345,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                       const Padding(
                         padding: EdgeInsets.only(bottom: 8),
                         child: Text(
-                          "L'arrêt doit rester dans la fenêtre 22:30 → 22:30 (24h max).",
+                          AppLocalizations.of(context)!.stopTimeRangeError,
                           style: TextStyle(color: AppColors.error),
                         ),
                       ),
@@ -354,8 +354,8 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                         padding: const EdgeInsets.only(bottom: 8),
                         child: Text(
                           _assignedPosteWindowLabel().isEmpty
-                              ? "L'heure de début doit être dans le poste affecté."
-                              : "L'heure de début doit être comprise dans le poste affecté (${_assignedPosteWindowLabel()}).",
+                              ? AppLocalizations.of(context)!.startTimeInShiftError
+                              : "${AppLocalizations.of(context)!.startTimeInShiftError} (${_assignedPosteWindowLabel()}).",
                           style: const TextStyle(color: AppColors.error),
                         ),
                       ),
@@ -364,7 +364,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(),
                           child: const Text(
-                            'Précédent',
+                            AppLocalizations.of(context)!.previous,
                             style: TextStyle(
                                 color: AppColors.success, fontSize: 22),
                           ),
@@ -390,7 +390,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                                 }
                               : null,
                           child: const Text(
-                            'Ajouter',
+                            AppLocalizations.of(context)!.add,
                             style: TextStyle(fontSize: 28),
                           ),
                         ),
@@ -405,6 +405,20 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
       ),
     );
   }
+}
+
+String _getLocalizedCategoryLabel(BuildContext context, String internalLabel) {
+  final l10n = AppLocalizations.of(context)!;
+  if (internalLabel == 'Arrêts Extérieures') {
+    return l10n.externalStopsCategory;
+  }
+  if (internalLabel == 'Arrêts Materiel' || internalLabel == 'Arrêts Matériel') {
+    return l10n.equipmentStopsCategory;
+  }
+  if (internalLabel == "Arrêts d'Exploitation") {
+    return l10n.exploitationStopsCategory;
+  }
+  return internalLabel;
 }
 
 class _StopActionMenuItem extends StatelessWidget {
@@ -1697,7 +1711,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           .map(
                             (category) => DropdownMenuItem(
                               value: category,
-                              child: Text(category.label),
+                              child: Text(_getLocalizedCategoryLabel(context, category.label)),
                             ),
                           )
                           .toList(),
@@ -2027,7 +2041,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           .map(
                             (category) => DropdownMenuItem(
                               value: category,
-                              child: Text(category.label),
+                              child: Text(_getLocalizedCategoryLabel(context, category.label)),
                             ),
                           )
                           .toList(),

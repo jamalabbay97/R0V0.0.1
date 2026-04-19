@@ -3427,6 +3427,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Description is required'**
   String get descriptionRequired;
+
+  /// No description provided for @addStopWithSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Stop {suffix}'**
+  String addStopWithSuffix(String suffix);
+
+  /// No description provided for @timeEntryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Time Entry'**
+  String get timeEntryTitle;
+
+  /// No description provided for @stopInProgressDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Record the start time now, then add the end time later.'**
+  String get stopInProgressDescription;
+
+  /// No description provided for @allowedStartRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed start: {window}'**
+  String allowedStartRange(String window);
+
+  /// No description provided for @startTimeInShiftError.
+  ///
+  /// In en, this message translates to:
+  /// **'The start time must be within the assigned shift.'**
+  String get startTimeInShiftError;
+
+  /// No description provided for @stopTimeRangeError.
+  ///
+  /// In en, this message translates to:
+  /// **'The stop must remain within the window 22:30 → 22:30 (24h max).'**
+  String get stopTimeRangeError;
+
+  /// No description provided for @externalStopsCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'External Stops'**
+  String get externalStopsCategory;
+
+  /// No description provided for @equipmentStopsCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Equipment Stops'**
+  String get equipmentStopsCategory;
+
+  /// No description provided for @exploitationStopsCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Exploitation Stops'**
+  String get exploitationStopsCategory;
+
+  /// No description provided for @timeRangeWithDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'From {start} to {end} ({duration})'**
+  String timeRangeWithDuration(String start, String end, String duration);
 }
 
 class _AppLocalizationsDelegate

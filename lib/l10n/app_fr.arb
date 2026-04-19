@@ -1387,5 +1387,44 @@
   "swipeLeftHint": "Glissez vers la gauche (ou appuyez sur Sheets ci-dessus) pour ouvrir les rapports",
   "@swipeLeftHint": {},
   "descriptionRequired": "La description est obligatoire",
-  "@descriptionRequired": {}
+  "@descriptionRequired": {},
+  "addStopWithSuffix": "Ajouter Arrêt {suffix}",
+  "@addStopWithSuffix": {
+    "placeholders": {
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "timeEntryTitle": "Saisie des heures",
+  "@timeEntryTitle": {},
+  "stopInProgressDescription": "Enregistrer l'heure de début maintenant, puis ajouter l'heure de fin plus tard.",
+  "@stopInProgressDescription": {},
+  "allowedStartRange": "Début autorisé: {window}",
+  "@allowedStartRange": {
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "startTimeInShiftError": "L'heure de début doit être dans le poste affecté.",
+  "@startTimeInShiftError": {},
+  "stopTimeRangeError": "L'arrêt doit rester dans la fenêtre 22:30 → 22:30 (24h max).",
+  "@stopTimeRangeError": {},
+  "externalStopsCategory": "Arrêts Extérieures",
+  "@externalStopsCategory": {},
+  "equipmentStopsCategory": "Arrêts Matériel",
+  "@equipmentStopsCategory": {},
+  "exploitationStopsCategory": "Arrêts d'Exploitation",
+  "@exploitationStopsCategory": {},
+  "timeRangeWithDuration": "De {start} à {end} ({duration})",
+  "@timeRangeWithDuration": {
+    "placeholders": {
+      "start": { "type": "String" },
+      "end": { "type": "String" },
+      "duration": { "type": "String" }
+    }
+  }
 }
+

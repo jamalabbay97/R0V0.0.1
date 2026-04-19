@@ -1796,4 +1796,43 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get descriptionRequired => 'La description est obligatoire';
+
+  @override
+  String addStopWithSuffix(String suffix) {
+    return 'Ajouter Arrêt $suffix';
+  }
+
+  @override
+  String get timeEntryTitle => 'Saisie des heures';
+
+  @override
+  String get stopInProgressDescription =>
+      'Enregistrer l\'heure de début maintenant, puis ajouter l\'heure de fin plus tard.';
+
+  @override
+  String allowedStartRange(String window) {
+    return 'Début autorisé: $window';
+  }
+
+  @override
+  String get startTimeInShiftError =>
+      'L\'heure de début doit être dans le poste affecté.';
+
+  @override
+  String get stopTimeRangeError =>
+      'L\'arrêt doit rester dans la fenêtre 22:30 → 22:30 (24h max).';
+
+  @override
+  String get externalStopsCategory => 'Arrêts Extérieures';
+
+  @override
+  String get equipmentStopsCategory => 'Arrêts Matériel';
+
+  @override
+  String get exploitationStopsCategory => 'Arrêts d\'Exploitation';
+
+  @override
+  String timeRangeWithDuration(String start, String end, String duration) {
+    return 'De $start à $end ($duration)';
+  }
 }

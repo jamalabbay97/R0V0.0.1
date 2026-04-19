@@ -76,7 +76,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
     final picked = await showSpinnerTimePickerDialog(
       context: context,
       initialTime: _startTime,
-      title: 'Heure début',
+      title: AppLocalizations.of(context)!.startTimeLabel,
     );
     if (picked != null) {
       setState(() => _startTime = picked);
@@ -87,7 +87,7 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
     final picked = await showSpinnerTimePickerDialog(
       context: context,
       initialTime: _endTime,
-      title: 'Heure fin',
+      title: AppLocalizations.of(context)!.endTimeLabel,
     );
     if (picked != null) {
       setState(() => _endTime = picked);
@@ -129,7 +129,8 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Ajouter Arrêt ${widget.titleSuffix}',
+                      AppLocalizations.of(context)!
+                          .addStopWithSuffix(widget.titleSuffix),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 26,
@@ -139,9 +140,9 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 12),
-                    const Text(
-                      'Saisie des heures',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context)!.timeEntryTitle,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 30,
                         fontWeight: FontWeight.w700,
@@ -150,9 +151,10 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                     const SizedBox(height: 20),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text(
-                        'Heure début',
-                        style: TextStyle(color: Colors.white, fontSize: 20),
+                      title: Text(
+                        AppLocalizations.of(context)!.startTimeLabel,
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 20),
                       ),
                       subtitle: Text(
                         _formatTime(_startTime),
@@ -171,9 +173,10 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                     const SizedBox(height: 10),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text(
-                        'Heure fin',
-                        style: TextStyle(color: Colors.white, fontSize: 20),
+                      title: Text(
+                        AppLocalizations.of(context)!.endTimeLabel,
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 20),
                       ),
                       subtitle: Text(
                         _isPending ? 'Pending' : _formatTime(_endTime),
@@ -191,33 +194,33 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                     ),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text(
-                        'Arrêt en cours',
-                        style: TextStyle(color: Colors.white),
+                      title: Text(
+                        AppLocalizations.of(context)!.stopInProgress,
+                        style: const TextStyle(color: Colors.white),
                       ),
-                      subtitle: const Text(
-                        "Enregistrer seulement l'heure de début pour terminer plus tard.",
-                        style: TextStyle(color: Colors.white70),
+                      subtitle: Text(
+                        AppLocalizations.of(context)!.stopInProgressDescription,
+                        style: const TextStyle(color: Colors.white70),
                       ),
                       value: _isPending,
                       onChanged: (value) => setState(() => _isPending = value),
                     ),
                     const SizedBox(height: 16),
                     if (!hasValidRange)
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
                         child: Text(
-                          "L'arrêt doit rester dans la fenêtre 22:30 → 22:30 (24h max).",
-                          style: TextStyle(color: AppColors.error),
+                          AppLocalizations.of(context)!.stopTimeRangeError,
+                          style: const TextStyle(color: AppColors.error),
                         ),
                       ),
                     Row(
                       children: [
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          child: const Text(
-                            'Précédent',
-                            style: TextStyle(
+                          child: Text(
+                            AppLocalizations.of(context)!.previous,
+                            style: const TextStyle(
                                 color: AppColors.success, fontSize: 22),
                           ),
                         ),
@@ -241,9 +244,9 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                                   );
                                 }
                               : null,
-                          child: const Text(
-                            'Ajouter',
-                            style: TextStyle(fontSize: 28),
+                          child: Text(
+                            AppLocalizations.of(context)!.add,
+                            style: const TextStyle(fontSize: 28),
                           ),
                         ),
                       ],
@@ -408,6 +411,7 @@ bool _tnbStopTypeRequiresDetail(String? type) =>
     const {'AE', 'AM', 'AI', 'AESYS'}.contains(_extractTnbStopTypeCode(type));
 
 String _formatTnbStopResultLine(
+  BuildContext context,
   Stop stop, {
   int? index,
 }) {
@@ -428,7 +432,7 @@ String _formatTnbStopResultLine(
       : stop.duration.isNotEmpty
           ? formatMinutesToHoursMinutes(parseDurationToMinutes(stop.duration))
           : '0h 00m';
-  return '${labelSegments.join(' • ')}\n     De $start a $end ($duration)';
+  return '${labelSegments.join(' • ')}\n     ${AppLocalizations.of(context)!.timeRangeWithDuration(start, end, duration)}';
 }
 
 const List<StopLocation> _tnbStopLocations = [
@@ -513,6 +517,21 @@ class StockEntry {
 }
 
 // --- Logic Helpers ---
+String _getLocalizedCategoryLabel(BuildContext context, String internalLabel) {
+  final l10n = AppLocalizations.of(context)!;
+  if (internalLabel == 'Arrêts Extérieures') {
+    return l10n.externalStopsCategory;
+  }
+  if (internalLabel == 'Arrêts Materiel' ||
+      internalLabel == 'Arrêts Matériel') {
+    return l10n.equipmentStopsCategory;
+  }
+  if (internalLabel == "Arrêts d'Exploitation") {
+    return l10n.exploitationStopsCategory;
+  }
+  return internalLabel;
+}
+
 int parseDurationToMinutes(String duration) {
   if (duration.isEmpty) return 0;
   final cleaned = duration.replaceAll(RegExp(r'[^0-9Hh:·\s]'), '').trim();
@@ -1159,7 +1178,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
       ...stops.asMap().entries.map((e) => OCPCard(
               child: ListTile(
             title: Text(
-              _formatTnbStopResultLine(e.value, index: e.key + 1),
+              _formatTnbStopResultLine(context, e.value, index: e.key + 1),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             subtitle: _isPendingStop(e.value)
@@ -1196,7 +1215,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                           dense: true,
                           leading: const Icon(Icons.stop_circle_outlined,
                               color: AppColors.success),
-                          title: Text(AppLocalizations.of(context)!.finishButton),
+                          title:
+                              Text(AppLocalizations.of(context)!.finishButton),
                         ),
                       ),
                     PopupMenuItem<_StopCardAction>(
@@ -1211,8 +1231,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                       value: _StopCardAction.delete,
                       child: ListTile(
                         dense: true,
-                        leading:
-                            const Icon(Icons.delete_outline, color: AppColors.error),
+                        leading: const Icon(Icons.delete_outline,
+                            color: AppColors.error),
                         title: Text(AppLocalizations.of(context)!.delete),
                       ),
                     ),
@@ -1269,7 +1289,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                       items: _tnbStopCategories
                           .map((category) => DropdownMenuItem(
                                 value: category,
-                                child: Text(category.label),
+                                child: Text(_getLocalizedCategoryLabel(
+                                    context, category.label)),
                               ))
                           .toList(),
                       onChanged: (value) {
@@ -1280,7 +1301,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                           stopDetail = '';
                         });
                       },
-                      hint: Text(AppLocalizations.of(context)!.selectStopCategory),
+                      hint: Text(
+                          AppLocalizations.of(context)!.selectStopCategory),
                       isExpanded: true,
                     ),
                     if (selectedCategory != null) ...[
@@ -1304,7 +1326,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                             stopDetail = '';
                           });
                         },
-                        hint: Text(AppLocalizations.of(context)!.selectStopType),
+                        hint:
+                            Text(AppLocalizations.of(context)!.selectStopType),
                         isExpanded: true,
                       ),
                     ],
@@ -1329,7 +1352,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                             selectedLocation = value;
                           });
                         },
-                        hint: Text(AppLocalizations.of(context)!.selectLocation),
+                        hint:
+                            Text(AppLocalizations.of(context)!.selectLocation),
                       ),
                     ],
                     if (requiresDetail) ...[
@@ -1481,7 +1505,9 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
     recalculateTimes();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.stopFinishedSuccessfully)),
+        SnackBar(
+            content:
+                Text(AppLocalizations.of(context)!.stopFinishedSuccessfully)),
       );
     }
   }
@@ -1546,7 +1572,8 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                       items: _tnbStopCategories
                           .map((category) => DropdownMenuItem(
                                 value: category,
-                                child: Text(category.label),
+                                child: Text(_getLocalizedCategoryLabel(
+                                    context, category.label)),
                               ))
                           .toList(),
                       onChanged: (value) => setDs(() {
@@ -1909,6 +1936,7 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 6),
                           child: Text(
                             _formatTnbStopResultLine(
+                              context,
                               entry.value,
                               index: entry.key + 1,
                             ),
@@ -2124,14 +2152,17 @@ class _ActivityReportScreenState extends State<ActivityReportScreen> {
         await _reportRepository.insertReport(report);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(AppLocalizations.of(context)!.success), backgroundColor: AppColors.success));
+              content: Text(AppLocalizations.of(context)!.success),
+              backgroundColor: AppColors.success));
           Navigator.popUntil(context, (route) => route.isFirst);
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(AppLocalizations.of(context)!.errorMessage(e.toString())), backgroundColor: AppColors.error));
+            content:
+                Text(AppLocalizations.of(context)!.errorMessage(e.toString())),
+            backgroundColor: AppColors.error));
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
