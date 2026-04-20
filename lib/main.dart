@@ -47,13 +47,13 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => RoleProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, RoleProvider>(
+          create: (_) => RoleProvider(),
+          update: (_, auth, role) => role!..onAuthStateChanged(auth.user),
+        ),
       ],
-      child: Consumer4<LanguageProvider, ThemeProvider, AuthProvider,
-          RoleProvider>(
-        builder: (context, languageProvider, themeProvider, authProvider,
-            roleProvider, _) {
-          roleProvider.onAuthStateChanged(authProvider.user);
+      child: Consumer3<LanguageProvider, ThemeProvider, RoleProvider>(
+        builder: (context, languageProvider, themeProvider, roleProvider, _) {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             title: AppConfig.instance.displayName,
