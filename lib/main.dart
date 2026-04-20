@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:r0/core/config/app_config_flavors.dart';
 import 'package:r0/data/repositories/report_repository_impl.dart';
@@ -18,6 +19,7 @@ import 'package:r0/presentation/theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   AppConfig.initialize(AppFlavor.prod);
 
   await Firebase.initializeApp(

@@ -6,6 +6,7 @@ import 'package:googleapis/sheets/v4.dart';
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:intl/intl.dart';
 import 'package:r0/domain/models/report.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class GoogleSheetsService {
   GoogleSheetsService({
@@ -14,9 +15,8 @@ class GoogleSheetsService {
     String? credentialsAssetPath,
     DateTime Function()? nowProvider,
   })  : _spreadsheetId = spreadsheetId ??
-            (const String.fromEnvironment('GOOGLE_SHEETS_SPREADSHEET_ID')
-                    .isEmpty
-                ? _hardcodedSpreadsheetId
+            (dotenv.env['GOOGLE_SHEETS_SPREADSHEET_ID']?.isNotEmpty == true
+                ? dotenv.env['GOOGLE_SHEETS_SPREADSHEET_ID']!
                 : const String.fromEnvironment('GOOGLE_SHEETS_SPREADSHEET_ID')),
         _credentialsJson = credentialsJson ??
             const String.fromEnvironment('GOOGLE_SHEETS_CREDENTIALS_JSON'),
@@ -26,8 +26,7 @@ class GoogleSheetsService {
                     'assets/credentials/r0v01-5b577-67d9e9bae92b.json'),
         _nowProvider = nowProvider ?? DateTime.now;
 
-  static const String _hardcodedSpreadsheetId =
-      '1WzdE8fl3BwatmMXw1mcIAebOndx41XvXWdahP7nEaVo'; // Hardcoded ID
+
 
   static const String _genericReportsSheet = 'Reports';
   static const String _genericDetailsSheet = 'Report Details';
