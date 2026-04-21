@@ -121,6 +121,36 @@ class SettingsScreen extends StatelessWidget {
                     'This account is protected and cannot be modified by other admins.',
                   ),
                 ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: FilledButton.icon(
+                  onPressed: authProvider.isLoading
+                      ? null
+                      : () async {
+                          final ok = await authProvider.signOut();
+                          if (!context.mounted || ok) {
+                            return;
+                          }
+                          final message = authProvider.errorMessage ??
+                              'Unable to sign out. Please try again.';
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(message)),
+                          );
+                        },
+                  icon: authProvider.isLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.logout),
+                  label: Text(
+                    authProvider.isLoading ? 'Signing out...' : 'Log out',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
             ],
           ),
         ),
