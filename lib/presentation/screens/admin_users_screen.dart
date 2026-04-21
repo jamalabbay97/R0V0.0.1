@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:r0/presentation/access_control/access_control_definitions.dart';
 import 'package:r0/presentation/providers/report_access_provider.dart';
 import 'package:r0/presentation/screens/home_screen.dart';
 
@@ -17,14 +18,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  static const Map<String, String> _reportLabels = {
-    'r0_report': 'R0 Report',
-    'activity_report': 'Activity Report',
-    'daily_report': 'Daily Report',
-    'truck_tracking': 'Truck Tracking',
-    'machines_stopped': 'Machines/Equipment Stopped',
-    'reports_archive': 'Reports Archive',
-  };
   Future<void> _updateRole(String userId, String role) async {
     await _firestore.collection('users').doc(userId).set({
       'role': role,
@@ -35,6 +28,16 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   Future<void> _setUserReports(String userId, Set<String> reports) async {
     await _firestore.collection('users').doc(userId).set({
       'allowedReports': reports.toList()..sort(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> _setUserCapabilities(
+    String userId,
+    Set<String> capabilities,
+  ) async {
+    await _firestore.collection('users').doc(userId).set({
+      'capabilities': capabilities.toList()..sort(),
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -109,7 +112,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                         'Enable/hide report modules globally. Removed modules are deleted from the catalog.',
                       ),
                       const SizedBox(height: 12),
-                      ...ReportAccessProvider.defaultReportKeys.map((key) {
+                      ...AccessControlDefinitions.allReportKeys.map((key) {
                         final isConfigured = activeCatalog.contains(key);
                         final isEnabled = isConfigured
                             ? ((reportSnapshot.data?.docs
@@ -120,7 +123,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: Text(_reportLabels[key] ?? key),
+                          title: Text(
+                            AccessControlDefinitions.reportLabels[key] ?? key,
+                          ),
                           subtitle: Text(
                             isConfigured
                                 ? (isEnabled ? 'Visible' : 'Hidden')
@@ -203,11 +208,26 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       final currentRole =
                           (data['role'] as String?)?.toLowerCase() ??
                               'employee';
+                      final isPrimaryAccount =
+                          AccessControlDefinitions.isPrimaryProtectedAccount(
+                        uid: doc.id,
+                        email: email == '(no email)' ? null : email,
+                      );
+                      final isReadonlyAccount = isPrimaryAccount;
 
                       final rawAssignedReports =
                           (data['allowedReports'] as List<dynamic>?)
                               ?.whereType<String>()
                               .toSet();
+                      final rawCapabilities =
+                          (data['capabilities'] as List<dynamic>?)
+                              ?.whereType<String>()
+                              .toSet();
+                      final effectiveCapabilities =
+                          AccessControlDefinitions.effectiveCapabilities(
+                        currentRole,
+                        rawCapabilities,
+                      );
 
                       final assignedReports =
                           ((data['allowedReports'] as List<dynamic>?)
@@ -257,25 +277,45 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                       ],
                                     ),
                                   ),
-                                  DropdownButton<String>(
-                                    value: _roles.contains(currentRole)
-                                        ? currentRole
-                                        : 'employee',
-                                    items: _roles
-                                        .map(
-                                          (role) => DropdownMenuItem<String>(
-                                            value: role,
-                                            child: Text(role),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      DropdownButton<String>(
+                                        value: _roles.contains(currentRole)
+                                            ? currentRole
+                                            : 'employee',
+                                        items: _roles
+                                            .map(
+                                              (role) =>
+                                                  DropdownMenuItem<String>(
+                                                value: role,
+                                                child: Text(role),
+                                              ),
+                                            )
+                                            .toList(),
+                                        onChanged: isReadonlyAccount
+                                            ? null
+                                            : (value) async {
+                                                if (value == null ||
+                                                    value == currentRole) {
+                                                  return;
+                                                }
+                                                await _updateRole(
+                                                  doc.id,
+                                                  value,
+                                                );
+                                              },
+                                      ),
+                                      if (isPrimaryAccount)
+                                        const Padding(
+                                          padding: EdgeInsets.only(top: 6),
+                                          child: Chip(
+                                            label: Text(
+                                              'Primary account (locked)',
+                                            ),
                                           ),
-                                        )
-                                        .toList(),
-                                    onChanged: (value) async {
-                                      if (value == null ||
-                                          value == currentRole) {
-                                        return;
-                                      }
-                                      await _updateRole(doc.id, value);
-                                    },
+                                        ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -287,7 +327,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                               Wrap(
                                 spacing: 8,
                                 runSpacing: 6,
-                                children: ReportAccessProvider.defaultReportKeys
+                                children: AccessControlDefinitions.allReportKeys
                                     .map((key) {
                                   final isVisibleInCatalog =
                                       activeCatalog.contains(key);
@@ -296,10 +336,15 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                       isVisibleInCatalog;
 
                                   return FilterChip(
-                                    label: Text(_reportLabels[key] ?? key),
+                                    label: Text(
+                                      AccessControlDefinitions
+                                              .reportLabels[key] ??
+                                          key,
+                                    ),
                                     selected: selected,
                                     onSelected: !isVisibleInCatalog ||
-                                            currentRole == 'admin'
+                                            currentRole == 'admin' ||
+                                            isReadonlyAccount
                                         ? null
                                         : (next) async {
                                             final nextReports =
@@ -313,6 +358,42 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                             await _setUserReports(
                                               doc.id,
                                               nextReports,
+                                            );
+                                          },
+                                  );
+                                }).toList(),
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'Permissions (what this user can do)',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 6,
+                                children: AccessControlDefinitions
+                                    .capabilityLabels.entries
+                                    .map((entry) {
+                                  final selected =
+                                      effectiveCapabilities.contains(entry.key);
+                                  return FilterChip(
+                                    label: Text(entry.value),
+                                    selected: selected,
+                                    onSelected: currentRole == 'admin' ||
+                                            isReadonlyAccount
+                                        ? null
+                                        : (next) async {
+                                            final nextCapabilities =
+                                                (rawCapabilities ?? {}).toSet();
+                                            if (next) {
+                                              nextCapabilities.add(entry.key);
+                                            } else {
+                                              nextCapabilities
+                                                  .remove(entry.key);
+                                            }
+                                            await _setUserCapabilities(
+                                              doc.id,
+                                              nextCapabilities,
                                             );
                                           },
                                   );
