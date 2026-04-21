@@ -13,6 +13,7 @@ import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/presentation/providers/auth_provider.dart';
 import 'package:r0/presentation/providers/language_provider.dart';
 import 'package:r0/presentation/providers/role_provider.dart';
+import 'package:r0/presentation/providers/report_access_provider.dart';
 import 'package:r0/presentation/providers/theme_provider.dart';
 import 'package:r0/presentation/routing/app_router.dart';
 import 'package:r0/presentation/theme.dart';
@@ -50,6 +51,10 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProxyProvider<AuthProvider, RoleProvider>(
           create: (_) => RoleProvider(),
           update: (_, auth, role) => role!..onAuthStateChanged(auth.user),
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, ReportAccessProvider>(
+          create: (_) => ReportAccessProvider(),
+          update: (_, auth, access) => access!..onAuthStateChanged(auth.user),
         ),
       ],
       child: Consumer3<LanguageProvider, ThemeProvider, RoleProvider>(

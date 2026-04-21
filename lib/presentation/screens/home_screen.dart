@@ -11,6 +11,8 @@ import 'package:r0/presentation/screens/reports_screen.dart';
 import 'package:r0/presentation/screens/settings_screen.dart';
 import 'package:r0/presentation/screens/shift_timeline_dashboard_screen.dart';
 import 'package:r0/presentation/screens/truck_tracking_screen.dart';
+import 'package:r0/presentation/providers/report_access_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:r0/presentation/widgets/custom_widgets.dart';
 import 'package:r0/presentation/widgets/logo_widget.dart';
 import 'package:r0/presentation/theme.dart';
@@ -353,50 +355,26 @@ class _HomeDashboardPage extends StatelessWidget {
     AppLocalizations l10n,
     ThemeData theme,
   ) {
-    final reportCards = [
-      _ReportCardData(
-        title: AppLocalizations.of(context)!.r0Report,
-        description: AppLocalizations.of(context)!.r0Description,
-        icon: Icons.assignment_outlined,
-        color: AppColors.primary,
-        onTap: () => _navigateToR0Report(context),
-      ),
-      _ReportCardData(
-        title: AppLocalizations.of(context)!.activityReport,
-        description: AppLocalizations.of(context)!.activityReportDescription,
-        icon: Icons.work_outline,
-        color: AppColors.secondary,
-        onTap: () => _navigateToActivityReport(context),
-      ),
-      _ReportCardData(
-        title: AppLocalizations.of(context)!.dailyReport,
-        description: AppLocalizations.of(context)!.dailyReportDescription,
-        icon: Icons.today_outlined,
-        color: AppColors.warning,
-        onTap: () => _navigateToDailyReport(context),
-      ),
-      _ReportCardData(
-        title: AppLocalizations.of(context)!.truckTracking,
-        description: AppLocalizations.of(context)!.truckTrackingDescription,
-        icon: Icons.local_shipping_outlined,
-        color: const Color(0xFF1976D2),
-        onTap: () => _navigateToTruckTracking(context),
-      ),
-      _ReportCardData(
-        title: AppLocalizations.of(context)!.machinesStoppedTitleShort,
-        description: AppLocalizations.of(context)!.machinesStoppedDescription,
-        icon: Icons.build_outlined,
-        color: AppColors.error,
-        onTap: () => _navigateToMachinesStopped(context),
-      ),
-      _ReportCardData(
-        title: AppLocalizations.of(context)!.reportsArchive,
-        description: AppLocalizations.of(context)!.reportsArchiveDescription,
-        icon: Icons.archive_outlined,
-        color: const Color(0xFF757575),
-        onTap: () => _navigateToReportsArchive(context),
-      ),
-    ];
+    final accessProvider = context.watch<ReportAccessProvider>();
+    final reportCards = <_ReportCardData>[];
+
+    for (final key in accessProvider.orderedVisibleReportKeys) {
+      final card = _buildCardFromKey(context, key);
+      if (card != null) {
+        reportCards.add(card);
+      }
+    }
+
+    if (reportCards.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text(
+            'No reports are currently assigned to your account. Please contact an administrator.',
+          ),
+        ),
+      );
+    }
 
     final screenWidth = MediaQuery.of(context).size.width;
     int crossAxisCount = 2;
@@ -427,6 +405,61 @@ class _HomeDashboardPage extends StatelessWidget {
         return _buildReportCard(context, reportCards[index], theme);
       },
     );
+  }
+
+  _ReportCardData? _buildCardFromKey(BuildContext context, String key) {
+    switch (key) {
+      case 'r0_report':
+        return _ReportCardData(
+          title: AppLocalizations.of(context)!.r0Report,
+          description: AppLocalizations.of(context)!.r0Description,
+          icon: Icons.assignment_outlined,
+          color: AppColors.primary,
+          onTap: () => _navigateToR0Report(context),
+        );
+      case 'activity_report':
+        return _ReportCardData(
+          title: AppLocalizations.of(context)!.activityReport,
+          description: AppLocalizations.of(context)!.activityReportDescription,
+          icon: Icons.work_outline,
+          color: AppColors.secondary,
+          onTap: () => _navigateToActivityReport(context),
+        );
+      case 'daily_report':
+        return _ReportCardData(
+          title: AppLocalizations.of(context)!.dailyReport,
+          description: AppLocalizations.of(context)!.dailyReportDescription,
+          icon: Icons.today_outlined,
+          color: AppColors.warning,
+          onTap: () => _navigateToDailyReport(context),
+        );
+      case 'truck_tracking':
+        return _ReportCardData(
+          title: AppLocalizations.of(context)!.truckTracking,
+          description: AppLocalizations.of(context)!.truckTrackingDescription,
+          icon: Icons.local_shipping_outlined,
+          color: const Color(0xFF1976D2),
+          onTap: () => _navigateToTruckTracking(context),
+        );
+      case 'machines_stopped':
+        return _ReportCardData(
+          title: AppLocalizations.of(context)!.machinesStoppedTitleShort,
+          description: AppLocalizations.of(context)!.machinesStoppedDescription,
+          icon: Icons.build_outlined,
+          color: AppColors.error,
+          onTap: () => _navigateToMachinesStopped(context),
+        );
+      case 'reports_archive':
+        return _ReportCardData(
+          title: AppLocalizations.of(context)!.reportsArchive,
+          description: AppLocalizations.of(context)!.reportsArchiveDescription,
+          icon: Icons.archive_outlined,
+          color: const Color(0xFF757575),
+          onTap: () => _navigateToReportsArchive(context),
+        );
+      default:
+        return null;
+    }
   }
 
   Widget _buildReportCard(
