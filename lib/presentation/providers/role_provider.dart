@@ -43,6 +43,12 @@ class RoleProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
+    unawaited(_firestore.collection('users').doc(user.uid).set({
+      'email': user.email,
+      'displayName': user.displayName,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true)));
+
     _roleSubscription = _firestore
         .collection('users')
         .doc(user.uid)

@@ -14,6 +14,17 @@ class FirestoreService {
   /// Get current user ID
   String? get _userId => _auth.currentUser?.uid;
 
+  Future<bool> _isCurrentUserAdmin() async {
+    final uid = _userId;
+    if (uid == null) {
+      return false;
+    }
+
+    final snapshot = await _firestore.collection('users').doc(uid).get();
+    final role = (snapshot.data()?['role'] as String?)?.toLowerCase();
+    return role == 'admin';
+  }
+
   /// Check if user is authenticated
   bool get isAuthenticated => _auth.currentUser != null;
 
@@ -70,11 +81,16 @@ class FirestoreService {
     }
 
     try {
-      final snapshot = await _firestore
-          .collection(_reportsCollection)
-          .where('userId', isEqualTo: _userId)
-          .orderBy('date', descending: true)
-          .get();
+      final isAdmin = await _isCurrentUserAdmin();
+      Query<Map<String, dynamic>> query =
+          _firestore.collection(_reportsCollection).orderBy(
+                'date',
+                descending: true,
+              );
+      if (!isAdmin) {
+        query = query.where('userId', isEqualTo: _userId);
+      }
+      final snapshot = await query.get();
 
       return snapshot.docs
           .map((doc) => _reportFromFirestore(doc.id, doc.data()))
@@ -94,11 +110,14 @@ class FirestoreService {
     }
 
     try {
+      final isAdmin = await _isCurrentUserAdmin();
       Query<Map<String, dynamic>> query = _firestore
           .collection(_reportsCollection)
-          .where('userId', isEqualTo: _userId)
           .orderBy('date', descending: true)
           .limit(limit);
+      if (!isAdmin) {
+        query = query.where('userId', isEqualTo: _userId);
+      }
 
       if (startAfter != null) {
         query = query.startAfterDocument(startAfter);
@@ -123,14 +142,17 @@ class FirestoreService {
       return Stream.value([]);
     }
 
-    return _firestore
-        .collection(_reportsCollection)
-        .where('userId', isEqualTo: _userId)
-        .orderBy('date', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => _reportFromFirestore(doc.id, doc.data()))
-            .toList());
+    return Stream.fromFuture(_isCurrentUserAdmin()).asyncExpand((isAdmin) {
+      Query<Map<String, dynamic>> query = _firestore
+          .collection(_reportsCollection)
+          .orderBy('date', descending: true);
+      if (!isAdmin) {
+        query = query.where('userId', isEqualTo: _userId);
+      }
+      return query.snapshots().map((snapshot) => snapshot.docs
+          .map((doc) => _reportFromFirestore(doc.id, doc.data()))
+          .toList());
+    });
   }
 
   /// Delete a report from Firestore

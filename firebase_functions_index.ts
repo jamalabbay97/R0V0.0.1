@@ -192,6 +192,7 @@ export const bootstrapUserRecord = functions.auth.user().onCreate(
                 email: user.email ?? null,
                 displayName: user.displayName ?? null,
                 role: 'employee',
+                allowedReports: [],
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             },

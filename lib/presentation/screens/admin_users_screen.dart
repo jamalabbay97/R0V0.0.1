@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:r0/presentation/providers/report_access_provider.dart';
+import 'package:r0/presentation/screens/home_screen.dart';
 
 /// Employee and feature management screen for administrators.
 class AdminUsersScreen extends StatefulWidget {
@@ -66,6 +68,17 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin • Control Center'),
+        actions: [
+          IconButton(
+            tooltip: 'Open dashboard',
+            icon: const Icon(Icons.dashboard_customize_outlined),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: _firestore.collection('report_definitions').snapshots(),
@@ -174,19 +187,37 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   return Column(
                     children: docs.map((doc) {
                       final data = doc.data();
-                      final email = (data['email'] as String?) ?? '(no email)';
-                      final name =
-                          (data['displayName'] as String?) ?? 'Unnamed user';
+                      final authUser = FirebaseAuth.instance.currentUser;
+                      final isCurrentUser = authUser?.uid == doc.id;
+                      final fallbackEmail =
+                          isCurrentUser ? authUser?.email : null;
+                      final email = (data['email'] as String?) ??
+                          fallbackEmail ??
+                          '(no email)';
+                      final name = (data['displayName'] as String?) ??
+                          (isCurrentUser ? authUser?.displayName : null) ??
+                          (email != '(no email)'
+                              ? email.split('@').first
+                              : null) ??
+                          'User ${doc.id.substring(0, 6)}';
                       final currentRole =
                           (data['role'] as String?)?.toLowerCase() ??
                               'employee';
 
-                      final assignedReports = ((data['allowedReports']
-                                      as List<dynamic>?)
-                                  ?.whereType<String>()
-                                  .toSet() ??
-                              ReportAccessProvider.defaultReportKeys.toSet())
-                          .intersection(
+                      final rawAssignedReports =
+                          (data['allowedReports'] as List<dynamic>?)
+                              ?.whereType<String>()
+                              .toSet();
+
+                      final assignedReports =
+                          ((data['allowedReports'] as List<dynamic>?)
+                                      ?.whereType<String>()
+                                      .toSet() ??
+                                  (currentRole == 'admin'
+                                      ? ReportAccessProvider.defaultReportKeys
+                                          .toSet()
+                                      : <String>{}))
+                              .intersection(
                         ReportAccessProvider.defaultReportKeys.toSet(),
                       );
 
@@ -211,6 +242,18 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                           ),
                                         ),
                                         Text(email),
+                                        Text(
+                                          'uid: ${doc.id}',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withValues(alpha: 0.6),
+                                              ),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -248,18 +291,20 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                     .map((key) {
                                   final isVisibleInCatalog =
                                       activeCatalog.contains(key);
-                                  final selected =
-                                      assignedReports.contains(key) &&
-                                          isVisibleInCatalog;
+                                  final selected = (currentRole == 'admin' ||
+                                          assignedReports.contains(key)) &&
+                                      isVisibleInCatalog;
 
                                   return FilterChip(
                                     label: Text(_reportLabels[key] ?? key),
                                     selected: selected,
-                                    onSelected: !isVisibleInCatalog
+                                    onSelected: !isVisibleInCatalog ||
+                                            currentRole == 'admin'
                                         ? null
                                         : (next) async {
                                             final nextReports =
-                                                assignedReports.toSet();
+                                                (rawAssignedReports ?? {})
+                                                    .toSet();
                                             if (next) {
                                               nextReports.add(key);
                                             } else {

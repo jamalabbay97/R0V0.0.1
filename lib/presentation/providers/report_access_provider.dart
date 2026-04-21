@@ -42,7 +42,7 @@ class ReportAccessProvider extends ChangeNotifier {
 
   String? _userId;
   bool _isLoading = false;
-  Set<String> _assignedReportKeys = defaultReportKeys.toSet();
+  Set<String> _assignedReportKeys = {};
   final Map<String, ReportDefinition> _definitionsByKey = {};
 
   bool get isLoading => _isLoading;
@@ -86,7 +86,7 @@ class ReportAccessProvider extends ChangeNotifier {
     _userSub?.cancel();
     _defsSub?.cancel();
 
-    _assignedReportKeys = defaultReportKeys.toSet();
+    _assignedReportKeys = {};
     _definitionsByKey.clear();
 
     if (user == null) {
@@ -101,13 +101,14 @@ class ReportAccessProvider extends ChangeNotifier {
     _userSub =
         _firestore.collection('users').doc(user.uid).snapshots().listen((doc) {
       final data = doc.data();
+      final role = (data?['role'] as String?)?.toLowerCase();
       final keys = (data?['allowedReports'] as List<dynamic>?)
           ?.whereType<String>()
           .map((e) => e.trim())
           .where((e) => e.isNotEmpty)
           .toSet();
       _assignedReportKeys =
-          keys == null || keys.isEmpty ? defaultReportKeys.toSet() : keys;
+          role == 'admin' ? defaultReportKeys.toSet() : (keys ?? <String>{});
       _isLoading = false;
       notifyListeners();
     }, onError: (_) {
