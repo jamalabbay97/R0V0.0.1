@@ -21,6 +21,35 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function hasArchiveAccess() {
+      let allowedReports = get(
+        /databases/$(database)/documents/users/$(request.auth.uid)
+      ).data.allowedReports;
+      return isSignedIn()
+        && allowedReports is list
+        && 'reports_archive' in allowedReports;
+    }
+
+    function canCreateReportType(reportType) {
+      let allowedReports = get(
+        /databases/$(database)/documents/users/$(request.auth.uid)
+      ).data.allowedReports;
+      return isSignedIn()
+        && allowedReports is list
+        && (
+          (reportType == 'R0' && 'r0_report' in allowedReports)
+          || (reportType == 'Activity TNB' && 'activity_report' in allowedReports)
+          || ((reportType == 'daily TSUD' || reportType == 'Daily TSUD')
+              && 'daily_report' in allowedReports)
+          || ((reportType == 'Suivi Camion'
+                || reportType == 'Chargeuse'
+                || reportType == 'Pelle')
+              && 'truck_tracking' in allowedReports)
+          || (reportType == 'Machine/Engin Arrêtés'
+              && 'machines_stopped' in allowedReports)
+        );
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) || isAdmin();
@@ -37,7 +66,10 @@ service cloud.firestore {
     }
 
     match /reports/{reportId} {
-      allow read: if isOwner(resource.data.userId) || isAdmin() || isManager();
+      allow read: if isOwner(resource.data.userId)
+        || isAdmin()
+        || isManager()
+        || (hasArchiveAccess() && canCreateReportType(resource.data.type));
       allow create: if isOwner(request.resource.data.userId);
       allow update, delete: if isOwner(resource.data.userId) || isAdmin();
     }

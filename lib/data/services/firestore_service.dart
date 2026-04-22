@@ -10,19 +10,53 @@ class FirestoreService {
 
   /// Collection name for reports
   static const String _reportsCollection = 'reports';
+  static const String _archiveReportKey = 'reports_archive';
+  static const Map<String, Set<String>> _reportTypesByAccessKey = {
+    'r0_report': {'R0'},
+    'activity_report': {'Activity TNB'},
+    'daily_report': {'daily TSUD', 'Daily TSUD'},
+    'truck_tracking': {'Suivi Camion', 'Chargeuse', 'Pelle'},
+    'machines_stopped': {'Machine/Engin Arrêtés'},
+  };
 
   /// Get current user ID
   String? get _userId => _auth.currentUser?.uid;
 
-  Future<bool> _isCurrentUserAdmin() async {
+  Future<_ReportAccessContext> _getCurrentUserAccessContext() async {
     final uid = _userId;
     if (uid == null) {
-      return false;
+      return const _ReportAccessContext(
+        canViewSharedArchive: false,
+      );
     }
 
     final snapshot = await _firestore.collection('users').doc(uid).get();
     final role = (snapshot.data()?['role'] as String?)?.toLowerCase();
-    return role == 'admin';
+    final allowedReports =
+        (snapshot.data()?['allowedReports'] as List<dynamic>?)
+            ?.whereType<String>()
+            .map((report) => report.trim())
+            .toSet();
+
+    final canViewSharedArchive = role == 'admin' ||
+        (allowedReports?.contains(_archiveReportKey) ?? false);
+
+    final allowedReportTypes = role == 'admin'
+        ? <String>{}
+        : _resolveAllowedReportTypes(allowedReports ?? const <String>{});
+
+    return _ReportAccessContext(
+      canViewSharedArchive: canViewSharedArchive,
+      allowedReportTypes: allowedReportTypes,
+    );
+  }
+
+  Set<String> _resolveAllowedReportTypes(Set<String> allowedReportKeys) {
+    final allowedTypes = <String>{};
+    for (final key in allowedReportKeys) {
+      allowedTypes.addAll(_reportTypesByAccessKey[key] ?? const <String>{});
+    }
+    return allowedTypes;
   }
 
   /// Check if user is authenticated
@@ -81,13 +115,21 @@ class FirestoreService {
     }
 
     try {
-      final isAdmin = await _isCurrentUserAdmin();
+      final accessContext = await _getCurrentUserAccessContext();
+      if (!accessContext.isAdmin && accessContext.allowedReportTypes.isEmpty) {
+        return [];
+      }
       Query<Map<String, dynamic>> query =
           _firestore.collection(_reportsCollection).orderBy(
                 'date',
                 descending: true,
               );
-      if (!isAdmin) {
+      if (!accessContext.isAdmin &&
+          accessContext.allowedReportTypes.isNotEmpty) {
+        query = query.where('type',
+            whereIn: accessContext.allowedReportTypes.toList());
+      }
+      if (!accessContext.canViewSharedArchive) {
         query = query.where('userId', isEqualTo: _userId);
       }
       final snapshot = await query.get();
@@ -110,12 +152,20 @@ class FirestoreService {
     }
 
     try {
-      final isAdmin = await _isCurrentUserAdmin();
+      final accessContext = await _getCurrentUserAccessContext();
+      if (!accessContext.isAdmin && accessContext.allowedReportTypes.isEmpty) {
+        return ReportPage(reports: const [], lastDocument: null);
+      }
       Query<Map<String, dynamic>> query = _firestore
           .collection(_reportsCollection)
           .orderBy('date', descending: true)
           .limit(limit);
-      if (!isAdmin) {
+      if (!accessContext.isAdmin &&
+          accessContext.allowedReportTypes.isNotEmpty) {
+        query = query.where('type',
+            whereIn: accessContext.allowedReportTypes.toList());
+      }
+      if (!accessContext.canViewSharedArchive) {
         query = query.where('userId', isEqualTo: _userId);
       }
 
@@ -142,11 +192,20 @@ class FirestoreService {
       return Stream.value([]);
     }
 
-    return Stream.fromFuture(_isCurrentUserAdmin()).asyncExpand((isAdmin) {
+    return Stream.fromFuture(_getCurrentUserAccessContext())
+        .asyncExpand((accessContext) {
+      if (!accessContext.isAdmin && accessContext.allowedReportTypes.isEmpty) {
+        return Stream.value(const <Report>[]);
+      }
       Query<Map<String, dynamic>> query = _firestore
           .collection(_reportsCollection)
           .orderBy('date', descending: true);
-      if (!isAdmin) {
+      if (!accessContext.isAdmin &&
+          accessContext.allowedReportTypes.isNotEmpty) {
+        query = query.where('type',
+            whereIn: accessContext.allowedReportTypes.toList());
+      }
+      if (!accessContext.canViewSharedArchive) {
         query = query.where('userId', isEqualTo: _userId);
       }
       return query.snapshots().map((snapshot) => snapshot.docs
@@ -240,6 +299,18 @@ class FirestoreService {
       additionalData: data['additionalData'] as Map<String, dynamic>?,
     );
   }
+}
+
+class _ReportAccessContext {
+  final bool canViewSharedArchive;
+  final Set<String> allowedReportTypes;
+
+  bool get isAdmin => canViewSharedArchive && allowedReportTypes.isEmpty;
+
+  const _ReportAccessContext({
+    required this.canViewSharedArchive,
+    this.allowedReportTypes = const <String>{},
+  });
 }
 
 class ReportPage {
