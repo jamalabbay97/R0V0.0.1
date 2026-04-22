@@ -171,7 +171,8 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
                         color: theme.colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Icon(Icons.insights_rounded, color: theme.colorScheme.primary, size: 32),
+                      child: Icon(Icons.insights_rounded,
+                          color: theme.colorScheme.primary, size: 32),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -188,7 +189,8 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
                           Text(
                             'View and filter all reports',
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.6),
                             ),
                           ),
                         ],
@@ -199,7 +201,8 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
                       tooltip: 'Refresh',
                       icon: const Icon(Icons.refresh_outlined),
                       style: IconButton.styleFrom(
-                        backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.05),
+                        backgroundColor:
+                            theme.colorScheme.primary.withValues(alpha: 0.05),
                         foregroundColor: theme.colorScheme.primary,
                       ),
                     ),

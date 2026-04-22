@@ -25,11 +25,43 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     }, SetOptions(merge: true));
   }
 
-  Future<void> _setUserReports(String userId, Set<String> reports) async {
-    await _firestore.collection('users').doc(userId).set({
+  Future<void> _setUserReports(
+    String userId,
+    Set<String> reports, {
+    String? reportCreationEntityId,
+  }) async {
+    final payload = {
       'allowedReports': reports.toList()..sort(),
       'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    };
+
+    final entityId = reportCreationEntityId?.trim();
+    if (entityId == null || entityId.isEmpty) {
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .set(payload, SetOptions(merge: true));
+      return;
+    }
+
+    final usersInSameEntity = await _firestore
+        .collection('users')
+        .where('reportCreationEntityId', isEqualTo: entityId)
+        .get();
+
+    if (usersInSameEntity.docs.isEmpty) {
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .set(payload, SetOptions(merge: true));
+      return;
+    }
+
+    final batch = _firestore.batch();
+    for (final userDoc in usersInSameEntity.docs) {
+      batch.set(userDoc.reference, payload, SetOptions(merge: true));
+    }
+    await batch.commit();
   }
 
   Future<void> _setUserCapabilities(
@@ -240,6 +272,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                               .intersection(
                         ReportAccessProvider.defaultReportKeys.toSet(),
                       );
+                      final reportCreationEntityId =
+                          data['reportCreationEntityId'] as String?;
 
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 6),
@@ -358,6 +392,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                             await _setUserReports(
                                               doc.id,
                                               nextReports,
+                                              reportCreationEntityId:
+                                                  reportCreationEntityId,
                                             );
                                           },
                                   );
