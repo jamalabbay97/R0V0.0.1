@@ -26,7 +26,7 @@ class AppRouter {
 
         if (roleProvider.isAdmin) {
           return const RoleGuard(
-            allowedRoles: {'admin'},
+            allowedRoles: {'admin', 'manager'},
             child: AdminUsersScreen(),
           );
         }

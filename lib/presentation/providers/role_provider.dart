@@ -20,6 +20,8 @@ class RoleProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isAdmin => _role == 'admin';
+  bool get isManager => _role == 'manager';
+  bool get isAdminOrManager => isAdmin || isManager;
 
   void onAuthStateChanged(User? user) {
     final nextUserId = user?.uid;
@@ -55,6 +57,16 @@ class RoleProvider extends ChangeNotifier {
         .snapshots()
         .listen((snapshot) {
       final data = snapshot.data();
+      final isDeleted = data?['isDeleted'] == true;
+      if (isDeleted) {
+        _role = null;
+        _isLoading = false;
+        _errorMessage =
+            'Your account has been deactivated. Please contact an administrator.';
+        FirebaseAuth.instance.signOut();
+        notifyListeners();
+        return;
+      }
       _role = (data?['role'] as String?) ?? 'employee';
       _isLoading = false;
       notifyListeners();

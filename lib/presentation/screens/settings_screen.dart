@@ -97,12 +97,12 @@ class SettingsScreen extends StatelessWidget {
                 );
               }),
               const Divider(),
-              if (roleProvider.isAdmin)
+              if (roleProvider.isAdminOrManager)
                 ListTile(
-                  leading: const Icon(Icons.admin_panel_settings_outlined),
-                  title: const Text('Admin controls'),
+                  leading: const Icon(Icons.storefront_outlined),
+                  title: const Text('Store settings'),
                   subtitle: const Text(
-                    'Manage users, feature visibility, and permissions.',
+                    'Manage users, roles, and feature visibility.',
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).pushNamed(

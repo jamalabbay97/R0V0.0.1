@@ -1,11 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:r0/firebase_options.dart';
 import 'package:r0/presentation/access_control/access_control_definitions.dart';
+import 'package:r0/presentation/providers/role_provider.dart';
 import 'package:r0/presentation/providers/report_access_provider.dart';
 import 'package:r0/presentation/screens/home_screen.dart';
 
-/// Employee and feature management screen for administrators.
+/// Employee and feature management screen for admins and managers.
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
 
@@ -17,6 +21,20 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   static const List<String> _roles = ['employee', 'manager', 'admin'];
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final GlobalKey<FormState> _createUserFormKey = GlobalKey<FormState>();
+  String _selectedCreateRole = 'employee';
+  bool _isCreatingUser = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _updateRole(String userId, String role) async {
     await _firestore.collection('users').doc(userId).set({
@@ -98,11 +116,114 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     await _firestore.collection('report_definitions').doc(key).delete();
   }
 
+  Future<void> _createUserAccount() async {
+    final form = _createUserFormKey.currentState;
+    if (form == null || !form.validate()) {
+      return;
+    }
+
+    final displayName = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final role = _selectedCreateRole;
+    final temporaryAppName =
+        'user-provisioning-${DateTime.now().millisecondsSinceEpoch}';
+    FirebaseApp? secondaryApp;
+
+    setState(() => _isCreatingUser = true);
+    try {
+      secondaryApp = await Firebase.initializeApp(
+        name: temporaryAppName,
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      final secondaryAuth = FirebaseAuth.instanceFor(app: secondaryApp);
+
+      final credential = await secondaryAuth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      final createdUser = credential.user;
+      if (createdUser == null) {
+        throw FirebaseAuthException(
+          code: 'internal-error',
+          message: 'Unable to provision account.',
+        );
+      }
+
+      if (displayName.isNotEmpty) {
+        await createdUser.updateDisplayName(displayName);
+      }
+
+      await _firestore.collection('users').doc(createdUser.uid).set({
+        'email': email,
+        'displayName': displayName.isEmpty ? null : displayName,
+        'role': role,
+        'isDeleted': false,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      await secondaryAuth.signOut();
+
+      if (!mounted) {
+        return;
+      }
+      _nameController.clear();
+      _emailController.clear();
+      _passwordController.clear();
+      setState(() => _selectedCreateRole = 'employee');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('User account created for $email.')),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message ?? 'Failed to create account.'),
+        ),
+      );
+    } finally {
+      if (secondaryApp != null) {
+        await secondaryApp.delete();
+      }
+      if (mounted) {
+        setState(() => _isCreatingUser = false);
+      }
+    }
+  }
+
+  Future<void> _deactivateUser({
+    required String userId,
+    required String email,
+  }) async {
+    await _firestore.collection('users').doc(userId).set({
+      'isDeleted': true,
+      'allowedReports': <String>[],
+      'capabilities': <String>[],
+      'role': 'employee',
+      'deletedAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Account deactivated: $email')));
+  }
+
   @override
   Widget build(BuildContext context) {
+    final roleProvider = context.watch<RoleProvider>();
+    final actorRole = roleProvider.role ?? 'employee';
+    final isActorManager = actorRole == 'manager';
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin • Control Center'),
+        title: const Text('Store • Control Center'),
         actions: [
           IconButton(
             tooltip: 'Open dashboard',
@@ -133,7 +254,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Application Controls',
+                        'Store settings',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -187,6 +308,119 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 ),
               ),
               const SizedBox(height: 12),
+              if (isActorManager)
+                const Card(
+                  child: ListTile(
+                    leading: Icon(Icons.info_outline),
+                    title: Text('Manager account restrictions'),
+                    subtitle: Text(
+                      'Managers can add, delete, and edit employee accounts, but cannot modify manager/admin accounts.',
+                    ),
+                  ),
+                ),
+              if (isActorManager) const SizedBox(height: 12),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Form(
+                    key: _createUserFormKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Add new user account',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Display name',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextFormField(
+                          controller: _emailController,
+                          decoration: const InputDecoration(
+                            labelText: 'Email',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            final text = (value ?? '').trim();
+                            if (text.isEmpty || !text.contains('@')) {
+                              return 'Please enter a valid email.';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Temporary password',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            final text = (value ?? '').trim();
+                            if (text.length < 6) {
+                              return 'Password must be at least 6 characters.';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        DropdownButtonFormField<String>(
+                          initialValue: _selectedCreateRole,
+                          decoration: const InputDecoration(
+                            labelText: 'Role',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: _roles
+                              .where(
+                                (role) => !isActorManager || role != 'admin',
+                              )
+                              .map(
+                                (role) => DropdownMenuItem<String>(
+                                  value: role,
+                                  child: Text(role),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: _isCreatingUser
+                              ? null
+                              : (value) {
+                                  if (value == null) return;
+                                  setState(() => _selectedCreateRole = value);
+                                },
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton.icon(
+                          onPressed:
+                              _isCreatingUser ? null : _createUserAccount,
+                          icon: _isCreatingUser
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.person_add_alt_1),
+                          label: Text(
+                            _isCreatingUser ? 'Creating...' : 'Create account',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 4),
                 child: Text(
@@ -211,7 +445,10 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  final docs = snapshot.data!.docs;
+                  final docs = snapshot.data!.docs.where((doc) {
+                    final data = doc.data();
+                    return data['isDeleted'] != true;
+                  }).toList();
                   if (docs.isEmpty) {
                     return const Card(
                       child: Padding(
@@ -245,7 +482,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                         uid: doc.id,
                         email: email == '(no email)' ? null : email,
                       );
-                      final isReadonlyAccount = isPrimaryAccount;
+                      final isTargetManager = currentRole == 'manager';
+                      final isTargetAdmin = currentRole == 'admin';
+                      final isReadonlyAccount = isPrimaryAccount ||
+                          (isActorManager &&
+                              (isTargetManager || isTargetAdmin));
 
                       final rawAssignedReports =
                           (data['allowedReports'] as List<dynamic>?)
@@ -334,6 +575,21 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                                     value == currentRole) {
                                                   return;
                                                 }
+                                                if (isActorManager &&
+                                                    value == 'admin') {
+                                                  if (!mounted) {
+                                                    return;
+                                                  }
+                                                  ScaffoldMessenger.of(context)
+                                                      .showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                        'Managers cannot assign admin role.',
+                                                      ),
+                                                    ),
+                                                  );
+                                                  return;
+                                                }
                                                 await _updateRole(
                                                   doc.id,
                                                   value,
@@ -349,9 +605,63 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                             ),
                                           ),
                                         ),
+                                      if (isActorManager && isTargetManager)
+                                        const Padding(
+                                          padding: EdgeInsets.only(top: 6),
+                                          child: Chip(
+                                            label: Text('Manager (locked)'),
+                                          ),
+                                        ),
                                     ],
                                   ),
                                 ],
+                              ),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton.icon(
+                                  onPressed: isReadonlyAccount || isCurrentUser
+                                      ? null
+                                      : () async {
+                                          final confirmed =
+                                              await showDialog<bool>(
+                                            context: context,
+                                            builder: (dialogContext) =>
+                                                AlertDialog(
+                                              title: const Text(
+                                                'Deactivate account?',
+                                              ),
+                                              content: Text(
+                                                'This will block $email from using the app until reactivated.',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(
+                                                    dialogContext,
+                                                  ).pop(false),
+                                                  child: const Text('Cancel'),
+                                                ),
+                                                FilledButton(
+                                                  onPressed: () => Navigator.of(
+                                                    dialogContext,
+                                                  ).pop(true),
+                                                  child: const Text(
+                                                    'Deactivate',
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                          if (confirmed != true) {
+                                            return;
+                                          }
+                                          await _deactivateUser(
+                                            userId: doc.id,
+                                            email: email,
+                                          );
+                                        },
+                                  icon: const Icon(Icons.delete_outline),
+                                  label: const Text('Delete account'),
+                                ),
                               ),
                               const Divider(height: 20),
                               const Text(

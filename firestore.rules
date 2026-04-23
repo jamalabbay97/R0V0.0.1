@@ -2,7 +2,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function isSignedIn() {
-      return request.auth != null;
+      return request.auth != null && !(
+        get(/databases/$(database)/documents/users/$(request.auth.uid))
+          .data.isDeleted == true
+      );
     }
 
     function roleFor(uid) {
@@ -15,6 +18,30 @@ service cloud.firestore {
 
     function isManager() {
       return isSignedIn() && roleFor(request.auth.uid) == 'manager';
+    }
+
+    function isAdminOrManager() {
+      return isAdmin() || isManager();
+    }
+
+    function canManagerModifyUser(userId) {
+      return isManager()
+        && userId != request.auth.uid
+        && !(
+          get(/databases/$(database)/documents/users/$(userId)).data.role
+            in ['manager', 'admin']
+        );
+    }
+
+    function managerCanAssignRole() {
+      return request.resource.data.role in ['employee', 'manager'];
+    }
+
+    function canManagerDeleteUser(userId) {
+      return isManager()
+        && userId != request.auth.uid
+        && get(/databases/$(database)/documents/users/$(userId)).data.role
+            == 'employee';
     }
 
     function isOwner(userId) {
@@ -66,18 +93,24 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) || isAdmin();
+      allow read: if isOwner(userId) || isAdminOrManager();
+      allow create: if isOwner(userId)
+        || isAdmin()
+        || (canManagerModifyUser(userId) && managerCanAssignRole());
       allow update: if isAdmin() || (
         isOwner(userId)
         && request.resource.data.role == resource.data.role
+      ) || (
+        canManagerModifyUser(userId)
+        && managerCanAssignRole()
+        && request.resource.data.role != 'admin'
       );
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || canManagerDeleteUser(userId);
     }
 
     match /report_definitions/{reportKey} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isAdminOrManager();
     }
 
     match /reports/{reportId} {
