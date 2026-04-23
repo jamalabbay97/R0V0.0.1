@@ -41,7 +41,7 @@ class AppRouter {
       case adminUsersRoute:
         return MaterialPageRoute(
           builder: (_) => const RoleGuard(
-            allowedRoles: {'admin'},
+            allowedRoles: {'admin', 'manager'},
             child: AdminUsersScreen(),
           ),
         );

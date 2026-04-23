@@ -116,6 +116,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     await _firestore.collection('report_definitions').doc(key).delete();
   }
 
+  bool _managerCannotManageRole(String role) {
+    final normalized = role.toLowerCase();
+    return normalized == 'manager' || normalized == 'admin';
+  }
+
   Future<void> _createUserAccount() async {
     final form = _createUserFormKey.currentState;
     if (form == null || !form.validate()) {
@@ -126,6 +131,14 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final role = _selectedCreateRole;
+    final actorRole = context.read<RoleProvider>().role ?? 'employee';
+
+    if (actorRole == 'manager' && role == 'admin') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Managers cannot assign admin role.')),
+      );
+      return;
+    }
     final temporaryAppName =
         'user-provisioning-${DateTime.now().millisecondsSinceEpoch}';
     FirebaseApp? secondaryApp;
@@ -483,10 +496,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                         email: email == '(no email)' ? null : email,
                       );
                       final isTargetManager = currentRole == 'manager';
-                      final isTargetAdmin = currentRole == 'admin';
                       final isReadonlyAccount = isPrimaryAccount ||
                           (isActorManager &&
-                              (isTargetManager || isTargetAdmin));
+                              _managerCannotManageRole(currentRole));
 
                       final rawAssignedReports =
                           (data['allowedReports'] as List<dynamic>?)
