@@ -18,6 +18,10 @@ class FirestoreService {
     'truck_tracking': {'Suivi Camion', 'Chargeuse', 'Pelle'},
     'machines_stopped': {'Machine/Engin Arrêtés'},
   };
+  static final Map<String, String> _accessKeyByReportType = {
+    for (final entry in _reportTypesByAccessKey.entries)
+      for (final type in entry.value) type: entry.key,
+  };
 
   /// Get current user ID
   String? get _userId => _auth.currentUser?.uid;
@@ -44,10 +48,16 @@ class FirestoreService {
     final allowedReportTypes = role == 'admin'
         ? <String>{}
         : _resolveAllowedReportTypes(allowedReports ?? const <String>{});
+    final allowedCreationReportKeys = role == 'admin'
+        ? <String>{}
+        : _resolveAllowedCreationReportKeys(
+            allowedReports ?? const <String>{},
+          );
 
     return _ReportAccessContext(
       canViewSharedArchive: canViewSharedArchive,
       allowedReportTypes: allowedReportTypes,
+      allowedCreationReportKeys: allowedCreationReportKeys,
     );
   }
 
@@ -57,6 +67,49 @@ class FirestoreService {
       allowedTypes.addAll(_reportTypesByAccessKey[key] ?? const <String>{});
     }
     return allowedTypes;
+  }
+
+  Set<String> _resolveAllowedCreationReportKeys(Set<String> allowedReportKeys) {
+    return allowedReportKeys.where(_reportTypesByAccessKey.containsKey).toSet();
+  }
+
+  List<QueryDocumentSnapshot<Map<String, dynamic>>> _filterSharedArchiveDocs({
+    required List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+    required _ReportAccessContext accessContext,
+  }) {
+    if (accessContext.isAdmin || !accessContext.canViewSharedArchive) {
+      return docs;
+    }
+
+    final allowedCreationKeys = accessContext.allowedCreationReportKeys;
+    if (allowedCreationKeys.isEmpty) {
+      return const <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+    }
+
+    final filtered = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+
+    for (final doc in docs) {
+      final data = doc.data();
+      final type = data['type'] as String?;
+      final accessKey =
+          (data['reportAccessKey'] as String?) ?? _accessKeyByReportType[type];
+      if (accessKey == null || !allowedCreationKeys.contains(accessKey)) {
+        continue;
+      }
+
+      final creatorKeys =
+          (data['creatorAllowedCreationReportKeys'] as List<dynamic>?)
+              ?.whereType<String>()
+              .toSet();
+
+      // For legacy reports that do not have creator key snapshots yet,
+      // keep visibility based on type/access key matching only.
+      if (creatorKeys == null || creatorKeys.contains(accessKey)) {
+        filtered.add(doc);
+      }
+    }
+
+    return filtered;
   }
 
   /// Check if user is authenticated
@@ -89,16 +142,27 @@ class FirestoreService {
     }
 
     try {
+      final accessContext = await _getCurrentUserAccessContext();
+      final creatorAllowedCreationReportKeys = accessContext.isAdmin
+          ? _reportTypesByAccessKey.keys.toSet()
+          : accessContext.allowedCreationReportKeys;
+
       // If report has a Firestore ID, update it; otherwise create new
       if (report.firestoreId != null) {
-        final reportData = _reportToFirestoreForUpdate(report);
+        final reportData = _reportToFirestoreForUpdate(
+          report,
+          creatorAllowedCreationReportKeys: creatorAllowedCreationReportKeys,
+        );
         await _firestore
             .collection(_reportsCollection)
             .doc(report.firestoreId)
             .update(reportData);
         return report.firestoreId!;
       } else {
-        final reportData = _reportToFirestoreForCreate(report);
+        final reportData = _reportToFirestoreForCreate(
+          report,
+          creatorAllowedCreationReportKeys: creatorAllowedCreationReportKeys,
+        );
         final docRef =
             await _firestore.collection(_reportsCollection).add(reportData);
         return docRef.id;
@@ -119,6 +183,11 @@ class FirestoreService {
       if (!accessContext.isAdmin && accessContext.allowedReportTypes.isEmpty) {
         return [];
       }
+      if (!accessContext.isAdmin &&
+          accessContext.canViewSharedArchive &&
+          accessContext.allowedCreationReportKeys.isEmpty) {
+        return [];
+      }
       Query<Map<String, dynamic>> query =
           _firestore.collection(_reportsCollection).orderBy(
                 'date',
@@ -133,8 +202,12 @@ class FirestoreService {
         query = query.where('userId', isEqualTo: _userId);
       }
       final snapshot = await query.get();
+      final allowedDocs = _filterSharedArchiveDocs(
+        docs: snapshot.docs,
+        accessContext: accessContext,
+      );
 
-      return snapshot.docs
+      return allowedDocs
           .map((doc) => _reportFromFirestore(doc.id, doc.data()))
           .toList();
     } catch (e) {
@@ -156,6 +229,11 @@ class FirestoreService {
       if (!accessContext.isAdmin && accessContext.allowedReportTypes.isEmpty) {
         return ReportPage(reports: const [], lastDocument: null);
       }
+      if (!accessContext.isAdmin &&
+          accessContext.canViewSharedArchive &&
+          accessContext.allowedCreationReportKeys.isEmpty) {
+        return ReportPage(reports: const [], lastDocument: null);
+      }
       Query<Map<String, dynamic>> query = _firestore
           .collection(_reportsCollection)
           .orderBy('date', descending: true)
@@ -174,9 +252,13 @@ class FirestoreService {
       }
 
       final snapshot = await query.get();
+      final allowedDocs = _filterSharedArchiveDocs(
+        docs: snapshot.docs,
+        accessContext: accessContext,
+      );
 
       return ReportPage(
-        reports: snapshot.docs
+        reports: allowedDocs
             .map((doc) => _reportFromFirestore(doc.id, doc.data()))
             .toList(),
         lastDocument: snapshot.docs.isNotEmpty ? snapshot.docs.last : null,
@@ -197,6 +279,11 @@ class FirestoreService {
       if (!accessContext.isAdmin && accessContext.allowedReportTypes.isEmpty) {
         return Stream.value(const <Report>[]);
       }
+      if (!accessContext.isAdmin &&
+          accessContext.canViewSharedArchive &&
+          accessContext.allowedCreationReportKeys.isEmpty) {
+        return Stream.value(const <Report>[]);
+      }
       Query<Map<String, dynamic>> query = _firestore
           .collection(_reportsCollection)
           .orderBy('date', descending: true);
@@ -208,9 +295,15 @@ class FirestoreService {
       if (!accessContext.canViewSharedArchive) {
         query = query.where('userId', isEqualTo: _userId);
       }
-      return query.snapshots().map((snapshot) => snapshot.docs
-          .map((doc) => _reportFromFirestore(doc.id, doc.data()))
-          .toList());
+      return query.snapshots().map((snapshot) {
+        final allowedDocs = _filterSharedArchiveDocs(
+          docs: snapshot.docs,
+          accessContext: accessContext,
+        );
+        return allowedDocs
+            .map((doc) => _reportFromFirestore(doc.id, doc.data()))
+            .toList();
+      });
     });
   }
 
@@ -234,6 +327,10 @@ class FirestoreService {
     }
 
     try {
+      final accessContext = await _getCurrentUserAccessContext();
+      final creatorAllowedCreationReportKeys = accessContext.isAdmin
+          ? _reportTypesByAccessKey.keys.toSet()
+          : accessContext.allowedCreationReportKeys;
       final batch = _firestore.batch();
       int batchCount = 0;
 
@@ -241,7 +338,14 @@ class FirestoreService {
         if (report.firestoreId == null) {
           // New report - add to batch
           final docRef = _firestore.collection(_reportsCollection).doc();
-          batch.set(docRef, _reportToFirestoreForCreate(report));
+          batch.set(
+            docRef,
+            _reportToFirestoreForCreate(
+              report,
+              creatorAllowedCreationReportKeys:
+                  creatorAllowedCreationReportKeys,
+            ),
+          );
           batchCount++;
 
           // Firestore batch limit is 500
@@ -261,13 +365,19 @@ class FirestoreService {
   }
 
   /// Convert Report to Firestore document
-  Map<String, dynamic> _reportToFirestoreForCreate(Report report) {
+  Map<String, dynamic> _reportToFirestoreForCreate(
+    Report report, {
+    required Set<String> creatorAllowedCreationReportKeys,
+  }) {
     return {
       'userId': _userId,
       'description': report.description,
       'date': Timestamp.fromDate(report.date),
       'group': report.group,
       'type': report.type,
+      'reportAccessKey': _accessKeyByReportType[report.type],
+      'creatorAllowedCreationReportKeys':
+          creatorAllowedCreationReportKeys.toList()..sort(),
       'additionalData': report.additionalData,
       'localId': report.id, // Keep local SQLite ID for reference
       'createdAt': FieldValue.serverTimestamp(),
@@ -276,12 +386,18 @@ class FirestoreService {
   }
 
   /// Convert Report to Firestore update payload
-  Map<String, dynamic> _reportToFirestoreForUpdate(Report report) {
+  Map<String, dynamic> _reportToFirestoreForUpdate(
+    Report report, {
+    required Set<String> creatorAllowedCreationReportKeys,
+  }) {
     return {
       'description': report.description,
       'date': Timestamp.fromDate(report.date),
       'group': report.group,
       'type': report.type,
+      'reportAccessKey': _accessKeyByReportType[report.type],
+      'creatorAllowedCreationReportKeys':
+          creatorAllowedCreationReportKeys.toList()..sort(),
       'additionalData': report.additionalData,
       'updatedAt': FieldValue.serverTimestamp(),
     };
@@ -304,12 +420,14 @@ class FirestoreService {
 class _ReportAccessContext {
   final bool canViewSharedArchive;
   final Set<String> allowedReportTypes;
+  final Set<String> allowedCreationReportKeys;
 
   bool get isAdmin => canViewSharedArchive && allowedReportTypes.isEmpty;
 
   const _ReportAccessContext({
     required this.canViewSharedArchive,
     this.allowedReportTypes = const <String>{},
+    this.allowedCreationReportKeys = const <String>{},
   });
 }
 
