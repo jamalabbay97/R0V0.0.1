@@ -20,9 +20,10 @@ class FirestoreService {
   };
   static final Map<String, String> _accessKeyByReportType = {
     for (final entry in _reportTypesByAccessKey.entries)
-      for (final type in entry.value) type: entry.key,
+      for (final type in entry.value) type.trim().toLowerCase(): entry.key,
   };
   static const String _r0DescriptionPrefix = 'Rapport R0';
+  static const String _r0DescriptionPrefixEn = 'R0 Report';
   static const String _activityDescriptionPrefix = 'Activity TNB';
   static const String _dailyDescriptionPrefix = 'Daily TSUD';
 
@@ -94,18 +95,7 @@ class FirestoreService {
     for (final doc in docs) {
       final data = doc.data();
       final accessKey = _resolveAccessKeyForStoredData(data);
-      if (accessKey == null || !allowedCreationKeys.contains(accessKey)) {
-        continue;
-      }
-
-      final creatorKeys =
-          (data['creatorAllowedCreationReportKeys'] as List<dynamic>?)
-              ?.whereType<String>()
-              .toSet();
-
-      // For legacy reports that do not have creator key snapshots yet,
-      // keep visibility based on type/access key matching only.
-      if (creatorKeys == null || creatorKeys.contains(accessKey)) {
+      if (accessKey != null && allowedCreationKeys.contains(accessKey)) {
         filtered.add(doc);
       }
     }
@@ -114,13 +104,14 @@ class FirestoreService {
   }
 
   String? _resolveAccessKeyForReport(Report report) {
-    final explicitTypeMatch = _accessKeyByReportType[report.type];
+    final explicitTypeMatch = _resolveAccessKeyForType(report.type);
     if (explicitTypeMatch != null) {
       return explicitTypeMatch;
     }
 
     final description = report.description.trim();
-    if (description.startsWith(_r0DescriptionPrefix)) {
+    if (description.startsWith(_r0DescriptionPrefix) ||
+        description.startsWith(_r0DescriptionPrefixEn)) {
       return 'r0_report';
     }
     if (description.startsWith(_activityDescriptionPrefix)) {
@@ -148,13 +139,14 @@ class FirestoreService {
     }
 
     final type = data['type'] as String?;
-    final typeMatch = _accessKeyByReportType[type];
+    final typeMatch = _resolveAccessKeyForType(type);
     if (typeMatch != null) {
       return typeMatch;
     }
 
     final description = (data['description'] as String?)?.trim() ?? '';
-    if (description.startsWith(_r0DescriptionPrefix)) {
+    if (description.startsWith(_r0DescriptionPrefix) ||
+        description.startsWith(_r0DescriptionPrefixEn)) {
       return 'r0_report';
     }
     if (description.startsWith(_activityDescriptionPrefix)) {
@@ -177,6 +169,19 @@ class FirestoreService {
     }
 
     return null;
+  }
+
+  String? _resolveAccessKeyForType(String? rawType) {
+    if (rawType == null) {
+      return null;
+    }
+
+    final normalizedType = rawType.trim().toLowerCase();
+    if (normalizedType.isEmpty) {
+      return null;
+    }
+
+    return _accessKeyByReportType[normalizedType];
   }
 
   /// Check if user is authenticated
