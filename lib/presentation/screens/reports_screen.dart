@@ -780,8 +780,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final visibleReportKeys =
         context.read<ReportAccessProvider>().visibleReportKeys;
     final accessibleReports = _reports.where((report) {
-      final accessKey =
-          AccessControlDefinitions.accessKeyForReportType(report.type);
+      final accessKey = AccessControlDefinitions.accessKeyForReport(report);
       if (accessKey == null) {
         return false;
       }

@@ -1,4 +1,5 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:r0/domain/models/report.dart';
 import 'package:r0/presentation/providers/report_access_provider.dart';
 
 class AccessControlDefinitions {
@@ -82,6 +83,37 @@ class AccessControlDefinitions {
         return entry.key;
       }
     }
+    return null;
+  }
+
+  static String? accessKeyForReport(Report report) {
+    final typeMatch = accessKeyForReportType(report.type);
+    if (typeMatch != null) {
+      return typeMatch;
+    }
+
+    final description = report.description.trim();
+    if (description.startsWith('Rapport R0') ||
+        description.startsWith('R0 Report')) {
+      return 'r0_report';
+    }
+    if (description.startsWith('Activity TNB')) {
+      return 'activity_report';
+    }
+    if (description.startsWith('Daily TSUD')) {
+      return 'daily_report';
+    }
+
+    final additionalData = report.additionalData ?? const <String, dynamic>{};
+    if (additionalData.containsKey('Compteurs') &&
+        additionalData.containsKey('consommation')) {
+      return 'r0_report';
+    }
+    if (additionalData.containsKey('truckData') ||
+        additionalData.containsKey('equipmentTrips')) {
+      return 'truck_tracking';
+    }
+
     return null;
   }
 }
