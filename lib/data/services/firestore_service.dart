@@ -22,6 +22,9 @@ class FirestoreService {
     for (final entry in _reportTypesByAccessKey.entries)
       for (final type in entry.value) type: entry.key,
   };
+  static const String _r0DescriptionPrefix = 'Rapport R0';
+  static const String _activityDescriptionPrefix = 'Activity TNB';
+  static const String _dailyDescriptionPrefix = 'Daily TSUD';
 
   /// Get current user ID
   String? get _userId => _auth.currentUser?.uid;
@@ -90,9 +93,7 @@ class FirestoreService {
 
     for (final doc in docs) {
       final data = doc.data();
-      final type = data['type'] as String?;
-      final accessKey =
-          (data['reportAccessKey'] as String?) ?? _accessKeyByReportType[type];
+      final accessKey = _resolveAccessKeyForStoredData(data);
       if (accessKey == null || !allowedCreationKeys.contains(accessKey)) {
         continue;
       }
@@ -110,6 +111,72 @@ class FirestoreService {
     }
 
     return filtered;
+  }
+
+  String? _resolveAccessKeyForReport(Report report) {
+    final explicitTypeMatch = _accessKeyByReportType[report.type];
+    if (explicitTypeMatch != null) {
+      return explicitTypeMatch;
+    }
+
+    final description = report.description.trim();
+    if (description.startsWith(_r0DescriptionPrefix)) {
+      return 'r0_report';
+    }
+    if (description.startsWith(_activityDescriptionPrefix)) {
+      return 'activity_report';
+    }
+    if (description.startsWith(_dailyDescriptionPrefix)) {
+      return 'daily_report';
+    }
+
+    final data = report.additionalData ?? const <String, dynamic>{};
+    if (data.containsKey('Compteurs') && data.containsKey('consommation')) {
+      return 'r0_report';
+    }
+    if (data.containsKey('truckData') || data.containsKey('equipmentTrips')) {
+      return 'truck_tracking';
+    }
+
+    return null;
+  }
+
+  String? _resolveAccessKeyForStoredData(Map<String, dynamic> data) {
+    final explicitAccessKey = data['reportAccessKey'] as String?;
+    if (explicitAccessKey != null && explicitAccessKey.isNotEmpty) {
+      return explicitAccessKey;
+    }
+
+    final type = data['type'] as String?;
+    final typeMatch = _accessKeyByReportType[type];
+    if (typeMatch != null) {
+      return typeMatch;
+    }
+
+    final description = (data['description'] as String?)?.trim() ?? '';
+    if (description.startsWith(_r0DescriptionPrefix)) {
+      return 'r0_report';
+    }
+    if (description.startsWith(_activityDescriptionPrefix)) {
+      return 'activity_report';
+    }
+    if (description.startsWith(_dailyDescriptionPrefix)) {
+      return 'daily_report';
+    }
+
+    final additionalData = data['additionalData'];
+    if (additionalData is Map<String, dynamic>) {
+      if (additionalData.containsKey('Compteurs') &&
+          additionalData.containsKey('consommation')) {
+        return 'r0_report';
+      }
+      if (additionalData.containsKey('truckData') ||
+          additionalData.containsKey('equipmentTrips')) {
+        return 'truck_tracking';
+      }
+    }
+
+    return null;
   }
 
   /// Check if user is authenticated
@@ -193,11 +260,6 @@ class FirestoreService {
                 'date',
                 descending: true,
               );
-      if (!accessContext.isAdmin &&
-          accessContext.allowedReportTypes.isNotEmpty) {
-        query = query.where('type',
-            whereIn: accessContext.allowedReportTypes.toList());
-      }
       if (!accessContext.canViewSharedArchive) {
         query = query.where('userId', isEqualTo: _userId);
       }
@@ -238,11 +300,6 @@ class FirestoreService {
           .collection(_reportsCollection)
           .orderBy('date', descending: true)
           .limit(limit);
-      if (!accessContext.isAdmin &&
-          accessContext.allowedReportTypes.isNotEmpty) {
-        query = query.where('type',
-            whereIn: accessContext.allowedReportTypes.toList());
-      }
       if (!accessContext.canViewSharedArchive) {
         query = query.where('userId', isEqualTo: _userId);
       }
@@ -287,11 +344,6 @@ class FirestoreService {
       Query<Map<String, dynamic>> query = _firestore
           .collection(_reportsCollection)
           .orderBy('date', descending: true);
-      if (!accessContext.isAdmin &&
-          accessContext.allowedReportTypes.isNotEmpty) {
-        query = query.where('type',
-            whereIn: accessContext.allowedReportTypes.toList());
-      }
       if (!accessContext.canViewSharedArchive) {
         query = query.where('userId', isEqualTo: _userId);
       }
@@ -369,13 +421,14 @@ class FirestoreService {
     Report report, {
     required Set<String> creatorAllowedCreationReportKeys,
   }) {
+    final accessKey = _resolveAccessKeyForReport(report);
     return {
       'userId': _userId,
       'description': report.description,
       'date': Timestamp.fromDate(report.date),
       'group': report.group,
       'type': report.type,
-      'reportAccessKey': _accessKeyByReportType[report.type],
+      'reportAccessKey': accessKey,
       'creatorAllowedCreationReportKeys':
           creatorAllowedCreationReportKeys.toList()..sort(),
       'additionalData': report.additionalData,
@@ -390,12 +443,13 @@ class FirestoreService {
     Report report, {
     required Set<String> creatorAllowedCreationReportKeys,
   }) {
+    final accessKey = _resolveAccessKeyForReport(report);
     return {
       'description': report.description,
       'date': Timestamp.fromDate(report.date),
       'group': report.group,
       'type': report.type,
-      'reportAccessKey': _accessKeyByReportType[report.type],
+      'reportAccessKey': accessKey,
       'creatorAllowedCreationReportKeys':
           creatorAllowedCreationReportKeys.toList()..sort(),
       'additionalData': report.additionalData,
