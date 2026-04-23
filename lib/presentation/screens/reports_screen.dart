@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/domain/models/report.dart';
+import 'package:r0/presentation/access_control/access_control_definitions.dart';
+import 'package:r0/presentation/providers/report_access_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:r0/domain/repositories/report_repository.dart';
 import 'package:r0/data/services/google_sheets_service.dart';
@@ -659,6 +661,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   final posteOrder = const ["3ème", "1er", "2ème"];
+  ReportAccessProvider? _accessProvider;
 
   int _toCycleMinutesFromTimeOfDay(TimeOfDay value) {
     final minutes = (value.hour * 60) + value.minute;
@@ -736,6 +739,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
     _loadReports();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final provider = context.read<ReportAccessProvider>();
+    if (_accessProvider == provider) {
+      return;
+    }
+    _accessProvider?.removeListener(_onReportAccessChanged);
+    _accessProvider = provider;
+    _accessProvider?.addListener(_onReportAccessChanged);
+  }
+
   Future<void> _loadReports() async {
     setState(() {
       _isLoading = true;
@@ -762,10 +777,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   void _filterReports() {
+    final visibleReportKeys =
+        context.read<ReportAccessProvider>().visibleReportKeys;
+    final accessibleReports = _reports.where((report) {
+      final accessKey =
+          AccessControlDefinitions.accessKeyForReportType(report.type);
+      if (accessKey == null) {
+        return false;
+      }
+      return visibleReportKeys.contains(accessKey);
+    }).toList();
     if (_selectedPosteFilter == null) {
-      _filteredReports = _reports;
+      _filteredReports = accessibleReports;
     } else {
-      _filteredReports = _reports.where((report) {
+      _filteredReports = accessibleReports.where((report) {
         final additionalData = report.additionalData;
         if (additionalData == null) return false;
 
@@ -785,13 +810,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
 
     // Update available postes based on existing reports
-    _updateAvailablePostes();
+    _updateAvailablePostes(accessibleReports);
   }
 
-  void _updateAvailablePostes() {
+  void _updateAvailablePostes(List<Report> reports) {
     final Set<String> foundPostes = <String>{};
 
-    for (final report in _reports) {
+    for (final report in reports) {
       final additionalData = report.additionalData;
       if (additionalData != null) {
         final poste = additionalData['selectedPoste'] ??
@@ -809,6 +834,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
     setState(() {
       _availablePostes = foundPostes.toList()..sort();
     });
+  }
+
+  void _onReportAccessChanged() {
+    if (!mounted) {
+      return;
+    }
+    setState(_filterReports);
+  }
+
+  @override
+  void dispose() {
+    _accessProvider?.removeListener(_onReportAccessChanged);
+    super.dispose();
   }
 
   void _onPosteFilterChanged(String? newValue) {

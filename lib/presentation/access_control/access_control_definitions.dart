@@ -11,6 +11,14 @@ class AccessControlDefinitions {
     'reports_archive': 'Reports Archive',
   };
 
+  static const Map<String, Set<String>> reportTypesByAccessKey = {
+    'r0_report': {'R0'},
+    'activity_report': {'Activity TNB'},
+    'daily_report': {'daily TSUD', 'Daily TSUD'},
+    'truck_tracking': {'Suivi Camion', 'Chargeuse', 'Pelle'},
+    'machines_stopped': {'Machine/Engin Arrêtés'},
+  };
+
   static const Map<String, String> capabilityLabels = {
     'can_create_reports': 'Create and submit reports',
     'can_edit_reports': 'Edit existing reports',
@@ -67,4 +75,13 @@ class AccessControlDefinitions {
 
   static List<String> get allReportKeys =>
       ReportAccessProvider.defaultReportKeys.toList(growable: false);
+
+  static String? accessKeyForReportType(String type) {
+    for (final entry in reportTypesByAccessKey.entries) {
+      if (entry.value.contains(type)) {
+        return entry.key;
+      }
+    }
+    return null;
+  }
 }
