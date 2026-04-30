@@ -129,9 +129,20 @@ class SettingsScreen extends StatelessWidget {
                       ? null
                       : () async {
                           final ok = await authProvider.signOut();
-                          if (!context.mounted || ok) {
+                          if (!context.mounted) {
                             return;
                           }
+
+                          if (ok) {
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(
+                                builder: (_) => AppRouter.appEntry(),
+                              ),
+                              (route) => false,
+                            );
+                            return;
+                          }
+
                           final message = authProvider.errorMessage ??
                               'Unable to sign out. Please try again.';
                           ScaffoldMessenger.of(context).showSnackBar(

@@ -250,7 +250,8 @@ class _MachinesEquipmentStoppedScreenState
                       if (mainCat != null)
                         DropdownButtonFormField<String>(
                             key: ValueKey(mainCat),
-                            hint: Text(AppLocalizations.of(context)!.subCategory),
+                            hint:
+                                Text(AppLocalizations.of(context)!.subCategory),
                             isExpanded: true,
                             items: _equipmentData[mainCat]!
                                 .keys
@@ -343,11 +344,13 @@ class _MachinesEquipmentStoppedScreenState
     try {
       final report = Report(
         id: widget.initialReport?.id,
+        firestoreId: widget.initialReport?.firestoreId,
         description: 'Machine/Engin Arrêtés',
         date: _selectedDate,
         type: 'Machine/Engin Arrêtés',
         group: 'Machines Equipment',
         additionalData: {'equipmentList': _equipmentList},
+        isSentToSheets: widget.initialReport?.isSentToSheets ?? false,
       );
 
       if (widget.isEditing && widget.onSave != null) {
