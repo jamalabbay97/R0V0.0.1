@@ -4105,8 +4105,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 const Divider(height: 1),
                 Expanded(
                   child: DefaultTabController(
-                    initialIndex: _currentShiftTabIndex(),
-                    length: 4,
+                    initialIndex: 0,
+                    length: 1,
                     child: Column(
                       children: [
                         Material(
@@ -4114,15 +4114,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           child: TabBar(
                             isScrollable: true,
                             tabs: [
-                              Tab(
-                                  text:
-                                      AppLocalizations.of(context)!.thirdPoste),
-                              Tab(
-                                  text:
-                                      AppLocalizations.of(context)!.firstPoste),
-                              Tab(
-                                  text: AppLocalizations.of(context)!
-                                      .secondPoste),
                               Tab(text: AppLocalizations.of(context)!.global),
                             ],
                           ),
@@ -4130,24 +4121,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         Expanded(
                           child: TabBarView(
                             children: [
-                              _buildTsudReportDetailsPage(
-                                data: data,
-                                reportDate: report.date,
-                                l10n: l10n,
-                                shiftKey: '3',
-                              ),
-                              _buildTsudReportDetailsPage(
-                                data: data,
-                                reportDate: report.date,
-                                l10n: l10n,
-                                shiftKey: '1',
-                              ),
-                              _buildTsudReportDetailsPage(
-                                data: data,
-                                reportDate: report.date,
-                                l10n: l10n,
-                                shiftKey: '2',
-                              ),
                               SingleChildScrollView(
                                 padding: const EdgeInsets.all(16),
                                 child: Column(
