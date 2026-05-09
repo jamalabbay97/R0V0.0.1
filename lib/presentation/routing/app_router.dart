@@ -6,10 +6,12 @@ import 'package:r0/presentation/routing/role_guard.dart';
 import 'package:r0/presentation/screens/admin_users_screen.dart';
 import 'package:r0/presentation/screens/home_screen.dart';
 import 'package:r0/presentation/screens/login_screen.dart';
+import 'package:r0/presentation/screens/profile_settings_screen.dart';
 
-/// Smart routing after login based on the signed-in user's role.
+/// Entry routing after login.
 class AppRouter {
   static const String adminUsersRoute = '/admin/users';
+  static const String profileSettingsRoute = '/settings/profile';
 
   static Widget appEntry() {
     return Consumer2<AuthProvider, RoleProvider>(
@@ -22,13 +24,6 @@ class AppRouter {
 
         if (!authProvider.isAuthenticated) {
           return const LoginScreen();
-        }
-
-        if (roleProvider.isAdmin) {
-          return const RoleGuard(
-            allowedRoles: {'admin', 'manager'},
-            child: AdminUsersScreen(),
-          );
         }
 
         return const HomeScreen();
@@ -44,6 +39,10 @@ class AppRouter {
             allowedRoles: {'admin', 'manager'},
             child: AdminUsersScreen(),
           ),
+        );
+      case profileSettingsRoute:
+        return MaterialPageRoute(
+          builder: (_) => const ProfileSettingsScreen(),
         );
       default:
         return MaterialPageRoute(builder: (_) => appEntry());

@@ -130,10 +130,12 @@ class _ReportEditorScreenState extends State<ReportEditorScreen> {
     });
 
     try {
-      // Validate that the report has an ID before updating
-      if (updatedReport.id == null) {
+      // Validate that the report has at least one persistent identifier.
+      // Some shared/cloud reports may not have a local SQLite id, but do have
+      // a valid Firestore id and are still editable.
+      if (updatedReport.id == null && updatedReport.firestoreId == null) {
         throw Exception(
-            'Report ID is missing. Cannot update report without ID.');
+            'Report identifiers are missing. Cannot update report without local or cloud ID.');
       }
 
       final reportRepository = context.read<ReportRepository>();

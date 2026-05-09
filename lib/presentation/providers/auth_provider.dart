@@ -127,4 +127,73 @@ class AuthProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  /// Update signed-in user's display name.
+  Future<bool> updateDisplayName(String displayName) async {
+    try {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+
+      await _authService.updateProfile(displayName: displayName.trim());
+      _user = _authService.currentUser;
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Update signed-in user's password.
+  Future<bool> updatePassword(String newPassword) async {
+    try {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+
+      await _authService.updatePassword(newPassword.trim());
+      _user = _authService.currentUser;
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Reauthenticate with current password and then update password.
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+
+      await _authService.changePassword(
+        currentPassword: currentPassword.trim(),
+        newPassword: newPassword.trim(),
+      );
+      _user = _authService.currentUser;
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
 }

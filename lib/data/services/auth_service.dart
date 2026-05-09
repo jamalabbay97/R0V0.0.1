@@ -93,6 +93,34 @@ class AuthService {
     }
   }
 
+  /// Reauthenticate user with current password, then update password.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('No user is currently signed in');
+      }
+      final email = user.email;
+      if (email == null || email.trim().isEmpty) {
+        throw Exception('Current account email is unavailable.');
+      }
+
+      final credential = EmailAuthProvider.credential(
+        email: email.trim(),
+        password: currentPassword,
+      );
+      await user.reauthenticateWithCredential(credential);
+      await user.updatePassword(newPassword);
+    } on FirebaseAuthException catch (e) {
+      throw _handleAuthException(e);
+    } catch (e) {
+      throw Exception('Failed to update password: $e');
+    }
+  }
+
   /// Update user profile
   Future<void> updateProfile({String? displayName, String? photoURL}) async {
     try {

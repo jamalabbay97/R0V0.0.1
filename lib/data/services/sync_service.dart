@@ -156,10 +156,12 @@ class SyncService {
 
   /// Update report locally and sync to cloud
   Future<void> updateReport(Report report) async {
-    // Update local database first
-    await _localDb.updateReport(report);
+    // Update local database when a local row exists.
+    if (report.id != null) {
+      await _localDb.updateReport(report);
+    }
 
-    // Try to sync to cloud if authenticated
+    // Try to sync to cloud if authenticated.
     if (_firestore.isAuthenticated && report.firestoreId != null) {
       try {
         await _firestore.uploadReport(report);

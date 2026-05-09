@@ -4,7 +4,6 @@ import 'package:r0/l10n/app_localizations.dart';
 import 'package:r0/presentation/access_control/access_control_definitions.dart';
 import 'package:r0/presentation/providers/auth_provider.dart';
 import 'package:r0/presentation/providers/language_provider.dart';
-import 'package:r0/presentation/providers/report_access_provider.dart';
 import 'package:r0/presentation/providers/role_provider.dart';
 import 'package:r0/presentation/routing/app_router.dart';
 import 'package:r0/presentation/providers/theme_provider.dart';
@@ -17,11 +16,14 @@ class SettingsScreen extends StatelessWidget {
     final languageProvider = Provider.of<LanguageProvider>(context);
     final roleProvider = context.watch<RoleProvider>();
     final authProvider = context.watch<AuthProvider>();
-    final accessProvider = context.watch<ReportAccessProvider>();
     final currentUser = authProvider.user;
-    final featureDefinitions = accessProvider.definitions;
-    final assignedReports = accessProvider.assignedReportKeys;
-    final visibleReports = accessProvider.visibleReportKeys;
+    final displayName = currentUser?.displayName?.trim();
+    final fallbackEmail = currentUser?.email?.trim();
+    final profileName = (displayName != null && displayName.isNotEmpty)
+        ? displayName
+        : (fallbackEmail != null && fallbackEmail.isNotEmpty)
+            ? fallbackEmail
+            : 'User';
 
     return Scaffold(
       appBar: AppBar(
@@ -68,34 +70,19 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
               const Divider(),
-              const ListTile(
-                title: Text('Feature visibility'),
-                subtitle: Text(
-                  'See every available feature and who can access it.',
+              ListTile(
+                leading: CircleAvatar(
+                  child: Text(
+                    profileName.substring(0, 1).toUpperCase(),
+                  ),
+                ),
+                title: const Text('Profile'),
+                subtitle: const Text('Manage your personal account details.'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).pushNamed(
+                  AppRouter.profileSettingsRoute,
                 ),
               ),
-              ...featureDefinitions.map((definition) {
-                final isAssigned = assignedReports.contains(definition.key);
-                final isVisible = visibleReports.contains(definition.key);
-                final label =
-                    AccessControlDefinitions.reportLabels[definition.key] ??
-                        definition.key;
-                final status = !definition.enabled
-                    ? 'Hidden globally by admin'
-                    : isVisible
-                        ? 'Visible to you'
-                        : isAssigned
-                            ? 'Assigned but globally hidden'
-                            : 'Not assigned to your account';
-
-                return ListTile(
-                  leading: Icon(
-                    isVisible ? Icons.visibility : Icons.visibility_off,
-                  ),
-                  title: Text(label),
-                  subtitle: Text(status),
-                );
-              }),
               const Divider(),
               if (roleProvider.isAdminOrManager)
                 ListTile(
