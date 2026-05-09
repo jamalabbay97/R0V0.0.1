@@ -21,18 +21,25 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   static const List<String> _roles = ['employee', 'manager', 'admin'];
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _userNameController = TextEditingController();
+  final TextEditingController _userEmailController = TextEditingController();
+  final TextEditingController _userPasswordController = TextEditingController();
+  final TextEditingController _managerNameController = TextEditingController();
+  final TextEditingController _managerEmailController = TextEditingController();
+  final TextEditingController _managerPasswordController =
+      TextEditingController();
   final GlobalKey<FormState> _createUserFormKey = GlobalKey<FormState>();
-  String _selectedCreateRole = 'employee';
+  final GlobalKey<FormState> _createManagerFormKey = GlobalKey<FormState>();
   bool _isCreatingUser = false;
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
+    _userNameController.dispose();
+    _userEmailController.dispose();
+    _userPasswordController.dispose();
+    _managerNameController.dispose();
+    _managerEmailController.dispose();
+    _managerPasswordController.dispose();
     super.dispose();
   }
 
@@ -121,16 +128,21 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     return normalized == 'manager' || normalized == 'admin';
   }
 
-  Future<void> _createUserAccount() async {
-    final form = _createUserFormKey.currentState;
+  Future<void> _createUserAccount({
+    required GlobalKey<FormState> formKey,
+    required TextEditingController nameController,
+    required TextEditingController emailController,
+    required TextEditingController passwordController,
+    required String role,
+  }) async {
+    final form = formKey.currentState;
     if (form == null || !form.validate()) {
       return;
     }
 
-    final displayName = _nameController.text.trim();
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-    final role = _selectedCreateRole;
+    final displayName = nameController.text.trim();
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
     final actorRole = context.read<RoleProvider>().role ?? 'employee';
 
     if (actorRole == 'manager' && role == 'admin') {
@@ -181,10 +193,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       if (!mounted) {
         return;
       }
-      _nameController.clear();
-      _emailController.clear();
-      _passwordController.clear();
-      setState(() => _selectedCreateRole = 'employee');
+      nameController.clear();
+      emailController.clear();
+      passwordController.clear();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('User account created for $email.')),
       );
@@ -228,6 +239,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     ).showSnackBar(SnackBar(content: Text('Account deactivated: $email')));
   }
 
+  String _toTitleCase(String value) {
+    if (value.isEmpty) return value;
+    return '${value[0].toUpperCase()}${value.substring(1).toLowerCase()}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final roleProvider = context.watch<RoleProvider>();
@@ -258,27 +274,28 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           };
 
           return ListView(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: [
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Store settings',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+              if (actorRole == 'admin')
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Admin store settings',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Enable/hide report modules globally. Removed modules are deleted from the catalog.',
-                      ),
-                      const SizedBox(height: 12),
-                      ...AccessControlDefinitions.allReportKeys.map((key) {
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Enable/hide report modules globally. Removed modules are deleted from the catalog.',
+                        ),
+                        const SizedBox(height: 14),
+                        ...AccessControlDefinitions.allReportKeys.map((key) {
                         final isConfigured = activeCatalog.contains(key);
                         final isEnabled = isConfigured
                             ? ((reportSnapshot.data?.docs
@@ -287,39 +304,74 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                 true)
                             : false;
 
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(
-                            AccessControlDefinitions.reportLabels[key] ?? key,
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
                           ),
-                          subtitle: Text(
-                            isConfigured
-                                ? (isEnabled ? 'Visible' : 'Hidden')
-                                : 'Not in catalog',
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .outline
+                                  .withValues(alpha: 0.25),
+                            ),
+                            borderRadius: BorderRadius.circular(14),
                           ),
-                          leading: Switch(
-                            value: isEnabled,
-                            onChanged: isConfigured
-                                ? (value) => _setReportEnabled(key, value)
-                                : null,
-                          ),
-                          trailing: isConfigured
-                              ? IconButton(
-                                  tooltip: 'Remove from catalog',
-                                  icon: const Icon(Icons.delete_outline),
-                                  onPressed: () => _removeFromCatalog(key),
-                                )
-                              : TextButton.icon(
-                                  onPressed: () => _addReportToCatalog(key),
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Add'),
+                          child: Row(
+                            children: [
+                              Switch(
+                                value: isEnabled,
+                                onChanged: isConfigured
+                                    ? (value) => _setReportEnabled(key, value)
+                                    : null,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      AccessControlDefinitions.reportLabels[
+                                              key] ??
+                                          key,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      isConfigured
+                                          ? (isEnabled ? 'Visible' : 'Hidden')
+                                          : 'Not in catalog',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall,
+                                    ),
+                                  ],
                                 ),
+                              ),
+                              const SizedBox(width: 8),
+                              isConfigured
+                                  ? IconButton(
+                                      tooltip: 'Remove from catalog',
+                                      icon: const Icon(Icons.delete_outline),
+                                      onPressed: () => _removeFromCatalog(key),
+                                    )
+                                  : TextButton.icon(
+                                      onPressed: () => _addReportToCatalog(key),
+                                      icon: const Icon(Icons.add),
+                                      label: const Text('Add'),
+                                    ),
+                            ],
+                          ),
                         );
-                      }),
-                    ],
+                        }),
+                      ],
+                    ),
                   ),
                 ),
-              ),
               const SizedBox(height: 12),
               if (isActorManager)
                 const Card(
@@ -333,104 +385,159 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 ),
               if (isActorManager) const SizedBox(height: 12),
               Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Form(
-                    key: _createUserFormKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Add new user account',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                child: ExpansionTile(
+                  title: const Text(
+                    'Add user account',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  subtitle: const Text('Tap to expand and fill in details'),
+                  childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  children: [
+                    Form(
+                      key: _createUserFormKey,
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _userNameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Display name',
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _nameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Display name',
-                            border: OutlineInputBorder(),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: _userEmailController,
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                            ),
+                            validator: (value) {
+                              final text = (value ?? '').trim();
+                              if (text.isEmpty || !text.contains('@')) {
+                                return 'Please enter a valid email.';
+                              }
+                              return null;
+                            },
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        TextFormField(
-                          controller: _emailController,
-                          decoration: const InputDecoration(
-                            labelText: 'Email',
-                            border: OutlineInputBorder(),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: _userPasswordController,
+                            obscureText: true,
+                            decoration: const InputDecoration(
+                              labelText: 'Temporary password',
+                            ),
+                            validator: (value) {
+                              final text = (value ?? '').trim();
+                              if (text.length < 6) {
+                                return 'Password must be at least 6 characters.';
+                              }
+                              return null;
+                            },
                           ),
-                          validator: (value) {
-                            final text = (value ?? '').trim();
-                            if (text.isEmpty || !text.contains('@')) {
-                              return 'Please enter a valid email.';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 10),
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Temporary password',
-                            border: OutlineInputBorder(),
+                          const SizedBox(height: 12),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: FilledButton.icon(
+                              onPressed: _isCreatingUser
+                                  ? null
+                                  : () => _createUserAccount(
+                                        formKey: _createUserFormKey,
+                                        nameController: _userNameController,
+                                        emailController: _userEmailController,
+                                        passwordController:
+                                            _userPasswordController,
+                                        role: 'employee',
+                                      ),
+                              icon: const Icon(Icons.person_add_alt_1),
+                              label: const Text('Create user account'),
+                            ),
                           ),
-                          validator: (value) {
-                            final text = (value ?? '').trim();
-                            if (text.length < 6) {
-                              return 'Password must be at least 6 characters.';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 10),
-                        DropdownButtonFormField<String>(
-                          initialValue: _selectedCreateRole,
-                          decoration: const InputDecoration(
-                            labelText: 'Role',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: _roles
-                              .where(
-                                (role) => !isActorManager || role != 'admin',
-                              )
-                              .map(
-                                (role) => DropdownMenuItem<String>(
-                                  value: role,
-                                  child: Text(role),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: _isCreatingUser
-                              ? null
-                              : (value) {
-                                  if (value == null) return;
-                                  setState(() => _selectedCreateRole = value);
-                                },
-                        ),
-                        const SizedBox(height: 12),
-                        FilledButton.icon(
-                          onPressed:
-                              _isCreatingUser ? null : _createUserAccount,
-                          icon: _isCreatingUser
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.person_add_alt_1),
-                          label: Text(
-                            _isCreatingUser ? 'Creating...' : 'Create account',
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                child: ExpansionTile(
+                  initiallyExpanded: false,
+                  enabled: !isActorManager,
+                  title: Text(
+                    'Add manager account',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: isActorManager
+                          ? Theme.of(context).disabledColor
+                          : null,
                     ),
                   ),
+                  subtitle: Text(
+                    isActorManager
+                        ? 'Only admins can create manager accounts'
+                        : 'Tap to expand and fill in details',
+                  ),
+                  childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  children: [
+                    Form(
+                      key: _createManagerFormKey,
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _managerNameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Display name',
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: _managerEmailController,
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                            ),
+                            validator: (value) {
+                              final text = (value ?? '').trim();
+                              if (text.isEmpty || !text.contains('@')) {
+                                return 'Please enter a valid email.';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: _managerPasswordController,
+                            obscureText: true,
+                            decoration: const InputDecoration(
+                              labelText: 'Temporary password',
+                            ),
+                            validator: (value) {
+                              final text = (value ?? '').trim();
+                              if (text.length < 6) {
+                                return 'Password must be at least 6 characters.';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: FilledButton.icon(
+                              onPressed: _isCreatingUser || isActorManager
+                                  ? null
+                                  : () => _createUserAccount(
+                                        formKey: _createManagerFormKey,
+                                        nameController: _managerNameController,
+                                        emailController: _managerEmailController,
+                                        passwordController:
+                                            _managerPasswordController,
+                                        role: 'manager',
+                                      ),
+                              icon: const Icon(Icons.person_add_alt_1),
+                              label: const Text('Create manager account'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 12),
@@ -438,7 +545,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 padding: EdgeInsets.symmetric(horizontal: 4),
                 child: Text(
                   'Users',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                 ),
               ),
               const SizedBox(height: 8),
@@ -471,8 +578,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     );
                   }
 
-                  return Column(
-                    children: docs.map((doc) {
+                  Widget buildUserDetails(
+                    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+                  ) {
                       final data = doc.data();
                       final authUser = FirebaseAuth.instance.currentUser;
                       final isCurrentUser = authUser?.uid == doc.id;
@@ -530,238 +638,275 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 6),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          name,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                        child: ExpansionTile(
+                          title: Text(
+                            name,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          subtitle: Text(email),
+                          childrenPadding: const EdgeInsets.fromLTRB(
+                            14,
+                            0,
+                            14,
+                            14,
+                          ),
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'uid: ${doc.id}',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6),
                                         ),
-                                        Text(email),
-                                        Text(
-                                          'uid: ${doc.id}',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.copyWith(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurface
-                                                    .withValues(alpha: 0.6),
-                                              ),
-                                        ),
-                                      ],
-                                    ),
                                   ),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      DropdownButton<String>(
-                                        value: _roles.contains(currentRole)
-                                            ? currentRole
-                                            : 'employee',
-                                        items: _roles
-                                            .map(
-                                              (role) =>
-                                                  DropdownMenuItem<String>(
-                                                value: role,
-                                                child: Text(role),
-                                              ),
-                                            )
-                                            .toList(),
-                                        onChanged: isReadonlyAccount
-                                            ? null
-                                            : (value) async {
-                                                if (value == null ||
-                                                    value == currentRole) {
-                                                  return;
-                                                }
-                                                if (isActorManager &&
-                                                    value == 'admin') {
-                                                  if (!mounted) {
-                                                    return;
-                                                  }
-                                                  ScaffoldMessenger.of(context)
-                                                      .showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text(
-                                                        'Managers cannot assign admin role.',
-                                                      ),
-                                                    ),
-                                                  );
-                                                  return;
-                                                }
-                                                await _updateRole(
-                                                  doc.id,
-                                                  value,
-                                                );
-                                              },
-                                      ),
-                                      if (isPrimaryAccount)
-                                        const Padding(
-                                          padding: EdgeInsets.only(top: 6),
-                                          child: Chip(
-                                            label: Text(
-                                              'Primary account (locked)',
-                                            ),
-                                          ),
+                                ),
+                                DropdownButton<String>(
+                                  value: _roles.contains(currentRole)
+                                      ? currentRole
+                                      : 'employee',
+                                  items: _roles
+                                      .map(
+                                        (role) => DropdownMenuItem<String>(
+                                          value: role,
+                                          child: Text(_toTitleCase(role)),
                                         ),
-                                      if (isActorManager && isTargetManager)
-                                        const Padding(
-                                          padding: EdgeInsets.only(top: 6),
-                                          child: Chip(
-                                            label: Text('Manager (locked)'),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton.icon(
-                                  onPressed: isReadonlyAccount || isCurrentUser
+                                      )
+                                      .toList(),
+                                  onChanged: isReadonlyAccount
                                       ? null
-                                      : () async {
-                                          final confirmed =
-                                              await showDialog<bool>(
-                                            context: context,
-                                            builder: (dialogContext) =>
-                                                AlertDialog(
-                                              title: const Text(
-                                                'Deactivate account?',
-                                              ),
-                                              content: Text(
-                                                'This will block $email from using the app until reactivated.',
-                                              ),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () => Navigator.of(
-                                                    dialogContext,
-                                                  ).pop(false),
-                                                  child: const Text('Cancel'),
-                                                ),
-                                                FilledButton(
-                                                  onPressed: () => Navigator.of(
-                                                    dialogContext,
-                                                  ).pop(true),
-                                                  child: const Text(
-                                                    'Deactivate',
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                          if (confirmed != true) {
+                                      : (value) async {
+                                          if (value == null ||
+                                              value == currentRole) {
                                             return;
                                           }
-                                          await _deactivateUser(
-                                            userId: doc.id,
-                                            email: email,
-                                          );
+                                          if (isActorManager &&
+                                              value == 'admin') {
+                                            if (!mounted) {
+                                              return;
+                                            }
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Managers cannot assign admin role.',
+                                                ),
+                                              ),
+                                            );
+                                            return;
+                                          }
+                                          await _updateRole(doc.id, value);
                                         },
-                                  icon: const Icon(Icons.delete_outline),
-                                  label: const Text('Delete account'),
+                                ),
+                              ],
+                            ),
+                            if (isPrimaryAccount)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 6),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Chip(
+                                    label: Text('Primary account (locked)'),
+                                  ),
                                 ),
                               ),
-                              const Divider(height: 20),
-                              const Text(
-                                'Assigned reports',
-                                style: TextStyle(fontWeight: FontWeight.w600),
+                            if (isActorManager && isTargetManager)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 6),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Chip(
+                                    label: Text('Manager (locked)'),
+                                  ),
+                                ),
                               ),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 6,
-                                children: AccessControlDefinitions.allReportKeys
-                                    .map((key) {
-                                  final isVisibleInCatalog =
-                                      activeCatalog.contains(key);
-                                  final selected = (currentRole == 'admin' ||
-                                          assignedReports.contains(key)) &&
-                                      isVisibleInCatalog;
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton.icon(
+                                onPressed: isReadonlyAccount || isCurrentUser
+                                    ? null
+                                    : () async {
+                                        final confirmed = await showDialog<bool>(
+                                          context: context,
+                                          builder: (dialogContext) => AlertDialog(
+                                            title: const Text(
+                                              'Deactivate account?',
+                                            ),
+                                            content: Text(
+                                              'This will block $email from using the app until reactivated.',
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.of(
+                                                  dialogContext,
+                                                ).pop(false),
+                                                child: const Text('Cancel'),
+                                              ),
+                                              FilledButton(
+                                                onPressed: () => Navigator.of(
+                                                  dialogContext,
+                                                ).pop(true),
+                                                child: const Text('Deactivate'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        if (confirmed != true) {
+                                          return;
+                                        }
+                                        await _deactivateUser(
+                                          userId: doc.id,
+                                          email: email,
+                                        );
+                                      },
+                                icon: const Icon(Icons.delete_outline),
+                                label: const Text('Delete account'),
+                              ),
+                            ),
+                            const Divider(height: 20),
+                            const Text(
+                              'Assigned reports',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
+                              children:
+                                  AccessControlDefinitions.allReportKeys.map((key) {
+                                final isVisibleInCatalog =
+                                    activeCatalog.contains(key);
+                                final selected = (currentRole == 'admin' ||
+                                        assignedReports.contains(key)) &&
+                                    isVisibleInCatalog;
 
-                                  return FilterChip(
-                                    label: Text(
-                                      AccessControlDefinitions
-                                              .reportLabels[key] ??
-                                          key,
-                                    ),
-                                    selected: selected,
-                                    onSelected: !isVisibleInCatalog ||
-                                            currentRole == 'admin' ||
-                                            isReadonlyAccount
-                                        ? null
-                                        : (next) async {
-                                            final nextReports =
-                                                (rawAssignedReports ?? {})
-                                                    .toSet();
-                                            if (next) {
-                                              nextReports.add(key);
-                                            } else {
-                                              nextReports.remove(key);
-                                            }
-                                            await _setUserReports(
-                                              doc.id,
-                                              nextReports,
-                                              reportCreationEntityId:
-                                                  reportCreationEntityId,
-                                            );
-                                          },
-                                  );
-                                }).toList(),
-                              ),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'Permissions (what this user can do)',
-                                style: TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 6,
-                                children: AccessControlDefinitions
-                                    .capabilityLabels.entries
-                                    .map((entry) {
-                                  final selected =
-                                      effectiveCapabilities.contains(entry.key);
-                                  return FilterChip(
-                                    label: Text(entry.value),
-                                    selected: selected,
-                                    onSelected: currentRole == 'admin' ||
-                                            isReadonlyAccount
-                                        ? null
-                                        : (next) async {
-                                            final nextCapabilities =
-                                                (rawCapabilities ?? {}).toSet();
-                                            if (next) {
-                                              nextCapabilities.add(entry.key);
-                                            } else {
-                                              nextCapabilities
-                                                  .remove(entry.key);
-                                            }
-                                            await _setUserCapabilities(
-                                              doc.id,
-                                              nextCapabilities,
-                                            );
-                                          },
-                                  );
-                                }).toList(),
-                              ),
-                            ],
-                          ),
+                                return FilterChip(
+                                  label: Text(
+                                    AccessControlDefinitions.reportLabels[key] ??
+                                        key,
+                                  ),
+                                  selected: selected,
+                                  onSelected: !isVisibleInCatalog ||
+                                          currentRole == 'admin' ||
+                                          isReadonlyAccount
+                                      ? null
+                                      : (next) async {
+                                          final nextReports =
+                                              (rawAssignedReports ?? {}).toSet();
+                                          if (next) {
+                                            nextReports.add(key);
+                                          } else {
+                                            nextReports.remove(key);
+                                          }
+                                          await _setUserReports(
+                                            doc.id,
+                                            nextReports,
+                                            reportCreationEntityId:
+                                                reportCreationEntityId,
+                                          );
+                                        },
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Permissions (what this user can do)',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
+                              children: AccessControlDefinitions
+                                  .capabilityLabels.entries
+                                  .map((entry) {
+                                final selected =
+                                    effectiveCapabilities.contains(entry.key);
+                                return FilterChip(
+                                  label: Text(entry.value),
+                                  selected: selected,
+                                  onSelected:
+                                      currentRole == 'admin' || isReadonlyAccount
+                                          ? null
+                                          : (next) async {
+                                              final nextCapabilities =
+                                                  (rawCapabilities ?? {}).toSet();
+                                              if (next) {
+                                                nextCapabilities.add(entry.key);
+                                              } else {
+                                                nextCapabilities.remove(entry.key);
+                                              }
+                                              await _setUserCapabilities(
+                                                doc.id,
+                                                nextCapabilities,
+                                              );
+                                            },
+                                );
+                              }).toList(),
+                            ),
+                          ],
                         ),
                       );
-                    }).toList(),
+                  }
+
+                  Widget buildCategorySection(
+                    String title,
+                    List<QueryDocumentSnapshot<Map<String, dynamic>>> members,
+                  ) {
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      child: ExpansionTile(
+                        initiallyExpanded: title == 'Admin',
+                        title: Text(
+                          '$title (${members.length})',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        subtitle: Text(
+                          members.isEmpty
+                              ? 'No accounts in this category'
+                              : 'Tap to show accounts',
+                        ),
+                        childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                        children: members.isEmpty
+                            ? const [
+                                Padding(
+                                  padding: EdgeInsets.fromLTRB(8, 4, 8, 8),
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text('No saved accounts.'),
+                                  ),
+                                ),
+                              ]
+                            : members.map(buildUserDetails).toList(),
+                      ),
+                    );
+                  }
+
+                  final adminUsers = docs.where((d) {
+                    final role = (d.data()['role'] as String?)?.toLowerCase();
+                    return role == 'admin';
+                  }).toList();
+                  final managerUsers = docs.where((d) {
+                    final role = (d.data()['role'] as String?)?.toLowerCase();
+                    return role == 'manager';
+                  }).toList();
+                  final employeeUsers = docs.where((d) {
+                    final role = (d.data()['role'] as String?)?.toLowerCase();
+                    return role != 'admin' && role != 'manager';
+                  }).toList();
+
+                  return Column(
+                    children: [
+                      buildCategorySection('Admin', adminUsers),
+                      buildCategorySection('Manager', managerUsers),
+                      buildCategorySection('User', employeeUsers),
+                    ],
                   );
                 },
               ),
