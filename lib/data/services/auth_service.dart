@@ -5,6 +5,57 @@ import 'package:flutter/foundation.dart';
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  bool _webPersistenceInitialized = false;
+
+  Future<void> _ensureWebPersistence() async {
+    if (!kIsWeb || _webPersistenceInitialized) {
+      return;
+    }
+
+    // Use SESSION first on web to avoid localStorage failures seen on
+    // Android mobile browsers/WebViews (including some Xiaomi/Redmi devices).
+    final persistenceModes = [
+      Persistence.SESSION,
+      Persistence.NONE,
+    ];
+
+    for (final mode in persistenceModes) {
+      try {
+        await _auth.setPersistence(mode);
+        if (kDebugMode) {
+          debugPrint('Firebase Auth persistence set to: ${mode.name}');
+        }
+        break; // Successfully set persistence
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('Failed to set Firebase Auth persistence to ${mode.name}: $e');
+        }
+        // If it's the last mode and it failed, we just move on
+        if (mode == Persistence.NONE) {
+          if (kDebugMode) {
+            debugPrint('All Firebase Auth persistence modes failed.');
+          }
+        }
+      }
+    }
+
+    _webPersistenceInitialized = true;
+  }
+
+  bool _isWebStorageSecurityError(Object error) {
+    if (!kIsWeb) {
+      return false;
+    }
+
+    final text = error.toString().toLowerCase();
+    return text.contains('securityerror') ||
+        text.contains('localstorage') ||
+        text.contains('sessionstorage') ||
+        text.contains('access is denied') ||
+        text.contains('indexeddb') ||
+        text.contains('quotaexceedederror');
+  }
+
   /// Get current user
   User? get currentUser => _auth.currentUser;
 
@@ -20,14 +71,31 @@ class AuthService {
     required String password,
   }) async {
     try {
+      await _ensureWebPersistence();
       final credential = await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
       return credential;
-    } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
     } catch (e) {
+      if (_isWebStorageSecurityError(e)) {
+        try {
+          await _auth.setPersistence(Persistence.NONE);
+          final retryCredential = await _auth.signInWithEmailAndPassword(
+            email: email.trim(),
+            password: password,
+          );
+          return retryCredential;
+        } catch (_) {
+          throw Exception(
+            'This browser/device is blocking secure local storage needed for web sign-in. '
+            'Please disable private mode or app-level tracking/privacy restrictions, then try again.',
+          );
+        }
+      }
+      if (e is FirebaseAuthException) {
+        throw _handleAuthException(e);
+      }
       throw Exception('Failed to sign in: $e');
     }
   }
@@ -39,6 +107,7 @@ class AuthService {
     String? displayName,
   }) async {
     try {
+      await _ensureWebPersistence();
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
@@ -51,9 +120,31 @@ class AuthService {
       }
 
       return credential;
-    } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
     } catch (e) {
+      if (_isWebStorageSecurityError(e)) {
+        try {
+          await _auth.setPersistence(Persistence.NONE);
+          final retryCredential = await _auth.createUserWithEmailAndPassword(
+            email: email.trim(),
+            password: password,
+          );
+
+          if (displayName != null && retryCredential.user != null) {
+            await retryCredential.user!.updateDisplayName(displayName);
+            await retryCredential.user!.reload();
+          }
+
+          return retryCredential;
+        } catch (_) {
+          throw Exception(
+            'This browser/device is blocking secure local storage needed for web sign-up. '
+            'Please disable private mode or app-level tracking/privacy restrictions, then try again.',
+          );
+        }
+      }
+      if (e is FirebaseAuthException) {
+        throw _handleAuthException(e);
+      }
       throw Exception('Failed to sign up: $e');
     }
   }
@@ -176,7 +267,8 @@ class AuthService {
       case 'operation-not-allowed':
         return Exception('This operation is not allowed.');
       case 'requires-recent-login':
-        return Exception('This operation requires recent authentication. Please log in again.');
+        return Exception(
+            'This operation requires recent authentication. Please log in again.');
       default:
         if (kDebugMode) {
           debugPrint('Firebase Auth Error: ${e.code} - ${e.message}');

@@ -1,17 +1,31 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Permissions for location and internet access -->
+    <!-- Core permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
+    <!-- Storage: scoped storage is enforced on Android 10+ (API 29+).
+         WRITE_EXTERNAL_STORAGE has no effect on API 29+.
+         READ_EXTERNAL_STORAGE is restricted on API 33+; use READ_MEDIA_* instead. -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <!-- Android 13+ granular media permissions (API 33+) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     
     <application
         android:label="R0 - Workflow Reports"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:theme="@style/LaunchTheme">
+        android:theme="@style/LaunchTheme"
+        android:hardwareAccelerated="true"
+        android:requestLegacyExternalStorage="false">
         <activity
             android:name=".MainActivity"
             android:exported="true"

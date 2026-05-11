@@ -10,7 +10,6 @@ plugins {
 android {
     namespace = "com.example.R0"
     compileSdk = 36
-    buildToolsVersion = "36.0.0"
     ndkVersion = "28.2.13676358"
 
     compileOptions {
@@ -18,16 +17,14 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
+    // Migrated to compilerOptions block at top level
+
 
     defaultConfig {
         // Application ID - Using existing Firebase configuration
         applicationId = "com.example.R0"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // Android 10+ (API 29) minimum — required for Firebase Auth, scoped storage, etc.
+        minSdk = 29
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -41,10 +38,17 @@ android {
         }
     }
 
-    aaptOptions {
+    androidResources {
         ignoreAssetsPattern = "!x86:!*ffprobe"
     }
 }
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
 
 flutter {
     source = "../.."

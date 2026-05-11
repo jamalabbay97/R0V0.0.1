@@ -3,6 +3,7 @@ import 'package:r0/domain/repositories/report_repository.dart';
 import 'package:r0/data/services/database_helper.dart';
 import 'package:r0/data/services/firestore_service.dart';
 import 'package:r0/data/services/sync_service.dart';
+import 'package:flutter/foundation.dart';
 
 class ReportRepositoryImpl implements ReportRepository {
   final DatabaseHelper _databaseHelper;
@@ -13,14 +14,26 @@ class ReportRepositoryImpl implements ReportRepository {
 
   Future<void> _syncIfAuthenticated() async {
     if (_firestoreService.isAuthenticated) {
-      await _syncService.performFullSync();
+      try {
+        await _syncService.performFullSync();
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('Cloud sync failed, continuing with local data: $e');
+        }
+      }
     }
   }
 
   @override
   Future<int> insertReport(Report report) async {
     if (_firestoreService.isAuthenticated) {
-      return _syncService.saveReport(report);
+      try {
+        return await _syncService.saveReport(report);
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('Cloud-backed save failed, writing local only: $e');
+        }
+      }
     }
 
     return _databaseHelper.insertReport(report);

@@ -14,6 +14,10 @@ class DatabaseHelper {
   final GoogleSheetsService _sheetsService = GoogleSheetsService();
   static const String _webReportsKey = 'reports_web_storage';
   static const String _webNextIdKey = 'reports_web_next_id';
+  static final List<Map<String, dynamic>> _webMemoryReports =
+      <Map<String, dynamic>>[];
+  static int _webMemoryNextId = 1;
+  static bool _webPersistenceUnavailable = false;
 
   factory DatabaseHelper() => _instance;
 
@@ -208,11 +212,14 @@ class DatabaseHelper {
 
   Future<int> deleteReport(int id) async {
     if (kIsWeb) {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = await _getWebPrefsSafely();
       final storedMaps = await _readWebReportMaps(prefs);
       final initialLength = storedMaps.length;
       storedMaps.removeWhere((map) => map['id'] == id);
       await _writeWebReportMaps(prefs, storedMaps);
+      if (_webMemoryNextId <= id) {
+        _webMemoryNextId = id + 1;
+      }
       return initialLength - storedMaps.length;
     }
     final db = await database;
@@ -234,18 +241,18 @@ class DatabaseHelper {
   }
 
   Future<int> _insertWebReport(Report report) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _getWebPrefsSafely();
     final storedMaps = await _readWebReportMaps(prefs);
-    final nextId = prefs.getInt(_webNextIdKey) ?? 1;
+    final nextId = _readWebNextId(prefs);
     final reportWithId = report.copyWith(id: nextId);
     storedMaps.add(reportWithId.toMap());
     await _writeWebReportMaps(prefs, storedMaps);
-    await prefs.setInt(_webNextIdKey, nextId + 1);
+    await _writeWebNextId(prefs, nextId + 1);
     return nextId;
   }
 
   Future<List<Report>> _getWebReports() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _getWebPrefsSafely();
     final storedMaps = await _readWebReportMaps(prefs);
     final reports = storedMaps.map(Report.fromMap).toList();
     reports.sort(_compareReports);
@@ -257,7 +264,7 @@ class DatabaseHelper {
       throw ArgumentError('Cannot update report without an id.');
     }
 
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _getWebPrefsSafely();
     final storedMaps = await _readWebReportMaps(prefs);
     final index = storedMaps.indexWhere((map) => map['id'] == report.id);
 
@@ -271,28 +278,99 @@ class DatabaseHelper {
   }
 
   Future<List<Map<String, dynamic>>> _readWebReportMaps(
-    SharedPreferences prefs,
+    SharedPreferences? prefs,
   ) {
+    if (prefs == null || _webPersistenceUnavailable) {
+      return Future.value(
+        _webMemoryReports
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList(),
+      );
+    }
+
     final jsonString = prefs.getString(_webReportsKey);
     if (jsonString == null || jsonString.isEmpty) {
       return Future.value(<Map<String, dynamic>>[]);
     }
 
-    final decoded = jsonDecode(jsonString);
-    if (decoded is! List) {
-      return Future.value(<Map<String, dynamic>>[]);
-    }
+    try {
+      final decoded = jsonDecode(jsonString);
+      if (decoded is! List) {
+        return Future.value(<Map<String, dynamic>>[]);
+      }
 
-    return Future.value(
-      decoded.map((item) => Map<String, dynamic>.from(item as Map)).toList(),
-    );
+      return Future.value(
+        decoded.map((item) => Map<String, dynamic>.from(item as Map)).toList(),
+      );
+    } catch (_) {
+      // Some older mobile browsers/WebViews may leave partially written values.
+      // Falling back avoids breaking report reads and subsequent writes.
+      _webPersistenceUnavailable = true;
+      return Future.value(
+        _webMemoryReports
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList(),
+      );
+    }
   }
 
   Future<void> _writeWebReportMaps(
-    SharedPreferences prefs,
+    SharedPreferences? prefs,
     List<Map<String, dynamic>> reports,
   ) async {
-    await prefs.setString(_webReportsKey, jsonEncode(reports));
+    if (prefs == null || _webPersistenceUnavailable) {
+      _webMemoryReports
+        ..clear()
+        ..addAll(reports.map((item) => Map<String, dynamic>.from(item)));
+      if (reports.isNotEmpty) {
+        final maxId = reports
+            .map((item) => item['id'])
+            .whereType<int>()
+            .fold<int>(0, (previous, id) => id > previous ? id : previous);
+        _webMemoryNextId = maxId + 1;
+      }
+      return;
+    }
+
+    try {
+      await prefs.setString(_webReportsKey, jsonEncode(reports));
+    } catch (_) {
+      _webPersistenceUnavailable = true;
+      _webMemoryReports
+        ..clear()
+        ..addAll(reports.map((item) => Map<String, dynamic>.from(item)));
+    }
+  }
+
+  Future<SharedPreferences?> _getWebPrefsSafely() async {
+    if (_webPersistenceUnavailable) {
+      return null;
+    }
+    try {
+      return await SharedPreferences.getInstance();
+    } catch (_) {
+      _webPersistenceUnavailable = true;
+      return null;
+    }
+  }
+
+  int _readWebNextId(SharedPreferences? prefs) {
+    if (prefs == null || _webPersistenceUnavailable) {
+      return _webMemoryNextId;
+    }
+    return prefs.getInt(_webNextIdKey) ?? _webMemoryNextId;
+  }
+
+  Future<void> _writeWebNextId(SharedPreferences? prefs, int nextId) async {
+    _webMemoryNextId = nextId;
+    if (prefs == null || _webPersistenceUnavailable) {
+      return;
+    }
+    try {
+      await prefs.setInt(_webNextIdKey, nextId);
+    } catch (_) {
+      _webPersistenceUnavailable = true;
+    }
   }
 
   int _compareReports(Report a, Report b) {

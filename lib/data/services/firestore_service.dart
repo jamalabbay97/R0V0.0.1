@@ -203,7 +203,19 @@ class FirestoreService {
       if (kDebugMode) {
         debugPrint('Failed to configure Firestore offline persistence: $e');
       }
-      // Persistence might already be configured, which is fine
+      // On restrictive mobile browsers/WebViews (or private mode), IndexedDB
+      // can be blocked. Fall back to non-persistent mode to keep reads/writes
+      // and real-time updates functional instead of failing startup flows.
+      if (kIsWeb) {
+        try {
+          _firestore.settings = const Settings(
+            persistenceEnabled: false,
+            cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+          );
+        } catch (_) {
+          // Ignore: Firestore may already be initialized with existing settings.
+        }
+      }
     }
   }
 
