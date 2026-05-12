@@ -78,7 +78,23 @@ class ReportRepositoryImpl implements ReportRepository {
   }
 
   @override
-  Future<int> deleteReport(int id) {
+  Future<int> deleteReport(int id) async {
+    final report = await _databaseHelper.getReport(id);
+    if (report == null) {
+      return 0;
+    }
+
+    if (_firestoreService.isAuthenticated) {
+      try {
+        await _syncService.deleteReport(report);
+        return 1;
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('Cloud-aware delete failed, deleting local only: $e');
+        }
+      }
+    }
+
     return _databaseHelper.deleteReport(id);
   }
 

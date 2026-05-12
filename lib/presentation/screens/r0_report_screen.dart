@@ -28,6 +28,7 @@ class VentilationItem {
   int code;
   String category;
   String label;
+  String stopDetail;
   String duree;
   String note;
   String originalStart;
@@ -36,6 +37,7 @@ class VentilationItem {
       {required this.code,
       this.category = '',
       required this.label,
+      this.stopDetail = '',
       this.duree = '',
       this.note = '',
       this.originalStart = '',
@@ -330,6 +332,7 @@ class R0ReportState extends State<R0Report> {
                 code: 0,
                 category: a['Catégorie']?.toString() ?? '',
                 label: a['Arret']?.toString() ?? '',
+                stopDetail: (a['Detail'] ?? a['Détail'])?.toString() ?? '',
                 duree: (a['OriginalStart'] ?? a['Début'])?.toString() ?? '',
                 note: (a['OriginalEnd'] ?? a['Fin'])?.toString() ?? '',
                 originalStart:
@@ -506,28 +509,34 @@ class R0ReportState extends State<R0Report> {
 
   String _getLocalizedReasonLabel(String key, AppLocalizations l10n) {
     final map = {
-      'ARRET CARREAU INDUSTRIEL': AppLocalizations.of(context)!.stopIndustrialArea,
+      'ARRET CARREAU INDUSTRIEL':
+          AppLocalizations.of(context)!.stopIndustrialArea,
       'COUPURE GENERALE DU COURANT': AppLocalizations.of(context)!.stopPowerCut,
       'GREVE': AppLocalizations.of(context)!.stopStrike,
       'INTEMPERIES': AppLocalizations.of(context)!.stopWeather,
       'STOCKS PLEINS': AppLocalizations.of(context)!.stopFullStocks,
       'J. FERIES OU HEBDOMADAIRES': AppLocalizations.of(context)!.stopHolidays,
-      'ARRET PAR LA CENTRALE (M.ENERGIE)': AppLocalizations.of(context)!.stopPowerPlant,
+      'ARRET PAR LA CENTRALE (M.ENERGIE)':
+          AppLocalizations.of(context)!.stopPowerPlant,
       'CONTROLE': AppLocalizations.of(context)!.stopControl,
-      'DEFAUT ELEC. (C.CRAME, RESEAU)': AppLocalizations.of(context)!.stopElecFault,
+      'DEFAUT ELEC. (C.CRAME, RESEAU)':
+          AppLocalizations.of(context)!.stopElecFault,
       'PANNE MECANIQUE': AppLocalizations.of(context)!.stopMechBreakdown,
       'PANNE ELECTRIQUE': AppLocalizations.of(context)!.stopElecBreakdown,
-      'INTERVENTION ATELIER PNEUMATIQUE': AppLocalizations.of(context)!.stopTireWorkshop,
+      'INTERVENTION ATELIER PNEUMATIQUE':
+          AppLocalizations.of(context)!.stopTireWorkshop,
       'ENTRETIEN SYSTEMATIQUE': AppLocalizations.of(context)!.stopMaintenance,
       'APPOINT (HUILE, GAZOL, EAU)': AppLocalizations.of(context)!.stopRefill,
       'GRAISSAGE': AppLocalizations.of(context)!.stopGreasing,
-      'ARRET ELEC. INSTALATION FIXES': AppLocalizations.of(context)!.stopFixedInstallElec,
+      'ARRET ELEC. INSTALATION FIXES':
+          AppLocalizations.of(context)!.stopFixedInstallElec,
       'MANQUE CAMIONS': AppLocalizations.of(context)!.stopNoTrucks,
       'MANQUE BULL': AppLocalizations.of(context)!.stopNoBull,
       'MANQUE MECANICIEN': AppLocalizations.of(context)!.stopNoMechanic,
       'MANQUE D\'OUTILS DE TRAVAIL': AppLocalizations.of(context)!.stopNoTools,
       'MACHINE A L\'ARRET': AppLocalizations.of(context)!.stopMachineStopped,
-      'PANNE ENGIN DEVANT MACHINE': AppLocalizations.of(context)!.stopBreakdownFront,
+      'PANNE ENGIN DEVANT MACHINE':
+          AppLocalizations.of(context)!.stopBreakdownFront,
       'RELEVE': AppLocalizations.of(context)!.stopShiftChange,
       'EXECUTION PLATE FORME': AppLocalizations.of(context)!.stopPlatformExec,
       'DEPLACEMENT': AppLocalizations.of(context)!.stopMove,
@@ -537,7 +546,8 @@ class R0ReportState extends State<R0Report> {
       'MANQUE CONDUCTEUR': AppLocalizations.of(context)!.stopNoDriver,
       'BRIQUET': AppLocalizations.of(context)!.stopBreak,
       'PISTES (INTEMPERIES EXCLUES)': AppLocalizations.of(context)!.stopTracks,
-      'ARRETS MECA. INSTALATIONS FIXES': AppLocalizations.of(context)!.stopFixedInstallMech,
+      'ARRETS MECA. INSTALATIONS FIXES':
+          AppLocalizations.of(context)!.stopFixedInstallMech,
       'TELESCOPAGE': AppLocalizations.of(context)!.stopTelescoping,
       'EXCAVATION PURE': AppLocalizations.of(context)!.stopPureExcavation,
       'TERASSEMENT PUR': AppLocalizations.of(context)!.stopPureEarthworks,
@@ -561,7 +571,9 @@ class R0ReportState extends State<R0Report> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isEditing ? AppLocalizations.of(context)!.modifierR0 : AppLocalizations.of(context)!.nouveauRapportR0),
+        title: Text(widget.isEditing
+            ? AppLocalizations.of(context)!.modifierR0
+            : AppLocalizations.of(context)!.nouveauRapportR0),
       ),
       body: Center(
         child: Container(
@@ -635,7 +647,9 @@ class R0ReportState extends State<R0Report> {
           if (!isFirst) const SizedBox(width: 16),
           Expanded(
             child: OCPButton(
-              text: isLast ? AppLocalizations.of(context)!.submit : AppLocalizations.of(context)!.next,
+              text: isLast
+                  ? AppLocalizations.of(context)!.submit
+                  : AppLocalizations.of(context)!.next,
               onPressed: () => _validateAndProceed(l10n),
               isLoading: _isLoading && isLast,
             ),
@@ -651,7 +665,8 @@ class R0ReportState extends State<R0Report> {
           formData.selectedPoste.isEmpty ||
           formData.selectedModel.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(AppLocalizations.of(context)!.r0ValidationMissingFields)));
+            content:
+                Text(AppLocalizations.of(context)!.r0ValidationMissingFields)));
         return;
       }
     }
@@ -664,8 +679,8 @@ class R0ReportState extends State<R0Report> {
           !formData.indexCompteurs.noteDefaut) {
         if (end - start > 8.0) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content:
-                Text(AppLocalizations.of(context)!.operatingHoursExceeded((end - start).toInt(), 8)),
+            content: Text(AppLocalizations.of(context)!
+                .operatingHoursExceeded((end - start).toInt(), 8)),
             backgroundColor: AppColors.error,
           ));
           return;
@@ -778,9 +793,10 @@ class R0ReportState extends State<R0Report> {
             value: formData.selectedCategory.isNotEmpty
                 ? formData.selectedCategory
                 : null,
-            items: [AppLocalizations.of(context)!.engines, AppLocalizations.of(context)!.machines]
-                .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                .toList(),
+            items: [
+              AppLocalizations.of(context)!.engines,
+              AppLocalizations.of(context)!.machines
+            ].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
             onChanged: (val) => setState(() {
                   formData.selectedCategory = val!;
                   formData.selectedType = '';
@@ -794,7 +810,8 @@ class R0ReportState extends State<R0Report> {
               value: formData.selectedType.isNotEmpty
                   ? formData.selectedType
                   : null,
-              items: (formData.selectedCategory == AppLocalizations.of(context)!.engines
+              items: (formData.selectedCategory ==
+                          AppLocalizations.of(context)!.engines
                       ? enginsData.keys
                       : machinesData.keys)
                   .map((s) => DropdownMenuItem(
@@ -813,7 +830,8 @@ class R0ReportState extends State<R0Report> {
               value: formData.selectedModel.isNotEmpty
                   ? formData.selectedModel
                   : null,
-              items: (formData.selectedCategory == AppLocalizations.of(context)!.engines
+              items: (formData.selectedCategory ==
+                          AppLocalizations.of(context)!.engines
                       ? enginsData[formData.selectedType]
                       : machinesData[formData.selectedType])!
                   .map((s) => DropdownMenuItem(value: s, child: Text(s)))
@@ -850,7 +868,9 @@ class R0ReportState extends State<R0Report> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(AppLocalizations.of(context)!.counterEntryTitle(formData.selectedPoste),
+        Text(
+            AppLocalizations.of(context)!
+                .counterEntryTitle(formData.selectedPoste),
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 16),
         Row(
@@ -892,7 +912,8 @@ class R0ReportState extends State<R0Report> {
                     });
                   },
                 ),
-                Text(AppLocalizations.of(context)!.defautLabel, style: const TextStyle(fontSize: 12)),
+                Text(AppLocalizations.of(context)!.defautLabel,
+                    style: const TextStyle(fontSize: 12)),
               ],
             ),
           ],
@@ -937,7 +958,8 @@ class R0ReportState extends State<R0Report> {
                     });
                   },
                 ),
-                Text(AppLocalizations.of(context)!.defautLabel, style: const TextStyle(fontSize: 12)),
+                Text(AppLocalizations.of(context)!.defautLabel,
+                    style: const TextStyle(fontSize: 12)),
               ],
             ),
           ],
@@ -979,6 +1001,17 @@ class R0ReportState extends State<R0Report> {
                         ),
                       ),
                     ),
+                  if (item.stopDetail.trim().isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2, bottom: 2),
+                      child: Text(
+                        '${AppLocalizations.of(context)!.detailArretLabel}: ${item.stopDetail}',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.secondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
                   Text("${item.duree} -> ${item.note}"),
                 ],
               ),
@@ -1006,6 +1039,8 @@ class R0ReportState extends State<R0Report> {
     int step = 0;
     String? selectedCategory;
     String? selectedType;
+    bool showDetailField = false;
+    final detailController = TextEditingController();
     DateTime startTime = DateTime.now();
     DateTime endTime = DateTime.now();
     final arretCategories = _currentArretCategories();
@@ -1032,15 +1067,47 @@ class R0ReportState extends State<R0Report> {
               initialValue: selectedCategory,
             );
           } else if (step == 1 && selectedCategory != null) {
-            content = DropdownButtonFormField<String>(
-              hint: Text(AppLocalizations.of(context)!.type),
-              initialValue: selectedType,
-              isExpanded: true,
-              items: arretCategories[selectedCategory]!
-                  .map((t) => DropdownMenuItem(
-                      value: t, child: Text(_getLocalizedReasonLabel(t, l10n))))
-                  .toList(),
-              onChanged: (v) => setDs(() => selectedType = v),
+            content = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<String>(
+                  hint: Text(AppLocalizations.of(context)!.type),
+                  initialValue: selectedType,
+                  isExpanded: true,
+                  items: arretCategories[selectedCategory]!
+                      .map((t) => DropdownMenuItem(
+                          value: t,
+                          child: Text(_getLocalizedReasonLabel(t, l10n))))
+                      .toList(),
+                  onChanged: (v) => setDs(() => selectedType = v),
+                ),
+                const SizedBox(height: 12),
+                TextButton.icon(
+                  onPressed: () => setDs(() {
+                    showDetailField = !showDetailField;
+                    if (!showDetailField) {
+                      detailController.clear();
+                    }
+                  }),
+                  icon: Icon(showDetailField ? Icons.remove : Icons.add),
+                  label: Text(showDetailField
+                      ? 'Retirer le détail'
+                      : 'Ajouter un détail'),
+                ),
+                if (showDetailField) ...[
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: detailController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.detailArretLabel,
+                      hintText:
+                          AppLocalizations.of(context)!.enterStopReasonHint,
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ],
             );
           } else if (step == 2 && selectedType != null) {
             content = Column(
@@ -1062,7 +1129,8 @@ class R0ReportState extends State<R0Report> {
                       builder: (context) {
                         TimeOfDay tempTime = TimeOfDay.fromDateTime(startTime);
                         return AlertDialog(
-                          title: Text(AppLocalizations.of(context)!.selectTimeTitle),
+                          title: Text(
+                              AppLocalizations.of(context)!.selectTimeTitle),
                           content: SizedBox(
                             height: 200,
                             child: TimePickerSpinner(
@@ -1092,7 +1160,8 @@ class R0ReportState extends State<R0Report> {
                             ElevatedButton(
                               onPressed: () =>
                                   Navigator.of(context).pop(tempTime),
-                              child: Text(AppLocalizations.of(context)!.okButton),
+                              child:
+                                  Text(AppLocalizations.of(context)!.okButton),
                             ),
                           ],
                         );
@@ -1118,7 +1187,8 @@ class R0ReportState extends State<R0Report> {
                       builder: (context) {
                         TimeOfDay tempTime = TimeOfDay.fromDateTime(endTime);
                         return AlertDialog(
-                          title: Text(AppLocalizations.of(context)!.selectTimeTitle),
+                          title: Text(
+                              AppLocalizations.of(context)!.selectTimeTitle),
                           content: SizedBox(
                             height: 200,
                             child: TimePickerSpinner(
@@ -1148,7 +1218,8 @@ class R0ReportState extends State<R0Report> {
                             ElevatedButton(
                               onPressed: () =>
                                   Navigator.of(context).pop(tempTime),
-                              child: Text(AppLocalizations.of(context)!.okButton),
+                              child:
+                                  Text(AppLocalizations.of(context)!.okButton),
                             ),
                           ],
                         );
@@ -1225,7 +1296,8 @@ class R0ReportState extends State<R0Report> {
                             !_isTimeWithinShift(
                                 startTod, formData.selectedPoste)) {
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text(AppLocalizations.of(context)!.invalidStopStartTimeForPoste),
+                              content: Text(AppLocalizations.of(context)!
+                                  .invalidStopStartTimeForPoste),
                               backgroundColor: AppColors.error));
                           return;
                         }
@@ -1234,6 +1306,7 @@ class R0ReportState extends State<R0Report> {
                               code: 0,
                               category: selectedCategory ?? '',
                               label: selectedType!,
+                              stopDetail: detailController.text.trim(),
                               duree:
                                   "${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}",
                               note:
@@ -1262,28 +1335,35 @@ class R0ReportState extends State<R0Report> {
   Widget _buildStepExploitation(AppLocalizations l10n) {
     return Column(
       children: [
-        _exploitRow(AppLocalizations.of(context)!.heuresMarche, formData.exploitation['H.M']!,
+        _exploitRow(AppLocalizations.of(context)!.heuresMarche,
+            formData.exploitation['H.M']!,
             readOnly: true),
-        _exploitRow(AppLocalizations.of(context)!.heuresArret, formData.exploitation['H.A']!,
+        _exploitRow(AppLocalizations.of(context)!.heuresArret,
+            formData.exploitation['H.A']!,
             readOnly: true),
         const Divider(),
-        _exploitRow(AppLocalizations.of(context)!.metrageFore, formData.exploitation['metrage fore']!,
+        _exploitRow(AppLocalizations.of(context)!.metrageFore,
+            formData.exploitation['metrage fore']!,
             onChanged: (v) => formData.exploitation['metrage fore'] = v),
-        _exploitRow(
-            AppLocalizations.of(context)!.nrTrousFores, formData.exploitation['Nr de Trous Fores']!,
+        _exploitRow(AppLocalizations.of(context)!.nrTrousFores,
+            formData.exploitation['Nr de Trous Fores']!,
             onChanged: (v) => formData.exploitation['Nr de Trous Fores'] = v),
-        _exploitRow(AppLocalizations.of(context)!.nrVoyages, formData.exploitation['Nr de Voyages']!,
+        _exploitRow(AppLocalizations.of(context)!.nrVoyages,
+            formData.exploitation['Nr de Voyages']!,
             onChanged: (v) => formData.exploitation['Nr de Voyages'] = v),
-        _exploitRow(AppLocalizations.of(context)!.m3Decapage, formData.exploitation['M³ Decapages']!,
+        _exploitRow(AppLocalizations.of(context)!.m3Decapage,
+            formData.exploitation['M³ Decapages']!,
             onChanged: (v) => formData.exploitation['M³ Decapages'] = v),
-        _exploitRow(AppLocalizations.of(context)!.tonnageLabel, formData.exploitation['Tonnage']!,
-            onChanged: (v) {
+        _exploitRow(AppLocalizations.of(context)!.tonnageLabel,
+            formData.exploitation['Tonnage']!, onChanged: (v) {
           formData.exploitation['Tonnage'] = v;
           _calculateHours();
         }),
-        _exploitRow(AppLocalizations.of(context)!.nombreTKU, formData.exploitation['Nombre T.K.U']!,
+        _exploitRow(AppLocalizations.of(context)!.nombreTKU,
+            formData.exploitation['Nombre T.K.U']!,
             onChanged: (v) => formData.exploitation['Nombre T.K.U'] = v),
-        _exploitRow(AppLocalizations.of(context)!.rendementLabel, formData.exploitation['Rendement %']!,
+        _exploitRow(AppLocalizations.of(context)!.rendementLabel,
+            formData.exploitation['Rendement %']!,
             readOnly: true),
       ],
     );
@@ -1422,8 +1502,26 @@ class R0ReportState extends State<R0Report> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
-                        child: Text(_getLocalizedReasonLabel(item.label, l10n),
-                            style: const TextStyle(fontSize: 13))),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_getLocalizedReasonLabel(item.label, l10n),
+                              style: const TextStyle(fontSize: 13)),
+                          if (item.stopDetail.trim().isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                '${AppLocalizations.of(context)!.detailArretLabel}: ${item.stopDetail}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color:
+                                      Theme.of(context).colorScheme.secondary,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                     Text("${item.duree} - ${item.note}",
                         style: const TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 13)),
@@ -1431,30 +1529,47 @@ class R0ReportState extends State<R0Report> {
                 ),
               )),
         ] else
-          _row(AppLocalizations.of(context)!.stops, AppLocalizations.of(context)!.aucunArret),
+          _row(AppLocalizations.of(context)!.stops,
+              AppLocalizations.of(context)!.aucunArret),
         const Divider(),
-        _row(AppLocalizations.of(context)!.heuresMarche, formData.exploitation['H.M']!),
-        _row(AppLocalizations.of(context)!.heuresArret, formData.exploitation['H.A']!),
+        _row(AppLocalizations.of(context)!.heuresMarche,
+            formData.exploitation['H.M']!),
+        _row(AppLocalizations.of(context)!.heuresArret,
+            formData.exploitation['H.A']!),
         const Divider(),
-        _row(AppLocalizations.of(context)!.metrageFore, formData.exploitation['metrage fore']!),
-        _row(AppLocalizations.of(context)!.nrTrousFores, formData.exploitation['Nr de Trous Fores']!),
-        _row(AppLocalizations.of(context)!.nrVoyages, formData.exploitation['Nr de Voyages']!),
-        _row(AppLocalizations.of(context)!.m3Decapage, formData.exploitation['M³ Decapages']!),
-        _row(AppLocalizations.of(context)!.tonnageLabel, formData.exploitation['Tonnage']!),
-        _row(AppLocalizations.of(context)!.nombreTKU, formData.exploitation['Nombre T.K.U']!),
-        _row(AppLocalizations.of(context)!.rendementLabel, formData.exploitation['Rendement %'] ?? ''),
+        _row(AppLocalizations.of(context)!.metrageFore,
+            formData.exploitation['metrage fore']!),
+        _row(AppLocalizations.of(context)!.nrTrousFores,
+            formData.exploitation['Nr de Trous Fores']!),
+        _row(AppLocalizations.of(context)!.nrVoyages,
+            formData.exploitation['Nr de Voyages']!),
+        _row(AppLocalizations.of(context)!.m3Decapage,
+            formData.exploitation['M³ Decapages']!),
+        _row(AppLocalizations.of(context)!.tonnageLabel,
+            formData.exploitation['Tonnage']!),
+        _row(AppLocalizations.of(context)!.nombreTKU,
+            formData.exploitation['Nombre T.K.U']!),
+        _row(AppLocalizations.of(context)!.rendementLabel,
+            formData.exploitation['Rendement %'] ?? ''),
         const Divider(),
-        _row("${AppLocalizations.of(context)!.conducteurLabel}:", formData.personnel.conducteur),
-        _row("${AppLocalizations.of(context)!.graisseurLabel}:", formData.personnel.graisseur),
-        _row("${AppLocalizations.of(context)!.matriculesLabel}:", formData.personnel.matricules),
+        _row("${AppLocalizations.of(context)!.conducteurLabel}:",
+            formData.personnel.conducteur),
+        _row("${AppLocalizations.of(context)!.graisseurLabel}:",
+            formData.personnel.graisseur),
+        _row("${AppLocalizations.of(context)!.matriculesLabel}:",
+            formData.personnel.matricules),
         const Divider(),
-        _row("${AppLocalizations.of(context)!.chantierLabel}:", formData.repartitionTravail.chantier),
-        _row("${AppLocalizations.of(context)!.duration}:", formData.repartitionTravail.temps),
-        _row(
-            "${AppLocalizations.of(context)!.imputationLabel}:", formData.repartitionTravail.imputation),
+        _row("${AppLocalizations.of(context)!.chantierLabel}:",
+            formData.repartitionTravail.chantier),
+        _row("${AppLocalizations.of(context)!.duration}:",
+            formData.repartitionTravail.temps),
+        _row("${AppLocalizations.of(context)!.imputationLabel}:",
+            formData.repartitionTravail.imputation),
         const Divider(),
-        _row("${AppLocalizations.of(context)!.triconeLabel}:", formData.consommation.tricone),
-        _row("${AppLocalizations.of(context)!.gasoilLabel}:", formData.consommation.gasoil),
+        _row("${AppLocalizations.of(context)!.triconeLabel}:",
+            formData.consommation.tricone),
+        _row("${AppLocalizations.of(context)!.gasoilLabel}:",
+            formData.consommation.gasoil),
       ],
     );
   }
@@ -1586,6 +1701,7 @@ class R0ReportState extends State<R0Report> {
             code: item.code,
             category: item.category,
             label: item.label,
+            stopDetail: item.stopDetail,
             duree: _formatDateTimeToTimeString(effectiveStart),
             note: _formatDateTimeToTimeString(effectiveEnd),
             originalStart:
@@ -1622,6 +1738,7 @@ class R0ReportState extends State<R0Report> {
               carryOverByShift[key]!.arrets.add({
                 'Catégorie': item.category,
                 'Arret': item.label,
+                'Detail': item.stopDetail,
                 'Début': _formatDateTimeToTimeString(segmentStart),
                 'Fin': _formatDateTimeToTimeString(segmentEnd),
                 'OriginalStart': item.originalStart.isNotEmpty
@@ -1665,6 +1782,7 @@ class R0ReportState extends State<R0Report> {
               .map((v) => {
                     'Catégorie': v.category,
                     'Arret': v.label,
+                    'Detail': v.stopDetail,
                     'Début': v.duree,
                     'Fin': v.note,
                     'OriginalStart':
@@ -1779,7 +1897,9 @@ class R0ReportState extends State<R0Report> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(AppLocalizations.of(context)!.errorMessage(e.toString())), backgroundColor: AppColors.error));
+            content:
+                Text(AppLocalizations.of(context)!.errorMessage(e.toString())),
+            backgroundColor: AppColors.error));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

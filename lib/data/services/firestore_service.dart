@@ -10,6 +10,7 @@ class FirestoreService {
 
   /// Collection name for reports
   static const String _reportsCollection = 'reports';
+  static const String _deletedForUserIdsField = 'deletedForUserIds';
   static const String _archiveReportKey = 'reports_archive';
   static const Map<String, Set<String>> _reportTypesByAccessKey = {
     'r0_report': {'R0'},
@@ -81,19 +82,24 @@ class FirestoreService {
     required List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
     required _ReportAccessContext accessContext,
   }) {
-    if (accessContext.isAdmin || !accessContext.canViewSharedArchive) {
-      return docs;
-    }
-
+    final filtered = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+    final currentUserId = _userId;
+    final requiresCreationKeyFilter =
+        !accessContext.isAdmin && accessContext.canViewSharedArchive;
     final allowedCreationKeys = accessContext.allowedCreationReportKeys;
-    if (allowedCreationKeys.isEmpty) {
+    if (requiresCreationKeyFilter && allowedCreationKeys.isEmpty) {
       return const <QueryDocumentSnapshot<Map<String, dynamic>>>[];
     }
 
-    final filtered = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
-
     for (final doc in docs) {
       final data = doc.data();
+      if (_isDeletedForUser(data, currentUserId)) {
+        continue;
+      }
+      if (!requiresCreationKeyFilter) {
+        filtered.add(doc);
+        continue;
+      }
       final accessKey = _resolveAccessKeyForStoredData(data);
       if (accessKey != null && allowedCreationKeys.contains(accessKey)) {
         filtered.add(doc);
@@ -101,6 +107,18 @@ class FirestoreService {
     }
 
     return filtered;
+  }
+
+  bool _isDeletedForUser(Map<String, dynamic> data, String? userId) {
+    if (userId == null) {
+      return false;
+    }
+    final deletedForUserIds =
+        (data[_deletedForUserIdsField] as List<dynamic>?)?.whereType<String>();
+    if (deletedForUserIds == null) {
+      return false;
+    }
+    return deletedForUserIds.contains(userId);
   }
 
   String? _resolveAccessKeyForReport(Report report) {
@@ -282,9 +300,7 @@ class FirestoreService {
       }
       final snapshot = await query.get();
       final allowedDocs = _filterSharedArchiveDocs(
-        docs: snapshot.docs,
-        accessContext: accessContext,
-      );
+          docs: snapshot.docs, accessContext: accessContext);
 
       return allowedDocs
           .map((doc) => _reportFromFirestore(doc.id, doc.data()))
@@ -327,9 +343,7 @@ class FirestoreService {
 
       final snapshot = await query.get();
       final allowedDocs = _filterSharedArchiveDocs(
-        docs: snapshot.docs,
-        accessContext: accessContext,
-      );
+          docs: snapshot.docs, accessContext: accessContext);
 
       return ReportPage(
         reports: allowedDocs
@@ -366,9 +380,7 @@ class FirestoreService {
       }
       return query.snapshots().map((snapshot) {
         final allowedDocs = _filterSharedArchiveDocs(
-          docs: snapshot.docs,
-          accessContext: accessContext,
-        );
+            docs: snapshot.docs, accessContext: accessContext);
         return allowedDocs
             .map((doc) => _reportFromFirestore(doc.id, doc.data()))
             .toList();
@@ -376,14 +388,21 @@ class FirestoreService {
     });
   }
 
-  /// Delete a report from Firestore
+  /// Mark a report as deleted for the current user only.
   Future<void> deleteReport(String firestoreId) async {
     if (!isAuthenticated) {
       throw Exception('User must be authenticated to delete reports');
     }
+    final uid = _userId;
+    if (uid == null) {
+      throw Exception('User must be authenticated to delete reports');
+    }
 
     try {
-      await _firestore.collection(_reportsCollection).doc(firestoreId).delete();
+      await _firestore.collection(_reportsCollection).doc(firestoreId).update({
+        _deletedForUserIdsField: FieldValue.arrayUnion([uid]),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
     } catch (e) {
       throw Exception('Failed to delete report from Firestore: $e');
     }
@@ -452,6 +471,7 @@ class FirestoreService {
       'localId': report.id, // Keep local SQLite ID for reference
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
+      _deletedForUserIdsField: <String>[],
     };
   }
 

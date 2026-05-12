@@ -7453,7 +7453,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
           .trim();
 
   String _getTnbStopDetailLabel(Map<String, dynamic> stop) =>
-      (stop['detail'] ?? stop['Détail'] ?? '').toString().trim();
+      (stop['detail'] ??
+              stop['Detail'] ??
+              stop['Détail'] ??
+              stop['D茅tail'] ??
+              '')
+          .toString()
+          .trim();
 
   String _formatTnbActivityStopSummary(
     Map<String, dynamic> stop, {
@@ -13106,7 +13112,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
     Map<String, String>? initialItem,
   }) {
     int step = 0;
-    String? selectedCategory = initialItem?['Catégorie'];
+    String? selectedCategory =
+        initialItem?['Catégorie'] ?? initialItem?['Cat茅gorie'];
+    bool showDetailField = false;
+    String stopDetail = (initialItem?['Detail'] ?? '').trim();
     if (selectedCategory == null || selectedCategory.isEmpty) {
       selectedCategory = initialItem != null
           ? arretCategories.keys.firstWhere(
@@ -13116,6 +13125,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
     if (selectedCategory != null && selectedCategory.isEmpty) {
       selectedCategory = null;
+    }
+    if (stopDetail.isNotEmpty) {
+      showDetailField = true;
     }
     String? selectedType = initialItem?['Arret'];
     String startTime = initialItem?['Début'] ?? '';
@@ -13147,27 +13159,59 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ],
           );
         } else if (step == 1 && selectedCategory != null) {
-          content = Row(
+          content = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: selectedType,
-                  isExpanded: true,
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      initialValue: selectedType,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                          labelText:
+                              AppLocalizations.of(context)!.selectStopTypeStep,
+                          border: const OutlineInputBorder()),
+                      items: arretCategories[selectedCategory]!
+                          .map((type) =>
+                              DropdownMenuItem(value: type, child: Text(type)))
+                          .toList(),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedType = value;
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: () => setDialogState(() {
+                  showDetailField = !showDetailField;
+                  if (!showDetailField) {
+                    stopDetail = '';
+                  }
+                }),
+                icon: Icon(showDetailField ? Icons.remove : Icons.add),
+                label:
+                    Text(showDetailField ? 'Retirer le détail' : 'Ajouter un détail'),
+              ),
+              if (showDetailField) ...[
+                const SizedBox(height: 8),
+                TextFormField(
+                  initialValue: stopDetail,
+                  maxLines: 3,
                   decoration: InputDecoration(
-                      labelText:
-                          AppLocalizations.of(context)!.selectStopTypeStep,
-                      border: const OutlineInputBorder()),
-                  items: arretCategories[selectedCategory]!
-                      .map((type) =>
-                          DropdownMenuItem(value: type, child: Text(type)))
-                      .toList(),
+                    labelText: AppLocalizations.of(context)!.detailArretLabel,
+                    hintText: AppLocalizations.of(context)!.enterStopReasonHint,
+                    border: const OutlineInputBorder(),
+                  ),
                   onChanged: (value) {
-                    setDialogState(() {
-                      selectedType = value;
-                    });
+                    stopDetail = value;
                   },
                 ),
-              ),
+              ],
             ],
           );
         } else if (step == 2 && selectedType != null) {
@@ -13352,6 +13396,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             Navigator.of(context).pop({
                               'Catégorie': selectedCategory ?? '',
                               'Arret': selectedType!,
+                              'Detail': stopDetail.trim(),
                               'Début': startTime,
                               'Fin': endTime,
                             });
@@ -13427,6 +13472,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final initialItem = {
       'Catégorie': (arret['Catégorie'] ?? '').toString(),
       'Arret': (arret['Arret'] ?? '').toString(),
+      'Detail': (arret['Detail'] ?? arret['Détail'] ?? '').toString(),
       'Début': (arret['OriginalStart'] ?? arret['Début'] ?? '').toString(),
       'Fin': (arret['OriginalEnd'] ?? arret['Fin'] ?? '').toString(),
     };
@@ -13447,6 +13493,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final updatedArret = Map<String, dynamic>.from(arret);
       updatedArret['Catégorie'] = result['Catégorie'] ?? '';
       updatedArret['Arret'] = result['Arret'] ?? '';
+      updatedArret['Detail'] = result['Detail'] ?? '';
       updatedArret['Début'] = result['Début'] ?? '';
       updatedArret['Fin'] = result['Fin'] ?? '';
       updatedArret['OriginalStart'] = result['Début'] ?? '';

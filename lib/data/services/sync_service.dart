@@ -112,6 +112,23 @@ class SyncService {
           // Continue with next report
         }
       }
+
+      // Remove local cloud-linked reports that are no longer visible for this user
+      // (for example, hidden/deleted only for this account).
+      final visibleCloudIds = cloudReports
+          .map((report) => report.firestoreId)
+          .whereType<String>()
+          .toSet();
+      for (final localReport in localReports) {
+        final localFirestoreId = localReport.firestoreId;
+        if (localFirestoreId == null) {
+          continue;
+        }
+        if (!visibleCloudIds.contains(localFirestoreId) &&
+            localReport.id != null) {
+          await _localDb.deleteReport(localReport.id!);
+        }
+      }
     } catch (e) {
       if (kDebugMode) {
         debugPrint('Error during cloud to local sync: $e');
