@@ -46,6 +46,7 @@ android {
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        freeCompilerArgs.add("-Xlint:deprecation")
     }
 }
 
@@ -68,4 +69,5 @@ dependencies {
 
 tasks.withType<JavaCompile> {
     options.compilerArgs.add("-Xlint:-options")
+    options.compilerArgs.add("-Xlint:deprecation")
 }

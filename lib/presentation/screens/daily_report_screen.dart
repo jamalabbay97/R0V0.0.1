@@ -375,7 +375,7 @@ String _getLocalizedCategoryLabel(BuildContext context, String internalLabel) {
 // --- Helper Functions ---
 int parseDurationToMinutes(String duration) {
   if (duration.isEmpty) return 0;
-  final cleaned = duration.replaceAll(RegExp(r'[^0-9Hh:·\s]'), '').trim();
+  final cleaned = duration.replaceAll(RegExp(r'[^0-9Hh:ms]'), '').trim();
   // Simplified parsing logic
   try {
     if (cleaned.contains('h')) {
@@ -404,7 +404,7 @@ const List<StopCategory> _tnbStopCategories = [
       'MP - Manque Produit',
       'CC - Coupure De Courant',
       'AD - Arrêts Décidés',
-      'STS - Stock Saturée',
+      'STS - Stock Saturé',
       'DS - Attente Dégagement Stérile',
       'MB - Manque Bull',
       'Aut - Autre',
@@ -413,7 +413,7 @@ const List<StopCategory> _tnbStopCategories = [
   StopCategory(
     label: 'Arrêts Materiel',
     types: [
-      'AE - Arrêts Éléctrique',
+      'AE - Arrêts Électrique',
       'AM - Arrêts Mécanique',
       'AI - Arrêts Installateur',
       'AESYS - Arrêts Entretien Systématique',
@@ -563,7 +563,6 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
   void _loadExistingData() {
     if (widget.initialReport?.additionalData == null) return;
     final data = widget.initialReport!.additionalData!;
-
     if (data['module1Stops'] is List) {
       module1Stops = (data['module1Stops'] as List)
           .map((s) => ModuleStop(
@@ -763,7 +762,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     ]);
   }
 
-  // --- Step 1 & 2: Arrêts ---
+  // --- Step 1 & 2: Arr閿歵s ---
   Widget _buildStepArrets(int module, List<ModuleStop> stops) {
     return Column(children: [
       Text("Module $module",
@@ -1383,25 +1382,25 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     String stopDetail,
   ) {
     if (selectedCategory == null) {
-      return "La catégorie d'arrêt est obligatoire.";
+      return "La categorie d'arret est obligatoire.";
     }
     if (selectedNature == null || selectedNature.isEmpty) {
-      return "Le type d'arrêt est obligatoire.";
+      return "Le type d'arret est obligatoire.";
     }
     if (_tnbStopTypeRequiresLocation(selectedNature) &&
         (selectedLocation == null || selectedLocation.isEmpty)) {
-      return "Le lieu d'arrêt est obligatoire.";
+      return "Le lieu d'arret est obligatoire.";
     }
     if (_tnbStopTypeRequiresDetail(selectedNature) &&
         stopDetail.trim().isEmpty) {
-      return "Le détail d'arrêt est obligatoire.";
+      return "Le detail d'arret est obligatoire.";
     }
     if (endTime == null) {
       return null;
     }
     final durationMinutes = _durationMinutesInCycle(startTime, endTime);
     if (durationMinutes <= 0 || durationMinutes > totalPeriodMinutes) {
-      return "L'arrêt doit rester dans la fenêtre 22:30 → 22:30 (24h max).";
+      return "L'arret doit rester dans la fenetre 22:30 -> 22:30 (24h max).";
     }
     return null;
   }
@@ -1415,28 +1414,28 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
         final end = _parseTime(stop.endTime);
         if (stop.category.isEmpty || stop.nature.isEmpty) {
           errors.add(
-              'Module $module - Arrêt ${i + 1}: catégorie et type d\'arrêt obligatoires.');
+              'Module $module - Arret ${i + 1}: categorie et type d\'arret obligatoires.');
         }
         if (_tnbStopTypeRequiresLocation(stop.nature) &&
             stop.location.isEmpty) {
           errors.add(
-              'Module $module - Arrêt ${i + 1}: lieu d\'arrêt obligatoire.');
+              'Module $module - Arret ${i + 1}: lieu d\'arret obligatoire.');
         }
         if (_tnbStopTypeRequiresDetail(stop.nature) &&
             stop.detail.trim().isEmpty) {
           errors.add(
-              'Module $module - Arrêt ${i + 1}: Type et lieu d\'arrêt obligatoires.');
+              'Module $module - Arret ${i + 1}: Type et lieu d\'arret obligatoires.');
         }
         if (start == null) {
           errors.add(
-              'Module $module - Arrêt ${i + 1}: heure de début obligatoire.');
+              'Module $module - Arret ${i + 1}: heure de debut obligatoire.');
           continue;
         }
         if (end != null) {
           final durationMinutes = _durationMinutesInCycle(start, end);
           if (durationMinutes <= 0 || durationMinutes > totalPeriodMinutes) {
             errors.add(
-                'Module $module - Arrêt ${i + 1}: plage horaire invalide.');
+                'Module $module - Arret ${i + 1}: plage horaire invalide.');
           }
         }
       }
@@ -1457,16 +1456,71 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     return TimeOfDay(hour: hour, minute: minute);
   }
 
-  Widget _syntheseCard(String title, int operating, int downtime) {
+  Widget _syntheseCard(
+    String title,
+    int operating,
+    int downtime, {
+    required int module,
+  }) {
+    final accent = module == 1 ? AppColors.primary : AppColors.success;
     return OCPCard(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(title,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-      const Divider(),
-      _row("Fonctionnement", formatMinutesToHoursMinutes(operating),
-          color: AppColors.primary),
-      _row("Arrêts", formatMinutesToHoursMinutes(downtime),
-          color: AppColors.error),
+      Row(children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(Icons.analytics_outlined, color: accent, size: 18),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(title,
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+        ),
+      ]),
+      const SizedBox(height: 12),
+      Row(children: [
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text("Fonctionnement",
+                  style: TextStyle(fontSize: 12, color: AppColors.grey)),
+              const SizedBox(height: 4),
+              Text(formatMinutesToHoursMinutes(operating),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, color: AppColors.primary))
+            ]),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.error.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text("Arrêts",
+                  style: TextStyle(fontSize: 12, color: AppColors.grey)),
+              const SizedBox(height: 4),
+              Text(formatMinutesToHoursMinutes(downtime),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, color: AppColors.error))
+            ]),
+          ),
+        ),
+      ]),
     ]));
   }
 
@@ -1501,7 +1555,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
       if (_tnbStopTypeRequiresLocation(stop.nature) && stop.location.isNotEmpty)
         stop.location,
     ];
-    return '$index • ${segments.join(' - ')}';
+    return '$index - ${segments.join(' - ')}';
   }
 
   String _formatModuleStopTimeline(ModuleStop stop) {
@@ -1637,18 +1691,18 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
         ...errors.map((e) => Align(
             alignment: Alignment.centerLeft,
             child:
-                Text('• $e', style: const TextStyle(color: AppColors.error)))),
+                Text('- $e', style: const TextStyle(color: AppColors.error)))),
       ],
       const SizedBox(height: 24),
       _row("Date",
           "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}"),
       const Divider(),
 
-      // Details Arrêts M1
+      // Details Arrets M1
       if (module1Stops.isNotEmpty) ...[
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 8.0),
-          child: Text("Détails Arrêts M1",
+          child: Text("Details Arrets M1",
               style: TextStyle(
                   fontWeight: FontWeight.bold, color: AppColors.primary)),
         ),
@@ -1678,14 +1732,20 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                 ),
               ),
             ),
+        const SizedBox(height: 12),
+        _syntheseCard(
+            "Synthèse Module 1",
+            module1OperatingTime,
+            module1TotalDowntime,
+            module: 1),
         const Divider(),
       ],
 
-      // Details Arrêts M2
+      // Details Arrets M2
       if (module2Stops.isNotEmpty) ...[
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 8.0),
-          child: Text("Détails Arrêts M2",
+          child: Text("Details Arrets M2",
               style: TextStyle(
                   fontWeight: FontWeight.bold, color: AppColors.primary)),
         ),
@@ -1715,27 +1775,26 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                 ),
               ),
             ),
+        const SizedBox(height: 12),
+        _syntheseCard(
+            "Synthèse Module 2",
+            module2OperatingTime,
+            module2TotalDowntime,
+            module: 2),
         const Divider(),
       ],
-
-      _syntheseCard(
-          "Synthèse Module 1", module1OperatingTime, module1TotalDowntime),
-      const SizedBox(height: 16),
-      _syntheseCard(
-          "Synthèse Module 2", module2OperatingTime, module2TotalDowntime),
-      const Divider(),
 
       // Details Stock
       if (stockEntries.isNotEmpty) ...[
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 8.0),
-          child: Text("Détails Stock",
+          child: Text("Details Stock",
               style: TextStyle(
                   fontWeight: FontWeight.bold, color: AppColors.primary)),
         ),
-        ...stockEntries.map((e) => _row(
-            "${posteToString(e.poste)} - ${parkToString(e.park)}",
-            "${stockTypeToString(e.type)}: ${e.quantity}")),
+        for (final e in stockEntries)
+          _row("${posteToString(e.poste)} - ${parkToString(e.park)}",
+              "${stockTypeToString(e.type)}: ${e.quantity}"),
         const Divider(),
       ],
     ]);
@@ -1746,7 +1805,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     if (verificationErrors.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text(
-              'Corrigez les erreurs de vérification avant de sauvegarder.'),
+              'Corrigez les erreurs de verification avant de sauvegarder.'),
           backgroundColor: AppColors.error));
       return;
     }
@@ -1773,7 +1832,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                     'stopLocation': s.stopLocation,
                     'startTime': s.startTime,
                     'endTime': s.endTime,
-                    'Catégorie': s.category,
+                    'Categorie': s.category,
                     'CarryOver': false,
                   })
               .toList(),
@@ -1789,7 +1848,7 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
                     'stopLocation': s.stopLocation,
                     'startTime': s.startTime,
                     'endTime': s.endTime,
-                    'Catégorie': s.category,
+                    'Categorie': s.category,
                     'CarryOver': false,
                   })
               .toList(),
@@ -1832,3 +1891,5 @@ class _DailyReportScreenState extends State<DailyReportScreen> {
     }
   }
 }
+
+

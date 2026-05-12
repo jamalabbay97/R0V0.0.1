@@ -65,24 +65,28 @@ class Report {
   }
 
   Report copyWith({
-    int? id,
-    String? firestoreId,
+    Object? id = _sentinel,
+    Object? firestoreId = _sentinel,
     String? description,
     DateTime? date,
     String? group,
     String? type,
-    Map<String, dynamic>? additionalData,
+    Object? additionalData = _sentinel,
     bool? isSentToSheets,
   }) {
     return Report(
-      id: id ?? this.id,
-      firestoreId: firestoreId ?? this.firestoreId,
+      id: id == _sentinel ? this.id : id as int?,
+      firestoreId: firestoreId == _sentinel ? this.firestoreId : firestoreId as String?,
       description: description ?? this.description,
       date: date ?? this.date,
       group: group ?? this.group,
       type: type ?? this.type,
-      additionalData: additionalData ?? this.additionalData,
+      additionalData: additionalData == _sentinel
+          ? this.additionalData
+          : additionalData as Map<String, dynamic>?,
       isSentToSheets: isSentToSheets ?? this.isSentToSheets,
     );
   }
 }
+
+const _sentinel = Object();

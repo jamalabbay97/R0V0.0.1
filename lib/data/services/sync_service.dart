@@ -80,29 +80,36 @@ class SyncService {
 
       // Process each cloud report
       for (final cloudReport in cloudReports) {
-        final localReport = localReportsByFirestoreId[cloudReport.firestoreId];
+        try {
+          final localReport = localReportsByFirestoreId[cloudReport.firestoreId];
 
-        if (localReport == null) {
-          // New report from cloud - add to local with a fresh local id.
-          // Cloud documents can carry creator-device local ids that collide
-          // when an admin syncs reports from multiple users.
-          await _localDb.insertReport(cloudReport.copyWith(id: null));
-          if (kDebugMode) {
-            debugPrint('Downloaded new report from cloud: ${cloudReport.firestoreId}');
-          }
-        } else {
-          // Report exists locally - check if cloud is newer
-          // For simplicity, we'll keep the cloud version
-          // In a production app, you'd implement conflict resolution
-          if (cloudReport.date.isAfter(localReport.date)) {
-            // Preserve local row id when updating an existing local record.
-            await _localDb.updateReport(
-              cloudReport.copyWith(id: localReport.id),
-            );
+          if (localReport == null) {
+            // New report from cloud - add to local with a fresh local id.
+            // Cloud documents can carry creator-device local ids that collide
+            // when an admin syncs reports from multiple users.
+            await _localDb.insertReport(cloudReport.copyWith(id: null));
             if (kDebugMode) {
-              debugPrint('Updated local report from cloud: ${cloudReport.firestoreId}');
+              debugPrint('Downloaded new report from cloud: ${cloudReport.firestoreId}');
+            }
+          } else {
+            // Report exists locally - check if cloud is newer
+            // For simplicity, we'll keep the cloud version
+            // In a production app, you'd implement conflict resolution
+            if (cloudReport.date.isAfter(localReport.date)) {
+              // Preserve local row id when updating an existing local record.
+              await _localDb.updateReport(
+                cloudReport.copyWith(id: localReport.id),
+              );
+              if (kDebugMode) {
+                debugPrint('Updated local report from cloud: ${cloudReport.firestoreId}');
+              }
             }
           }
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint('Error processing cloud report ${cloudReport.firestoreId}: $e');
+          }
+          // Continue with next report
         }
       }
     } catch (e) {
