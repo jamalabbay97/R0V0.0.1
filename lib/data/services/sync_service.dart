@@ -8,6 +8,26 @@ class SyncService {
   final DatabaseHelper _localDb = DatabaseHelper();
   final FirestoreService _firestore = FirestoreService();
 
+  Future<Report> _withResolvedFirestoreId(Report report) async {
+    if (!_firestore.isAuthenticated ||
+        report.firestoreId != null ||
+        report.id == null) {
+      return report;
+    }
+
+    try {
+      final firestoreId = await _firestore.findReportIdByLocalId(report.id!);
+      if (firestoreId == null) return report;
+      return report.copyWith(firestoreId: firestoreId);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint(
+            'Failed to resolve Firestore ID for report ${report.id}: $e');
+      }
+      return report;
+    }
+  }
+
   /// Sync all local reports to Firestore
   Future<void> syncLocalToCloud() async {
     if (!_firestore.isAuthenticated) {
@@ -22,7 +42,8 @@ class SyncService {
       final localReports = await _localDb.getReports();
 
       // Filter reports that haven't been synced
-      final unsyncedReports = localReports.where((r) => r.firestoreId == null).toList();
+      final unsyncedReports =
+          localReports.where((r) => r.firestoreId == null).toList();
 
       if (unsyncedReports.isEmpty) {
         if (kDebugMode) {
@@ -34,12 +55,14 @@ class SyncService {
       // Upload unsynced reports
       for (final report in unsyncedReports) {
         try {
-          final firestoreId = await _firestore.uploadReport(report);
-          
+          final reportToUpload = await _withResolvedFirestoreId(report);
+          final firestoreId = await _firestore.uploadReport(reportToUpload);
+
           // Update local report with Firestore ID
-          final updatedReport = report.copyWith(firestoreId: firestoreId);
+          final updatedReport =
+              reportToUpload.copyWith(firestoreId: firestoreId);
           await _localDb.updateReport(updatedReport);
-          
+
           if (kDebugMode) {
             debugPrint('Synced report ${report.id} to Firestore: $firestoreId');
           }
@@ -81,7 +104,8 @@ class SyncService {
       // Process each cloud report
       for (final cloudReport in cloudReports) {
         try {
-          final localReport = localReportsByFirestoreId[cloudReport.firestoreId];
+          final localReport =
+              localReportsByFirestoreId[cloudReport.firestoreId];
 
           if (localReport == null) {
             // New report from cloud - add to local with a fresh local id.
@@ -89,7 +113,8 @@ class SyncService {
             // when an admin syncs reports from multiple users.
             await _localDb.insertReport(cloudReport.copyWith(id: null));
             if (kDebugMode) {
-              debugPrint('Downloaded new report from cloud: ${cloudReport.firestoreId}');
+              debugPrint(
+                  'Downloaded new report from cloud: ${cloudReport.firestoreId}');
             }
           } else {
             // Report exists locally - check if cloud is newer
@@ -101,13 +126,15 @@ class SyncService {
                 cloudReport.copyWith(id: localReport.id),
               );
               if (kDebugMode) {
-                debugPrint('Updated local report from cloud: ${cloudReport.firestoreId}');
+                debugPrint(
+                    'Updated local report from cloud: ${cloudReport.firestoreId}');
               }
             }
           }
         } catch (e) {
           if (kDebugMode) {
-            debugPrint('Error processing cloud report ${cloudReport.firestoreId}: $e');
+            debugPrint(
+                'Error processing cloud report ${cloudReport.firestoreId}: $e');
           }
           // Continue with next report
         }
@@ -185,15 +212,29 @@ class SyncService {
 
   /// Update report locally and sync to cloud
   Future<void> updateReport(Report report) async {
-    // Update local database when a local row exists.
+    Report reportToUpdate = report;
+
+    // Editors often rebuild Report objects from form data. Preserve sync
+    // metadata from the existing local row so an update does not become a
+    // brand-new unsynced report and later duplicate the original Firestore doc.
     if (report.id != null) {
-      await _localDb.updateReport(report);
+      final existingReport = await _localDb.getReport(report.id!);
+      if (existingReport != null) {
+        reportToUpdate = report.copyWith(
+          firestoreId: report.firestoreId ?? existingReport.firestoreId,
+          isSentToSheets:
+              report.isSentToSheets || existingReport.isSentToSheets,
+        );
+      }
+
+      reportToUpdate = await _withResolvedFirestoreId(reportToUpdate);
+      await _localDb.updateReport(reportToUpdate);
     }
 
     // Try to sync to cloud if authenticated.
-    if (_firestore.isAuthenticated && report.firestoreId != null) {
+    if (_firestore.isAuthenticated && reportToUpdate.firestoreId != null) {
       try {
-        await _firestore.uploadReport(report);
+        await _firestore.uploadReport(reportToUpdate);
       } catch (e) {
         if (kDebugMode) {
           debugPrint('Failed to sync report update to cloud: $e');

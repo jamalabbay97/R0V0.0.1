@@ -1090,6 +1090,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             carryOverByShift[key]!.arrets.add({
               'Catégorie': arret['Catégorie'] ?? '',
               'Arret': arret['Arret'] ?? '',
+              'Detail': arret['Detail'] ?? arret['Détail'] ?? '',
               'Début': _formatDateTimeToTimeString(segmentStart),
               'Fin': _formatDateTimeToTimeString(segmentEnd),
               'OriginalStart': debut,
@@ -1146,6 +1147,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final existing = existingByKey.remove(key);
       return Report(
         id: existing?.id,
+        firestoreId: existing?.firestoreId,
         description: 'Rapport R0 - ${shift.poste} (Carry Over)',
         date: shift.date,
         type: report.type,
@@ -4586,14 +4588,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
       setDialogState(() {});
 
-      final updatedReport = Report(
-        id: report.id,
-        description: report.description,
-        type: report.type,
-        group: report.group,
-        date: report.date,
-        additionalData: data,
-      );
+      final updatedReport = report.copyWith(additionalData: data);
 
       _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
     }
@@ -4773,14 +4768,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
       setDialogState(() {});
 
-      final updatedReport = Report(
-        id: report.id,
-        description: report.description,
-        type: report.type,
-        group: report.group,
-        date: report.date,
-        additionalData: data,
-      );
+      final updatedReport = report.copyWith(additionalData: data);
 
       _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
     }
@@ -4810,14 +4798,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
               setDialogState(() {});
 
-              final updatedReport = Report(
-                id: report.id,
-                description: report.description,
-                type: report.type,
-                group: report.group,
-                date: report.date,
-                additionalData: data,
-              );
+              final updatedReport = report.copyWith(additionalData: data);
 
               Navigator.pop(context);
               _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
@@ -7452,14 +7433,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
           .toString()
           .trim();
 
-  String _getTnbStopDetailLabel(Map<String, dynamic> stop) =>
-      (stop['detail'] ??
-              stop['Detail'] ??
-              stop['Détail'] ??
-              stop['D茅tail'] ??
-              '')
-          .toString()
-          .trim();
+  String _getTnbStopDetailLabel(Map<String, dynamic> stop) => (stop['detail'] ??
+          stop['Detail'] ??
+          stop['Détail'] ??
+          stop['D茅tail'] ??
+          '')
+      .toString()
+      .trim();
 
   String _formatTnbActivityStopSummary(
     Map<String, dynamic> stop, {
@@ -13194,8 +13174,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   }
                 }),
                 icon: Icon(showDetailField ? Icons.remove : Icons.add),
-                label:
-                    Text(showDetailField ? 'Retirer le détail' : 'Ajouter un détail'),
+                label: Text(showDetailField
+                    ? 'Retirer le détail'
+                    : 'Ajouter un détail'),
               ),
               if (showDetailField) ...[
                 const SizedBox(height: 8),
@@ -13447,14 +13428,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
       setDialogState(() {});
 
-      final updatedReport = Report(
-        id: report.id,
-        description: report.description,
-        type: report.type,
-        group: report.group,
-        date: report.date,
-        additionalData: data,
-      );
+      final updatedReport = report.copyWith(additionalData: data);
 
       _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
     }
@@ -13506,14 +13480,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
       setDialogState(() {});
 
-      final updatedReport = Report(
-        id: report.id,
-        description: report.description,
-        type: report.type,
-        group: report.group,
-        date: report.date,
-        additionalData: data,
-      );
+      final updatedReport = report.copyWith(additionalData: data);
 
       _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
     }
@@ -13546,14 +13513,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
               setDialogState(() {});
 
-              final updatedReport = Report(
-                id: report.id,
-                description: report.description,
-                type: report.type,
-                group: report.group,
-                date: report.date,
-                additionalData: data,
-              );
+              final updatedReport = report.copyWith(additionalData: data);
 
               Navigator.pop(context);
               _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);

@@ -237,6 +237,27 @@ class FirestoreService {
     }
   }
 
+  /// Find an existing report document created from the same local row.
+  Future<String?> findReportIdByLocalId(int localId) async {
+    if (!isAuthenticated) {
+      throw Exception('User must be authenticated to find reports');
+    }
+
+    try {
+      final snapshot = await _firestore
+          .collection(_reportsCollection)
+          .where('userId', isEqualTo: _userId)
+          .where('localId', isEqualTo: localId)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) return null;
+      return snapshot.docs.first.id;
+    } catch (e) {
+      throw Exception('Failed to find report by local ID: $e');
+    }
+  }
+
   /// Upload a report to Firestore
   Future<String> uploadReport(Report report) async {
     if (!isAuthenticated) {

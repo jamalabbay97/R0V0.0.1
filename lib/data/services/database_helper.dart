@@ -173,17 +173,32 @@ class DatabaseHelper {
   }
 
   Future<int> updateReport(Report report) async {
+    final reportToUpdate = await _preserveReportMetadataForUpdate(report);
+
     if (kIsWeb) {
-      return _updateWebReport(report);
+      return _updateWebReport(reportToUpdate);
     }
     final db = await database;
     final updated = await db.update(
       'reports',
-      report.toMap(),
+      reportToUpdate.toMap(),
       where: 'id = ?',
-      whereArgs: [report.id],
+      whereArgs: [reportToUpdate.id],
     );
     return updated;
+  }
+
+  Future<Report> _preserveReportMetadataForUpdate(Report report) async {
+    final id = report.id;
+    if (id == null) return report;
+
+    final existingReport = await getReport(id);
+    if (existingReport == null) return report;
+
+    return report.copyWith(
+      firestoreId: report.firestoreId ?? existingReport.firestoreId,
+      isSentToSheets: report.isSentToSheets || existingReport.isSentToSheets,
+    );
   }
 
   Future<void> sendReportToSheets(Report report) async {
