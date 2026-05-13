@@ -156,7 +156,83 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     FirebaseApp? secondaryApp;
 
     setState(() => _isCreatingUser = true);
+
     try {
+      // 1. Check for existing deactivated account in Firestore
+      final existingUsers = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+
+      if (existingUsers.docs.isNotEmpty) {
+        final doc = existingUsers.docs.first;
+        final data = doc.data();
+        final isDeleted = data['isDeleted'] == true;
+
+        if (!isDeleted) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('The email address is already in use by an active account.'),
+              ),
+            );
+          }
+          setState(() => _isCreatingUser = false);
+          return;
+        }
+
+        // Offer to reactivate
+        if (mounted) {
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Reactivate account?'),
+              content: Text(
+                'An account with the email $email was previously deactivated. '
+                'Would you like to reactivate it?\n\n'
+                'Note: The existing password will remain in effect.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Reactivate'),
+                ),
+              ],
+            ),
+          );
+
+          if (confirmed != true) {
+            setState(() => _isCreatingUser = false);
+            return;
+          }
+
+          await _firestore.collection('users').doc(doc.id).set({
+            'displayName':
+                displayName.isEmpty ? (data['displayName'] ?? '') : displayName,
+            'role': role,
+            'isDeleted': false,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+
+          if (!mounted) return;
+
+          nameController.clear();
+          emailController.clear();
+          passwordController.clear();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Account reactivated for $email.')),
+          );
+          setState(() => _isCreatingUser = false);
+          return;
+        }
+      }
+
+      // 2. Proceed with normal creation flow
       secondaryApp = await Firebase.initializeApp(
         name: temporaryAppName,
         options: DefaultFirebaseOptions.currentPlatform,
@@ -203,11 +279,22 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message ?? 'Failed to create account.'),
-        ),
-      );
+      if (e.code == 'email-already-in-use') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'This email is already in use by another account. '
+              'If the user is not in the list, they may have been deactivated elsewhere.',
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message ?? 'Failed to create account.'),
+          ),
+        );
+      }
     } finally {
       if (secondaryApp != null) {
         await secondaryApp.delete();
