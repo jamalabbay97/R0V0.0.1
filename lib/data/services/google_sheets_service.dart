@@ -6,6 +6,7 @@ import 'package:googleapis/sheets/v4.dart';
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:intl/intl.dart';
 import 'package:r0/domain/models/report.dart';
+import 'package:r0/domain/services/stop_detail_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class GoogleSheetsService {
@@ -26,8 +27,6 @@ class GoogleSheetsService {
                     'assets/credentials/r0v01-5b577-67d9e9bae92b.json'),
         _nowProvider = nowProvider ?? DateTime.now;
 
-
-
   static const String _genericReportsSheet = 'Reports';
   static const String _genericDetailsSheet = 'Report Details';
   static const String _detailsSuffix = ' - Détails';
@@ -35,6 +34,19 @@ class GoogleSheetsService {
   static const String _dailySheet = 'TSUD';
   static const String _ifDowntimeDetailsSheet =
       "détail d'arrêts IF (TNB, TSUD)";
+  static const String _r0DowntimeDetailsSheet = "détails d'arrêts R0";
+  static const List<String> _r0DowntimeDetailsHeaders = [
+    'Date',
+    'Catégorie principale',
+    'Sous-Catégorie',
+    'Equipement',
+    "Catégorie d'Arrét",
+    "Type d'Arrét",
+    "Designation d'Arrét",
+    "Début d'Arret",
+    "Fin d'Arret",
+    'H.A',
+  ];
   static const String _truckSheet = 'Poser les camions';
   static const String _machinesSheet = 'Machines et engins à l\'arrêt';
   static const String _r0Sheet = 'R0';
@@ -137,6 +149,12 @@ class GoogleSheetsService {
 
         await _appendRowsToTemplate(api, templateRows);
         await _syncIfDowntimeDetailsSheet(
+          api,
+          report: report,
+          reportDateLocal: reportLocalDate,
+          data: data,
+        );
+        await _syncR0DowntimeDetailsSheet(
           api,
           report: report,
           reportDateLocal: reportLocalDate,
@@ -263,6 +281,132 @@ class GoogleSheetsService {
       rangeSuffix: 'W',
       rows: module2Rows,
     );
+  }
+
+  Future<void> _syncR0DowntimeDetailsSheet(
+    SheetsApi api, {
+    required Report report,
+    required DateTime reportDateLocal,
+    required Map<String, dynamic> data,
+  }) async {
+    final category = _categorizeReport(report, data);
+    if (category != _ReportCategory.r0) {
+      return;
+    }
+
+    final rows = _buildR0DowntimeDetailsRows(reportDateLocal, data);
+    if (rows.isEmpty) {
+      return;
+    }
+
+    await _ensureSheetWithHeaders(
+      api,
+      _r0DowntimeDetailsSheet,
+      _r0DowntimeDetailsHeaders,
+    );
+    await _loadSheetNames(api);
+    final targetSheetName =
+        _resolveSheetName(_r0DowntimeDetailsSheet) ?? _r0DowntimeDetailsSheet;
+
+    await api.spreadsheets.values.append(
+      ValueRange(values: rows),
+      _spreadsheetId,
+      '$targetSheetName!A1',
+      valueInputOption: 'RAW',
+      insertDataOption: 'INSERT_ROWS',
+    );
+  }
+
+  List<List<Object?>> _buildR0DowntimeDetailsRows(
+    DateTime reportDateLocal,
+    Map<String, dynamic> data,
+  ) {
+    final arrets = _listOfMaps(data['Arrets']);
+    if (arrets.isEmpty) {
+      return const [];
+    }
+
+    final date =
+        DateFormat('yyyy-MM-dd', _frenchLocale).format(reportDateLocal);
+    return arrets.map((arret) {
+      return [
+        date,
+        data['Category'] ?? '',
+        data['Type'] ?? '',
+        data['Model'] ?? '',
+        arret['Catégorie'] ?? arret['Categorie'] ?? '',
+        arret['Arret'] ?? arret['Arrêt'] ?? '',
+        StopDetailService.readDetail(arret),
+        _formatStopClockTime(arret['OriginalStart'] ?? arret['Début']),
+        _formatStopClockTime(arret['OriginalEnd'] ?? arret['Fin']),
+        _formatR0StopDowntimeHours(arret),
+      ];
+    }).toList();
+  }
+
+  String _formatR0StopDowntimeHours(Map<String, dynamic> stop) {
+    for (final key in const [
+      'H.A',
+      'HA',
+      'ha',
+      'duration',
+      'Duration',
+      'durée',
+      'Durée',
+    ]) {
+      final value = stop[key];
+      if (value == null || value.toString().trim().isEmpty) {
+        continue;
+      }
+
+      if (key == 'H.A' || key == 'HA' || key == 'ha') {
+        final hours = double.tryParse(
+          value.toString().trim().replaceAll(',', '.'),
+        );
+        if (hours != null) {
+          return hours.toStringAsFixed(2);
+        }
+      }
+
+      final minutes = _durationToMinutes(value);
+      if (minutes != null) {
+        return (minutes / 60).toStringAsFixed(2);
+      }
+
+      return value.toString().trim();
+    }
+
+    final start = _clockTimeToMinutes(stop['OriginalStart'] ?? stop['Début']);
+    final end = _clockTimeToMinutes(stop['OriginalEnd'] ?? stop['Fin']);
+    if (start == null || end == null) {
+      return '';
+    }
+
+    var durationMinutes = end - start;
+    if (durationMinutes <= 0) {
+      durationMinutes += 24 * 60;
+    }
+
+    return (durationMinutes / 60).toStringAsFixed(2);
+  }
+
+  int? _clockTimeToMinutes(Object? raw) {
+    final value = raw?.toString().trim() ?? '';
+    final match = RegExp(r'^(\d{1,2}):(\d{2})(?::\d{2})?$').firstMatch(value);
+    if (match == null) {
+      return null;
+    }
+
+    final hours = int.tryParse(match.group(1) ?? '');
+    final minutes = int.tryParse(match.group(2) ?? '');
+    if (hours == null || minutes == null) {
+      return null;
+    }
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return null;
+    }
+
+    return (hours * 60) + minutes;
   }
 
   Future<void> _ensureIfDowntimeDetailsLayout(
@@ -2346,37 +2490,17 @@ class GoogleSheetsService {
       arrets.length,
     ];
 
-    final detailsHeaders = [
-      ..._detailsBaseHeaders,
-      'Category',
-      'Arret',
-      'Start',
-      'End',
-      'Original Start',
-      'Original End',
-      'Carry Over',
-    ];
-
-    final detailsRows = <List<Object?>>[];
-    for (final entry in arrets) {
-      detailsRows.add([
-        ..._detailsBaseRow(savedAt, action, report, reportDateIso),
-        entry['Catégorie'] ?? '',
-        entry['Arret'] ?? '',
-        entry['Début'] ?? '',
-        entry['Fin'] ?? '',
-        entry['OriginalStart'] ?? '',
-        entry['OriginalEnd'] ?? '',
-        entry['CarryOver'] ?? '',
-      ]);
-    }
+    final detailsRows = _buildR0DowntimeDetailsRows(
+      DateTime.tryParse(reportDateIso)?.toLocal() ?? report.date.toLocal(),
+      data,
+    );
 
     return _ReportPayload(
       sheetName: sheetName,
       headers: headers,
       row: row,
-      detailsSheetName: _sanitizeSheetTitle('$sheetName - Arrêts'),
-      detailsHeaders: detailsHeaders,
+      detailsSheetName: _r0DowntimeDetailsSheet,
+      detailsHeaders: _r0DowntimeDetailsHeaders,
       detailsRows: detailsRows,
     );
   }
@@ -2621,6 +2745,17 @@ class GoogleSheetsService {
   @visibleForTesting
   int detectHeaderRowIndexForTest(List<List<Object?>> rows) =>
       _detectHeaderRowIndex(rows);
+
+  @visibleForTesting
+  List<String> r0DowntimeDetailsHeadersForTest() =>
+      List<String>.from(_r0DowntimeDetailsHeaders);
+
+  @visibleForTesting
+  List<List<Object?>> buildR0DowntimeDetailsRowsForTest(
+    DateTime reportDateLocal,
+    Map<String, dynamic> data,
+  ) =>
+      _buildR0DowntimeDetailsRows(reportDateLocal, data);
 
   /// Reads all sheets from Google Sheets and returns normalized searchable rows.
   ///

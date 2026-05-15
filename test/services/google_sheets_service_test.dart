@@ -109,4 +109,57 @@ void main() {
       expect(record.searchableText, isNot(contains('2026-02-14')));
     });
   });
+  group('GoogleSheetsService R0 downtime details', () {
+    final service = GoogleSheetsService();
+
+    test('uses the dedicated R0 downtime details header layout', () {
+      expect(service.r0DowntimeDetailsHeadersForTest(), [
+        'Date',
+        'Catégorie principale',
+        'Sous-Catégorie',
+        'Equipement',
+        "Catégorie d'Arrét",
+        "Type d'Arrét",
+        "Designation d'Arrét",
+        "Début d'Arret",
+        "Fin d'Arret",
+        'H.A',
+      ]);
+    });
+
+    test('builds rows for the dedicated R0 downtime details sheet', () {
+      final rows = service.buildR0DowntimeDetailsRowsForTest(
+        DateTime(2026, 5, 15),
+        {
+          'Category': 'SONDEUSES',
+          'Type': 'Electrique',
+          'Model': 'PV275-2',
+          'Arrets': [
+            {
+              'Catégorie': 'Arrêt non décidé',
+              'Arret': 'Panne mécanique',
+              'Detail': 'Flexible cassé',
+              'Début': '08:15',
+              'Fin': '09:45',
+            },
+          ],
+        },
+      );
+
+      expect(rows, [
+        [
+          '2026-05-15',
+          'SONDEUSES',
+          'Electrique',
+          'PV275-2',
+          'Arrêt non décidé',
+          'Panne mécanique',
+          'Flexible cassé',
+          '08:15:00',
+          '09:45:00',
+          '1.50',
+        ],
+      ]);
+    });
+  });
 }
