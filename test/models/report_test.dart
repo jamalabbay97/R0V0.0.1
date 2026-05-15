@@ -127,7 +127,9 @@ void main() {
       expect(updated.type, 'Daily');
     });
 
-    test('copyWith should preserve original values when fields are not provided', () {
+    test(
+        'copyWith should preserve original values when fields are not provided',
+        () {
       final original = Report(
         id: 1,
         description: 'Original',
@@ -145,6 +147,32 @@ void main() {
       expect(updated.group, 'R0');
       expect(updated.type, 'Activity');
       expect(updated.additionalData, {'key': 'value'});
+    });
+
+    test('toMap and fromMap should preserve R0 stop details', () {
+      final original = Report(
+        id: 1,
+        description: 'Rapport R0 - 1er',
+        date: DateTime(2024, 1, 15, 14, 30, 45),
+        group: '1er',
+        type: 'BULL D9',
+        additionalData: {
+          'Arrets': [
+            {
+              'Arret': 'Panne',
+              'Détail': 'Flexible cassé',
+              'Début': '08:00',
+              'Fin': '08:30',
+            },
+          ],
+        },
+      );
+
+      final restored = Report.fromMap(original.toMap());
+      final arrets = restored.additionalData!['Arrets'] as List;
+      final arret = arrets.first as Map<String, dynamic>;
+
+      expect(arret['Detail'], 'Flexible cassé');
     });
 
     test('toMap and fromMap should be reversible', () {

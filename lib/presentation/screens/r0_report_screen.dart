@@ -3,6 +3,7 @@ import 'package:r0/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:r0/domain/repositories/report_repository.dart';
 import 'package:r0/domain/services/time_calculation_service.dart';
+import 'package:r0/domain/services/stop_detail_service.dart';
 import 'package:r0/domain/models/report.dart';
 import 'package:r0/domain/models/mine_data.dart'; // Import the shared model
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
@@ -332,7 +333,7 @@ class R0ReportState extends State<R0Report> {
                 code: 0,
                 category: a['Catégorie']?.toString() ?? '',
                 label: a['Arret']?.toString() ?? '',
-                stopDetail: (a['Detail'] ?? a['Détail'])?.toString() ?? '',
+                stopDetail: StopDetailService.readDetail(a),
                 duree: (a['OriginalStart'] ?? a['Début'])?.toString() ?? '',
                 note: (a['OriginalEnd'] ?? a['Fin'])?.toString() ?? '',
                 originalStart:

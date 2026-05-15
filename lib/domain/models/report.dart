@@ -1,6 +1,7 @@
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:r0/domain/services/stop_sorting_service.dart';
+import 'package:r0/domain/services/stop_detail_service.dart';
 import 'package:r0/domain/services/trip_sorting_service.dart';
 
 class Report {
@@ -28,6 +29,7 @@ class Report {
     final normalizedAdditionalData = additionalData != null
         ? Map<String, dynamic>.from(additionalData!)
         : null;
+    _normalizeStopDetailsInAdditionalData(normalizedAdditionalData);
     StopSortingService.sortStopsInAdditionalData(normalizedAdditionalData);
     TripSortingService.sortTripsInAdditionalData(normalizedAdditionalData);
 
@@ -49,6 +51,7 @@ class Report {
     final parsedAdditionalData = map['additional_data'] != null
         ? Map<String, dynamic>.from(jsonDecode(map['additional_data']))
         : null;
+    _normalizeStopDetailsInAdditionalData(parsedAdditionalData);
     StopSortingService.sortStopsInAdditionalData(parsedAdditionalData);
     TripSortingService.sortTripsInAdditionalData(parsedAdditionalData);
 
@@ -64,6 +67,25 @@ class Report {
     );
   }
 
+  static void _normalizeStopDetailsInAdditionalData(
+      Map<String, dynamic>? additionalData) {
+    if (additionalData == null) return;
+    _normalizeStopDetailsInList(additionalData['Arrets']);
+    _normalizeStopDetailsInList(additionalData['module1Stops']);
+    _normalizeStopDetailsInList(additionalData['module2Stops']);
+  }
+
+  static void _normalizeStopDetailsInList(dynamic value) {
+    if (value is! List) return;
+
+    for (var i = 0; i < value.length; i++) {
+      final stop = value[i];
+      if (stop is Map) {
+        value[i] = StopDetailService.normalizeStopDetail(stop);
+      }
+    }
+  }
+
   Report copyWith({
     Object? id = _sentinel,
     Object? firestoreId = _sentinel,
@@ -76,7 +98,8 @@ class Report {
   }) {
     return Report(
       id: id == _sentinel ? this.id : id as int?,
-      firestoreId: firestoreId == _sentinel ? this.firestoreId : firestoreId as String?,
+      firestoreId:
+          firestoreId == _sentinel ? this.firestoreId : firestoreId as String?,
       description: description ?? this.description,
       date: date ?? this.date,
       group: group ?? this.group,

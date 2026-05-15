@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:r0/domain/repositories/report_repository.dart';
 import 'package:r0/data/services/google_sheets_service.dart';
 import 'package:r0/domain/services/time_calculation_service.dart';
+import 'package:r0/domain/services/stop_detail_service.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 import 'package:uuid/uuid.dart';
@@ -1057,6 +1058,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         currentShiftArrets.add({
           'Catégorie': arret['Catégorie'] ?? '',
           'Arret': arret['Arret'] ?? '',
+          'Detail': StopDetailService.readDetail(arret),
           'Début': _formatDateTimeToTimeString(effectiveStart),
           'Fin': _formatDateTimeToTimeString(effectiveEnd),
           'OriginalStart': arret['OriginalStart'] ?? debut,
@@ -1090,7 +1092,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             carryOverByShift[key]!.arrets.add({
               'Catégorie': arret['Catégorie'] ?? '',
               'Arret': arret['Arret'] ?? '',
-              'Detail': arret['Detail'] ?? arret['Détail'] ?? '',
+              'Detail': StopDetailService.readDetail(arret),
               'Début': _formatDateTimeToTimeString(segmentStart),
               'Fin': _formatDateTimeToTimeString(segmentEnd),
               'OriginalStart': debut,
@@ -7433,13 +7435,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
           .toString()
           .trim();
 
-  String _getTnbStopDetailLabel(Map<String, dynamic> stop) => (stop['detail'] ??
-          stop['Detail'] ??
-          stop['Détail'] ??
-          stop['D茅tail'] ??
-          '')
-      .toString()
-      .trim();
+  String _getTnbStopDetailLabel(Map<String, dynamic> stop) =>
+      StopDetailService.readDetail(stop);
 
   String _formatTnbActivityStopSummary(
     Map<String, dynamic> stop, {
@@ -13095,7 +13092,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     String? selectedCategory =
         initialItem?['Catégorie'] ?? initialItem?['Cat茅gorie'];
     bool showDetailField = false;
-    String stopDetail = (initialItem?['Detail'] ?? '').trim();
+    String stopDetail =
+        StopDetailService.readDetail(initialItem ?? const <String, String>{});
     if (selectedCategory == null || selectedCategory.isEmpty) {
       selectedCategory = initialItem != null
           ? arretCategories.keys.firstWhere(
@@ -13430,7 +13428,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
       final updatedReport = report.copyWith(additionalData: data);
 
-      _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+      await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
     }
   }
 
@@ -13446,7 +13444,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final initialItem = {
       'Catégorie': (arret['Catégorie'] ?? '').toString(),
       'Arret': (arret['Arret'] ?? '').toString(),
-      'Detail': (arret['Detail'] ?? arret['Détail'] ?? '').toString(),
+      'Detail': StopDetailService.readDetail(arret),
       'Début': (arret['OriginalStart'] ?? arret['Début'] ?? '').toString(),
       'Fin': (arret['OriginalEnd'] ?? arret['Fin'] ?? '').toString(),
     };
@@ -13482,7 +13480,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
       final updatedReport = report.copyWith(additionalData: data);
 
-      _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+      await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
     }
   }
 
@@ -13505,7 +13503,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             child: Text(AppLocalizations.of(context)!.cancel),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               (data['Arrets'] as List).removeAt(index);
 
               // Recalculate hours
@@ -13516,7 +13514,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               final updatedReport = report.copyWith(additionalData: data);
 
               Navigator.pop(context);
-              _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
+              await _saveReportUpdate(updatedReport, scaffoldMessenger, l10n);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: Text(AppLocalizations.of(context)!.delete),
