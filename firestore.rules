@@ -87,8 +87,13 @@ service cloud.firestore {
         && reportAccessKey in allowedReports;
     }
 
+    function isSheetsSyncedReport(docData) {
+      return docData.sheetsSynced == true;
+    }
+
     function canReadReportByAccess(docData) {
-      return canUseReportAccessKey(docData.reportAccessKey)
+      return isSheetsSyncedReport(docData)
+        || canUseReportAccessKey(docData.reportAccessKey)
         || canCreateReportType(docData.type);
     }
 
@@ -115,6 +120,7 @@ service cloud.firestore {
 
     match /reports/{reportId} {
       allow read: if isOwner(resource.data.userId)
+        || isSheetsSyncedReport(resource.data)
         || isAdmin()
         || isManager()
         || (hasArchiveAccess() && canReadReportByAccess(resource.data));

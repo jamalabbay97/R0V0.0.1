@@ -73,8 +73,24 @@ class ReportRepositoryImpl implements ReportRepository {
   }
 
   @override
-  Future<void> sendReportToSheets(Report report) {
-    return _databaseHelper.sendReportToSheets(report);
+  Future<void> sendReportToSheets(Report report) async {
+    await _databaseHelper.sendReportToSheets(report);
+
+    if (!_firestoreService.isAuthenticated) {
+      return;
+    }
+
+    try {
+      final syncedReport = report.id == null
+          ? report.copyWith(isSentToSheets: true)
+          : (await _databaseHelper.getReport(report.id!)) ??
+              report.copyWith(isSentToSheets: true);
+      await _syncService.updateReport(syncedReport);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Failed to share Sheets-sent report status to cloud: $e');
+      }
+    }
   }
 
   @override

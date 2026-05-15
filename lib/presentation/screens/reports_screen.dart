@@ -781,6 +781,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final visibleReportKeys =
         context.read<ReportAccessProvider>().visibleReportKeys;
     final accessibleReports = _reports.where((report) {
+      if (report.isSentToSheets) {
+        return true;
+      }
       final accessKey = AccessControlDefinitions.accessKeyForReport(report);
       if (accessKey == null) {
         return false;

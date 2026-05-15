@@ -11,6 +11,7 @@ class FirestoreService {
   /// Collection name for reports
   static const String _reportsCollection = 'reports';
   static const String _deletedForUserIdsField = 'deletedForUserIds';
+  static const String _sheetsSyncedField = 'sheetsSynced';
   static const String _archiveReportKey = 'reports_archive';
   static const Map<String, Set<String>> _reportTypesByAccessKey = {
     'r0_report': {'R0'},
@@ -87,13 +88,14 @@ class FirestoreService {
     final requiresCreationKeyFilter =
         !accessContext.isAdmin && accessContext.canViewSharedArchive;
     final allowedCreationKeys = accessContext.allowedCreationReportKeys;
-    if (requiresCreationKeyFilter && allowedCreationKeys.isEmpty) {
-      return const <QueryDocumentSnapshot<Map<String, dynamic>>>[];
-    }
 
     for (final doc in docs) {
       final data = doc.data();
       if (_isDeletedForUser(data, currentUserId)) {
+        continue;
+      }
+      if (_isSharedSheetsReport(data)) {
+        filtered.add(doc);
         continue;
       }
       if (!requiresCreationKeyFilter) {
@@ -108,6 +110,11 @@ class FirestoreService {
 
     return filtered;
   }
+
+  bool _isSharedSheetsReport(Map<String, dynamic> data) =>
+      data[_sheetsSyncedField] == true ||
+      data['sheets_synced'] == true ||
+      data['sheets_synced'] == 1;
 
   bool _isDeletedForUser(Map<String, dynamic> data, String? userId) {
     if (userId == null) {
@@ -303,22 +310,20 @@ class FirestoreService {
 
     try {
       final accessContext = await _getCurrentUserAccessContext();
-      if (!accessContext.isAdmin && accessContext.allowedReportTypes.isEmpty) {
-        return [];
+      if (!accessContext.canViewSharedArchive) {
+        final reports = await _downloadPersonalAndSheetsReports();
+        reports.sort(_compareReportsByDateDesc);
+        return reports;
       }
-      if (!accessContext.isAdmin &&
-          accessContext.canViewSharedArchive &&
-          accessContext.allowedCreationReportKeys.isEmpty) {
-        return [];
+
+      if (!accessContext.isAdmin && accessContext.allowedReportTypes.isEmpty) {
+        return await _downloadSheetsSyncedReportsOnly();
       }
       Query<Map<String, dynamic>> query =
           _firestore.collection(_reportsCollection).orderBy(
                 'date',
                 descending: true,
               );
-      if (!accessContext.canViewSharedArchive) {
-        query = query.where('userId', isEqualTo: _userId);
-      }
       final snapshot = await query.get();
       final allowedDocs = _filterSharedArchiveDocs(
           docs: snapshot.docs, accessContext: accessContext);
@@ -342,21 +347,26 @@ class FirestoreService {
 
     try {
       final accessContext = await _getCurrentUserAccessContext();
-      if (!accessContext.isAdmin && accessContext.allowedReportTypes.isEmpty) {
-        return ReportPage(reports: const [], lastDocument: null);
+      if (!accessContext.canViewSharedArchive) {
+        final reports = await _downloadPersonalAndSheetsReports();
+        reports.sort(_compareReportsByDateDesc);
+        return ReportPage(
+          reports: reports.take(limit).toList(),
+          lastDocument: null,
+        );
       }
-      if (!accessContext.isAdmin &&
-          accessContext.canViewSharedArchive &&
-          accessContext.allowedCreationReportKeys.isEmpty) {
-        return ReportPage(reports: const [], lastDocument: null);
+
+      if (!accessContext.isAdmin && accessContext.allowedReportTypes.isEmpty) {
+        final reports = await _downloadSheetsSyncedReportsOnly();
+        return ReportPage(
+          reports: reports.take(limit).toList(),
+          lastDocument: null,
+        );
       }
       Query<Map<String, dynamic>> query = _firestore
           .collection(_reportsCollection)
           .orderBy('date', descending: true)
           .limit(limit);
-      if (!accessContext.canViewSharedArchive) {
-        query = query.where('userId', isEqualTo: _userId);
-      }
 
       if (startAfter != null) {
         query = query.startAfterDocument(startAfter);
@@ -385,20 +395,15 @@ class FirestoreService {
 
     return Stream.fromFuture(_getCurrentUserAccessContext())
         .asyncExpand((accessContext) {
-      if (!accessContext.isAdmin && accessContext.allowedReportTypes.isEmpty) {
-        return Stream.value(const <Report>[]);
+      if (!accessContext.canViewSharedArchive) {
+        return Stream.fromFuture(_downloadPersonalAndSheetsReports());
       }
-      if (!accessContext.isAdmin &&
-          accessContext.canViewSharedArchive &&
-          accessContext.allowedCreationReportKeys.isEmpty) {
-        return Stream.value(const <Report>[]);
+      if (!accessContext.isAdmin && accessContext.allowedReportTypes.isEmpty) {
+        return Stream.fromFuture(_downloadSheetsSyncedReportsOnly());
       }
       Query<Map<String, dynamic>> query = _firestore
           .collection(_reportsCollection)
           .orderBy('date', descending: true);
-      if (!accessContext.canViewSharedArchive) {
-        query = query.where('userId', isEqualTo: _userId);
-      }
       return query.snapshots().map((snapshot) {
         final allowedDocs = _filterSharedArchiveDocs(
             docs: snapshot.docs, accessContext: accessContext);
@@ -473,6 +478,60 @@ class FirestoreService {
     }
   }
 
+  Future<List<Report>> _downloadPersonalAndSheetsReports() async {
+    final currentUserId = _userId;
+    if (currentUserId == null) {
+      return const <Report>[];
+    }
+
+    final personalSnapshot = await _firestore
+        .collection(_reportsCollection)
+        .where('userId', isEqualTo: currentUserId)
+        .orderBy('date', descending: true)
+        .get();
+    final sheetsSnapshot = await _firestore
+        .collection(_reportsCollection)
+        .where(_sheetsSyncedField, isEqualTo: true)
+        .orderBy('date', descending: true)
+        .get();
+
+    final reportsById = <String, Report>{};
+    for (final doc in [...personalSnapshot.docs, ...sheetsSnapshot.docs]) {
+      final data = doc.data();
+      if (_isDeletedForUser(data, currentUserId)) {
+        continue;
+      }
+      reportsById[doc.id] = _reportFromFirestore(doc.id, data);
+    }
+
+    final reports = reportsById.values.toList()
+      ..sort(_compareReportsByDateDesc);
+    return reports;
+  }
+
+  Future<List<Report>> _downloadSheetsSyncedReportsOnly() async {
+    final currentUserId = _userId;
+    final snapshot = await _firestore
+        .collection(_reportsCollection)
+        .where(_sheetsSyncedField, isEqualTo: true)
+        .orderBy('date', descending: true)
+        .get();
+
+    return snapshot.docs
+        .where((doc) => !_isDeletedForUser(doc.data(), currentUserId))
+        .map((doc) => _reportFromFirestore(doc.id, doc.data()))
+        .toList()
+      ..sort(_compareReportsByDateDesc);
+  }
+
+  int _compareReportsByDateDesc(Report a, Report b) {
+    final dateCompare = b.date.compareTo(a.date);
+    if (dateCompare != 0) {
+      return dateCompare;
+    }
+    return (a.id ?? 0).compareTo(b.id ?? 0);
+  }
+
   /// Convert Report to Firestore document
   Map<String, dynamic> _reportToFirestoreForCreate(
     Report report, {
@@ -489,6 +548,7 @@ class FirestoreService {
       'creatorAllowedCreationReportKeys':
           creatorAllowedCreationReportKeys.toList()..sort(),
       'additionalData': report.additionalData,
+      _sheetsSyncedField: report.isSentToSheets,
       'localId': report.id, // Keep local SQLite ID for reference
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
@@ -511,6 +571,7 @@ class FirestoreService {
       'creatorAllowedCreationReportKeys':
           creatorAllowedCreationReportKeys.toList()..sort(),
       'additionalData': report.additionalData,
+      _sheetsSyncedField: report.isSentToSheets,
       'updatedAt': FieldValue.serverTimestamp(),
     };
   }
@@ -525,6 +586,9 @@ class FirestoreService {
       group: data['group'] as String,
       type: data['type'] as String,
       additionalData: data['additionalData'] as Map<String, dynamic>?,
+      isSentToSheets: data[_sheetsSyncedField] == true ||
+          data['sheets_synced'] == true ||
+          data['sheets_synced'] == 1,
     );
   }
 }

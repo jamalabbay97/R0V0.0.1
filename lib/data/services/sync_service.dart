@@ -231,10 +231,17 @@ class SyncService {
       await _localDb.updateReport(reportToUpdate);
     }
 
-    // Try to sync to cloud if authenticated.
-    if (_firestore.isAuthenticated && reportToUpdate.firestoreId != null) {
+    // Try to sync to cloud if authenticated. If this local report was not
+    // uploaded yet, create the cloud document now so shared Sheets-sent
+    // visibility uses the same saved payload and layout for every account.
+    if (_firestore.isAuthenticated) {
       try {
-        await _firestore.uploadReport(reportToUpdate);
+        final firestoreId = await _firestore.uploadReport(reportToUpdate);
+        if (reportToUpdate.firestoreId == null && reportToUpdate.id != null) {
+          await _localDb.updateReport(
+            reportToUpdate.copyWith(firestoreId: firestoreId),
+          );
+        }
       } catch (e) {
         if (kDebugMode) {
           debugPrint('Failed to sync report update to cloud: $e');
