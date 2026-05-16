@@ -85,9 +85,9 @@ class GoogleSheetsService {
         return false;
       }
 
-      final savedAt = _nowProvider().toIso8601String();
+      final savedAt = _formatIsoTimestampWithSeconds(_nowProvider());
       final reportDate = report.date;
-      final reportDateIso = reportDate.toIso8601String();
+      final reportDateIso = _formatIsoTimestampWithSeconds(reportDate);
       final reportLocalDate = reportDate.toLocal();
       final payload = _buildPayload(
         report,
@@ -164,12 +164,12 @@ class GoogleSheetsService {
       }
 
       await _ensureSheetWithHeaders(api, payload.sheetName, payload.headers);
-      await api.spreadsheets.values.append(
-        ValueRange(values: [payload.row]),
-        _spreadsheetId,
-        '${payload.sheetName}!A1',
-        valueInputOption: 'RAW',
-        insertDataOption: 'INSERT_ROWS',
+      await _insertRowsSortedByDateTime(
+        api,
+        sheetName: payload.sheetName,
+        rows: [payload.row],
+        dateColumnIndex: 11,
+        firstDataRowNumber: 2,
       );
 
       if (payload.detailsRows.isNotEmpty &&
@@ -180,12 +180,12 @@ class GoogleSheetsService {
           payload.detailsSheetName!,
           payload.detailsHeaders!,
         );
-        await api.spreadsheets.values.append(
-          ValueRange(values: payload.detailsRows),
-          _spreadsheetId,
-          '${payload.detailsSheetName}!A1',
-          valueInputOption: 'RAW',
-          insertDataOption: 'INSERT_ROWS',
+        await _insertRowsSortedByDateTime(
+          api,
+          sheetName: payload.detailsSheetName!,
+          rows: payload.detailsRows,
+          dateColumnIndex: 6,
+          firstDataRowNumber: 2,
         );
       }
 
@@ -304,16 +304,12 @@ class GoogleSheetsService {
       _r0DowntimeDetailsSheet,
       _r0DowntimeDetailsHeaders,
     );
-    await _loadSheetNames(api);
-    final targetSheetName =
-        _resolveSheetName(_r0DowntimeDetailsSheet) ?? _r0DowntimeDetailsSheet;
-
-    await api.spreadsheets.values.append(
-      ValueRange(values: rows),
-      _spreadsheetId,
-      '$targetSheetName!A1',
-      valueInputOption: 'RAW',
-      insertDataOption: 'INSERT_ROWS',
+    await _insertRowsSortedByDateTime(
+      api,
+      sheetName: _r0DowntimeDetailsSheet,
+      rows: rows,
+      dateColumnIndex: 0,
+      firstDataRowNumber: 2,
     );
   }
 
@@ -326,8 +322,7 @@ class GoogleSheetsService {
       return const [];
     }
 
-    final date =
-        DateFormat('yyyy-MM-dd', _frenchLocale).format(reportDateLocal);
+    final date = _formatSheetTimestamp(reportDateLocal);
     return arrets.map((arret) {
       return [
         date,
@@ -869,23 +864,10 @@ class GoogleSheetsService {
     SheetsApi api,
     _TemplateRows templateRows,
   ) async {
-    if (_normalizeHeaderKey(templateRows.sheetName) ==
-        _normalizeHeaderKey(_truckSheet)) {
-      return _insertTruckTemplateRowsSorted(api, templateRows);
-    }
-
-    final appendResponse = await api.spreadsheets.values.append(
-      ValueRange(values: templateRows.rows),
-      _spreadsheetId,
-      '${templateRows.sheetName}!A7',
-      valueInputOption: 'RAW',
-      insertDataOption: 'INSERT_ROWS',
-    );
-
-    return _extractRowBounds(appendResponse.updates?.updatedRange);
+    return _insertTemplateRowsSorted(api, templateRows);
   }
 
-  Future<_RowBounds?> _insertTruckTemplateRowsSorted(
+  Future<_RowBounds?> _insertTemplateRowsSorted(
     SheetsApi api,
     _TemplateRows templateRows,
   ) async {
@@ -896,7 +878,7 @@ class GoogleSheetsService {
     final firstRow = templateRows.rows.first;
     final newDate = firstRow.isNotEmpty ? firstRow.first : null;
     final newPoste = firstRow.length > 8 ? firstRow[8] : null;
-    final insertStartRowNumber = await _resolveTruckInsertRowNumber(
+    final insertStartRowNumber = await _resolveTemplateInsertRowNumber(
       api,
       sheetName: templateRows.sheetName,
       reportDateValue: newDate,
@@ -937,13 +919,15 @@ class GoogleSheetsService {
     return _RowBounds(startRowIndex: startRowIndex, endRowIndex: endRowIndex);
   }
 
-  Future<int> _resolveTruckInsertRowNumber(
+  Future<int> _resolveTemplateInsertRowNumber(
     SheetsApi api, {
     required String sheetName,
     required Object? reportDateValue,
     required Object? posteValue,
   }) async {
-    final targetDate = _normalizeSheetDate(reportDateValue?.toString() ?? '');
+    final targetDateTime =
+        _parseSheetDateTime(reportDateValue?.toString() ?? '');
+    final targetDate = targetDateTime ?? DateTime.fromMillisecondsSinceEpoch(0);
     final targetPoste = _normalizePosteValue(posteValue);
     final response = await api.spreadsheets.values.get(
       _spreadsheetId,
@@ -951,19 +935,17 @@ class GoogleSheetsService {
     );
     final values = response.values ?? const [];
 
-    var fallbackInsertRow = values.length + 7;
     for (var index = 0; index < values.length; index++) {
       final row = values[index];
       if (row.isEmpty) {
         continue;
       }
 
-      final currentDate = _normalizeSheetDate(row.first?.toString() ?? '');
-      if (currentDate.isEmpty) {
+      final currentDate = _parseSheetDateTime(row.first?.toString() ?? '');
+      if (currentDate == null) {
         continue;
       }
 
-      fallbackInsertRow = index + 7;
       final dateComparison = targetDate.compareTo(currentDate);
       if (dateComparison > 0) {
         return index + 7;
@@ -972,15 +954,17 @@ class GoogleSheetsService {
         continue;
       }
 
-      final currentPoste = row.length > 8 ? _normalizePosteValue(row[8]) : '';
-      final posteComparison =
-          _posteSortRank(targetPoste).compareTo(_posteSortRank(currentPoste));
-      if (posteComparison < 0) {
-        return index + 7;
+      if (_normalizeHeaderKey(sheetName) == _normalizeHeaderKey(_truckSheet)) {
+        final currentPoste = row.length > 8 ? _normalizePosteValue(row[8]) : '';
+        final posteComparison =
+            _posteSortRank(targetPoste).compareTo(_posteSortRank(currentPoste));
+        if (posteComparison < 0) {
+          return index + 7;
+        }
       }
     }
 
-    return fallbackInsertRow;
+    return values.length + 7;
   }
 
   int _posteSortRank(String poste) {
@@ -1029,34 +1013,10 @@ class GoogleSheetsService {
     ),
   ];
 
-  _RowBounds? _extractRowBounds(String? updatedRange) {
-    if (updatedRange == null || updatedRange.isEmpty) {
-      return null;
-    }
-
-    final rowMatch =
-        RegExp(r'![A-Z]+(\d+):[A-Z]+(\d+)').firstMatch(updatedRange);
-    if (rowMatch == null) {
-      return null;
-    }
-
-    final startRow = int.tryParse(rowMatch.group(1) ?? '');
-    final endRow = int.tryParse(rowMatch.group(2) ?? '');
-    if (startRow == null || endRow == null) {
-      return null;
-    }
-
-    return _RowBounds(
-      startRowIndex: startRow - 1,
-      endRowIndex: endRow,
-    );
-  }
-
   _TemplateRows? _buildTemplateRows(Report report, DateTime reportDateLocal) {
     final data = report.additionalData ?? {};
     final category = _categorizeReport(report, data);
-    final date =
-        DateFormat('yyyy-MM-dd', _frenchLocale).format(reportDateLocal);
+    final date = _formatSheetTimestamp(reportDateLocal);
 
     switch (category) {
       case _ReportCategory.dailyTsud:
@@ -1328,8 +1288,8 @@ class GoogleSheetsService {
         final totalTrips = _resolveTotalTrips(data, trucks);
         final equipmentSummary = _formatEquipmentTripsForTemplate(trucks);
         final creator = _extractCreatorName(data);
-        final truckDate =
-            DateFormat('dd-MM-yyyy', _frenchLocale).format(reportDateLocal);
+        final truckDate = DateFormat('dd-MM-yyyy HH:mm:ss', _frenchLocale)
+            .format(reportDateLocal);
         final frenchPoste = _toFrenchPosteLabel(data['selectedPoste']);
         final frenchQualityType =
             _toFrenchQualityTypeLabel(data['selectedQualiteType']);
@@ -1794,6 +1754,81 @@ class GoogleSheetsService {
     }
   }
 
+  Future<void> _insertRowsSortedByDateTime(
+    SheetsApi api, {
+    required String sheetName,
+    required List<List<Object?>> rows,
+    required int dateColumnIndex,
+    required int firstDataRowNumber,
+  }) async {
+    if (rows.isEmpty) {
+      return;
+    }
+
+    await _loadSheetNames(api);
+    final targetSheetName = _resolveSheetName(sheetName) ?? sheetName;
+    final sheetId = _sheetIdsByName[targetSheetName];
+    if (sheetId == null) {
+      debugPrint('Sheet ID for "$targetSheetName" not found.');
+      return;
+    }
+
+    final firstRow = rows.first;
+    final targetDate = dateColumnIndex < firstRow.length
+        ? _parseSheetDateTime(firstRow[dateColumnIndex]?.toString() ?? '')
+        : null;
+    final existingResponse = await api.spreadsheets.values.get(
+      _spreadsheetId,
+      '$targetSheetName!A$firstDataRowNumber:AZ',
+    );
+    final existingRows = existingResponse.values ?? const [];
+    var insertRowNumber = existingRows.length + firstDataRowNumber;
+
+    for (var index = 0; index < existingRows.length; index++) {
+      final row = existingRows[index];
+      if (!_hasContent(row) || row.length <= dateColumnIndex) {
+        continue;
+      }
+
+      final currentDate =
+          _parseSheetDateTime(row[dateColumnIndex]?.toString() ?? '');
+      if (targetDate != null &&
+          currentDate != null &&
+          targetDate.compareTo(currentDate) > 0) {
+        insertRowNumber = index + firstDataRowNumber;
+        break;
+      }
+    }
+
+    final startRowIndex = insertRowNumber - 1;
+    final endRowIndex = startRowIndex + rows.length;
+    await api.spreadsheets.batchUpdate(
+      BatchUpdateSpreadsheetRequest(
+        requests: [
+          Request(
+            insertDimension: InsertDimensionRequest(
+              range: DimensionRange(
+                sheetId: sheetId,
+                dimension: 'ROWS',
+                startIndex: startRowIndex,
+                endIndex: endRowIndex,
+              ),
+              inheritFromBefore: startRowIndex > firstDataRowNumber - 1,
+            ),
+          ),
+        ],
+      ),
+      _spreadsheetId,
+    );
+
+    await api.spreadsheets.values.update(
+      ValueRange(values: rows),
+      _spreadsheetId,
+      '$targetSheetName!A$insertRowNumber',
+      valueInputOption: 'RAW',
+    );
+  }
+
   Future<void> _ensureSheetWithHeaders(
     SheetsApi api,
     String sheetName,
@@ -1898,8 +1933,8 @@ class GoogleSheetsService {
     required String reportDateIso,
     required DateTime reportLocalDate,
   }) {
-    final reportDateLocal = reportLocalDate.toIso8601String().split('T').first;
-    final reportTimeLocal = reportLocalDate.toIso8601String().split('T').last;
+    final reportDateLocal = DateFormat('yyyy-MM-dd').format(reportLocalDate);
+    final reportTimeLocal = DateFormat('HH:mm:ss').format(reportLocalDate);
     final displayTitle = _resolveDisplayTitle(report);
     final displayDate = _formatDisplayDate(reportLocalDate);
     final data = report.additionalData ?? {};
@@ -2616,6 +2651,73 @@ class GoogleSheetsService {
     return sanitized.length > 90 ? sanitized.substring(0, 90) : sanitized;
   }
 
+  String _formatIsoTimestampWithSeconds(DateTime value) {
+    final normalized = value.isUtc ? value : value.toLocal();
+    final date = normalized.toIso8601String().split('T').first;
+    final time = DateFormat('HH:mm:ss').format(normalized);
+    return normalized.isUtc ? '${date}T${time}Z' : '${date}T$time';
+  }
+
+  String _formatSheetTimestamp(DateTime value) {
+    return DateFormat('yyyy-MM-dd HH:mm:ss', _frenchLocale)
+        .format(value.toLocal());
+  }
+
+  DateTime? _parseSheetDateTime(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+
+    final normalized = trimmed.replaceAll(RegExp(r'\s+'), ' ');
+    final serial = double.tryParse(normalized.replaceAll(',', '.'));
+    if (serial != null) {
+      final excelEpoch = DateTime.utc(1899, 12, 30);
+      final wholeDays = serial.floor();
+      final seconds = ((serial - wholeDays) * Duration.secondsPerDay).round();
+      return excelEpoch
+          .add(Duration(days: wholeDays, seconds: seconds))
+          .toLocal();
+    }
+
+    final isoParsed = DateTime.tryParse(normalized);
+    if (isoParsed != null) {
+      return isoParsed.toLocal();
+    }
+
+    const acceptedPatterns = [
+      'yyyy-MM-dd HH:mm:ss',
+      'yyyy-MM-dd HH:mm',
+      'yyyy-MM-dd',
+      'dd-MM-yyyy HH:mm:ss',
+      'dd-MM-yyyy HH:mm',
+      'dd-MM-yyyy',
+      'dd/MM/yyyy HH:mm:ss',
+      'dd/MM/yyyy HH:mm',
+      'dd/MM/yyyy',
+      'd/M/yyyy HH:mm:ss',
+      'd/M/yyyy',
+      'd MMM yyyy HH:mm:ss',
+      'd MMM yyyy',
+      'd/M/yyyy',
+      'd MMM yyyy HH:mm:ss',
+      'd MMM yyyy',
+      'd MMMM yyyy HH:mm:ss',
+      'd MMMM yyyy HH:mm',
+      'd MMMM yyyy',
+    ];
+
+    for (final pattern in acceptedPatterns) {
+      try {
+        return DateFormat(pattern, _frenchLocale).parseStrict(normalized);
+      } catch (_) {
+        // Keep trying with the next pattern.
+      }
+    }
+
+    return null;
+  }
+
   bool _isSameReportDate(String rawDate, String targetDate) {
     if (rawDate == targetDate) {
       return true;
@@ -2627,50 +2729,12 @@ class GoogleSheetsService {
   }
 
   String _normalizeSheetDate(String value) {
-    final trimmed = value.trim();
-    if (trimmed.isEmpty) {
-      return '';
+    final parsed = _parseSheetDateTime(value);
+    if (parsed == null) {
+      return value.trim().replaceAll(RegExp(r'\s+'), ' ');
     }
 
-    final normalized = trimmed.replaceAll(RegExp(r'\s+'), ' ');
-
-    final asSpreadsheetSerial =
-        double.tryParse(normalized.replaceAll(',', '.'));
-    if (asSpreadsheetSerial != null) {
-      final excelEpoch = DateTime.utc(1899, 12, 30);
-      final parsed =
-          excelEpoch.add(Duration(days: asSpreadsheetSerial.floor()));
-      return DateFormat('yyyy-MM-dd', _frenchLocale).format(parsed.toLocal());
-    }
-
-    const acceptedPatterns = [
-      'yyyy-MM-dd',
-      'yyyy-MM-dd HH:mm',
-      'yyyy-MM-dd HH:mm:ss',
-      'dd-MM-yyyy',
-      'dd-MM-yyyy HH:mm',
-      'dd/MM/yyyy HH:mm:ss',
-      'dd/MM/yyyy',
-      'dd/MM/yyyy HH:mm',
-      'd/M/yyyy',
-      'd/M/yyyy HH:mm',
-      'd MMM yyyy',
-      'd MMMM yyyy',
-      'd MMM yyyy HH:mm',
-      'd MMMM yyyy HH:mm',
-    ];
-
-    for (final pattern in acceptedPatterns) {
-      try {
-        final parsed =
-            DateFormat(pattern, _frenchLocale).parseStrict(normalized);
-        return DateFormat('yyyy-MM-dd', _frenchLocale).format(parsed);
-      } catch (_) {
-        // Keep trying with the next pattern.
-      }
-    }
-
-    return normalized;
+    return DateFormat('yyyy-MM-dd', _frenchLocale).format(parsed);
   }
 
   String _normalizePosteValue(Object? value) {
@@ -2741,6 +2805,14 @@ class GoogleSheetsService {
 
   @visibleForTesting
   String normalizePosteForTest(Object? value) => _normalizePosteValue(value);
+
+  @visibleForTesting
+  String formatSheetTimestampForTest(DateTime value) =>
+      _formatSheetTimestamp(value);
+
+  @visibleForTesting
+  String formatIsoTimestampWithSecondsForTest(DateTime value) =>
+      _formatIsoTimestampWithSeconds(value);
 
   @visibleForTesting
   int detectHeaderRowIndexForTest(List<List<Object?>> rows) =>
@@ -3301,7 +3373,7 @@ class GoogleSheetsService {
   }
 
   String _formatDisplayDate(DateTime reportDate) {
-    return DateFormat('dd/MM/yyyy HH:mm', _frenchLocale)
+    return DateFormat('dd/MM/yyyy HH:mm:ss', _frenchLocale)
         .format(reportDate.toLocal());
   }
 

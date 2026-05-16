@@ -14,6 +14,23 @@ void main() {
       expect(service.normalizeSheetDateForTest('45567'), '2024-10-02');
       expect(service.normalizeSheetDateForTest('02/10/2024'), '2024-10-02');
       expect(service.normalizeSheetDateForTest('2 octobre 2024'), '2024-10-02');
+      expect(
+        service.normalizeSheetDateForTest('2026-05-16 14:03:27'),
+        '2026-05-16',
+      );
+    });
+
+    test('formats sheet and ISO timestamps with seconds', () {
+      final timestamp = DateTime(2026, 5, 16, 14, 3, 27, 999);
+
+      expect(
+        service.formatSheetTimestampForTest(timestamp),
+        '2026-05-16 14:03:27',
+      );
+      expect(
+        service.formatIsoTimestampWithSecondsForTest(timestamp),
+        '2026-05-16T14:03:27',
+      );
     });
 
     test('normalizes poste variants to french canonical labels', () {
@@ -148,7 +165,7 @@ void main() {
 
       expect(rows, [
         [
-          '2026-05-15',
+          '2026-05-15 00:00:00',
           'SONDEUSES',
           'Electrique',
           'PV275-2',
