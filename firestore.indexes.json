@@ -13,6 +13,20 @@
                     "order": "DESCENDING"
                 }
             ]
+        },
+        {
+            "collectionGroup": "reports",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "sheetsSynced",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "date",
+                    "order": "DESCENDING"
+                }
+            ]
         }
     ],
     "fieldOverrides": []

@@ -81,6 +81,39 @@ class SyncService {
     }
   }
 
+  bool _shouldReplaceLocalReportWithCloud({
+    required Report localReport,
+    required Report cloudReport,
+  }) {
+    return localReport.firestoreId != cloudReport.firestoreId ||
+        localReport.description != cloudReport.description ||
+        localReport.date != cloudReport.date ||
+        localReport.group != cloudReport.group ||
+        localReport.type != cloudReport.type ||
+        localReport.isSentToSheets != cloudReport.isSentToSheets ||
+        !_deepEquals(localReport.additionalData, cloudReport.additionalData);
+  }
+
+  bool _deepEquals(Object? left, Object? right) {
+    if (identical(left, right)) return true;
+    if (left is Map && right is Map) {
+      if (left.length != right.length) return false;
+      for (final key in left.keys) {
+        if (!right.containsKey(key)) return false;
+        if (!_deepEquals(left[key], right[key])) return false;
+      }
+      return true;
+    }
+    if (left is List && right is List) {
+      if (left.length != right.length) return false;
+      for (var index = 0; index < left.length; index++) {
+        if (!_deepEquals(left[index], right[index])) return false;
+      }
+      return true;
+    }
+    return left == right;
+  }
+
   /// Sync all cloud reports to local database
   Future<void> syncCloudToLocal() async {
     if (!_firestore.isAuthenticated) {
@@ -117,11 +150,15 @@ class SyncService {
                   'Downloaded new report from cloud: ${cloudReport.firestoreId}');
             }
           } else {
-            // Report exists locally - check if cloud is newer
-            // For simplicity, we'll keep the cloud version
-            // In a production app, you'd implement conflict resolution
-            if (cloudReport.date.isAfter(localReport.date)) {
-              // Preserve local row id when updating an existing local record.
+            // Keep the local row as an exact mirror of the cloud payload while
+            // preserving this device's SQLite id. A report can be marked as
+            // sent to Google Sheets without changing its report date, so date
+            // recency alone is not enough to decide whether other accounts
+            // should receive the shared/read-only version.
+            if (_shouldReplaceLocalReportWithCloud(
+              localReport: localReport,
+              cloudReport: cloudReport,
+            )) {
               await _localDb.updateReport(
                 cloudReport.copyWith(id: localReport.id),
               );
