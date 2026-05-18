@@ -2,6 +2,14 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:r0/domain/models/report.dart';
 import 'package:r0/presentation/providers/report_access_provider.dart';
 
+String _safeDotenvValue(String key) {
+  try {
+    return dotenv.env[key]?.trim() ?? '';
+  } catch (_) {
+    return '';
+  }
+}
+
 class AccessControlDefinitions {
   static const Map<String, String> reportLabels = {
     'r0_report': 'R0 Report',
@@ -59,9 +67,9 @@ class AccessControlDefinitions {
     required String uid,
     String? email,
   }) {
-    final primaryUid = dotenv.env['PRIMARY_ACCOUNT_UID']?.trim() ?? '';
+    final primaryUid = _safeDotenvValue('PRIMARY_ACCOUNT_UID');
     final primaryEmail =
-        (dotenv.env['PRIMARY_ACCOUNT_EMAIL']?.trim().toLowerCase()) ?? '';
+        _safeDotenvValue('PRIMARY_ACCOUNT_EMAIL').toLowerCase();
 
     if (primaryUid.isNotEmpty && uid == primaryUid) {
       return true;

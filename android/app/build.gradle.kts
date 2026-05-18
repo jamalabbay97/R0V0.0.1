@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -6,6 +8,26 @@ plugins {
     // Add the Google services Gradle plugin
     id("com.google.gms.google-services")
 }
+
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+}
+
+fun signingValue(name: String): String? {
+    return keystoreProperties.getProperty(name)?.takeIf { it.isNotBlank() }
+        ?: System.getenv(name)?.takeIf { it.isNotBlank() }
+}
+
+val releaseStoreFile = signingValue("storeFile") ?: signingValue("ANDROID_KEYSTORE_PATH")
+val releaseStorePassword = signingValue("storePassword") ?: signingValue("ANDROID_STORE_PASSWORD")
+val releaseKeyAlias = signingValue("keyAlias") ?: signingValue("ANDROID_KEY_ALIAS")
+val releaseKeyPassword = signingValue("keyPassword") ?: signingValue("ANDROID_KEY_PASSWORD")
+val hasReleaseSigning = releaseStoreFile != null &&
+    releaseStorePassword != null &&
+    releaseKeyAlias != null &&
+    releaseKeyPassword != null
 
 android {
     namespace = "com.example.R0"
@@ -30,11 +52,31 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            if (hasReleaseSigning) {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            } else if (System.getenv("CI") == "true") {
+                throw GradleException(
+                    "Release signing is required in CI. Configure ANDROID_KEYSTORE_PATH, " +
+                        "ANDROID_STORE_PASSWORD, ANDROID_KEY_ALIAS, and ANDROID_KEY_PASSWORD."
+                )
+            } else {
+                signingConfig = signingConfigs.getByName("debug")
+            }
+            isMinifyEnabled = true
+            isShrinkResources = true
         }
     }
 

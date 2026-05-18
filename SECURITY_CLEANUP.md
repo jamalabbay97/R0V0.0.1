@@ -34,8 +34,25 @@ git push --force
 After rewriting history, rotate all credentials that might have leaked:
 
 - Firebase service account keys
+- Google Sheets service account keys
 - GitHub tokens
 - API keys for external services
+- Android/iOS signing keys if they were ever committed
+
+## 2.1) Current hardening status
+
+- `.env` is no longer declared as a Flutter asset. Production config should be
+  injected with `--dart-define` or CI environment-specific build settings.
+- `assets/credentials/**` is ignored and no longer declared in `pubspec.yaml`.
+- Google Sheets service-account credentials are disabled in Flutter release
+  builds. Privileged Sheets submission must run through Cloud Functions or a
+  backend API.
+- Firebase Hosting now sends baseline security and caching headers.
+- CI includes a gitleaks secret-scan gate.
+
+If a service-account JSON was ever committed or included in a distributed app
+bundle, revoke that key in Google Cloud IAM immediately and create a new key
+only for server-side use.
 
 ## 3) Validate repository protection
 
@@ -48,3 +65,5 @@ After rewriting history, rotate all credentials that might have leaked:
 - Enforce least privilege on Firebase IAM.
 - Prefer workload identity / OIDC over long-lived keys where possible.
 - Add pre-commit secret scanning (for example: gitleaks, trufflehog).
+- Keep service account JSON in GitHub Actions secrets or Google Cloud Secret
+  Manager only.

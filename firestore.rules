@@ -48,6 +48,33 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function isSelfUserCreate(userId) {
+      return isOwner(userId)
+        && request.resource.data.keys().hasOnly([
+          'email',
+          'displayName',
+          'photoURL',
+          'createdAt',
+          'updatedAt'
+        ])
+        && !('role' in request.resource.data)
+        && !('allowedReports' in request.resource.data)
+        && !('isDeleted' in request.resource.data);
+    }
+
+    function isSelfProfileUpdate(userId) {
+      return isOwner(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'email',
+          'displayName',
+          'photoURL',
+          'updatedAt'
+        ])
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.allowedReports == resource.data.allowedReports
+        && request.resource.data.isDeleted == resource.data.isDeleted;
+    }
+
     function hasArchiveAccess() {
       let allowedReports = get(
         /databases/$(database)/documents/users/$(request.auth.uid)
@@ -99,13 +126,10 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdminOrManager();
-      allow create: if isOwner(userId)
+      allow create: if isSelfUserCreate(userId)
         || isAdmin()
         || (canManagerModifyUser(userId) && managerCanAssignRole());
-      allow update: if isAdmin() || (
-        isOwner(userId)
-        && request.resource.data.role == resource.data.role
-      ) || (
+      allow update: if isAdmin() || isSelfProfileUpdate(userId) || (
         canManagerModifyUser(userId)
         && managerCanAssignRole()
         && request.resource.data.role != 'admin'

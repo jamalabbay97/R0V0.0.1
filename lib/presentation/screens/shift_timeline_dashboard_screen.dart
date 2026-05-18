@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:r0/domain/models/report.dart';
 import 'package:provider/provider.dart';
 import 'package:r0/domain/repositories/report_repository.dart';
+import 'package:r0/presentation/theme.dart';
 
 typedef _TimelineExtractor = List<_DowntimeEntry> Function(
   Report report,
@@ -94,33 +95,40 @@ class _ShiftTimelineDashboardScreenState
             body: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                  ),
                   decoration: BoxDecoration(
                     color: Theme.of(context).cardColor,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        offset: const Offset(0, 4),
-                        blurRadius: 12,
-                      ),
-                    ],
+                    border: Border(
+                      bottom: BorderSide(color: Theme.of(context).dividerColor),
+                    ),
                     borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(24),
-                      bottomRight: Radius.circular(24),
+                      bottomLeft: Radius.circular(AppRadii.card),
+                      bottomRight: Radius.circular(AppRadii.card),
                     ),
                   ),
                   child: Row(
                     children: [
                       Container(
-                        width: 58,
-                        height: 58,
-                        padding: const EdgeInsets.all(4),
+                        width: 56,
+                        height: 56,
+                        alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: Theme.of(context)
                               .colorScheme
                               .primary
-                              .withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(14),
+                              .withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(AppRadii.control),
+                          border: Border.all(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.22),
+                          ),
                         ),
                         child: Icon(
                           Icons.timeline_rounded,
@@ -128,7 +136,7 @@ class _ShiftTimelineDashboardScreenState
                           size: 32,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -176,7 +184,7 @@ class _ShiftTimelineDashboardScreenState
                               ),
                             )
                           : ListView(
-                              padding: const EdgeInsets.all(16),
+                              padding: const EdgeInsets.all(AppSpacing.md),
                               children: [
                                 DropdownButtonFormField<DateTime>(
                                   initialValue: _selectedProductionDay,
@@ -202,7 +210,7 @@ class _ShiftTimelineDashboardScreenState
                                     );
                                   },
                                 ),
-                                const SizedBox(height: 18),
+                                const SizedBox(height: AppSpacing.lg),
                                 if (_selectedProductionDay != null &&
                                     reportsForDay.isNotEmpty)
                                   _ShiftTimelineCard(
@@ -218,7 +226,7 @@ class _ShiftTimelineDashboardScreenState
                                   ),
                                 if (_selectedProductionDay != null &&
                                     tnbReportsForDay.isNotEmpty) ...[
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: AppSpacing.md),
                                   _ShiftTimelineCard(
                                     title: 'TNB',
                                     productionDay: _selectedProductionDay!,
@@ -233,7 +241,7 @@ class _ShiftTimelineDashboardScreenState
                                 ],
                                 if (_selectedProductionDay != null &&
                                     tsudReportsForDay.isNotEmpty) ...[
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: AppSpacing.md),
                                   _ShiftTimelineCard(
                                     title: 'TSUD',
                                     productionDay: _selectedProductionDay!,
@@ -489,10 +497,8 @@ class _ShiftTimelineCard extends StatelessWidget {
         .toList();
 
     return Card(
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -502,23 +508,23 @@ class _ShiftTimelineCard extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               'Order: 3rd Shift → 1st Shift → 2nd Shift',
               style: theme.textTheme.bodySmall,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xxs),
             Text(
               _coverageText(),
               style: theme.textTheme.bodySmall,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             ...trackData.map((track) {
               final operatingPct =
                   ((1440 - track.totalDownMinutes) / 1440) * 100;
               final downtimePct = (track.totalDownMinutes / 1440) * 100;
               return Padding(
-                padding: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -534,17 +540,17 @@ class _ShiftTimelineCard extends StatelessWidget {
                         _PercentagePill(
                           label: 'Operating',
                           value: '${operatingPct.toStringAsFixed(1)}%',
-                          color: Colors.green.shade600,
+                          color: AppColors.primary,
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: AppSpacing.xs),
                         _PercentagePill(
                           label: 'Down',
                           value: '${downtimePct.toStringAsFixed(1)}%',
-                          color: Colors.red.shade500,
+                          color: AppColors.error,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.xs),
                     LayoutBuilder(
                       builder: (context, constraints) {
                         final width = constraints.maxWidth;
@@ -555,8 +561,8 @@ class _ShiftTimelineCard extends StatelessWidget {
                               CustomPaint(
                                 painter: _TimelinePainter(
                                   segments: track.segments,
-                                  upColor: Colors.green.shade500,
-                                  downColor: Colors.red.shade400,
+                                  upColor: AppColors.primary,
+                                  downColor: AppColors.error,
                                   dividerColor: theme.dividerColor,
                                 ),
                                 child: const SizedBox.expand(),
@@ -593,7 +599,7 @@ class _ShiftTimelineCard extends StatelessWidget {
                         Text('22:30'),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       'Operation: ${((1440 - track.totalDownMinutes) / 60).toStringAsFixed(2)}h • Downtime: ${(track.totalDownMinutes / 60).toStringAsFixed(2)}h',
                       style: theme.textTheme.bodyMedium,
@@ -602,12 +608,12 @@ class _ShiftTimelineCard extends StatelessWidget {
                 ),
               );
             }),
-            const SizedBox(height: 12),
-            Row(
+            const SizedBox(height: AppSpacing.sm),
+            const Row(
               children: [
-                _LegendChip(color: Colors.green.shade500, text: '🟢 Operation'),
-                const SizedBox(width: 8),
-                _LegendChip(color: Colors.red.shade400, text: '🔴 Downtime'),
+                _LegendChip(color: AppColors.primary, text: 'Operation'),
+                SizedBox(width: AppSpacing.xs),
+                _LegendChip(color: AppColors.error, text: 'Downtime'),
               ],
             ),
           ],
@@ -872,11 +878,13 @@ class _TimelinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Rect.fromLTWH(0, 14, size.width, 22);
-    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(8));
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(11));
 
     final base = Paint()..color = upColor.withValues(alpha: 0.18);
     canvas.drawRRect(rrect, base);
 
+    canvas.save();
+    canvas.clipRRect(rrect);
     for (final segment in segments) {
       final startX = (segment.startMinute / 1440) * size.width;
       final endX = (segment.endMinute / 1440) * size.width;
@@ -886,6 +894,7 @@ class _TimelinePainter extends CustomPainter {
       final paint = Paint()..color = segment.isDowntime ? downColor : upColor;
       canvas.drawRect(segRect, paint);
     }
+    canvas.restore();
 
     final divider = Paint()
       ..color = dividerColor

@@ -9,6 +9,18 @@ import 'package:r0/domain/models/report.dart';
 import 'package:r0/domain/services/stop_detail_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+String _configValue(String key, String dartDefineValue) {
+  if (dartDefineValue.isNotEmpty) {
+    return dartDefineValue;
+  }
+
+  try {
+    return dotenv.env[key] ?? '';
+  } catch (_) {
+    return '';
+  }
+}
+
 class GoogleSheetsService {
   GoogleSheetsService({
     String? spreadsheetId,
@@ -16,15 +28,15 @@ class GoogleSheetsService {
     String? credentialsAssetPath,
     DateTime Function()? nowProvider,
   })  : _spreadsheetId = spreadsheetId ??
-            (dotenv.env['GOOGLE_SHEETS_SPREADSHEET_ID']?.isNotEmpty == true
-                ? dotenv.env['GOOGLE_SHEETS_SPREADSHEET_ID']!
-                : const String.fromEnvironment('GOOGLE_SHEETS_SPREADSHEET_ID')),
+            _configValue(
+              'GOOGLE_SHEETS_SPREADSHEET_ID',
+              const String.fromEnvironment('GOOGLE_SHEETS_SPREADSHEET_ID'),
+            ),
         _credentialsJson = credentialsJson ??
             const String.fromEnvironment('GOOGLE_SHEETS_CREDENTIALS_JSON'),
         _credentialsAssetPath = credentialsAssetPath ??
             const String.fromEnvironment('GOOGLE_SHEETS_CREDENTIALS_ASSET_PATH',
-                defaultValue:
-                    'assets/credentials/r0v01-5b577-67d9e9bae92b.json'),
+                defaultValue: ''),
         _nowProvider = nowProvider ?? DateTime.now;
 
   static const String _genericReportsSheet = 'Reports';
@@ -1753,6 +1765,14 @@ class GoogleSheetsService {
   }
 
   Future<ServiceAccountCredentials?> _loadCredentials() async {
+    if (kReleaseMode) {
+      debugPrint(
+        'Google Sheets client credentials are disabled in release builds. '
+        'Use the backend submission endpoint instead.',
+      );
+      return null;
+    }
+
     if (_credentialsJson.isNotEmpty) {
       return ServiceAccountCredentials.fromJson(
         jsonDecode(_credentialsJson) as Map<String, dynamic>,

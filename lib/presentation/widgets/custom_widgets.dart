@@ -23,9 +23,9 @@ class OCPCard extends StatelessWidget {
       color: color,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadii.card),
         child: Padding(
-          padding: padding ?? const EdgeInsets.all(16.0),
+          padding: padding ?? const EdgeInsets.all(AppSpacing.lg),
           child: child,
         ),
       ),
@@ -53,11 +53,17 @@ class OCPInfoCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            width: AppSizes.iconBox,
+            height: AppSizes.iconBox,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
               color: (iconColor ?? Theme.of(context).primaryColor)
-                  .withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+                  .withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppRadii.control),
+              border: Border.all(
+                color: (iconColor ?? Theme.of(context).primaryColor)
+                    .withValues(alpha: 0.2),
+              ),
             ),
             child: Icon(
               icon,
@@ -116,12 +122,7 @@ class OCPButton extends StatelessWidget {
     if (isSecondary) {
       style = ButtonStyles.secondaryButton(context);
     } else if (isDestructive) {
-      style = ElevatedButton.styleFrom(
-        backgroundColor: AppColors.error,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-      );
+      style = ButtonStyles.dangerButton(context);
     } else {
       style = ButtonStyles.primaryButton(context);
     }
@@ -202,11 +203,7 @@ class OCPTextField extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.7),
+                color: Theme.of(context).textTheme.bodySmall?.color,
               ),
         ),
         const SizedBox(height: 8),
@@ -253,11 +250,7 @@ class OCPDropdown<T> extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.7),
+                color: Theme.of(context).textTheme.bodySmall?.color,
               ),
         ),
         const SizedBox(height: 8),
@@ -268,9 +261,9 @@ class OCPDropdown<T> extends StatelessWidget {
           onChanged: onChanged,
           validator: validator,
           decoration: const InputDecoration(
-            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 17),
           ),
-          icon: const Icon(Icons.arrow_drop_down),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded),
         ),
       ],
     );
@@ -294,8 +287,11 @@ class OCPStepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 80,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      constraints: const BoxConstraints(minHeight: 88),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xs,
+      ),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: steps.length,
@@ -306,23 +302,31 @@ class OCPStepper extends StatelessWidget {
           return GestureDetector(
             onTap: onStepTapped != null ? () => onStepTapped!(index) : null,
             child: Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              margin: const EdgeInsets.only(right: AppSpacing.xs),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
+              ),
               decoration: BoxDecoration(
-                color: isCurrent ? AppColors.primary : Colors.transparent,
+                color:
+                    isCurrent ? AppColors.primary : Theme.of(context).cardColor,
                 border: Border.all(
                   color: isCompleted || isCurrent
                       ? AppColors.primary
-                      : Colors.grey.withValues(alpha: 0.5),
-                  width: 2,
+                      : Theme.of(context).dividerColor,
+                  width: 1.2,
                 ),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadii.control),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (isCompleted)
-                    const Icon(Icons.check, size: 20, color: AppColors.primary)
+                    const Icon(
+                      Icons.check_circle_outline_rounded,
+                      size: 20,
+                      color: AppColors.primaryHover,
+                    )
                   else
                     Text(
                       '${index + 1}',
@@ -338,10 +342,12 @@ class OCPStepper extends StatelessWidget {
                     style: TextStyle(
                       color: isCurrent
                           ? Colors.white
-                          : (isCompleted ? AppColors.primary : Colors.grey),
+                          : (isCompleted
+                              ? AppColors.primaryHover
+                              : Theme.of(context).textTheme.bodySmall?.color),
                       fontWeight: isCurrent || isCompleted
-                          ? FontWeight.bold
-                          : FontWeight.normal,
+                          ? FontWeight.w700
+                          : FontWeight.w500,
                       fontSize: 12,
                     ),
                   ),

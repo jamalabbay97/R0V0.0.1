@@ -108,7 +108,9 @@ Set up your development environment in seconds.
 ### 1️⃣ Prerequisites
 - Clean install of [Flutter SDK](https://docs.flutter.dev/get-started/install) (`>= 3.0.0`)
 - Android Studio, Xcode, or Visual Studio Code
-- A valid Firebase Project (Credentials structured in `assets/credentials/` or `firebase.json`)
+- A valid Firebase project. Do not place service-account JSON in Flutter
+  assets; use local `.env` only for development fallback and `--dart-define`
+  or CI secrets for production builds.
 
 ### 2️⃣ Ignition Sequence
 ```bash

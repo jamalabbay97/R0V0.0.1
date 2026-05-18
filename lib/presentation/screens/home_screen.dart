@@ -117,14 +117,8 @@ class _PageSwitcher extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface.withValues(alpha: 0.72),
-          borderRadius: BorderRadius.circular(999),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(AppRadii.chip),
+          border: Border.all(color: theme.dividerColor),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -144,7 +138,7 @@ class _PageSwitcher extends StatelessWidget {
                     color: isSelected
                         ? theme.colorScheme.primary
                         : theme.colorScheme.onSurface.withValues(alpha: 0.25),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppRadii.chip),
                   ),
                 ),
               ),
@@ -164,14 +158,8 @@ class _PageSwitcher extends StatelessWidget {
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(AppRadii.chip),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -180,7 +168,7 @@ class _PageSwitcher extends StatelessWidget {
           (index) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: InkWell(
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(AppRadii.chip),
               onTap: () => onSelectPage(index),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
@@ -190,7 +178,7 @@ class _PageSwitcher extends StatelessWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(AppRadii.chip),
                   color: index == currentPage
                       ? theme.colorScheme.primary
                       : Colors.transparent,
@@ -233,7 +221,7 @@ class _HomeDashboardPage extends StatelessWidget {
               _buildHeader(context, theme, dateStr, l10n),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -244,7 +232,7 @@ class _HomeDashboardPage extends StatelessWidget {
                               .withValues(alpha: 0.7),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.xs),
                       Row(
                         children: [
                           Icon(
@@ -253,7 +241,7 @@ class _HomeDashboardPage extends StatelessWidget {
                             color: theme.colorScheme.onSurface
                                 .withValues(alpha: 0.6),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: AppSpacing.xs),
                           Expanded(
                             child: Text(
                               AppLocalizations.of(context)!.swipeLeftHint,
@@ -265,7 +253,7 @@ class _HomeDashboardPage extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: AppSpacing.md),
                       _buildReportCardsGrid(context, l10n, theme),
                     ],
                   ),
@@ -281,34 +269,34 @@ class _HomeDashboardPage extends StatelessWidget {
   Widget _buildHeader(BuildContext context, ThemeData theme, String date,
       AppLocalizations l10n) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
       decoration: BoxDecoration(
         color: theme.cardColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            offset: const Offset(0, 4),
-            blurRadius: 12,
-          ),
-        ],
+        border: Border(bottom: BorderSide(color: theme.dividerColor)),
         borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
+          bottomLeft: Radius.circular(AppRadii.card),
+          bottomRight: Radius.circular(AppRadii.card),
         ),
       ),
       child: Row(
         children: [
           Container(
-            width: 58,
-            height: 58,
-            padding: const EdgeInsets.all(4),
+            width: 56,
+            height: 56,
+            padding: const EdgeInsets.all(AppSpacing.xxs),
             decoration: BoxDecoration(
-              color: AppColors.backgroundLight,
-              borderRadius: BorderRadius.circular(14),
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(AppRadii.control),
+              border: Border.all(color: theme.dividerColor),
             ),
             child: const OcpLogo(size: 48),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,8 +320,9 @@ class _HomeDashboardPage extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             style: IconButton.styleFrom(
-              backgroundColor: AppColors.backgroundLight,
+              backgroundColor: theme.colorScheme.surface,
               foregroundColor: theme.colorScheme.primary,
+              side: BorderSide(color: theme.dividerColor),
             ),
             onPressed: () {
               Navigator.push(
@@ -396,8 +385,8 @@ class _HomeDashboardPage extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
+        crossAxisSpacing: AppSpacing.md,
+        mainAxisSpacing: AppSpacing.md,
         childAspectRatio: childAspectRatio,
       ),
       itemCount: reportCards.length,
@@ -469,19 +458,22 @@ class _HomeDashboardPage extends StatelessWidget {
   ) {
     return OCPCard(
       onTap: cardData.onTap,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            width: AppSizes.iconBox,
+            height: AppSizes.iconBox,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: cardData.color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              color: cardData.color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppRadii.control),
+              border: Border.all(color: cardData.color.withValues(alpha: 0.22)),
             ),
             child: Icon(
               cardData.icon,
-              size: 28,
+              size: 26,
               color: cardData.color,
             ),
           ),
@@ -494,7 +486,7 @@ class _HomeDashboardPage extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xxs),
           Text(
             cardData.description,
             style: theme.textTheme.bodySmall?.copyWith(

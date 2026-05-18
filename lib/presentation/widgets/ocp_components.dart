@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:r0/presentation/theme.dart';
 
 /// OCP Reports UI Component Library
 ///
@@ -30,18 +31,10 @@ class OCPPrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: width ?? double.infinity,
-      height: 48,
+      height: AppSizes.buttonHeight,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-        ),
+        style: ButtonStyles.primaryButton(context),
         child: isLoading
             ? const SizedBox(
                 height: 20,
@@ -56,14 +49,14 @@ class OCPPrimaryButton extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (icon != null) ...[
-                    Icon(icon, size: 24),
-                    const SizedBox(width: 8),
+                    Icon(icon, size: 22),
+                    const SizedBox(width: AppSpacing.xs),
                   ],
                   Text(
                     label,
                     style: const TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
@@ -92,27 +85,17 @@ class OCPSecondaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: width ?? double.infinity,
-      height: 48,
+      height: AppSizes.buttonHeight,
       child: OutlinedButton(
         onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: Theme.of(context).colorScheme.primary,
-          side: BorderSide(
-            color: Theme.of(context).colorScheme.primary,
-            width: 2,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-        ),
+        style: ButtonStyles.secondaryButton(context),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 24),
-              const SizedBox(width: 8),
+              Icon(icon, size: 22),
+              const SizedBox(width: AppSpacing.xs),
             ],
             Text(
               label,
@@ -149,16 +132,14 @@ class OCPCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: margin ?? const EdgeInsets.only(bottom: 16),
-      color: color,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      elevation: 2,
-      child: Padding(
-        padding: padding ?? const EdgeInsets.all(16),
-        child: child,
+    return Padding(
+      padding: margin ?? const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Card(
+        color: color,
+        child: Padding(
+          padding: padding ?? const EdgeInsets.all(AppSpacing.lg),
+          child: child,
+        ),
       ),
     );
   }
@@ -182,35 +163,49 @@ class OCPReportCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      elevation: 2,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadii.card),
         child: Container(
-          height: 140,
-          padding: const EdgeInsets.all(16),
+          height: 152,
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                icon,
-                size: 32,
-                color: Theme.of(context).colorScheme.primary,
+              Container(
+                width: AppSizes.iconBox,
+                height: AppSizes.iconBox,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppRadii.control),
+                  border: Border.all(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Icon(
+                  icon,
+                  size: 26,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 title,
                 style: const TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: AppSpacing.xxs),
               Expanded(
                 child: Text(
                   description,
@@ -253,8 +248,8 @@ class OCPSectionTitle extends StatelessWidget {
         title,
         style: TextStyle(
           fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.w600,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
     );
@@ -273,13 +268,16 @@ class OCPPageTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 24, bottom: 16),
+      padding: const EdgeInsets.only(
+        top: AppSpacing.lg,
+        bottom: AppSpacing.md,
+      ),
       child: Text(
         title,
         style: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: Theme.of(context).colorScheme.primary,
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
     );
@@ -326,11 +324,11 @@ class OCPFormField extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
             color: Theme.of(context).textTheme.bodySmall?.color,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.xs),
         TextFormField(
           controller: controller ??
               (value != null ? TextEditingController(text: value) : null),
@@ -342,13 +340,7 @@ class OCPFormField extends StatelessWidget {
           decoration: InputDecoration(
             hintText: hint,
             errorText: errorText,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
-            ),
+            constraints: const BoxConstraints(minHeight: AppSizes.inputHeight),
           ),
         ),
       ],
@@ -376,7 +368,7 @@ class OCPInfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -387,7 +379,7 @@ class OCPInfoRow extends StatelessWidget {
               color: Theme.of(context).textTheme.bodySmall?.color,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.xs),
           Expanded(
             child: Text(
               value,
@@ -428,18 +420,18 @@ class OCPStepIndicator extends StatelessWidget {
         : Colors.grey.shade400;
 
     return Container(
-      width: 32,
-      height: 32,
+      width: 34,
+      height: 34,
       decoration: BoxDecoration(
-        color: isCompleted || isActive ? color : Colors.transparent,
-        border: Border.all(color: color, width: 2),
+        color: isActive ? color : Theme.of(context).cardColor,
+        border: Border.all(color: color, width: 1.4),
         shape: BoxShape.circle,
       ),
       child: Center(
         child: isCompleted
-            ? const Icon(
-                Icons.check,
-                color: Colors.white,
+            ? Icon(
+                Icons.check_rounded,
+                color: Theme.of(context).colorScheme.primary,
                 size: 18,
               )
             : Text(

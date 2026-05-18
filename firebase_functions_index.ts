@@ -16,6 +16,7 @@ const ALLOWED_REPORT_TYPES = new Set([
 
 const USERS_COLLECTION = 'users';
 const REPORTS_COLLECTION = 'reports';
+const AUDIT_LOGS_COLLECTION = 'audit_logs';
 
 type AppRole = 'employee' | 'manager' | 'admin';
 
@@ -152,6 +153,27 @@ function mapReportSnapshot(snapshot: any): SerializableReport {
     };
 }
 
+async function writeAuditLog(params: {
+    actorUid: string;
+    action: string;
+    entityType: string;
+    entityId: string;
+    before?: Record<string, unknown> | null;
+    after?: Record<string, unknown> | null;
+    result?: 'success' | 'failure';
+}): Promise<void> {
+    await admin.firestore().collection(AUDIT_LOGS_COLLECTION).add({
+        actorUid: params.actorUid,
+        action: params.action,
+        entityType: params.entityType,
+        entityId: params.entityId,
+        before: params.before ?? null,
+        after: params.after ?? null,
+        result: params.result ?? 'success',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+}
+
 export const setUserRole = functions.https.onCall<SetUserRoleRequest, SetUserRoleResponse>(
     async (data: SetUserRoleRequest, context: functions.https.CallableContext) => {
         const actorUid = assertAdmin(context);
@@ -171,15 +193,26 @@ export const setUserRole = functions.https.onCall<SetUserRoleRequest, SetUserRol
         }
 
         const validatedRole = role as AppRole;
+        const userRef = admin.firestore().collection(USERS_COLLECTION).doc(uid);
+        const beforeSnapshot = await userRef.get();
+        const before = beforeSnapshot.exists ? beforeSnapshot.data() ?? null : null;
 
         await admin.auth().setCustomUserClaims(uid, { role: validatedRole });
-        await admin.firestore().collection(USERS_COLLECTION).doc(uid).set(
+        await userRef.set(
             {
                 role: validatedRole,
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             },
             { merge: true },
         );
+        await writeAuditLog({
+            actorUid,
+            action: 'user.role.set',
+            entityType: 'user',
+            entityId: uid,
+            before,
+            after: { role: validatedRole },
+        });
 
         return { success: true, uid, role: validatedRole };
     },
@@ -287,11 +320,26 @@ export const upsertMyReport = functions.https.onCall<UpsertReportRequest, Upsert
             }
 
             await docRef.set(payload, { merge: true });
+            await writeAuditLog({
+                actorUid: uid,
+                action: 'report.update',
+                entityType: 'report',
+                entityId: docRef.id,
+                before: snapshot.data() ?? null,
+                after: payload,
+            });
             return { success: true, reportId: docRef.id };
         }
 
         payload.createdAt = admin.firestore.FieldValue.serverTimestamp();
         const created = await db.collection(REPORTS_COLLECTION).add(payload);
+        await writeAuditLog({
+            actorUid: uid,
+            action: 'report.create',
+            entityType: 'report',
+            entityId: created.id,
+            after: payload,
+        });
         return { success: true, reportId: created.id };
     },
 );
@@ -315,7 +363,15 @@ export const deleteMyReport = functions.https.onCall<DeleteReportRequest, { succ
             );
         }
 
+        const before = snapshot.data() ?? null;
         await docRef.delete();
+        await writeAuditLog({
+            actorUid: uid,
+            action: 'report.delete',
+            entityType: 'report',
+            entityId: firestoreId,
+            before,
+        });
         return { success: true };
     },
 );

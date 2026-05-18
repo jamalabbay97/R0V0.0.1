@@ -70,20 +70,28 @@ class Report {
   static void _normalizeStopDetailsInAdditionalData(
       Map<String, dynamic>? additionalData) {
     if (additionalData == null) return;
-    _normalizeStopDetailsInList(additionalData['Arrets']);
-    _normalizeStopDetailsInList(additionalData['module1Stops']);
-    _normalizeStopDetailsInList(additionalData['module2Stops']);
+    _normalizeStopDetailsForKey(additionalData, 'Arrets');
+    _normalizeStopDetailsForKey(additionalData, 'module1Stops');
+    _normalizeStopDetailsForKey(additionalData, 'module2Stops');
   }
 
-  static void _normalizeStopDetailsInList(dynamic value) {
-    if (value is! List) return;
-
-    for (var i = 0; i < value.length; i++) {
-      final stop = value[i];
-      if (stop is Map) {
-        value[i] = StopDetailService.normalizeStopDetail(stop);
-      }
+  static void _normalizeStopDetailsForKey(
+    Map<String, dynamic> additionalData,
+    String key,
+  ) {
+    final value = additionalData[key];
+    if (value is List) {
+      additionalData[key] = _normalizeStopDetailsInList(value);
     }
+  }
+
+  static List<dynamic> _normalizeStopDetailsInList(List<dynamic> value) {
+    return value.map((stop) {
+      if (stop is Map) {
+        return StopDetailService.normalizeStopDetail(stop);
+      }
+      return stop;
+    }).toList();
   }
 
   Report copyWith({

@@ -15,6 +15,19 @@ This project already includes Flutter targets for web, Android, and iOS. The ste
 Add these repository secrets before running the publish workflow:
 
 - `FIREBASE_SERVICE_ACCOUNT` — JSON service account key with access to Firebase Hosting
+- Firebase client config values used as Flutter `--dart-define` inputs:
+  `FIREBASE_PROJECT_ID`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_STORAGE_BUCKET`,
+  `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_MEASUREMENT_ID`,
+  `FIREBASE_WEB_API_KEY`, `FIREBASE_WEB_APP_ID`,
+  `FIREBASE_ANDROID_API_KEY`, `FIREBASE_ANDROID_APP_ID`,
+  `FIREBASE_IOS_API_KEY`, `FIREBASE_IOS_APP_ID`,
+  `FIREBASE_IOS_BUNDLE_ID`, and `FIREBASE_MACOS_BUNDLE_ID`.
+- Android signing secrets: `ANDROID_KEYSTORE_BASE64`, `ANDROID_STORE_PASSWORD`,
+  `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`.
+
+Do not publish `.env` or Google service-account JSON files as Flutter assets.
+Google Sheets service-account credentials belong only in Cloud Functions or a
+backend secret manager.
 
 ## Web publishing
 
@@ -22,7 +35,14 @@ Add these repository secrets before running the publish workflow:
 
 ```bash
 flutter pub get
-flutter build web --release
+flutter build web --release \
+  --dart-define=FIREBASE_WEB_API_KEY="$FIREBASE_WEB_API_KEY" \
+  --dart-define=FIREBASE_WEB_APP_ID="$FIREBASE_WEB_APP_ID" \
+  --dart-define=FIREBASE_PROJECT_ID="$FIREBASE_PROJECT_ID" \
+  --dart-define=FIREBASE_AUTH_DOMAIN="$FIREBASE_AUTH_DOMAIN" \
+  --dart-define=FIREBASE_STORAGE_BUCKET="$FIREBASE_STORAGE_BUCKET" \
+  --dart-define=FIREBASE_MESSAGING_SENDER_ID="$FIREBASE_MESSAGING_SENDER_ID" \
+  --dart-define=FIREBASE_MEASUREMENT_ID="$FIREBASE_MEASUREMENT_ID"
 firebase deploy --only hosting --project r0v01-5b577
 ```
 

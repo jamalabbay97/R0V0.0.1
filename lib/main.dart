@@ -20,7 +20,11 @@ import 'package:r0/presentation/theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (_) {
+    // Production builds should provide configuration through --dart-define.
+  }
   AppConfig.initialize(AppFlavor.prod);
 
   await Firebase.initializeApp(

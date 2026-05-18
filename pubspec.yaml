@@ -41,6 +41,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.1
+  firebase_core_platform_interface: ^5.4.2
   mockito: ^5.4.4
   build_runner: ^2.4.8
   sqflite_common_ffi: ^2.3.0
@@ -56,11 +57,9 @@ flutter:
         - asset: assets/fonts/NotoSans-Regular.ttf
 
   assets:
-    - .env
     - assets/images/
     - assets/fonts/
     - assets/fonts/NotoSans-Regular.ttf 
-    - assets/credentials/r0v01-5b577-67d9e9bae92b.json
 
 icons_launcher:
   image_path: "assets/images/logo.png"
