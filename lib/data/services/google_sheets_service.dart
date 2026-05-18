@@ -248,7 +248,11 @@ class GoogleSheetsService {
 
     if (category == _ReportCategory.activityTnb) {
       final rows = _listOfMaps(data['Arrets'])
-          .map((stop) => _buildIfDowntimeRow(reportDateLocal, stop))
+          .map((stop) => _buildIfDowntimeRow(
+                reportDateLocal,
+                stop,
+                equipmentFallback: 'TNB',
+              ))
           .toList();
       await _appendIfDowntimeRows(
         api,
@@ -261,10 +265,18 @@ class GoogleSheetsService {
     }
 
     final module1Rows = _listOfMaps(data['module1Stops'])
-        .map((stop) => _buildIfDowntimeRow(reportDateLocal, stop))
+        .map((stop) => _buildIfDowntimeRow(
+              reportDateLocal,
+              stop,
+              equipmentFallback: 'TSUD',
+            ))
         .toList();
     final module2Rows = _listOfMaps(data['module2Stops'])
-        .map((stop) => _buildIfDowntimeRow(reportDateLocal, stop))
+        .map((stop) => _buildIfDowntimeRow(
+              reportDateLocal,
+              stop,
+              equipmentFallback: 'TSUD',
+            ))
         .toList();
 
     await _appendIfDowntimeRows(
@@ -496,11 +508,21 @@ class GoogleSheetsService {
 
   List<Object?> _buildIfDowntimeRow(
     DateTime reportDateLocal,
-    Map<String, dynamic> stop,
-  ) {
+    Map<String, dynamic> stop, {
+    required String equipmentFallback,
+  }) {
     final sts = _firstNonEmpty(stop, const ['Catégorie', 'category']);
-    final equipment =
-        _firstNonEmpty(stop, const ['location', 'Lieu', 'stopLocation']);
+    final equipment = _firstNonEmpty(
+      stop,
+      const [
+        'equipment',
+        'equipement',
+        'Equipement',
+        'location',
+        'Lieu',
+        'stopLocation',
+      ],
+    );
     final designation = _firstNonEmpty(
       stop,
       const ['detail', 'Détail', 'nature'],
@@ -512,7 +534,7 @@ class GoogleSheetsService {
       _formatStopClockTime(stop['endTime'] ?? stop['Fin']),
       _formatStopDurationClock(stop['duration']),
       sts,
-      equipment,
+      equipment.isEmpty ? equipmentFallback : equipment,
       designation,
     ];
   }
@@ -2828,6 +2850,18 @@ class GoogleSheetsService {
     Map<String, dynamic> data,
   ) =>
       _buildR0DowntimeDetailsRows(reportDateLocal, data);
+
+  @visibleForTesting
+  List<Object?> buildIfDowntimeRowForTest(
+    DateTime reportDateLocal,
+    Map<String, dynamic> stop, {
+    required String equipmentFallback,
+  }) =>
+      _buildIfDowntimeRow(
+        reportDateLocal,
+        stop,
+        equipmentFallback: equipmentFallback,
+      );
 
   /// Reads all sheets from Google Sheets and returns normalized searchable rows.
   ///

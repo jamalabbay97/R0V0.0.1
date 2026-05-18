@@ -179,4 +179,41 @@ void main() {
       ]);
     });
   });
+
+  group('GoogleSheetsService IF downtime details', () {
+    final service = GoogleSheetsService();
+
+    test('uses table fallback when downtime equipment is empty', () {
+      final row = service.buildIfDowntimeRowForTest(
+        DateTime(2026, 1, 1),
+        {
+          'startTime': '03:30',
+          'endTime': '10:00',
+          'duration': '6h 30m',
+          'category': 'MP',
+          'nature': 'manque produit',
+        },
+        equipmentFallback: 'TSUD',
+      );
+
+      expect(row[5], 'TSUD');
+    });
+
+    test('keeps downtime equipment when provided', () {
+      final row = service.buildIfDowntimeRowForTest(
+        DateTime(2026, 1, 1),
+        {
+          'startTime': '13:00',
+          'endTime': '13:40',
+          'duration': '40',
+          'category': 'AI',
+          'location': 'M1_CV73',
+          'nature': 'bavette',
+        },
+        equipmentFallback: 'TSUD',
+      );
+
+      expect(row[5], 'M1_CV73');
+    });
+  });
 }
