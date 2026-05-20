@@ -74,6 +74,24 @@ class ReportRepositoryImpl implements ReportRepository {
 
   @override
   Future<void> sendReportToSheets(Report report) async {
+    // Ensure the report is synced to Firestore first if authenticated so that we have a firestoreId
+    if (_firestoreService.isAuthenticated &&
+        (report.firestoreId == null || report.firestoreId!.isEmpty)) {
+      try {
+        await _syncService.updateReport(report);
+        if (report.id != null) {
+          final reloaded = await _databaseHelper.getReport(report.id!);
+          if (reloaded != null) {
+            report = reloaded;
+          }
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('Pre-sync to Firestore for Sheets failed: $e');
+        }
+      }
+    }
+
     await _databaseHelper.sendReportToSheets(report);
 
     if (!_firestoreService.isAuthenticated) {

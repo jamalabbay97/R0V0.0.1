@@ -108,10 +108,11 @@ class ReportAccessProvider extends ChangeNotifier {
           .where((e) => e.isNotEmpty)
           .toSet();
       _assignedReportKeys =
-          role == 'admin' ? defaultReportKeys.toSet() : (keys ?? <String>{});
+          role == 'admin' ? defaultReportKeys.toSet() : (keys ?? defaultReportKeys.toSet());
       _isLoading = false;
       notifyListeners();
     }, onError: (_) {
+      _assignedReportKeys = defaultReportKeys.toSet();
       _isLoading = false;
       notifyListeners();
     });

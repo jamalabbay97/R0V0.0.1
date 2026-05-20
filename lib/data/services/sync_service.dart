@@ -87,7 +87,7 @@ class SyncService {
   }) {
     return localReport.firestoreId != cloudReport.firestoreId ||
         localReport.description != cloudReport.description ||
-        localReport.date != cloudReport.date ||
+        localReport.date.difference(cloudReport.date).inSeconds.abs() > 0 ||
         localReport.group != cloudReport.group ||
         localReport.type != cloudReport.type ||
         localReport.isSentToSheets != cloudReport.isSentToSheets ||

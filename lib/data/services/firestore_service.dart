@@ -40,10 +40,32 @@ class FirestoreService {
       );
     }
 
-    final snapshot = await _firestore.collection('users').doc(uid).get();
-    final role = (snapshot.data()?['role'] as String?)?.toLowerCase();
+    DocumentSnapshot<Map<String, dynamic>>? snapshot;
+    try {
+      // Try cache first for instant offline access
+      snapshot = await _firestore
+          .collection('users')
+          .doc(uid)
+          .get(const GetOptions(source: Source.cache));
+    } catch (_) {
+      // Fallback to server with a timeout if not in cache
+      try {
+        snapshot = await _firestore
+            .collection('users')
+            .doc(uid)
+            .get()
+            .timeout(const Duration(seconds: 3));
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('Failed to get user access context, defaulting to basic: $e');
+        }
+      }
+    }
+
+    final data = snapshot?.data();
+    final role = (data?['role'] as String?)?.toLowerCase();
     final allowedReports =
-        (snapshot.data()?['allowedReports'] as List<dynamic>?)
+        (data?['allowedReports'] as List<dynamic>?)
             ?.whereType<String>()
             .map((report) => report.trim())
             .toSet();
@@ -283,18 +305,20 @@ class FirestoreService {
           report,
           creatorAllowedCreationReportKeys: creatorAllowedCreationReportKeys,
         );
-        await _firestore
+        // Do not await to allow immediate offline completion
+        _firestore
             .collection(_reportsCollection)
             .doc(report.firestoreId)
-            .update(reportData);
+            .update(reportData).ignore();
         return report.firestoreId!;
       } else {
         final reportData = _reportToFirestoreForCreate(
           report,
           creatorAllowedCreationReportKeys: creatorAllowedCreationReportKeys,
         );
-        final docRef =
-            await _firestore.collection(_reportsCollection).add(reportData);
+        final docRef = _firestore.collection(_reportsCollection).doc();
+        // Do not await to allow immediate offline completion
+        docRef.set(reportData).ignore();
         return docRef.id;
       }
     } catch (e) {
@@ -425,10 +449,11 @@ class FirestoreService {
     }
 
     try {
-      await _firestore.collection(_reportsCollection).doc(firestoreId).update({
+      // Do not await to allow immediate offline completion
+      _firestore.collection(_reportsCollection).doc(firestoreId).update({
         _deletedForUserIdsField: FieldValue.arrayUnion([uid]),
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }).ignore();
     } catch (e) {
       throw Exception('Failed to delete report from Firestore: $e');
     }

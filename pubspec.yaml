@@ -31,6 +31,7 @@ dependencies:
   firebase_core: ^2.32.0
   firebase_auth: ^4.17.6
   cloud_firestore: ^4.15.8
+  cloud_functions: ^4.6.8
   googleapis: ^13.1.0
   googleapis_auth: ^1.4.2
   flutter_slidable: ^3.1.0
@@ -60,6 +61,7 @@ flutter:
     - assets/images/
     - assets/fonts/
     - assets/fonts/NotoSans-Regular.ttf 
+    - .env
 
 icons_launcher:
   image_path: "assets/images/logo.png"

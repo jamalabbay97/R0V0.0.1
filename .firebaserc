@@ -1,5 +1,14 @@
 {
   "projects": {
     "default": "r0v01-5b577"
+  },
+  "targets": {
+    "r0v01-5b577": {
+      "hosting": {
+        "r0v01-5b577": [
+          "r0v01-5b577"
+        ]
+      }
+    }
   }
 }

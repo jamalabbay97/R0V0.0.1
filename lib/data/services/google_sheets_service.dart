@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:googleapis/sheets/v4.dart';
@@ -33,10 +34,15 @@ class GoogleSheetsService {
               const String.fromEnvironment('GOOGLE_SHEETS_SPREADSHEET_ID'),
             ),
         _credentialsJson = credentialsJson ??
-            const String.fromEnvironment('GOOGLE_SHEETS_CREDENTIALS_JSON'),
+            _configValue(
+              'GOOGLE_SHEETS_CREDENTIALS_JSON',
+              const String.fromEnvironment('GOOGLE_SHEETS_CREDENTIALS_JSON'),
+            ),
         _credentialsAssetPath = credentialsAssetPath ??
-            const String.fromEnvironment('GOOGLE_SHEETS_CREDENTIALS_ASSET_PATH',
-                defaultValue: ''),
+            _configValue(
+              'GOOGLE_SHEETS_CREDENTIALS_ASSET_PATH',
+              const String.fromEnvironment('GOOGLE_SHEETS_CREDENTIALS_ASSET_PATH'),
+            ),
         _nowProvider = nowProvider ?? DateTime.now;
 
   static const String _genericReportsSheet = 'Reports';
@@ -94,7 +100,26 @@ class GoogleSheetsService {
 
       final api = await _getSheetsApi();
       if (api == null) {
-        return false;
+        final savedAt = _formatIsoTimestampWithSeconds(_nowProvider());
+        final reportDate = report.date;
+        final reportDateIso = _formatIsoTimestampWithSeconds(reportDate);
+        final reportLocalDate = reportDate.toLocal();
+        final payload = _buildPayload(
+          report,
+          savedAt: savedAt,
+          action: action,
+          reportDateIso: reportDateIso,
+          reportLocalDate: reportLocalDate,
+        );
+
+        final templateRows = _buildTemplateRows(report, reportLocalDate);
+        return await _recordReportSnapshotViaBackend(
+          report,
+          action: action,
+          payload: payload,
+          templateRows: templateRows,
+          reportLocalDate: reportLocalDate,
+        );
       }
 
       final savedAt = _formatIsoTimestampWithSeconds(_nowProvider());
@@ -1765,7 +1790,8 @@ class GoogleSheetsService {
   }
 
   Future<ServiceAccountCredentials?> _loadCredentials() async {
-    if (kReleaseMode) {
+    const allowInRelease = bool.fromEnvironment('ALLOW_CLIENT_SHEETS_IN_RELEASE', defaultValue: false);
+    if (kReleaseMode && !allowInRelease) {
       debugPrint(
         'Google Sheets client credentials are disabled in release builds. '
         'Use the backend submission endpoint instead.',
@@ -3488,6 +3514,174 @@ class GoogleSheetsService {
       report.type,
       report.group,
     ];
+  }
+
+  Future<bool> _recordReportSnapshotViaBackend(
+    Report report, {
+    required String action,
+    required _ReportPayload payload,
+    _TemplateRows? templateRows,
+    required DateTime reportLocalDate,
+  }) async {
+    try {
+      final tasks = <Map<String, dynamic>>[];
+
+      if (templateRows != null) {
+        final checkDuplicate = (templateRows.sheetName == _activitySheet ||
+                                templateRows.sheetName == _dailySheet ||
+                                templateRows.sheetName == _machinesSheet)
+            ? 'date'
+            : (templateRows.sheetName == _r0Sheet)
+                ? 'r0'
+                : (templateRows.sheetName == _truckSheet)
+                    ? 'truck'
+                    : null;
+
+        final dateStr = DateFormat('yyyy-MM-dd', _frenchLocale).format(reportLocalDate);
+        final additionalData = report.additionalData ?? {};
+
+        tasks.add({
+          'type': 'appendTemplateRows',
+          'sheetName': templateRows.sheetName,
+          'rows': templateRows.rows,
+          'mergeRanges': templateRows.mergeRanges.map((m) => {
+            'startColumnIndex': m.startColumnIndex,
+            'endColumnIndex': m.endColumnIndex,
+          }).toList(),
+          'customMerges': templateRows.customMerges.map((m) => {
+            'startRowOffset': m.startRowOffset,
+            'endRowOffset': m.endRowOffset,
+            'startColumnIndex': m.startColumnIndex,
+            'endColumnIndex': m.endColumnIndex,
+          }).toList(),
+          'colorSections': templateRows.colorSections.map((c) => {
+            'startColumnIndex': c.startColumnIndex,
+            'endColumnIndex': c.endColumnIndex,
+          }).toList(),
+          'separatorColumnIndexes': templateRows.separatorColumnIndexes,
+          'checkDuplicate': checkDuplicate,
+          'date': dateStr,
+          'poste': additionalData['selectedPoste']?.toString() ?? '',
+          'module': additionalData['Model']?.toString() ?? '',
+        });
+
+        // Add downtime details tasks if applicable (mimicking _syncIfDowntimeDetailsSheet)
+        final category = _categorizeReport(report, additionalData);
+        if (category == _ReportCategory.activityTnb) {
+          final downtimeRows = _listOfMaps(additionalData['Arrets'])
+              .map((stop) => _buildIfDowntimeRow(
+                    reportLocalDate,
+                    stop,
+                    equipmentFallback: 'TNB',
+                  ))
+              .toList();
+          if (downtimeRows.isNotEmpty) {
+            tasks.add({
+              'type': 'appendIfDowntimeRows',
+              'sheetName': _ifDowntimeDetailsSheet,
+              'rangePrefix': 'A',
+              'rangeSuffix': 'G',
+              'rows': downtimeRows,
+            });
+          }
+        } else if (category == _ReportCategory.dailyTsud) {
+          final module1Rows = _listOfMaps(additionalData['module1Stops'])
+              .map((stop) => _buildIfDowntimeRow(
+                    reportLocalDate,
+                    stop,
+                    equipmentFallback: 'TSUD',
+                  ))
+              .toList();
+          final module2Rows = _listOfMaps(additionalData['module2Stops'])
+              .map((stop) => _buildIfDowntimeRow(
+                    reportLocalDate,
+                    stop,
+                    equipmentFallback: 'TSUD',
+                  ))
+              .toList();
+
+          if (module1Rows.isNotEmpty) {
+            tasks.add({
+              'type': 'appendIfDowntimeRows',
+              'sheetName': _ifDowntimeDetailsSheet,
+              'rangePrefix': 'I',
+              'rangeSuffix': 'O',
+              'rows': module1Rows,
+            });
+          }
+          if (module2Rows.isNotEmpty) {
+            tasks.add({
+              'type': 'appendIfDowntimeRows',
+              'sheetName': _ifDowntimeDetailsSheet,
+              'rangePrefix': 'Q',
+              'rangeSuffix': 'W',
+              'rows': module2Rows,
+            });
+          }
+        }
+
+        // Add R0 downtime details tasks if applicable (mimicking _syncR0DowntimeDetailsSheet)
+        if (category == _ReportCategory.r0) {
+          final r0Rows = _buildR0DowntimeDetailsRows(reportLocalDate, additionalData);
+          if (r0Rows.isNotEmpty) {
+            tasks.add({
+              'type': 'appendFlatRows',
+              'sheetName': _r0DowntimeDetailsSheet,
+              'headers': _r0DowntimeDetailsHeaders,
+              'rows': r0Rows,
+              'dateColumnIndex': 0,
+              'firstDataRowNumber': 2,
+            });
+          }
+        }
+      } else {
+        // Flat rows
+        tasks.add({
+          'type': 'appendFlatRows',
+          'sheetName': payload.sheetName,
+          'headers': payload.headers,
+          'rows': [payload.row],
+          'dateColumnIndex': 11,
+          'firstDataRowNumber': 2,
+        });
+
+        if (payload.detailsRows.isNotEmpty &&
+            payload.detailsSheetName != null &&
+            payload.detailsHeaders != null) {
+          tasks.add({
+            'type': 'appendFlatRows',
+            'sheetName': payload.detailsSheetName!,
+            'headers': payload.detailsHeaders!,
+            'rows': payload.detailsRows,
+            'dateColumnIndex': 11,
+            'firstDataRowNumber': 2,
+          });
+        }
+      }
+
+      final reportId = report.firestoreId ?? report.id?.toString();
+      if (reportId == null || reportId.isEmpty) {
+        throw Exception('Cannot sync report to Sheets without a valid backend ID.');
+      }
+
+      final callable = FirebaseFunctions.instance.httpsCallable('submitReportToSheets');
+      final result = await callable.call<Map<dynamic, dynamic>>({
+        'reportId': reportId,
+        'action': action,
+        'tasks': tasks,
+      });
+
+      return result.data['success'] == true;
+    } on FirebaseFunctionsException catch (e) {
+      if (e.code == 'already-exists') {
+        throw DuplicateReportDateException(e.message ?? 'Un rapport avec la date du jour existe déjà.');
+      }
+      debugPrint('Backend Google Sheets sync failed: ${e.code} - ${e.message}');
+      rethrow;
+    } catch (e) {
+      debugPrint('Backend Google Sheets sync failed: $e');
+      rethrow;
+    }
   }
 }
 

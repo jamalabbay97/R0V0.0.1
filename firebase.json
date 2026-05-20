@@ -25,6 +25,7 @@
         "indexes": "firestore.indexes.json"
     },
     "hosting": {
+        "site": "r0v01-5b577",
         "public": "build/web",
         "ignore": [
             "firebase.json",
@@ -32,7 +33,7 @@
         ],
         "headers": [
             {
-                "source": "/index.html",
+                "source": "**/*.@(js|html)",
                 "headers": [
                     {
                         "key": "Cache-Control",
@@ -57,23 +58,102 @@
                 ]
             },
             {
-                "source": "**/*.@(js|css|png|jpg|jpeg|gif|svg|webp|woff|woff2|wasm)",
+                "source": "**/*.@(png|jpeg|jpg|gif|svg|woff2|woff|ttf)",
                 "headers": [
                     {
                         "key": "Cache-Control",
-                        "value": "public, max-age=31536000, immutable"
+                        "value": "public, max-age=604800"
+                    }
+                ]
+            },
+            {
+                "source": "flutter_service_worker.js",
+                "headers": [
+                    {
+                        "key": "Cache-Control",
+                        "value": "no-cache, no-store, must-revalidate"
+                    },
+                    {
+                        "key": "X-Content-Type-Options",
+                        "value": "nosniff"
+                    }
+                ]
+            },
+            {
+                "source": "flutter_bootstrap.js",
+                "headers": [
+                    {
+                        "key": "Cache-Control",
+                        "value": "no-cache, no-store, must-revalidate"
+                    },
+                    {
+                        "key": "X-Content-Type-Options",
+                        "value": "nosniff"
+                    }
+                ]
+            },
+            {
+                "source": "flutter.js",
+                "headers": [
+                    {
+                        "key": "Cache-Control",
+                        "value": "no-cache, no-store, must-revalidate"
+                    },
+                    {
+                        "key": "X-Content-Type-Options",
+                        "value": "nosniff"
+                    }
+                ]
+            },
+            {
+                "source": "main.dart.js",
+                "headers": [
+                    {
+                        "key": "Cache-Control",
+                        "value": "no-cache, no-store, must-revalidate"
+                    },
+                    {
+                        "key": "X-Content-Type-Options",
+                        "value": "nosniff"
+                    }
+                ]
+            },
+            {
+                "source": "version.json",
+                "headers": [
+                    {
+                        "key": "Cache-Control",
+                        "value": "no-cache, no-store, must-revalidate"
+                    }
+                ]
+            },
+            {
+                "source": "assets/**",
+                "headers": [
+                    {
+                        "key": "Cache-Control",
+                        "value": "public, max-age=604800"
                     },
                     {
                         "key": "X-Content-Type-Options",
                         "value": "nosniff"
                     },
                     {
-                        "key": "Referrer-Policy",
-                        "value": "strict-origin-when-cross-origin"
-                    },
-                    {
                         "key": "Strict-Transport-Security",
                         "value": "max-age=31536000; includeSubDomains"
+                    }
+                ]
+            },
+            {
+                "source": "canvaskit/**",
+                "headers": [
+                    {
+                        "key": "Cache-Control",
+                        "value": "public, max-age=2592000"
+                    },
+                    {
+                        "key": "X-Content-Type-Options",
+                        "value": "nosniff"
                     }
                 ]
             },

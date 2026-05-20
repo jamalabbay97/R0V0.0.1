@@ -27,9 +27,13 @@ void main() async {
   }
   AppConfig.initialize(AppFlavor.prod);
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } on FirebaseException catch (e) {
+    if (e.code != 'duplicate-app') rethrow;
+  }
 
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,

@@ -3,6 +3,8 @@
  * when node_modules are not present in the root directory.
  */
 
+declare var process: any;
+
 declare module 'firebase-functions' {
     export namespace https {
         export interface CallableContext {
@@ -95,5 +97,13 @@ declare module 'firebase-admin' {
             static serverTimestamp(): any;
             static delete(): any;
         }
+    }
+}
+
+declare module 'google-auth-library' {
+    export class GoogleAuth {
+        constructor(options?: any);
+        getClient(): Promise<any>;
+        getAccessToken(): Promise<string | null | undefined>;
     }
 }

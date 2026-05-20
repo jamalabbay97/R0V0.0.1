@@ -54,7 +54,7 @@ class AppSizes {
 }
 
 class ButtonStyles {
-  static ButtonStyle primaryButton(BuildContext? context) {
+  static ButtonStyle primaryButton(BuildContext context) {
     return ElevatedButton.styleFrom(
       backgroundColor: AppColors.primary,
       disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.34),
@@ -75,7 +75,7 @@ class ButtonStyles {
     );
   }
 
-  static ButtonStyle secondaryButton(BuildContext? context) {
+  static ButtonStyle secondaryButton(BuildContext context) {
     return OutlinedButton.styleFrom(
       foregroundColor: AppColors.primaryHover,
       fixedSize: const Size.fromHeight(AppSizes.buttonHeight),
@@ -93,7 +93,7 @@ class ButtonStyles {
     );
   }
 
-  static ButtonStyle ghostButton(BuildContext? context) {
+  static ButtonStyle ghostButton(BuildContext context) {
     return TextButton.styleFrom(
       foregroundColor: AppColors.primaryHover,
       minimumSize: const Size(0, 44),
@@ -108,7 +108,7 @@ class ButtonStyles {
     );
   }
 
-  static ButtonStyle dangerButton(BuildContext? context) {
+  static ButtonStyle dangerButton(BuildContext context) {
     return ElevatedButton.styleFrom(
       backgroundColor: AppColors.error.withValues(alpha: 0.16),
       foregroundColor: const Color(0xFFFFB3B6),
@@ -223,13 +223,13 @@ ThemeData _buildTheme({
       surfaceTintColor: Colors.transparent,
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ButtonStyles.primaryButton(null),
+      style: ButtonStyles.primaryButton(_FakeBuildContext()),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
-      style: ButtonStyles.secondaryButton(null),
+      style: ButtonStyles.secondaryButton(_FakeBuildContext()),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: ButtonStyles.ghostButton(null),
+      style: ButtonStyles.ghostButton(_FakeBuildContext()),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
@@ -407,4 +407,9 @@ ThemeData _buildTheme({
       ),
     ),
   );
+}
+
+class _FakeBuildContext implements BuildContext {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

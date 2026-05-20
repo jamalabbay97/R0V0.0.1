@@ -11,6 +11,7 @@ class RoleProvider extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _roleSubscription;
   String? _currentUserId;
+  Timer? _loadingTimeout;
 
   String? _role;
   bool _isLoading = false;
@@ -32,6 +33,8 @@ class RoleProvider extends ChangeNotifier {
     _currentUserId = nextUserId;
     _roleSubscription?.cancel();
     _roleSubscription = null;
+    _loadingTimeout?.cancel();
+    _loadingTimeout = null;
 
     if (user == null) {
       _role = null;
@@ -45,6 +48,16 @@ class RoleProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
+    // Safety net: if Firestore never responds (e.g. no network),
+    // clear the loading state after 10 seconds so the UI doesn't hang.
+    _loadingTimeout = Timer(const Duration(seconds: 10), () {
+      if (_isLoading) {
+        _isLoading = false;
+        _errorMessage = 'Could not reach server. Check your connection.';
+        notifyListeners();
+      }
+    });
+
     unawaited(_firestore.collection('users').doc(user.uid).set({
       'email': user.email,
       'displayName': user.displayName,
@@ -56,6 +69,7 @@ class RoleProvider extends ChangeNotifier {
         .doc(user.uid)
         .snapshots()
         .listen((snapshot) {
+      _loadingTimeout?.cancel();
       final data = snapshot.data();
       final isDeleted = data?['isDeleted'] == true;
       if (isDeleted) {
@@ -71,6 +85,7 @@ class RoleProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }, onError: (error) {
+      _loadingTimeout?.cancel();
       _role = null;
       _isLoading = false;
       _errorMessage = 'Failed to load role: $error';
@@ -80,6 +95,7 @@ class RoleProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _loadingTimeout?.cancel();
     _roleSubscription?.cancel();
     super.dispose();
   }

@@ -3,6 +3,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:r0/domain/repositories/report_repository.dart';
+import 'package:r0/domain/models/report.dart';
 import 'package:r0/data/services/google_sheets_service.dart';
 
 class GoogleSheetsReportsScreen extends StatefulWidget {
@@ -48,22 +51,70 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
   }
 
   Future<void> _loadRecords({bool forceRefresh = false}) async {
+    final reportRepository = context.read<ReportRepository>();
+
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      final records = await _sheetsService.fetchAllRecords(
-        forceRefresh: forceRefresh,
-      );
+      List<GoogleSheetRecord> sheetsRecords = [];
+      try {
+        sheetsRecords = await _sheetsService.fetchAllRecords(
+          forceRefresh: forceRefresh,
+        );
+      } catch (e) {
+        debugPrint('Google Sheets fetch skipped or failed: $e');
+      }
+
+      final List<Report> localReports =
+          await reportRepository.getReports();
+      final List<GoogleSheetRecord> localMapped =
+          localReports.map(_mapReportToGoogleSheetRecord).toList();
+
+      final Set<String> seenKeys = {};
+      final List<GoogleSheetRecord> combinedRecords = [];
+
+      for (final record in sheetsRecords) {
+        final dateKey = record.date != null
+            ? DateFormat('yyyy-MM-dd').format(record.date!)
+            : 'nodate';
+        final key =
+            '${record.sheetName.toLowerCase()}_${dateKey}_${record.title.toLowerCase()}';
+        seenKeys.add(key);
+        combinedRecords.add(record);
+      }
+
+      for (final localRecord in localMapped) {
+        final dateKey = localRecord.date != null
+            ? DateFormat('yyyy-MM-dd').format(localRecord.date!)
+            : 'nodate';
+        final key =
+            '${localRecord.sheetName.toLowerCase()}_${dateKey}_${localRecord.title.toLowerCase()}';
+        if (!seenKeys.contains(key)) {
+          combinedRecords.add(localRecord);
+          seenKeys.add(key);
+        }
+      }
+
+      combinedRecords.sort((a, b) {
+        if (a.date == null && b.date == null) return 0;
+        if (a.date == null) return 1;
+        if (b.date == null) return -1;
+        return b.date!.compareTo(a.date!);
+      });
+
       if (!mounted) return;
 
-      final sheetNames =
-          records.map((record) => record.sheetName).toSet().toList()..sort();
+      final sheetNames = combinedRecords
+          .map((record) => record.sheetName)
+          .toSet()
+          .toList()
+        ..sort();
 
       setState(() {
-        _allRecords = records;
+        _allRecords = combinedRecords;
         _availableSheets = sheetNames;
         if (_selectedSheet != null && !sheetNames.contains(_selectedSheet)) {
           _selectedSheet = null;
@@ -1326,6 +1377,286 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  GoogleSheetRecord _mapReportToGoogleSheetRecord(Report report) {
+    final data = report.additionalData ?? {};
+    final details = <String, String>{};
+
+    details['Date'] = DateFormat('yyyy-MM-dd').format(report.date);
+    details['Date (as shown in app)'] = details['Date']!;
+    details['Description'] = report.description;
+    details['Poste'] = report.group;
+    details['Type (Report)'] = report.type;
+
+    String sheetName = report.type;
+    final typeLower = report.type.toLowerCase();
+
+    if (typeLower == 'r0') {
+      sheetName = 'R0';
+      details['Mine'] = data['mine']?.toString() ?? '';
+      details['Sortie'] = data['sortie']?.toString() ?? '';
+      details['Machine/Engins'] = data['Category']?.toString() ?? '';
+      details['Type'] = data['Type']?.toString() ?? '';
+      details['Model'] = data['Model']?.toString() ?? '';
+      details['Poste'] = data['selectedPoste']?.toString() ?? report.group;
+      
+      final compteurs = data['Compteurs'] as Map? ?? {};
+      details['Début compteur'] = compteurs['duree']?.toString() ?? '';
+      details['Fin compteur'] = compteurs['note']?.toString() ?? '';
+      
+      final exploitation = data['exploitation'] as Map? ?? {};
+      details['H.M'] = exploitation['H.M']?.toString() ?? '';
+      details['H.A'] = exploitation['H.A']?.toString() ?? '';
+      details['Métrage foré'] = (exploitation['metrage fore'] ?? exploitation['metrage_fore'])?.toString() ?? '';
+      details['Nr de Trous Forés'] = (exploitation['Nr de Trous Fores'] ?? exploitation['nr_de_trous_fores'])?.toString() ?? '';
+      details['Nr de Voyages'] = (exploitation['Nr de Voyages'] ?? exploitation['nr_de_voyages'])?.toString() ?? '';
+      details['M³ Décapages'] = (exploitation['M³ Decapages'] ?? exploitation['m3_decapages'])?.toString() ?? '';
+      details['Tonnage'] = exploitation['Tonnage']?.toString() ?? '';
+      details['Nombre T.K.U'] = (exploitation['Nombre T.K.U'] ?? exploitation['nombre_t_k_u'])?.toString() ?? '';
+      details['Rendement %'] = (exploitation['Rendement %'] ?? exploitation['rendement'])?.toString() ?? '';
+      
+      final personnel = data['personnel'] as Map? ?? {};
+      details['Conducteur'] = (personnel['conductr'] ?? personnel['conducteur'])?.toString() ?? '';
+      details['Graisseur'] = personnel['graisseur']?.toString() ?? '';
+      details['Matricules'] = personnel['matricules']?.toString() ?? '';
+      
+      final repartition = data['repartition'] as Map? ?? {};
+      details['Chantier'] = repartition['Chantier']?.toString() ?? '';
+      details['Temps'] = repartition['Temps']?.toString() ?? '';
+      details['Imputation'] = repartition['Imputation']?.toString() ?? '';
+      
+      final consommation = data['consommation'] as Map? ?? {};
+      details['Tricone'] = consommation['tricone']?.toString() ?? '';
+      details['Gasoil'] = consommation['gasoil']?.toString() ?? '';
+
+      final arrets = data['Arrets'] as List? ?? [];
+      final arretReasons = <String>[];
+      final arretTimes = <String>[];
+      for (final a in arrets) {
+        if (a is Map) {
+          final category = a['Catégorie'] ?? a['category'] ?? '';
+          final name = a['Arret'] ?? a['nature'] ?? '';
+          final start = a['Début'] ?? a['startTime'] ?? '';
+          final end = a['Fin'] ?? a['endTime'] ?? '';
+          arretReasons.add('$category - $name'.trim());
+          arretTimes.add('$start - $end'.trim());
+        }
+      }
+      details['Stops Details'] = arretReasons.isEmpty ? '-' : arretReasons.join('\n');
+      details['Stop Times'] = arretTimes.isEmpty ? '-' : arretTimes.join('\n');
+    } else if (typeLower.contains('activity') || typeLower.contains('tnb')) {
+      sheetName = 'TNB';
+      final exploitation = data['exploitation'] as Map? ?? {};
+      details['T H.A'] = (exploitation['H.A'] ?? data['T H.A'] ?? '')?.toString() ?? '';
+      details['T H.M'] = (exploitation['H.M'] ?? data['T H.M'] ?? '')?.toString() ?? '';
+      details['T H.V'] = (exploitation['H.V'] ?? data['T H.V'] ?? '')?.toString() ?? '';
+      details['T H.L'] = (exploitation['H.L'] ?? data['T H.L'] ?? '')?.toString() ?? '';
+
+      final arrets = data['Arrets'] as List? ?? [];
+      final arretReasons = <String>[];
+      final arretDurations = <String>[];
+      for (final a in arrets) {
+        if (a is Map) {
+          final category = a['category'] ?? a['Catégorie'] ?? '';
+          final nature = a['nature'] ?? a['Arret'] ?? '';
+          final start = a['startTime'] ?? a['Début'] ?? '';
+          final end = a['endTime'] ?? a['Fin'] ?? '';
+          final duration = a['duration'] ?? '';
+          final location = a['location'] ?? a['Lieu'] ?? '';
+          final detail = a['detail'] ?? a['Détail'] ?? '';
+          
+          arretReasons.add('$category / $nature / $location / $detail');
+          arretDurations.add('$start -> $end ($duration)');
+        }
+      }
+      details['Arrêts'] = arretReasons.join('\n');
+      details['Durées d\'arrêt'] = arretDurations.join('\n');
+
+      final vCounters = data['vibrator Counters'] as List? ?? data['vibratorCounters'] as List? ?? [];
+      final vCounterDetails = <String>[];
+      for (final c in vCounters) {
+        if (c is Map) {
+          final type = c['type'] ?? '';
+          final start = c['start'] ?? '';
+          final end = c['end'] ?? '';
+          final shift = c['shiftKey'] ?? report.group;
+          vCounterDetails.add('$shift / $start -> $end ($type)');
+        }
+      }
+      details['Compteurs Vibreurs'] = vCounterDetails.join('\n');
+
+      final lCounters = data['liaison Counters'] as List? ?? data['liaisonCounters'] as List? ?? [];
+      final lCounterDetails = <String>[];
+      for (final c in lCounters) {
+        if (c is Map) {
+          final type = c['type'] ?? '';
+          final start = c['start'] ?? '';
+          final end = c['end'] ?? '';
+          final shift = c['shiftKey'] ?? report.group;
+          lCounterDetails.add('$shift / $start -> $end ($type)');
+        }
+      }
+      details['Compteurs Liaison'] = lCounterDetails.join('\n');
+
+      final stocks = data['stock'] as List? ?? [];
+      final stockDetails = <String>[];
+      for (final s in stocks) {
+        if (s is Map) {
+          final park = s['park'] ?? '';
+          final type = s['type'] ?? '';
+          final qty = s['quantity'] ?? s['qty'] ?? '';
+          final shift = s['shiftKey'] ?? report.group;
+          stockDetails.add('$shift / $park / $type / $qty');
+        }
+      }
+      details['Stocks'] = stockDetails.join('\n');
+    } else if (typeLower.contains('daily') || typeLower.contains('tsud')) {
+      sheetName = 'TSUD';
+      final exploitation = data['exploitation'] as Map? ?? {};
+      details['Tonnage global'] = exploitation['Tonnage']?.toString() ?? '';
+      details['HM Global'] = exploitation['H.M']?.toString() ?? '';
+      details['HA Global'] = exploitation['H.A']?.toString() ?? '';
+      details['Rendement Global'] = (exploitation['Rendement %'] ?? exploitation['rendement'])?.toString() ?? '';
+
+      final m1 = data['module1'] as Map? ?? {};
+      details['Total H.M M1'] = (m1['H.M'] ?? m1['HM'] ?? '')?.toString() ?? '';
+      details['Total H.A M1'] = (m1['H.A'] ?? m1['HA'] ?? '')?.toString() ?? '';
+
+      final m1Stops = data['module1Stops'] as List? ?? [];
+      final m1Natures = <String>[];
+      final m1Durations = <String>[];
+      for (final s in m1Stops) {
+        if (s is Map) {
+          m1Natures.add(s['nature']?.toString() ?? '');
+          m1Durations.add(s['duration']?.toString() ?? '');
+        }
+      }
+      details['Arrêts M1'] = m1Natures.join('\n');
+      details['Durées Arrêts M1'] = m1Durations.join('\n');
+
+      final m2 = data['module2'] as Map? ?? {};
+      details['Total H.M M2'] = (m2['H.M'] ?? m2['HM'] ?? '')?.toString() ?? '';
+      details['Total H.A M2'] = (m2['H.A'] ?? m2['HA'] ?? '')?.toString() ?? '';
+
+      final m2Stops = data['module2Stops'] as List? ?? [];
+      final m2Natures = <String>[];
+      final m2Durations = <String>[];
+      for (final s in m2Stops) {
+        if (s is Map) {
+          m2Natures.add(s['nature']?.toString() ?? '');
+          m2Durations.add(s['duration']?.toString() ?? '');
+        }
+      }
+      details['Arrêts M2'] = m2Natures.join('\n');
+      details['Durées Arrêts M2'] = m2Durations.join('\n');
+
+      final stocks = data['stock'] as List? ?? [];
+      final stockDetails = <String>[];
+      for (final s in stocks) {
+        if (s is Map) {
+          final park = s['park'] ?? '';
+          final type = s['type'] ?? '';
+          final qty = s['quantity'] ?? s['qty'] ?? '';
+          final shift = s['shiftKey'] ?? report.group;
+          stockDetails.add('$shift / $park / $type / $qty');
+        }
+      }
+      details['Stocks'] = stockDetails.join('\n');
+    } else if (typeLower.contains('camion') || typeLower.contains('truck') || typeLower.contains('suivi')) {
+      sheetName = 'Poser les camions';
+      details['Poste'] = data['selectedPoste']?.toString() ?? report.group;
+      details['Qualité'] = data['selectedQualiteType']?.toString() ?? '';
+      details['Opération'] = data['operationType']?.toString() ?? '';
+      details['Mine'] = data['mine']?.toString() ?? '';
+      details['Sortie'] = data['sortie']?.toString() ?? '';
+      details['Machine/Engins'] = data['Category']?.toString() ?? '';
+      details['Distance'] = data['distance']?.toString() ?? '';
+      
+      final trucks = data['truckData'] as List? ?? [];
+      final camions = <String>[];
+      final conducteurs = <String>[];
+      final tripsPerTruck = <String>[];
+      final tripDetails = <String>[];
+      final tripsByEquipmentMap = <String, int>{};
+      var totalTripsCount = 0;
+
+      for (final t in trucks) {
+        if (t is Map) {
+          final name = t['truck']?.toString() ?? '';
+          final driver = t['driver']?.toString() ?? '';
+          camions.add(name);
+          conducteurs.add(driver);
+
+          final counts = t['counts'] as List? ?? [];
+          tripsPerTruck.add('$name: ${counts.length}');
+          totalTripsCount += counts.length;
+
+          for (final count in counts) {
+            if (count is Map) {
+              final time = count['time']?.toString() ?? '';
+              final equip = count['equipment']?.toString() ?? '';
+              final qual = count['productQualityType']?.toString() ?? '';
+              tripDetails.add('$time | $name | $equip | $qual');
+
+              if (equip.isNotEmpty) {
+                tripsByEquipmentMap[equip] = (tripsByEquipmentMap[equip] ?? 0) + 1;
+              }
+            }
+          }
+        }
+      }
+      details['Camions List'] = camions.join('\n');
+      details['Conducteurs List'] = conducteurs.join('\n');
+      details['Trips per Truck'] = tripsPerTruck.join('\n');
+      details['Trip Details'] = tripDetails.join('\n');
+      details['Total de Voyages'] = totalTripsCount.toString();
+
+      final tripsByEquipment = tripsByEquipmentMap.entries.map((e) => '${e.key}: ${e.value} voyages').toList();
+      details['Total de Voyages par Equipment'] = tripsByEquipment.join('\n');
+    } else if (typeLower.contains('engin') || typeLower.contains('machine') || typeLower.contains('arr')) {
+      sheetName = 'Machines et engins à l\'arrêt';
+      final machineStops = data['machineStops'] as List? ?? [];
+      final categories = <String>[];
+      final subCategories = <String>[];
+      final equipments = <String>[];
+      final reasons = <String>[];
+
+      for (final ms in machineStops) {
+        if (ms is Map) {
+          categories.add(ms['machineCategory']?.toString() ?? ms['mainCategory']?.toString() ?? '');
+          subCategories.add(ms['machineSubCategory']?.toString() ?? ms['subCategory']?.toString() ?? '');
+          equipments.add(ms['machineName']?.toString() ?? ms['equipment']?.toString() ?? '');
+          reasons.add(ms['reason']?.toString() ?? '');
+        }
+      }
+      details['Catégorie'] = categories.join('\n');
+      details['Sous-catégorie'] = subCategories.join('\n');
+      details['Équipement'] = equipments.join('\n');
+      details['Raison'] = reasons.join('\n');
+    } else {
+      data.forEach((key, val) {
+        if (val is Map) {
+          val.forEach((subKey, subVal) {
+            details['$key - $subKey'] = subVal?.toString() ?? '';
+          });
+        } else if (val is List) {
+          details[key] = val.map((e) => e.toString()).join('\n');
+        } else {
+          details[key] = val?.toString() ?? '';
+        }
+      });
+    }
+
+    return GoogleSheetRecord(
+      sheetName: sheetName,
+      rowNumber: report.id ?? 1,
+      details: details,
+      date: report.date,
+      dateLabel: DateFormat('yyyy-MM-dd').format(report.date),
+      title: report.description,
+      searchableText: '${report.description} ${report.type} ${report.group} ${details.values.join(' ')}'.toLowerCase(),
     );
   }
 }
