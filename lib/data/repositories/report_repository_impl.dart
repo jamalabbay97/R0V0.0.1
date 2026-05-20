@@ -74,10 +74,13 @@ class ReportRepositoryImpl implements ReportRepository {
 
   @override
   Future<void> sendReportToSheets(Report report) async {
-    // Ensure the report is synced to Firestore first if authenticated so that we have a firestoreId
+    // Ensure the report is synced to Firestore first if authenticated so that we have a firestoreId.
+    // We intentionally trigger a direct upload pass for unsynced local reports
+    // before trying Sheets submission.
     if (_firestoreService.isAuthenticated &&
         (report.firestoreId == null || report.firestoreId!.isEmpty)) {
       try {
+        await _syncService.syncLocalToCloud();
         await _syncService.updateReport(report);
         if (report.id != null) {
           final reloaded = await _databaseHelper.getReport(report.id!);
@@ -89,6 +92,12 @@ class ReportRepositoryImpl implements ReportRepository {
         if (kDebugMode) {
           debugPrint('Pre-sync to Firestore for Sheets failed: $e');
         }
+      }
+
+      if (report.firestoreId == null || report.firestoreId!.isEmpty) {
+        throw Exception(
+          'This report must be synced to cloud before sending to Google Sheets. Please sync and try again.',
+        );
       }
     }
 

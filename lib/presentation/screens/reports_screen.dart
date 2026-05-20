@@ -1493,7 +1493,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       if (mounted) {
         final duplicateMessage = e is DuplicateReportDateException
             ? e.message
-            : AppLocalizations.of(context)!.reportSendToSheetsFailed;
+            : e.toString().replaceFirst('Exception: ', '').trim().isNotEmpty
+                ? e.toString().replaceFirst('Exception: ', '').trim()
+                : AppLocalizations.of(context)!.reportSendToSheetsFailed;
         scaffoldMessenger.showSnackBar(
           SnackBar(content: Text(duplicateMessage)),
         );

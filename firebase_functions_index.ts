@@ -774,316 +774,117 @@ function selectColorTheme(sheetName: string, startRowIndex: number): ColorTheme 
 
 export const submitReportToSheets = functions.https.onCall<SubmitReportToSheetsRequest, { success: boolean }>(
     async (data: SubmitReportToSheetsRequest, context: functions.https.CallableContext) => {
-        const uid = assertSignedIn(context);
+        try {
+            const uid = assertSignedIn(context);
 
-        const reportId = ensureNonEmptyString(data?.reportId, 'reportId');
-        const action = ensureNonEmptyString(data?.action, 'action');
-        const tasks = data?.tasks;
-        if (!Array.isArray(tasks) || tasks.length === 0) {
-            throw new functions.https.HttpsError('invalid-argument', 'tasks must be a non-empty array.');
-        }
-
-        const db = admin.firestore();
-        const reportRef = db.collection(REPORTS_COLLECTION).doc(reportId);
-        const reportDoc = await reportRef.get();
-        if (!reportDoc.exists) {
-            throw new functions.https.HttpsError('not-found', 'Report not found.');
-        }
-        const reportData = reportDoc.data()!;
-        const isOwner = reportData.userId === uid;
-        const role = context.auth?.token?.role;
-        const isManagerOrAdmin = role === 'admin' || role === 'manager';
-        if (!isOwner && !isManagerOrAdmin) {
-            throw new functions.https.HttpsError('permission-denied', 'You do not have permission to sync this report.');
-        }
-
-        const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-        if (!spreadsheetId) {
-            throw new functions.https.HttpsError('failed-precondition', 'Spreadsheet ID is not configured.');
-        }
-
-        const accessToken = await getAccessToken();
-
-        const spreadsheetMeta = await callSheetsApi(spreadsheetId, accessToken, '', 'GET');
-        const sheets = spreadsheetMeta.sheets || [];
-        const sheetNames = sheets.map((s: any) => s.properties.title as string);
-        const sheetIdsByName: Record<string, number> = {};
-        for (const s of sheets) {
-            sheetIdsByName[s.properties.title] = s.properties.sheetId;
-        }
-
-        const getResolvedSheetName = (targetName: string): string => {
-            const lowerTarget = targetName.toLowerCase().trim();
-            for (const name of sheetNames) {
-                if (name.toLowerCase().trim() === lowerTarget) {
-                    return name;
-                }
-            }
-            return targetName;
-        };
-
-        const getSheetId = (sheetName: string): number | null => {
-            const name = getResolvedSheetName(sheetName);
-            return sheetIdsByName[name] ?? null;
-        };
-
-        for (const task of tasks) {
-            const taskType = task.type;
-            const rawSheetName = ensureNonEmptyString(task.sheetName, 'sheetName');
-            let resolvedSheetName = getResolvedSheetName(rawSheetName);
-
-            let sheetId = getSheetId(resolvedSheetName);
-            if (sheetId === null) {
-                const addResult = await callSheetsApi(spreadsheetId, accessToken, ':batchUpdate', 'POST', {
-                    requests: [{
-                        addSheet: { properties: { title: rawSheetName } }
-                    }]
-                });
-                const newSheetProp = addResult.replies?.[0]?.addSheet?.properties;
-                if (newSheetProp) {
-                    sheetIdsByName[newSheetProp.title] = newSheetProp.sheetId;
-                    sheetNames.push(newSheetProp.title);
-                    sheetId = newSheetProp.sheetId;
-                    resolvedSheetName = newSheetProp.title;
-                } else {
-                    throw new Error(`Failed to create sheet "${rawSheetName}"`);
-                }
+            const reportId = ensureNonEmptyString(data?.reportId, 'reportId');
+            const action = ensureNonEmptyString(data?.action, 'action');
+            const tasks = data?.tasks;
+            if (!Array.isArray(tasks) || tasks.length === 0) {
+                throw new functions.https.HttpsError('invalid-argument', 'tasks must be a non-empty array.');
             }
 
-            if (taskType === 'appendTemplateRows') {
-                const rows = task.rows;
-                if (!rows || rows.length === 0) continue;
+            const db = admin.firestore();
+            const reportRef = db.collection(REPORTS_COLLECTION).doc(reportId);
+            const reportDoc = await reportRef.get();
+            if (!reportDoc.exists) {
+                throw new functions.https.HttpsError('not-found', 'Report not found.');
+            }
+            const reportData = reportDoc.data()!;
+            const isOwner = reportData.userId === uid;
+            const role = context.auth?.token?.role;
+            const isManagerOrAdmin = role === 'admin' || role === 'manager';
+            if (!isOwner && !isManagerOrAdmin) {
+                throw new functions.https.HttpsError('permission-denied', 'You do not have permission to sync this report.');
+            }
 
-                const checkDuplicate = task.checkDuplicate;
-                if (checkDuplicate === 'date') {
-                    const targetDate = ensureNonEmptyString(task.date, 'date');
-                    const isDup = await checkDuplicateDate(spreadsheetId, accessToken, resolvedSheetName, targetDate);
-                    if (isDup) {
-                        throw new functions.https.HttpsError('already-exists', `Un rapport avec la date du jour existe déjà dans ${rawSheetName} (${targetDate}).`);
-                    }
-                } else if (checkDuplicate === 'r0') {
-                    const targetDate = ensureNonEmptyString(task.date, 'date');
-                    const targetPoste = String(task.poste || '');
-                    const targetModule = String(task.module || '');
-                    const isDup = await checkDuplicateR0Report(spreadsheetId, accessToken, resolvedSheetName, targetDate, targetPoste, targetModule);
-                    if (isDup) {
-                        throw new functions.https.HttpsError('already-exists', "Un rapport avec la date d'aujourd'hui existe déjà pour ce poste et ce module.");
-                    }
-                } else if (checkDuplicate === 'truck') {
-                    const targetDate = ensureNonEmptyString(task.date, 'date');
-                    const targetPoste = String(task.poste || '');
-                    const isDup = await checkDuplicateTruckReport(spreadsheetId, accessToken, resolvedSheetName, targetDate, targetPoste);
-                    if (isDup) {
-                        throw new functions.https.HttpsError('already-exists', "Un rapport avec la date d'aujourd'hui existe déjà pour ce poste.");
+            const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+            if (!spreadsheetId) {
+                throw new functions.https.HttpsError('failed-precondition', 'Spreadsheet ID is not configured.');
+            }
+
+            const accessToken = await getAccessToken();
+
+            const spreadsheetMeta = await callSheetsApi(spreadsheetId, accessToken, '', 'GET');
+            const sheets = spreadsheetMeta.sheets || [];
+            const sheetNames = sheets.map((s: any) => s.properties.title as string);
+            const sheetIdsByName: Record<string, number> = {};
+            for (const s of sheets) {
+                sheetIdsByName[s.properties.title] = s.properties.sheetId;
+            }
+
+            const getResolvedSheetName = (targetName: string): string => {
+                const lowerTarget = targetName.toLowerCase().trim();
+                for (const name of sheetNames) {
+                    if (name.toLowerCase().trim() === lowerTarget) {
+                        return name;
                     }
                 }
+                return targetName;
+            };
 
-                const firstRow = rows[0];
-                const newDate = firstRow.length > 0 ? String(firstRow[0]) : '';
-                const insertStartRowNumber = await resolveTemplateInsertRowNumber(spreadsheetId, accessToken, resolvedSheetName, newDate);
+            const getSheetId = (sheetName: string): number | null => {
+                const name = getResolvedSheetName(sheetName);
+                return sheetIdsByName[name] ?? null;
+            };
 
-                const startRowIndex = insertStartRowNumber - 1;
-                const endRowIndex = startRowIndex + rows.length;
+            for (const task of tasks) {
+                const taskType = task.type;
+                const rawSheetName = ensureNonEmptyString(task.sheetName, 'sheetName');
+                let resolvedSheetName = getResolvedSheetName(rawSheetName);
 
-                await callSheetsApi(spreadsheetId, accessToken, ':batchUpdate', 'POST', {
-                    requests: [{
-                        insertDimension: {
-                            range: {
-                                sheetId: sheetId,
-                                dimension: 'ROWS',
-                                startIndex: startRowIndex,
-                                endIndex: endRowIndex
-                            },
-                            inheritFromBefore: startRowIndex > 6
-                        }
-                    }]
-                });
-
-                await callSheetsApi(spreadsheetId, accessToken, `/values/${encodeURIComponent(resolvedSheetName)}!A${insertStartRowNumber}?valueInputOption=RAW`, 'PUT', {
-                    values: rows
-                });
-
-                const requests: any[] = [];
-                const colorTheme = selectColorTheme(resolvedSheetName, startRowIndex);
-
-                let maxColCount = 0;
-                for (const r of rows) {
-                    if (r.length > maxColCount) maxColCount = r.length;
-                }
-
-                if (maxColCount > 0) {
-                    requests.push({
-                        copyPaste: {
-                            source: {
-                                sheetId: sheetId,
-                                startRowIndex: 6,
-                                endRowIndex: 7,
-                                startColumnIndex: 0,
-                                endColumnIndex: maxColCount
-                            },
-                            destination: {
-                                sheetId: sheetId,
-                                startRowIndex: startRowIndex,
-                                endRowIndex: endRowIndex,
-                                startColumnIndex: 0,
-                                endColumnIndex: maxColCount
-                            },
-                            pasteType: 'PASTE_FORMAT',
-                            pasteOrientation: 'NORMAL'
-                        }
+                let sheetId = getSheetId(resolvedSheetName);
+                if (sheetId === null) {
+                    const addResult = await callSheetsApi(spreadsheetId, accessToken, ':batchUpdate', 'POST', {
+                        requests: [{
+                            addSheet: { properties: { title: rawSheetName } }
+                        }]
                     });
-
-                    requests.push({
-                        repeatCell: {
-                            range: {
-                                sheetId: sheetId,
-                                startRowIndex: startRowIndex,
-                                endRowIndex: endRowIndex,
-                                startColumnIndex: 0,
-                                endColumnIndex: maxColCount
-                            },
-                            cell: {
-                                userEnteredFormat: {
-                                    backgroundColor: colorTheme.primary
-                                }
-                            },
-                            fields: 'userEnteredFormat.backgroundColor'
-                        }
-                    });
-                }
-
-                const mergeRanges = task.mergeRanges || [];
-                for (const mergeRange of mergeRanges) {
-                    for (let colIndex = mergeRange.startColumnIndex; colIndex < mergeRange.endColumnIndex; colIndex++) {
-                        requests.push({
-                            mergeCells: {
-                                range: {
-                                    sheetId: sheetId,
-                                    startRowIndex: startRowIndex,
-                                    endRowIndex: endRowIndex,
-                                    startColumnIndex: colIndex,
-                                    endColumnIndex: colIndex + 1
-                                },
-                                mergeType: 'MERGE_ALL'
-                            }
-                        });
+                    const newSheetProp = addResult.replies?.[0]?.addSheet?.properties;
+                    if (newSheetProp) {
+                        sheetIdsByName[newSheetProp.title] = newSheetProp.sheetId;
+                        sheetNames.push(newSheetProp.title);
+                        sheetId = newSheetProp.sheetId;
+                        resolvedSheetName = newSheetProp.title;
+                    } else {
+                        throw new Error(`Failed to create sheet "${rawSheetName}"`);
                     }
                 }
 
-                const customMerges = task.customMerges || [];
-                for (const merge of customMerges) {
-                    requests.push({
-                        mergeCells: {
-                            range: {
-                                sheetId: sheetId,
-                                startRowIndex: startRowIndex + merge.startRowOffset,
-                                endRowIndex: startRowIndex + merge.endRowOffset,
-                                startColumnIndex: merge.startColumnIndex,
-                                endColumnIndex: merge.endColumnIndex
-                            },
-                            mergeType: 'MERGE_ALL'
+                if (taskType === 'appendTemplateRows') {
+                    const rows = task.rows;
+                    if (!rows || rows.length === 0) continue;
+
+                    const checkDuplicate = task.checkDuplicate;
+                    if (checkDuplicate === 'date') {
+                        const targetDate = ensureNonEmptyString(task.date, 'date');
+                        const isDup = await checkDuplicateDate(spreadsheetId, accessToken, resolvedSheetName, targetDate);
+                        if (isDup) {
+                            throw new functions.https.HttpsError('already-exists', `Un rapport avec la date du jour existe déjà dans ${rawSheetName} (${targetDate}).`);
                         }
-                    });
-                }
-
-                const colorSections = task.colorSections || [];
-                for (const section of colorSections) {
-                    requests.push({
-                        repeatCell: {
-                            range: {
-                                sheetId: sheetId,
-                                startRowIndex: startRowIndex,
-                                endRowIndex: endRowIndex,
-                                startColumnIndex: section.startColumnIndex,
-                                endColumnIndex: section.endColumnIndex
-                            },
-                            cell: {
-                                userEnteredFormat: {
-                                    backgroundColor: colorTheme.secondary
-                                }
-                            },
-                            fields: 'userEnteredFormat.backgroundColor'
+                    } else if (checkDuplicate === 'r0') {
+                        const targetDate = ensureNonEmptyString(task.date, 'date');
+                        const targetPoste = String(task.poste || '');
+                        const targetModule = String(task.module || '');
+                        const isDup = await checkDuplicateR0Report(spreadsheetId, accessToken, resolvedSheetName, targetDate, targetPoste, targetModule);
+                        if (isDup) {
+                            throw new functions.https.HttpsError('already-exists', "Un rapport avec la date d'aujourd'hui existe déjà pour ce poste et ce module.");
                         }
-                    });
-                }
-
-                const separatorColumnIndexes = task.separatorColumnIndexes || [];
-                for (const colIndex of separatorColumnIndexes) {
-                    requests.push({
-                        repeatCell: {
-                            range: {
-                                sheetId: sheetId,
-                                startRowIndex: startRowIndex,
-                                endRowIndex: endRowIndex,
-                                startColumnIndex: colIndex,
-                                endColumnIndex: colIndex + 1
-                            },
-                            cell: {
-                                userEnteredFormat: {
-                                    backgroundColor: { red: 1, green: 1, blue: 1 }
-                                }
-                            },
-                            fields: 'userEnteredFormat.backgroundColor'
+                    } else if (checkDuplicate === 'truck') {
+                        const targetDate = ensureNonEmptyString(task.date, 'date');
+                        const targetPoste = String(task.poste || '');
+                        const isDup = await checkDuplicateTruckReport(spreadsheetId, accessToken, resolvedSheetName, targetDate, targetPoste);
+                        if (isDup) {
+                            throw new functions.https.HttpsError('already-exists', "Un rapport avec la date d'aujourd'hui existe déjà pour ce poste.");
                         }
-                    });
-                    requests.push({
-                        updateBorders: {
-                            range: {
-                                sheetId: sheetId,
-                                startRowIndex: startRowIndex,
-                                endRowIndex: endRowIndex,
-                                startColumnIndex: colIndex,
-                                endColumnIndex: colIndex + 1
-                            },
-                            top: { style: 'NONE' },
-                            bottom: { style: 'NONE' },
-                            left: { style: 'NONE' },
-                            right: { style: 'NONE' },
-                            innerHorizontal: { style: 'NONE' },
-                            innerVertical: { style: 'NONE' }
-                        }
-                    });
-                }
-
-                if (requests.length > 0) {
-                    await callSheetsApi(spreadsheetId, accessToken, ':batchUpdate', 'POST', {
-                        requests: requests
-                    });
-                }
-
-            } else if (taskType === 'appendFlatRows') {
-                const rows = task.rows;
-                if (!rows || rows.length === 0) continue;
-
-                const headers = task.headers || [];
-                const dateColumnIndex = typeof task.dateColumnIndex === 'number' ? task.dateColumnIndex : 0;
-                const firstDataRowNumber = typeof task.firstDataRowNumber === 'number' ? task.firstDataRowNumber : 2;
-
-                try {
-                    const headerRes = await callSheetsApi(
-                        spreadsheetId,
-                        accessToken,
-                        `/values/${encodeURIComponent(resolvedSheetName)}!1:1`,
-                        'GET'
-                    );
-                    const headerValues = headerRes.values || [];
-                    if (headerValues.length === 0) {
-                        await callSheetsApi(spreadsheetId, accessToken, `/values/${encodeURIComponent(resolvedSheetName)}!1:1?valueInputOption=USER_ENTERED`, 'PUT', {
-                            values: [headers]
-                        });
                     }
-                } catch (e) {
-                    await callSheetsApi(spreadsheetId, accessToken, `/values/${encodeURIComponent(resolvedSheetName)}!1:1?valueInputOption=USER_ENTERED`, 'PUT', {
-                        values: [headers]
-                    });
-                }
 
-                for (const r of rows) {
-                    const newDate = r.length > dateColumnIndex ? String(r[dateColumnIndex]) : '';
-                    const insertRowNumber = await resolveFlatInsertRowNumber(spreadsheetId, accessToken, resolvedSheetName, newDate, dateColumnIndex, firstDataRowNumber);
+                    const firstRow = rows[0];
+                    const newDate = firstRow.length > 0 ? String(firstRow[0]) : '';
+                    const insertStartRowNumber = await resolveTemplateInsertRowNumber(spreadsheetId, accessToken, resolvedSheetName, newDate);
 
-                    const startRowIndex = insertRowNumber - 1;
-                    const endRowIndex = startRowIndex + 1;
+                    const startRowIndex = insertStartRowNumber - 1;
+                    const endRowIndex = startRowIndex + rows.length;
 
                     await callSheetsApi(spreadsheetId, accessToken, ':batchUpdate', 'POST', {
                         requests: [{
@@ -1094,91 +895,297 @@ export const submitReportToSheets = functions.https.onCall<SubmitReportToSheetsR
                                     startIndex: startRowIndex,
                                     endIndex: endRowIndex
                                 },
-                                inheritFromBefore: startRowIndex > (firstDataRowNumber - 1)
+                                inheritFromBefore: startRowIndex > 6
                             }
                         }]
                     });
 
-                    await callSheetsApi(spreadsheetId, accessToken, `/values/${encodeURIComponent(resolvedSheetName)}!A${insertRowNumber}?valueInputOption=RAW`, 'PUT', {
-                        values: [r]
+                    await callSheetsApi(spreadsheetId, accessToken, `/values/${encodeURIComponent(resolvedSheetName)}!A${insertStartRowNumber}?valueInputOption=RAW`, 'PUT', {
+                        values: rows
                     });
-                }
-            } else if (taskType === 'appendIfDowntimeRows') {
-                const rows = task.rows;
-                if (!rows || rows.length === 0) continue;
 
-                const rangePrefix = ensureNonEmptyString(task.rangePrefix, 'rangePrefix');
-                const rangeSuffix = ensureNonEmptyString(task.rangeSuffix, 'rangeSuffix');
+                    const requests: any[] = [];
+                    const colorTheme = selectColorTheme(resolvedSheetName, startRowIndex);
 
-                // Check if layout needs initializing
-                try {
-                    const checkLayoutRes = await callSheetsApi(
-                        spreadsheetId,
-                        accessToken,
-                        `/values/${encodeURIComponent(resolvedSheetName)}!A3`,
-                        'GET'
-                    );
-                    const values = checkLayoutRes.values || [];
-                    if (values.length === 0 || !values[0] || values[0].length === 0) {
+                    let maxColCount = 0;
+                    for (const r of rows) {
+                        if (r.length > maxColCount) maxColCount = r.length;
+                    }
+
+                    if (maxColCount > 0) {
+                        requests.push({
+                            copyPaste: {
+                                source: {
+                                    sheetId: sheetId,
+                                    startRowIndex: 6,
+                                    endRowIndex: 7,
+                                    startColumnIndex: 0,
+                                    endColumnIndex: maxColCount
+                                },
+                                destination: {
+                                    sheetId: sheetId,
+                                    startRowIndex: startRowIndex,
+                                    endRowIndex: endRowIndex,
+                                    startColumnIndex: 0,
+                                    endColumnIndex: maxColCount
+                                },
+                                pasteType: 'PASTE_FORMAT',
+                                pasteOrientation: 'NORMAL'
+                            }
+                        });
+
+                        requests.push({
+                            repeatCell: {
+                                range: {
+                                    sheetId: sheetId,
+                                    startRowIndex: startRowIndex,
+                                    endRowIndex: endRowIndex,
+                                    startColumnIndex: 0,
+                                    endColumnIndex: maxColCount
+                                },
+                                cell: {
+                                    userEnteredFormat: {
+                                        backgroundColor: colorTheme.primary
+                                    }
+                                },
+                                fields: 'userEnteredFormat.backgroundColor'
+                            }
+                        });
+                    }
+
+                    const mergeRanges = task.mergeRanges || [];
+                    for (const mergeRange of mergeRanges) {
+                        for (let colIndex = mergeRange.startColumnIndex; colIndex < mergeRange.endColumnIndex; colIndex++) {
+                            requests.push({
+                                mergeCells: {
+                                    range: {
+                                        sheetId: sheetId,
+                                        startRowIndex: startRowIndex,
+                                        endRowIndex: endRowIndex,
+                                        startColumnIndex: colIndex,
+                                        endColumnIndex: colIndex + 1
+                                    },
+                                    mergeType: 'MERGE_ALL'
+                                }
+                            });
+                        }
+                    }
+
+                    const customMerges = task.customMerges || [];
+                    for (const merge of customMerges) {
+                        requests.push({
+                            mergeCells: {
+                                range: {
+                                    sheetId: sheetId,
+                                    startRowIndex: startRowIndex + merge.startRowOffset,
+                                    endRowIndex: startRowIndex + merge.endRowOffset,
+                                    startColumnIndex: merge.startColumnIndex,
+                                    endColumnIndex: merge.endColumnIndex
+                                },
+                                mergeType: 'MERGE_ALL'
+                            }
+                        });
+                    }
+
+                    const colorSections = task.colorSections || [];
+                    for (const section of colorSections) {
+                        requests.push({
+                            repeatCell: {
+                                range: {
+                                    sheetId: sheetId,
+                                    startRowIndex: startRowIndex,
+                                    endRowIndex: endRowIndex,
+                                    startColumnIndex: section.startColumnIndex,
+                                    endColumnIndex: section.endColumnIndex
+                                },
+                                cell: {
+                                    userEnteredFormat: {
+                                        backgroundColor: colorTheme.secondary
+                                    }
+                                },
+                                fields: 'userEnteredFormat.backgroundColor'
+                            }
+                        });
+                    }
+
+                    const separatorColumnIndexes = task.separatorColumnIndexes || [];
+                    for (const colIndex of separatorColumnIndexes) {
+                        requests.push({
+                            repeatCell: {
+                                range: {
+                                    sheetId: sheetId,
+                                    startRowIndex: startRowIndex,
+                                    endRowIndex: endRowIndex,
+                                    startColumnIndex: colIndex,
+                                    endColumnIndex: colIndex + 1
+                                },
+                                cell: {
+                                    userEnteredFormat: {
+                                        backgroundColor: { red: 1, green: 1, blue: 1 }
+                                    }
+                                },
+                                fields: 'userEnteredFormat.backgroundColor'
+                            }
+                        });
+                        requests.push({
+                            updateBorders: {
+                                range: {
+                                    sheetId: sheetId,
+                                    startRowIndex: startRowIndex,
+                                    endRowIndex: endRowIndex,
+                                    startColumnIndex: colIndex,
+                                    endColumnIndex: colIndex + 1
+                                },
+                                top: { style: 'NONE' },
+                                bottom: { style: 'NONE' },
+                                left: { style: 'NONE' },
+                                right: { style: 'NONE' },
+                                innerHorizontal: { style: 'NONE' },
+                                innerVertical: { style: 'NONE' }
+                            }
+                        });
+                    }
+
+                    if (requests.length > 0) {
+                        await callSheetsApi(spreadsheetId, accessToken, ':batchUpdate', 'POST', {
+                            requests: requests
+                        });
+                    }
+
+                } else if (taskType === 'appendFlatRows') {
+                    const rows = task.rows;
+                    if (!rows || rows.length === 0) continue;
+
+                    const headers = task.headers || [];
+                    const dateColumnIndex = typeof task.dateColumnIndex === 'number' ? task.dateColumnIndex : 0;
+                    const firstDataRowNumber = typeof task.firstDataRowNumber === 'number' ? task.firstDataRowNumber : 2;
+
+                    try {
+                        const headerRes = await callSheetsApi(
+                            spreadsheetId,
+                            accessToken,
+                            `/values/${encodeURIComponent(resolvedSheetName)}!1:1`,
+                            'GET'
+                        );
+                        const headerValues = headerRes.values || [];
+                        if (headerValues.length === 0) {
+                            await callSheetsApi(spreadsheetId, accessToken, `/values/${encodeURIComponent(resolvedSheetName)}!1:1?valueInputOption=USER_ENTERED`, 'PUT', {
+                                values: [headers]
+                            });
+                        }
+                    } catch (e) {
+                        await callSheetsApi(spreadsheetId, accessToken, `/values/${encodeURIComponent(resolvedSheetName)}!1:1?valueInputOption=USER_ENTERED`, 'PUT', {
+                            values: [headers]
+                        });
+                    }
+
+                    for (const r of rows) {
+                        const newDate = r.length > dateColumnIndex ? String(r[dateColumnIndex]) : '';
+                        const insertRowNumber = await resolveFlatInsertRowNumber(spreadsheetId, accessToken, resolvedSheetName, newDate, dateColumnIndex, firstDataRowNumber);
+
+                        const startRowIndex = insertRowNumber - 1;
+                        const endRowIndex = startRowIndex + 1;
+
+                        await callSheetsApi(spreadsheetId, accessToken, ':batchUpdate', 'POST', {
+                            requests: [{
+                                insertDimension: {
+                                    range: {
+                                        sheetId: sheetId,
+                                        dimension: 'ROWS',
+                                        startIndex: startRowIndex,
+                                        endIndex: endRowIndex
+                                    },
+                                    inheritFromBefore: startRowIndex > (firstDataRowNumber - 1)
+                                }
+                            }]
+                        });
+
+                        await callSheetsApi(spreadsheetId, accessToken, `/values/${encodeURIComponent(resolvedSheetName)}!A${insertRowNumber}?valueInputOption=RAW`, 'PUT', {
+                            values: [r]
+                        });
+                    }
+                } else if (taskType === 'appendIfDowntimeRows') {
+                    const rows = task.rows;
+                    if (!rows || rows.length === 0) continue;
+
+                    const rangePrefix = ensureNonEmptyString(task.rangePrefix, 'rangePrefix');
+                    const rangeSuffix = ensureNonEmptyString(task.rangeSuffix, 'rangeSuffix');
+
+                    // Check if layout needs initializing
+                    try {
+                        const checkLayoutRes = await callSheetsApi(
+                            spreadsheetId,
+                            accessToken,
+                            `/values/${encodeURIComponent(resolvedSheetName)}!A3`,
+                            'GET'
+                        );
+                        const values = checkLayoutRes.values || [];
+                        if (values.length === 0 || !values[0] || values[0].length === 0) {
+                            await ensureIfDowntimeDetailsLayout(spreadsheetId, accessToken, resolvedSheetName);
+                        }
+                    } catch (e) {
                         await ensureIfDowntimeDetailsLayout(spreadsheetId, accessToken, resolvedSheetName);
                     }
-                } catch (e) {
-                    await ensureIfDowntimeDetailsLayout(spreadsheetId, accessToken, resolvedSheetName);
-                }
 
-                // Fetch existing range starting from row 5
-                let existingRows: any[][] = [];
-                try {
-                    const existingRange = await callSheetsApi(
+                    // Fetch existing range starting from row 5
+                    let existingRows: any[][] = [];
+                    try {
+                        const existingRange = await callSheetsApi(
+                            spreadsheetId,
+                            accessToken,
+                            `/values/${encodeURIComponent(resolvedSheetName)}!${rangePrefix}5:${rangeSuffix}`,
+                            'GET'
+                        );
+                        existingRows = existingRange.values || [];
+                    } catch (e) {
+                        console.warn(`Error fetching downtime rows range for ${resolvedSheetName}:`, e);
+                    }
+
+                    // Count non-empty rows
+                    const isNonEmptyRow = (row: any[]): boolean => {
+                        if (!row || row.length === 0) return false;
+                        return row.some(cell => cell !== null && cell !== undefined && String(cell).trim().length > 0);
+                    };
+                    const nonEmptyCount = existingRows.filter(isNonEmptyRow).length;
+
+                    const startRow = 5 + nonEmptyCount;
+                    const endRow = startRow + rows.length - 1;
+
+                    await callSheetsApi(
                         spreadsheetId,
                         accessToken,
-                        `/values/${encodeURIComponent(resolvedSheetName)}!${rangePrefix}5:${rangeSuffix}`,
-                        'GET'
+                        `/values/${encodeURIComponent(resolvedSheetName)}!${rangePrefix}${startRow}:${rangeSuffix}${endRow}?valueInputOption=RAW`,
+                        'PUT',
+                        {
+                            values: rows
+                        }
                     );
-                    existingRows = existingRange.values || [];
-                } catch (e) {
-                    console.warn(`Error fetching downtime rows range for ${resolvedSheetName}:`, e);
                 }
-
-                // Count non-empty rows
-                const isNonEmptyRow = (row: any[]): boolean => {
-                    if (!row || row.length === 0) return false;
-                    return row.some(cell => cell !== null && cell !== undefined && String(cell).trim().length > 0);
-                };
-                const nonEmptyCount = existingRows.filter(isNonEmptyRow).length;
-
-                const startRow = 5 + nonEmptyCount;
-                const endRow = startRow + rows.length - 1;
-
-                await callSheetsApi(
-                    spreadsheetId,
-                    accessToken,
-                    `/values/${encodeURIComponent(resolvedSheetName)}!${rangePrefix}${startRow}:${rangeSuffix}${endRow}?valueInputOption=RAW`,
-                    'PUT',
-                    {
-                        values: rows
-                    }
-                );
             }
+
+            const beforeData = reportDoc.data();
+            const updatedData = {
+                sheetsSynced: true,
+                isSentToSheets: true,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            };
+            await reportRef.set(updatedData, { merge: true });
+
+            await writeAuditLog({
+                actorUid: uid,
+                action: 'report.sheets_sync',
+                entityType: 'report',
+                entityId: reportId,
+                before: beforeData ?? null,
+                after: updatedData,
+            });
+
+            return { success: true };
+        } catch (error: any) {
+            if (error instanceof functions.https.HttpsError) {
+                throw error;
+            }
+            throw new functions.https.HttpsError('failed-precondition', error.message || 'Unknown error occurred.');
         }
-
-        const beforeData = reportDoc.data();
-        const updatedData = {
-            sheetsSynced: true,
-            isSentToSheets: true,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        };
-        await reportRef.set(updatedData, { merge: true });
-
-        await writeAuditLog({
-            actorUid: uid,
-            action: 'report.sheets_sync',
-            entityType: 'report',
-            entityId: reportId,
-            before: beforeData ?? null,
-            after: updatedData,
-        });
-
-        return { success: true };
     },
 );

@@ -3659,9 +3659,11 @@ class GoogleSheetsService {
         }
       }
 
-      final reportId = report.firestoreId ?? report.id?.toString();
+      final reportId = report.firestoreId;
       if (reportId == null || reportId.isEmpty) {
-        throw Exception('Cannot sync report to Sheets without a valid backend ID.');
+        throw Exception(
+          'Cannot sync report to Sheets via backend without a Firestore ID.',
+        );
       }
 
       final callable = FirebaseFunctions.instance.httpsCallable('submitReportToSheets');

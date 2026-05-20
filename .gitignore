@@ -44,3 +44,4 @@ ghp_*
 *.key
 secrets/
 credentials/
+node_modules
