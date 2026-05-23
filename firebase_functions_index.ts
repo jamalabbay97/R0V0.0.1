@@ -798,7 +798,7 @@ export const submitReportToSheets = functions.https.onCall<SubmitReportToSheetsR
                 throw new functions.https.HttpsError('permission-denied', 'You do not have permission to sync this report.');
             }
 
-            const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+            const spreadsheetId = functions.config().sheets?.spreadsheet_id || process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
             if (!spreadsheetId) {
                 throw new functions.https.HttpsError('failed-precondition', 'Spreadsheet ID is not configured.');
             }
