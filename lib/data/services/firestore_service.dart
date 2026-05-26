@@ -57,18 +57,18 @@ class FirestoreService {
             .timeout(const Duration(seconds: 3));
       } catch (e) {
         if (kDebugMode) {
-          debugPrint('Failed to get user access context, defaulting to basic: $e');
+          debugPrint(
+              'Failed to get user access context, defaulting to basic: $e');
         }
       }
     }
 
     final data = snapshot?.data();
     final role = (data?['role'] as String?)?.toLowerCase();
-    final allowedReports =
-        (data?['allowedReports'] as List<dynamic>?)
-            ?.whereType<String>()
-            .map((report) => report.trim())
-            .toSet();
+    final allowedReports = (data?['allowedReports'] as List<dynamic>?)
+        ?.whereType<String>()
+        .map((report) => report.trim())
+        .toSet();
 
     final canViewSharedArchive = role == 'admin' ||
         (allowedReports?.contains(_archiveReportKey) ?? false);
@@ -117,7 +117,15 @@ class FirestoreService {
         continue;
       }
       if (_isSharedSheetsReport(data)) {
-        filtered.add(doc);
+        if (accessContext.isAdmin) {
+          filtered.add(doc);
+          continue;
+        }
+
+        final accessKey = _resolveAccessKeyForStoredData(data);
+        if (accessKey != null && allowedCreationKeys.contains(accessKey)) {
+          filtered.add(doc);
+        }
         continue;
       }
       if (!requiresCreationKeyFilter) {
@@ -309,7 +317,8 @@ class FirestoreService {
         _firestore
             .collection(_reportsCollection)
             .doc(report.firestoreId)
-            .update(reportData).ignore();
+            .update(reportData)
+            .ignore();
         return report.firestoreId!;
       } else {
         final reportData = _reportToFirestoreForCreate(
@@ -520,12 +529,31 @@ class FirestoreService {
         .orderBy('date', descending: true)
         .get();
 
+    final accessContext = await _getCurrentUserAccessContext();
+    final allowedCreationKeys = accessContext.allowedCreationReportKeys;
+
     final reportsById = <String, Report>{};
-    for (final doc in [...personalSnapshot.docs, ...sheetsSnapshot.docs]) {
+    for (final doc in personalSnapshot.docs) {
       final data = doc.data();
       if (_isDeletedForUser(data, currentUserId)) {
         continue;
       }
+      reportsById[doc.id] = _reportFromFirestore(doc.id, data);
+    }
+
+    for (final doc in sheetsSnapshot.docs) {
+      final data = doc.data();
+      if (_isDeletedForUser(data, currentUserId)) {
+        continue;
+      }
+
+      if (!accessContext.isAdmin) {
+        final accessKey = _resolveAccessKeyForStoredData(data);
+        if (accessKey == null || !allowedCreationKeys.contains(accessKey)) {
+          continue;
+        }
+      }
+
       reportsById[doc.id] = _reportFromFirestore(doc.id, data);
     }
 
@@ -536,6 +564,8 @@ class FirestoreService {
 
   Future<List<Report>> _downloadSheetsSyncedReportsOnly() async {
     final currentUserId = _userId;
+    final accessContext = await _getCurrentUserAccessContext();
+    final allowedCreationKeys = accessContext.allowedCreationReportKeys;
     final snapshot = await _firestore
         .collection(_reportsCollection)
         .where(_sheetsSyncedField, isEqualTo: true)
@@ -543,7 +573,19 @@ class FirestoreService {
         .get();
 
     return snapshot.docs
-        .where((doc) => !_isDeletedForUser(doc.data(), currentUserId))
+        .where((doc) {
+          final data = doc.data();
+          if (_isDeletedForUser(data, currentUserId)) {
+            return false;
+          }
+
+          if (accessContext.isAdmin) {
+            return true;
+          }
+
+          final accessKey = _resolveAccessKeyForStoredData(data);
+          return accessKey != null && allowedCreationKeys.contains(accessKey);
+        })
         .map((doc) => _reportFromFirestore(doc.id, doc.data()))
         .toList()
       ..sort(_compareReportsByDateDesc);

@@ -42,7 +42,8 @@ class GoogleSheetsService {
         _credentialsAssetPath = credentialsAssetPath ??
             _configValue(
               'GOOGLE_SHEETS_CREDENTIALS_ASSET_PATH',
-              const String.fromEnvironment('GOOGLE_SHEETS_CREDENTIALS_ASSET_PATH'),
+              const String.fromEnvironment(
+                  'GOOGLE_SHEETS_CREDENTIALS_ASSET_PATH'),
             ),
         _functionsRegion = functionsRegion ??
             _configValue(
@@ -308,6 +309,12 @@ class GoogleSheetsService {
         rangeSuffix: 'G',
         rows: rows,
       );
+      await _sortIfDowntimeSectionByDate(
+        api,
+        sheetName: _ifDowntimeDetailsSheet,
+        rangePrefix: 'A',
+        rangeSuffix: 'G',
+      );
       return;
     }
 
@@ -340,6 +347,18 @@ class GoogleSheetsService {
       rangeSuffix: 'W',
       rows: module2Rows,
     );
+    await _sortIfDowntimeSectionByDate(
+      api,
+      sheetName: _ifDowntimeDetailsSheet,
+      rangePrefix: 'I',
+      rangeSuffix: 'O',
+    );
+    await _sortIfDowntimeSectionByDate(
+      api,
+      sheetName: _ifDowntimeDetailsSheet,
+      rangePrefix: 'Q',
+      rangeSuffix: 'W',
+    );
   }
 
   Future<void> _syncR0DowntimeDetailsSheet(
@@ -369,6 +388,13 @@ class GoogleSheetsService {
       rows: rows,
       dateColumnIndex: 0,
       firstDataRowNumber: 2,
+    );
+    await _sortRowsByDateDescending(
+      api,
+      sheetName: _r0DowntimeDetailsSheet,
+      startRow: 2,
+      dateColumnIndex: 0,
+      rangeEndColumn: 'J',
     );
   }
 
@@ -549,6 +575,109 @@ class GoogleSheetsService {
       ValueRange(values: rows),
       _spreadsheetId,
       '$sheetName!$rangePrefix$startRow:$rangeSuffix$endRow',
+      valueInputOption: 'RAW',
+    );
+  }
+
+  Future<void> _sortIfDowntimeSectionByDate(
+    SheetsApi api, {
+    required String sheetName,
+    required String rangePrefix,
+    required String rangeSuffix,
+  }) async {
+    final existingRange = await api.spreadsheets.values.get(
+      _spreadsheetId,
+      '$sheetName!${rangePrefix}5:$rangeSuffix',
+    );
+    final rows = (existingRange.values ?? const [])
+        .where(_hasContent)
+        .map((row) => row.map((value) => value?.toString() ?? '').toList())
+        .toList();
+
+    if (rows.length < 2) {
+      return;
+    }
+
+    rows.sort((a, b) {
+      final left = _parseIfDowntimeDate(a.isNotEmpty ? a.first : '');
+      final right = _parseIfDowntimeDate(b.isNotEmpty ? b.first : '');
+      if (left == null && right == null) {
+        return 0;
+      }
+      if (left == null) {
+        return 1;
+      }
+      if (right == null) {
+        return -1;
+      }
+      return right.compareTo(left);
+    });
+
+    final endRow = 5 + rows.length - 1;
+    await api.spreadsheets.values.update(
+      ValueRange(values: rows),
+      _spreadsheetId,
+      '$sheetName!${rangePrefix}5:$rangeSuffix$endRow',
+      valueInputOption: 'RAW',
+    );
+  }
+
+  DateTime? _parseIfDowntimeDate(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    try {
+      return DateFormat('M/d/yyyy').parseStrict(trimmed);
+    } catch (_) {
+      return DateTime.tryParse(trimmed);
+    }
+  }
+
+  Future<void> _sortRowsByDateDescending(
+    SheetsApi api, {
+    required String sheetName,
+    required int startRow,
+    required int dateColumnIndex,
+    required String rangeEndColumn,
+  }) async {
+    final existingRange = await api.spreadsheets.values.get(
+      _spreadsheetId,
+      '$sheetName!A$startRow:$rangeEndColumn',
+    );
+    final rows = (existingRange.values ?? const [])
+        .where(_hasContent)
+        .map((row) => row.map((value) => value?.toString() ?? '').toList())
+        .toList();
+
+    if (rows.length < 2) {
+      return;
+    }
+
+    rows.sort((a, b) {
+      final left = dateColumnIndex < a.length
+          ? _parseSheetDateTime(a[dateColumnIndex])
+          : null;
+      final right = dateColumnIndex < b.length
+          ? _parseSheetDateTime(b[dateColumnIndex])
+          : null;
+      if (left == null && right == null) {
+        return 0;
+      }
+      if (left == null) {
+        return 1;
+      }
+      if (right == null) {
+        return -1;
+      }
+      return right.compareTo(left);
+    });
+
+    final endRow = startRow + rows.length - 1;
+    await api.spreadsheets.values.update(
+      ValueRange(values: rows),
+      _spreadsheetId,
+      '$sheetName!A$startRow:$rangeEndColumn$endRow',
       valueInputOption: 'RAW',
     );
   }
@@ -1800,7 +1929,9 @@ class GoogleSheetsService {
   }
 
   Future<ServiceAccountCredentials?> _loadCredentials() async {
-    const allowInRelease = bool.fromEnvironment('ALLOW_CLIENT_SHEETS_IN_RELEASE', defaultValue: false);
+    const allowInRelease = bool.fromEnvironment(
+        'ALLOW_CLIENT_SHEETS_IN_RELEASE',
+        defaultValue: false);
     if (kReleaseMode && !allowInRelease) {
       debugPrint(
         'Google Sheets client credentials are disabled in release builds. '
@@ -3538,8 +3669,8 @@ class GoogleSheetsService {
 
       if (templateRows != null) {
         final checkDuplicate = (templateRows.sheetName == _activitySheet ||
-                                templateRows.sheetName == _dailySheet ||
-                                templateRows.sheetName == _machinesSheet)
+                templateRows.sheetName == _dailySheet ||
+                templateRows.sheetName == _machinesSheet)
             ? 'date'
             : (templateRows.sheetName == _r0Sheet)
                 ? 'r0'
@@ -3547,27 +3678,34 @@ class GoogleSheetsService {
                     ? 'truck'
                     : null;
 
-        final dateStr = DateFormat('yyyy-MM-dd', _frenchLocale).format(reportLocalDate);
+        final dateStr =
+            DateFormat('yyyy-MM-dd', _frenchLocale).format(reportLocalDate);
         final additionalData = report.additionalData ?? {};
 
         tasks.add({
           'type': 'appendTemplateRows',
           'sheetName': templateRows.sheetName,
           'rows': templateRows.rows,
-          'mergeRanges': templateRows.mergeRanges.map((m) => {
-            'startColumnIndex': m.startColumnIndex,
-            'endColumnIndex': m.endColumnIndex,
-          }).toList(),
-          'customMerges': templateRows.customMerges.map((m) => {
-            'startRowOffset': m.startRowOffset,
-            'endRowOffset': m.endRowOffset,
-            'startColumnIndex': m.startColumnIndex,
-            'endColumnIndex': m.endColumnIndex,
-          }).toList(),
-          'colorSections': templateRows.colorSections.map((c) => {
-            'startColumnIndex': c.startColumnIndex,
-            'endColumnIndex': c.endColumnIndex,
-          }).toList(),
+          'mergeRanges': templateRows.mergeRanges
+              .map((m) => {
+                    'startColumnIndex': m.startColumnIndex,
+                    'endColumnIndex': m.endColumnIndex,
+                  })
+              .toList(),
+          'customMerges': templateRows.customMerges
+              .map((m) => {
+                    'startRowOffset': m.startRowOffset,
+                    'endRowOffset': m.endRowOffset,
+                    'startColumnIndex': m.startColumnIndex,
+                    'endColumnIndex': m.endColumnIndex,
+                  })
+              .toList(),
+          'colorSections': templateRows.colorSections
+              .map((c) => {
+                    'startColumnIndex': c.startColumnIndex,
+                    'endColumnIndex': c.endColumnIndex,
+                  })
+              .toList(),
           'separatorColumnIndexes': templateRows.separatorColumnIndexes,
           'checkDuplicate': checkDuplicate,
           'date': dateStr,
@@ -3632,7 +3770,8 @@ class GoogleSheetsService {
 
         // Add R0 downtime details tasks if applicable (mimicking _syncR0DowntimeDetailsSheet)
         if (category == _ReportCategory.r0) {
-          final r0Rows = _buildR0DowntimeDetailsRows(reportLocalDate, additionalData);
+          final r0Rows =
+              _buildR0DowntimeDetailsRows(reportLocalDate, additionalData);
           if (r0Rows.isNotEmpty) {
             tasks.add({
               'type': 'appendFlatRows',
@@ -3689,7 +3828,8 @@ class GoogleSheetsService {
       return result.data['success'] == true;
     } on FirebaseFunctionsException catch (e) {
       if (e.code == 'already-exists') {
-        throw DuplicateReportDateException(e.message ?? 'Un rapport avec la date du jour existe déjà.');
+        throw DuplicateReportDateException(
+            e.message ?? 'Un rapport avec la date du jour existe déjà.');
       }
       debugPrint('Backend Google Sheets sync failed: ${e.code} - ${e.message}');
       rethrow;
