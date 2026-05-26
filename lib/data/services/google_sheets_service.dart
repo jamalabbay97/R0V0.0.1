@@ -27,6 +27,7 @@ class GoogleSheetsService {
     String? spreadsheetId,
     String? credentialsJson,
     String? credentialsAssetPath,
+    String? functionsRegion,
     DateTime Function()? nowProvider,
   })  : _spreadsheetId = spreadsheetId ??
             _configValue(
@@ -42,6 +43,14 @@ class GoogleSheetsService {
             _configValue(
               'GOOGLE_SHEETS_CREDENTIALS_ASSET_PATH',
               const String.fromEnvironment('GOOGLE_SHEETS_CREDENTIALS_ASSET_PATH'),
+            ),
+        _functionsRegion = functionsRegion ??
+            _configValue(
+              'FIREBASE_FUNCTIONS_REGION',
+              const String.fromEnvironment(
+                'FIREBASE_FUNCTIONS_REGION',
+                defaultValue: 'us-central1',
+              ),
             ),
         _nowProvider = nowProvider ?? DateTime.now;
 
@@ -74,6 +83,7 @@ class GoogleSheetsService {
   final String _spreadsheetId;
   final String _credentialsJson;
   final String _credentialsAssetPath;
+  final String _functionsRegion;
   final DateTime Function() _nowProvider;
 
   SheetsApi? _sheetsApi;
@@ -3666,7 +3676,10 @@ class GoogleSheetsService {
         );
       }
 
-      final callable = FirebaseFunctions.instance.httpsCallable('submitReportToSheets');
+      final functions = _functionsRegion.trim().isEmpty
+          ? FirebaseFunctions.instance
+          : FirebaseFunctions.instanceFor(region: _functionsRegion.trim());
+      final callable = functions.httpsCallable('submitReportToSheets');
       final result = await callable.call<Map<dynamic, dynamic>>({
         'reportId': reportId,
         'action': action,
