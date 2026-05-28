@@ -1335,10 +1335,15 @@ class GoogleSheetsService {
         final liaisonCounters = _listOfMaps(data['liaison Counters']);
         final stock = _listOfMaps(data['stock']);
 
+        final counterTable = _buildTnbCounterTable(
+          data,
+          vibratorCounters: vibratorCounters,
+          liaisonCounters: liaisonCounters,
+        );
+
         final maxRows = [
           stops.length,
-          vibratorCounters.length,
-          liaisonCounters.length,
+          counterTable.rowCount,
           stock.length,
           1,
         ].reduce((a, b) => a > b ? a : b);
@@ -1346,10 +1351,6 @@ class GoogleSheetsService {
         final rows = <List<Object?>>[];
         for (var i = 0; i < maxRows; i++) {
           final stop = i < stops.length ? stops[i] : null;
-          final vibrator =
-              i < vibratorCounters.length ? vibratorCounters[i] : null;
-          final liaison =
-              i < liaisonCounters.length ? liaisonCounters[i] : null;
           final stockEntry = i < stock.length ? stock[i] : null;
           final includeSharedValues = i == 0;
 
@@ -1362,22 +1363,32 @@ class GoogleSheetsService {
             includeSharedValues ? _extractCreatorName(data) : '',
             '',
             includeSharedValues ? date : '',
-            _formatCounterEntry(vibrator),
-            includeSharedValues ? _formatDuration(data['T H.V']) : '',
-            _formatCounterEntry(liaison),
-            includeSharedValues ? _formatDuration(data['T H.L']) : '',
+            includeSharedValues
+                ? _formatCounterTotalHours(
+                    counterTable.totalHoursForLabel('Vibreur'),
+                  )
+                : '',
+            includeSharedValues
+                ? _formatCounterTotalHours(
+                    counterTable.totalHoursForLabel('LN'),
+                  )
+                : '',
+            ...counterTable.rowAt(i),
             _formatStockEntry(stockEntry),
           ]);
         }
 
         final mergeRanges = <_TemplateMergeRange>[];
         if (rows.length > 1) {
+          final stockColumnIndex = 10 + counterTable.columnCount;
           mergeRanges.addAll([
             const _TemplateMergeRange(startColumnIndex: 0, endColumnIndex: 1),
             const _TemplateMergeRange(startColumnIndex: 3, endColumnIndex: 6),
-            const _TemplateMergeRange(startColumnIndex: 7, endColumnIndex: 8),
-            const _TemplateMergeRange(startColumnIndex: 9, endColumnIndex: 10),
-            const _TemplateMergeRange(startColumnIndex: 11, endColumnIndex: 12),
+            const _TemplateMergeRange(startColumnIndex: 7, endColumnIndex: 10),
+            _TemplateMergeRange(
+              startColumnIndex: stockColumnIndex,
+              endColumnIndex: stockColumnIndex + 1,
+            ),
           ]);
         }
 
@@ -1386,9 +1397,12 @@ class GoogleSheetsService {
           rows: rows,
           mergeRanges: mergeRanges,
           separatorColumnIndexes: const [6],
-          colorSections: const [
-            _TemplateColorSection(startColumnIndex: 0, endColumnIndex: 6),
-            _TemplateColorSection(startColumnIndex: 7, endColumnIndex: 13),
+          colorSections: [
+            const _TemplateColorSection(startColumnIndex: 0, endColumnIndex: 6),
+            _TemplateColorSection(
+              startColumnIndex: 7,
+              endColumnIndex: 11 + counterTable.columnCount,
+            ),
           ],
         );
       case _ReportCategory.r0:
@@ -1600,21 +1614,175 @@ class GoogleSheetsService {
     }
   }
 
-  String _formatCounterEntry(Map<String, dynamic>? counter) {
-    if (counter == null) {
-      return '';
+  _TnbCounterTable _buildTnbCounterTable(
+    Map<String, dynamic> data, {
+    required List<Map<String, dynamic>> vibratorCounters,
+    required List<Map<String, dynamic>> liaisonCounters,
+  }) {
+    const counterLabels = ['Vibreur', 'LN', 'L', 'G3', 'G6'];
+    final countersByLabel = <String, Map<String, dynamic>>{};
+    for (final counter in vibratorCounters) {
+      countersByLabel[_normalizeTnbCounterLabel(counter['poste'])] = counter;
     }
-    final poste = _posteLabel(counter['poste']);
+    for (final counter in liaisonCounters) {
+      countersByLabel[_normalizeTnbCounterLabel(counter['poste'])] = counter;
+    }
+
+    final storedSegmentsByCounter = data['tnbShiftCounters'] is Map
+        ? Map<String, dynamic>.from(data['tnbShiftCounters'] as Map)
+        : <String, dynamic>{};
+
+    final columns = <List<List<Object?>>>[];
+    final totalHoursByLabel = <String, double>{};
+    var rowCount = 0;
+    for (final label in counterLabels) {
+      final counter = countersByLabel[label];
+      final segments = _resolveTnbCounterSegments(
+        label: label,
+        counter: counter,
+        storedSegmentsByCounter: storedSegmentsByCounter,
+      );
+      rowCount = rowCount > segments.length ? rowCount : segments.length;
+      totalHoursByLabel[label] = segments.fold<double>(
+        0,
+        (sum, segment) =>
+            sum + (_tryCounterHours(segment.start, segment.end) ?? 0),
+      );
+      columns.add(segments
+          .map((segment) => [
+                _formatTnbShiftLabel(segment.shiftLabel),
+                segment.start,
+                segment.end,
+                _formatCounterHours(segment.start, segment.end),
+              ])
+          .toList(growable: false));
+    }
+
+    return _TnbCounterTable(
+      columns: columns,
+      rowCount: rowCount,
+      totalHoursByLabel: totalHoursByLabel,
+    );
+  }
+
+  List<_TnbCounterSegment> _resolveTnbCounterSegments({
+    required String label,
+    required Map<String, dynamic>? counter,
+    required Map<String, dynamic> storedSegmentsByCounter,
+  }) {
+    final storedSegmentsRaw = storedSegmentsByCounter[label];
+    if (storedSegmentsRaw is List && storedSegmentsRaw.isNotEmpty) {
+      final segments = storedSegmentsRaw
+          .whereType<Map>()
+          .map((raw) => _TnbCounterSegment(
+                shiftLabel: (raw['shiftLabel'] ?? raw['shiftKey'] ?? '')
+                    .toString()
+                    .trim(),
+                start: (raw['start'] ?? '').toString().trim(),
+                end: (raw['end'] ?? '').toString().trim(),
+              ))
+          .where(
+            (segment) => segment.start.isNotEmpty || segment.end.isNotEmpty,
+          )
+          .toList(growable: false);
+      if (segments.isNotEmpty) {
+        return segments.reversed.toList(growable: false);
+      }
+    }
+
+    if (counter == null) {
+      return const [];
+    }
+
     final start = counter['start']?.toString().trim() ?? '';
     final end = counter['end']?.toString().trim() ?? '';
-
     if (start.isEmpty && end.isEmpty) {
-      return poste;
+      return const [];
     }
-    if (poste.isEmpty) {
-      return '$start -> $end'.trim();
+    return [
+      _TnbCounterSegment(
+        shiftLabel: _normalizeTnbCounterLabel(counter['poste']),
+        start: start,
+        end: end,
+      ),
+    ];
+  }
+
+  String _normalizeTnbCounterLabel(Object? value) {
+    final text = value?.toString().trim() ?? '';
+    switch (text.toLowerCase()) {
+      case 'vibreur':
+      case 'vibreurs':
+      case 'vibrator':
+      case 'vibrators':
+        return 'Vibreur';
+      case 'ln':
+        return 'LN';
+      case 'l':
+        return 'L';
+      case 'g3':
+        return 'G3';
+      case 'g6':
+        return 'G6';
+      default:
+        return text;
     }
-    return '$poste / $start -> $end';
+  }
+
+  String _formatTnbShiftLabel(String value) {
+    final text = value.trim();
+    if (text.isEmpty) {
+      return '';
+    }
+    final normalized = text
+        .toLowerCase()
+        .replaceAll(RegExp(r'\(.*?\)'), '')
+        .replaceAll('poste', '')
+        .trim();
+    final shiftNumberMatch = RegExp(r'^[123]').firstMatch(normalized);
+    switch (shiftNumberMatch?.group(0) ?? normalized) {
+      case '1':
+      case '1er':
+      case '1ere':
+      case '1ère':
+        return '1er';
+      case '2':
+      case '2e':
+      case '2eme':
+      case '2ème':
+        return '2ème';
+      case '3':
+      case '3e':
+      case '3eme':
+      case '3ème':
+        return '3ème';
+      default:
+        return text;
+    }
+  }
+
+  String _formatCounterHours(String startValue, String endValue) {
+    final hours = _tryCounterHours(startValue, endValue);
+    if (hours == null) {
+      return '';
+    }
+    final formatted = hours.toStringAsFixed(2);
+    return formatted.endsWith('00')
+        ? formatted.substring(0, formatted.length - 3)
+        : formatted.replaceFirst(RegExp(r'0$'), '');
+  }
+
+  double? _tryCounterHours(String startValue, String endValue) {
+    final start = double.tryParse(startValue.replaceAll(',', '.'));
+    final end = double.tryParse(endValue.replaceAll(',', '.'));
+    if (start == null || end == null || end < start) {
+      return null;
+    }
+    return end - start;
+  }
+
+  String _formatCounterTotalHours(double hours) {
+    return _minutesToHourMinuteLabel((hours * 60).round());
   }
 
   String _formatStockEntry(Map<String, dynamic>? stockEntry) {
@@ -3039,6 +3207,13 @@ class GoogleSheetsService {
       _buildR0DowntimeDetailsRows(reportDateLocal, data);
 
   @visibleForTesting
+  List<List<Object?>> buildTemplateRowsForTest(
+    Report report,
+    DateTime reportDateLocal,
+  ) =>
+      _buildTemplateRows(report, reportDateLocal)?.rows ?? const [];
+
+  @visibleForTesting
   List<Object?> buildIfDowntimeRowForTest(
     DateTime reportDateLocal,
     Map<String, dynamic> stop, {
@@ -4399,6 +4574,46 @@ class _FlattenedEntry {
   final String path;
   final Object? value;
   final String valueType;
+}
+
+class _TnbCounterTable {
+  const _TnbCounterTable({
+    required this.columns,
+    required this.rowCount,
+    required this.totalHoursByLabel,
+  });
+
+  final List<List<List<Object?>>> columns;
+  final int rowCount;
+  final Map<String, double> totalHoursByLabel;
+
+  int get columnCount => columns.length * 4;
+
+  double totalHoursForLabel(String label) => totalHoursByLabel[label] ?? 0;
+
+  List<Object?> rowAt(int rowIndex) {
+    final row = <Object?>[];
+    for (final columnRows in columns) {
+      if (rowIndex < columnRows.length) {
+        row.addAll(columnRows[rowIndex]);
+      } else {
+        row.addAll(const ['', '', '', '']);
+      }
+    }
+    return row;
+  }
+}
+
+class _TnbCounterSegment {
+  const _TnbCounterSegment({
+    required this.shiftLabel,
+    required this.start,
+    required this.end,
+  });
+
+  final String shiftLabel;
+  final String start;
+  final String end;
 }
 
 class _TemplateRows {

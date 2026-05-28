@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:r0/data/services/google_sheets_service.dart';
+import 'package:r0/domain/models/report.dart';
 
 void main() {
   setUpAll(() async {
@@ -87,6 +88,174 @@ void main() {
       ];
 
       expect(service.detectHeaderRowIndexForTest(rows), 2);
+    });
+  });
+
+  group('GoogleSheetsService TNB template rows', () {
+    final service = GoogleSheetsService();
+
+    test('writes TNB counters in the wide per-shift meter table', () {
+      final reportDate = DateTime(2026, 5, 26, 15, 46);
+      final rows = service.buildTemplateRowsForTest(
+        Report(
+          description: 'Activity TNB',
+          date: reportDate,
+          group: 'MIB/U/E/I',
+          type: 'Activity TNB',
+          additionalData: {
+            'T H.A': 61,
+            'T H.M': 1379,
+            'T H.V': 9999,
+            'T H.L': 9999,
+            'vibrator Counters': [
+              {'poste': 'Vibreur', 'start': '12', 'end': '34.98'},
+            ],
+            'liaison Counters': [
+              {'poste': 'LN', 'start': '3', 'end': '25.98'},
+              {'poste': 'L', 'start': '76', 'end': '98.98'},
+              {'poste': 'G3', 'start': '100', 'end': '122.98'},
+              {'poste': 'G6', 'start': '200', 'end': '222.98'},
+            ],
+            'tnbShiftCounters': {
+              'Vibreur': [
+                {
+                  'shiftLabel': '3ème poste',
+                  'start': '12',
+                  'end': '20',
+                },
+                {
+                  'shiftLabel': '1er poste',
+                  'start': '20',
+                  'end': '28',
+                },
+                {
+                  'shiftLabel': '2ème poste',
+                  'start': '28',
+                  'end': '34.98',
+                },
+              ],
+              'LN': [
+                {
+                  'shiftLabel': '3ème poste',
+                  'start': '3',
+                  'end': '11',
+                },
+                {
+                  'shiftLabel': '1er poste',
+                  'start': '11',
+                  'end': '19',
+                },
+                {
+                  'shiftLabel': '2ème poste',
+                  'start': '19',
+                  'end': '25.98',
+                },
+              ],
+              'L': [
+                {
+                  'shiftLabel': '3ème poste',
+                  'start': '76',
+                  'end': '84',
+                },
+                {
+                  'shiftLabel': '1er poste',
+                  'start': '84',
+                  'end': '92',
+                },
+                {
+                  'shiftLabel': '2ème poste',
+                  'start': '92',
+                  'end': '98.98',
+                },
+              ],
+              'G3': [
+                {
+                  'shiftLabel': '3ème poste',
+                  'start': '100',
+                  'end': '108',
+                },
+                {
+                  'shiftLabel': '1er poste',
+                  'start': '108',
+                  'end': '116',
+                },
+                {
+                  'shiftLabel': '2ème poste',
+                  'start': '119',
+                  'end': '122.98',
+                },
+              ],
+              'G6': [
+                {
+                  'shiftLabel': '3ème poste',
+                  'start': '200',
+                  'end': '208',
+                },
+                {
+                  'shiftLabel': '1er poste',
+                  'start': '208',
+                  'end': '216',
+                },
+                {
+                  'shiftLabel': '2ème poste',
+                  'start': '216',
+                  'end': '222.98',
+                },
+              ],
+            },
+          },
+        ),
+        reportDate,
+      );
+
+      expect(rows, hasLength(3));
+      expect(rows.first.sublist(7, 30), [
+        '2026-05-26 15:46:00',
+        '22h 59m',
+        '22h 59m',
+        '2ème',
+        '28',
+        '34.98',
+        '6.98',
+        '2ème',
+        '19',
+        '25.98',
+        '6.98',
+        '2ème',
+        '92',
+        '98.98',
+        '6.98',
+        '2ème',
+        '119',
+        '122.98',
+        '3.98',
+        '2ème',
+        '216',
+        '222.98',
+        '6.98',
+      ]);
+      expect(rows[1].sublist(10, 30), [
+        '1er',
+        '20',
+        '28',
+        '8',
+        '1er',
+        '11',
+        '19',
+        '8',
+        '1er',
+        '84',
+        '92',
+        '8',
+        '1er',
+        '108',
+        '116',
+        '8',
+        '1er',
+        '208',
+        '216',
+        '8',
+      ]);
     });
   });
 
