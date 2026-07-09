@@ -96,115 +96,122 @@ void main() {
 
     test('writes TNB counters in the wide per-shift meter table', () {
       final reportDate = DateTime(2026, 5, 26, 15, 46);
-      final rows = service.buildTemplateRowsForTest(
-        Report(
-          description: 'Activity TNB',
-          date: reportDate,
-          group: 'MIB/U/E/I',
-          type: 'Activity TNB',
-          additionalData: {
-            'T H.A': 61,
-            'T H.M': 1379,
-            'T H.V': 9999,
-            'T H.L': 9999,
-            'vibrator Counters': [
-              {'poste': 'Vibreur', 'start': '12', 'end': '34.98'},
+      final report = Report(
+        description: 'Activity TNB',
+        date: reportDate,
+        group: 'MIB/U/E/I',
+        type: 'Activity TNB',
+        additionalData: {
+          'T H.A': 61,
+          'T H.M': 1379,
+          'T H.V': 9999,
+          'T H.L': 9999,
+          'vibrator Counters': [
+            {'poste': 'Vibreur', 'start': '12', 'end': '34.98'},
+          ],
+          'liaison Counters': [
+            {'poste': 'LN', 'start': '3', 'end': '25.98'},
+            {'poste': 'L', 'start': '76', 'end': '98.98'},
+            {'poste': 'G3', 'start': '100', 'end': '122.98'},
+            {'poste': 'G6', 'start': '200', 'end': '222.98'},
+          ],
+          'tnbShiftCounters': {
+            'Vibreur': [
+              {
+                'shiftLabel': '3ème poste',
+                'start': '12',
+                'end': '20',
+              },
+              {
+                'shiftLabel': '1er poste',
+                'start': '20',
+                'end': '28',
+              },
+              {
+                'shiftLabel': '2ème poste',
+                'start': '28',
+                'end': '34.98',
+              },
             ],
-            'liaison Counters': [
-              {'poste': 'LN', 'start': '3', 'end': '25.98'},
-              {'poste': 'L', 'start': '76', 'end': '98.98'},
-              {'poste': 'G3', 'start': '100', 'end': '122.98'},
-              {'poste': 'G6', 'start': '200', 'end': '222.98'},
+            'LN': [
+              {
+                'shiftLabel': '3ème poste',
+                'start': '3',
+                'end': '11',
+              },
+              {
+                'shiftLabel': '1er poste',
+                'start': '11',
+                'end': '19',
+              },
+              {
+                'shiftLabel': '2ème poste',
+                'start': '19',
+                'end': '25.98',
+              },
             ],
-            'tnbShiftCounters': {
-              'Vibreur': [
-                {
-                  'shiftLabel': '3ème poste',
-                  'start': '12',
-                  'end': '20',
-                },
-                {
-                  'shiftLabel': '1er poste',
-                  'start': '20',
-                  'end': '28',
-                },
-                {
-                  'shiftLabel': '2ème poste',
-                  'start': '28',
-                  'end': '34.98',
-                },
-              ],
-              'LN': [
-                {
-                  'shiftLabel': '3ème poste',
-                  'start': '3',
-                  'end': '11',
-                },
-                {
-                  'shiftLabel': '1er poste',
-                  'start': '11',
-                  'end': '19',
-                },
-                {
-                  'shiftLabel': '2ème poste',
-                  'start': '19',
-                  'end': '25.98',
-                },
-              ],
-              'L': [
-                {
-                  'shiftLabel': '3ème poste',
-                  'start': '76',
-                  'end': '84',
-                },
-                {
-                  'shiftLabel': '1er poste',
-                  'start': '84',
-                  'end': '92',
-                },
-                {
-                  'shiftLabel': '2ème poste',
-                  'start': '92',
-                  'end': '98.98',
-                },
-              ],
-              'G3': [
-                {
-                  'shiftLabel': '3ème poste',
-                  'start': '100',
-                  'end': '108',
-                },
-                {
-                  'shiftLabel': '1er poste',
-                  'start': '108',
-                  'end': '116',
-                },
-                {
-                  'shiftLabel': '2ème poste',
-                  'start': '119',
-                  'end': '122.98',
-                },
-              ],
-              'G6': [
-                {
-                  'shiftLabel': '3ème poste',
-                  'start': '200',
-                  'end': '208',
-                },
-                {
-                  'shiftLabel': '1er poste',
-                  'start': '208',
-                  'end': '216',
-                },
-                {
-                  'shiftLabel': '2ème poste',
-                  'start': '216',
-                  'end': '222.98',
-                },
-              ],
-            },
+            'L': [
+              {
+                'shiftLabel': '3ème poste',
+                'start': '76',
+                'end': '84',
+              },
+              {
+                'shiftLabel': '1er poste',
+                'start': '84',
+                'end': '92',
+              },
+              {
+                'shiftLabel': '2ème poste',
+                'start': '92',
+                'end': '98.98',
+              },
+            ],
+            'G3': [
+              {
+                'shiftLabel': '3ème poste',
+                'start': '100',
+                'end': '108',
+              },
+              {
+                'shiftLabel': '1er poste',
+                'start': '108',
+                'end': '116',
+              },
+              {
+                'shiftLabel': '2ème poste',
+                'start': '119',
+                'end': '122.98',
+              },
+            ],
+            'G6': [
+              {
+                'shiftLabel': '3ème poste',
+                'start': '200',
+                'end': '208',
+              },
+              {
+                'shiftLabel': '1er poste',
+                'start': '208',
+                'end': '216',
+              },
+              {
+                'shiftLabel': '2ème poste',
+                'start': '216',
+                'end': '222.98',
+              },
+            ],
           },
-        ),
+          'stock': [
+            {'poste': '2ème', 'park': 'PARK 2', 'type': 'PB30'},
+            {'poste': '1er', 'park': 'PARK 1', 'type': 'OCEANE'},
+            {'poste': '3ème', 'park': 'PARK 1', 'type': 'OCEANE'},
+          ],
+        },
+      );
+      final rows = service.buildTemplateRowsForTest(report, reportDate);
+      final mergeRanges = service.buildTemplateMergeRangesForTest(
+        report,
         reportDate,
       );
 
@@ -256,6 +263,17 @@ void main() {
         '216',
         '8',
       ]);
+      expect(rows.map((row) => row[30]), [
+        '2ème / PARK 2 / PB30',
+        '1er / PARK 1 / OCEANE',
+        '3ème / PARK 1 / OCEANE',
+      ]);
+      expect(
+        mergeRanges,
+        isNot(
+          contains({'startColumnIndex': 30, 'endColumnIndex': 31}),
+        ),
+      );
     });
   });
 

@@ -1380,15 +1380,10 @@ class GoogleSheetsService {
 
         final mergeRanges = <_TemplateMergeRange>[];
         if (rows.length > 1) {
-          final stockColumnIndex = 10 + counterTable.columnCount;
           mergeRanges.addAll([
             const _TemplateMergeRange(startColumnIndex: 0, endColumnIndex: 1),
             const _TemplateMergeRange(startColumnIndex: 3, endColumnIndex: 6),
             const _TemplateMergeRange(startColumnIndex: 7, endColumnIndex: 10),
-            _TemplateMergeRange(
-              startColumnIndex: stockColumnIndex,
-              endColumnIndex: stockColumnIndex + 1,
-            ),
           ]);
         }
 
@@ -3212,6 +3207,20 @@ class GoogleSheetsService {
     DateTime reportDateLocal,
   ) =>
       _buildTemplateRows(report, reportDateLocal)?.rows ?? const [];
+
+  @visibleForTesting
+  List<Map<String, int>> buildTemplateMergeRangesForTest(
+    Report report,
+    DateTime reportDateLocal,
+  ) =>
+      (_buildTemplateRows(report, reportDateLocal)?.mergeRanges ?? const [])
+          .map(
+            (range) => {
+              'startColumnIndex': range.startColumnIndex,
+              'endColumnIndex': range.endColumnIndex,
+            },
+          )
+          .toList();
 
   @visibleForTesting
   List<Object?> buildIfDowntimeRowForTest(
