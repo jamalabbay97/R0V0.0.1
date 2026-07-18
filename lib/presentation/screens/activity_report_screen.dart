@@ -101,6 +101,14 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
     final hasValidRange =
         _isPending || (durationMinutes > 0 && durationMinutes <= 24 * 60);
 
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final dialogBackground = isDarkMode ? null : colorScheme.surface;
+    final primaryTextColor = colorScheme.onSurface;
+    final secondaryTextColor = colorScheme.onSurfaceVariant;
+    final timeIconColor =
+        isDarkMode ? Colors.white70 : colorScheme.onSurfaceVariant;
+
     return Material(
       color: Colors.transparent,
       child: SafeArea(
@@ -111,15 +119,18 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
               padding: const EdgeInsets.all(16),
               child: Container(
                 decoration: BoxDecoration(
+                  color: dialogBackground,
                   borderRadius: BorderRadius.circular(28),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF202820), Color(0xFF1C211D)],
-                  ),
-                  boxShadow: const [
+                  gradient: isDarkMode
+                      ? const LinearGradient(
+                          colors: [Color(0xFF202820), Color(0xFF1C211D)],
+                        )
+                      : null,
+                  boxShadow: [
                     BoxShadow(
-                      color: Colors.black45,
+                      color: isDarkMode ? Colors.black45 : Colors.black26,
                       blurRadius: 16,
-                      offset: Offset(0, 8),
+                      offset: const Offset(0, 8),
                     ),
                   ],
                 ),
@@ -131,8 +142,8 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                     Text(
                       AppLocalizations.of(context)!
                           .addStopWithSuffix(widget.titleSuffix),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: primaryTextColor,
                         fontSize: 26,
                         fontWeight: FontWeight.w500,
                       ),
@@ -142,8 +153,8 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                     const SizedBox(height: 12),
                     Text(
                       AppLocalizations.of(context)!.timeEntryTitle,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: primaryTextColor,
                         fontSize: 30,
                         fontWeight: FontWeight.w700,
                       ),
@@ -153,19 +164,21 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(
                         AppLocalizations.of(context)!.startTimeLabel,
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 20),
+                        style: TextStyle(
+                          color: primaryTextColor,
+                          fontSize: 20,
+                        ),
                       ),
                       subtitle: Text(
                         _formatTime(_startTime),
                         style: TextStyle(
-                          color: Colors.grey.shade400,
+                          color: secondaryTextColor,
                           fontSize: 16,
                         ),
                       ),
-                      trailing: const Icon(
+                      trailing: Icon(
                         Icons.access_time,
-                        color: Colors.white70,
+                        color: timeIconColor,
                         size: 34,
                       ),
                       onTap: _pickStartTime,
@@ -175,19 +188,21 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(
                         AppLocalizations.of(context)!.endTimeLabel,
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 20),
+                        style: TextStyle(
+                          color: primaryTextColor,
+                          fontSize: 20,
+                        ),
                       ),
                       subtitle: Text(
                         _isPending ? 'Pending' : _formatTime(_endTime),
                         style: TextStyle(
-                          color: Colors.grey.shade400,
+                          color: secondaryTextColor,
                           fontSize: 16,
                         ),
                       ),
-                      trailing: const Icon(
+                      trailing: Icon(
                         Icons.access_time,
-                        color: Colors.white70,
+                        color: timeIconColor,
                         size: 34,
                       ),
                       onTap: _isPending ? null : _pickEndTime,
@@ -196,11 +211,11 @@ class _StopTimeEntryPageState extends State<_StopTimeEntryPage> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(
                         AppLocalizations.of(context)!.stopInProgress,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: primaryTextColor),
                       ),
                       subtitle: Text(
                         AppLocalizations.of(context)!.stopInProgressDescription,
-                        style: const TextStyle(color: Colors.white70),
+                        style: TextStyle(color: secondaryTextColor),
                       ),
                       value: _isPending,
                       onChanged: (value) => setState(() => _isPending = value),
