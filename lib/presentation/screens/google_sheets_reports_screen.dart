@@ -68,8 +68,7 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
         debugPrint('Google Sheets fetch skipped or failed: $e');
       }
 
-      final List<Report> localReports =
-          await reportRepository.getReports();
+      final List<Report> localReports = await reportRepository.getReports();
       final List<GoogleSheetRecord> localMapped =
           localReports.map(_mapReportToGoogleSheetRecord).toList();
 
@@ -1401,32 +1400,51 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
       details['Type'] = data['Type']?.toString() ?? '';
       details['Model'] = data['Model']?.toString() ?? '';
       details['Poste'] = data['selectedPoste']?.toString() ?? report.group;
-      
+
       final compteurs = data['Compteurs'] as Map? ?? {};
       details['Début compteur'] = compteurs['duree']?.toString() ?? '';
       details['Fin compteur'] = compteurs['note']?.toString() ?? '';
-      
+
       final exploitation = data['exploitation'] as Map? ?? {};
       details['H.M'] = exploitation['H.M']?.toString() ?? '';
       details['H.A'] = exploitation['H.A']?.toString() ?? '';
-      details['Métrage foré'] = (exploitation['metrage fore'] ?? exploitation['metrage_fore'])?.toString() ?? '';
-      details['Nr de Trous Forés'] = (exploitation['Nr de Trous Fores'] ?? exploitation['nr_de_trous_fores'])?.toString() ?? '';
-      details['Nr de Voyages'] = (exploitation['Nr de Voyages'] ?? exploitation['nr_de_voyages'])?.toString() ?? '';
-      details['M³ Décapages'] = (exploitation['M³ Decapages'] ?? exploitation['m3_decapages'])?.toString() ?? '';
+      details['Métrage foré'] =
+          (exploitation['metrage fore'] ?? exploitation['metrage_fore'])
+                  ?.toString() ??
+              '';
+      details['Nr de Trous Forés'] = (exploitation['Nr de Trous Fores'] ??
+                  exploitation['nr_de_trous_fores'])
+              ?.toString() ??
+          '';
+      details['Nr de Voyages'] =
+          (exploitation['Nr de Voyages'] ?? exploitation['nr_de_voyages'])
+                  ?.toString() ??
+              '';
+      details['M³ Décapages'] =
+          (exploitation['M³ Decapages'] ?? exploitation['m3_decapages'])
+                  ?.toString() ??
+              '';
       details['Tonnage'] = exploitation['Tonnage']?.toString() ?? '';
-      details['Nombre T.K.U'] = (exploitation['Nombre T.K.U'] ?? exploitation['nombre_t_k_u'])?.toString() ?? '';
-      details['Rendement %'] = (exploitation['Rendement %'] ?? exploitation['rendement'])?.toString() ?? '';
-      
+      details['Nombre T.K.U'] =
+          (exploitation['Nombre T.K.U'] ?? exploitation['nombre_t_k_u'])
+                  ?.toString() ??
+              '';
+      details['Rendement %'] =
+          (exploitation['Rendement %'] ?? exploitation['rendement'])
+                  ?.toString() ??
+              '';
+
       final personnel = data['personnel'] as Map? ?? {};
-      details['Conducteur'] = (personnel['conductr'] ?? personnel['conducteur'])?.toString() ?? '';
+      details['Conducteur'] =
+          (personnel['conductr'] ?? personnel['conducteur'])?.toString() ?? '';
       details['Graisseur'] = personnel['graisseur']?.toString() ?? '';
       details['Matricules'] = personnel['matricules']?.toString() ?? '';
-      
+
       final repartition = data['repartition'] as Map? ?? {};
       details['Chantier'] = repartition['Chantier']?.toString() ?? '';
       details['Temps'] = repartition['Temps']?.toString() ?? '';
       details['Imputation'] = repartition['Imputation']?.toString() ?? '';
-      
+
       final consommation = data['consommation'] as Map? ?? {};
       details['Tricone'] = consommation['tricone']?.toString() ?? '';
       details['Gasoil'] = consommation['gasoil']?.toString() ?? '';
@@ -1444,15 +1462,20 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
           arretTimes.add('$start - $end'.trim());
         }
       }
-      details['Stops Details'] = arretReasons.isEmpty ? '-' : arretReasons.join('\n');
+      details['Stops Details'] =
+          arretReasons.isEmpty ? '-' : arretReasons.join('\n');
       details['Stop Times'] = arretTimes.isEmpty ? '-' : arretTimes.join('\n');
     } else if (typeLower.contains('activity') || typeLower.contains('tnb')) {
       sheetName = 'TNB';
       final exploitation = data['exploitation'] as Map? ?? {};
-      details['T H.A'] = (exploitation['H.A'] ?? data['T H.A'] ?? '')?.toString() ?? '';
-      details['T H.M'] = (exploitation['H.M'] ?? data['T H.M'] ?? '')?.toString() ?? '';
-      details['T H.V'] = (exploitation['H.V'] ?? data['T H.V'] ?? '')?.toString() ?? '';
-      details['T H.L'] = (exploitation['H.L'] ?? data['T H.L'] ?? '')?.toString() ?? '';
+      details['T H.A'] =
+          (exploitation['H.A'] ?? data['T H.A'] ?? '')?.toString() ?? '';
+      details['T H.M'] =
+          (exploitation['H.M'] ?? data['T H.M'] ?? '')?.toString() ?? '';
+      details['T H.V'] =
+          (exploitation['H.V'] ?? data['T H.V'] ?? '')?.toString() ?? '';
+      details['T H.L'] =
+          (exploitation['H.L'] ?? data['T H.L'] ?? '')?.toString() ?? '';
 
       final arrets = data['Arrets'] as List? ?? [];
       final arretReasons = <String>[];
@@ -1466,7 +1489,7 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
           final duration = a['duration'] ?? '';
           final location = a['location'] ?? a['Lieu'] ?? '';
           final detail = a['detail'] ?? a['Détail'] ?? '';
-          
+
           arretReasons.add('$category / $nature / $location / $detail');
           arretDurations.add('$start -> $end ($duration)');
         }
@@ -1474,7 +1497,9 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
       details['Arrêts'] = arretReasons.join('\n');
       details['Durées d\'arrêt'] = arretDurations.join('\n');
 
-      final vCounters = data['vibrator Counters'] as List? ?? data['vibratorCounters'] as List? ?? [];
+      final vCounters = data['vibrator Counters'] as List? ??
+          data['vibratorCounters'] as List? ??
+          [];
       final vCounterDetails = <String>[];
       for (final c in vCounters) {
         if (c is Map) {
@@ -1487,7 +1512,9 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
       }
       details['Compteurs Vibreurs'] = vCounterDetails.join('\n');
 
-      final lCounters = data['liaison Counters'] as List? ?? data['liaisonCounters'] as List? ?? [];
+      final lCounters = data['liaison Counters'] as List? ??
+          data['liaisonCounters'] as List? ??
+          [];
       final lCounterDetails = <String>[];
       for (final c in lCounters) {
         if (c is Map) {
@@ -1518,7 +1545,10 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
       details['Tonnage global'] = exploitation['Tonnage']?.toString() ?? '';
       details['HM Global'] = exploitation['H.M']?.toString() ?? '';
       details['HA Global'] = exploitation['H.A']?.toString() ?? '';
-      details['Rendement Global'] = (exploitation['Rendement %'] ?? exploitation['rendement'])?.toString() ?? '';
+      details['Rendement Global'] =
+          (exploitation['Rendement %'] ?? exploitation['rendement'])
+                  ?.toString() ??
+              '';
 
       final m1 = data['module1'] as Map? ?? {};
       details['Total H.M M1'] = (m1['H.M'] ?? m1['HM'] ?? '')?.toString() ?? '';
@@ -1564,7 +1594,9 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
         }
       }
       details['Stocks'] = stockDetails.join('\n');
-    } else if (typeLower.contains('camion') || typeLower.contains('truck') || typeLower.contains('suivi')) {
+    } else if (typeLower.contains('camion') ||
+        typeLower.contains('truck') ||
+        typeLower.contains('suivi')) {
       sheetName = 'Poser les camions';
       details['Poste'] = data['selectedPoste']?.toString() ?? report.group;
       details['Qualité'] = data['selectedQualiteType']?.toString() ?? '';
@@ -1573,7 +1605,7 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
       details['Sortie'] = data['sortie']?.toString() ?? '';
       details['Machine/Engins'] = data['Category']?.toString() ?? '';
       details['Distance'] = data['distance']?.toString() ?? '';
-      
+
       final trucks = data['truckData'] as List? ?? [];
       final camions = <String>[];
       final conducteurs = <String>[];
@@ -1601,7 +1633,8 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
               tripDetails.add('$time | $name | $equip | $qual');
 
               if (equip.isNotEmpty) {
-                tripsByEquipmentMap[equip] = (tripsByEquipmentMap[equip] ?? 0) + 1;
+                tripsByEquipmentMap[equip] =
+                    (tripsByEquipmentMap[equip] ?? 0) + 1;
               }
             }
           }
@@ -1613,9 +1646,13 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
       details['Trip Details'] = tripDetails.join('\n');
       details['Total de Voyages'] = totalTripsCount.toString();
 
-      final tripsByEquipment = tripsByEquipmentMap.entries.map((e) => '${e.key}: ${e.value} voyages').toList();
+      final tripsByEquipment = tripsByEquipmentMap.entries
+          .map((e) => '${e.key}: ${e.value} voyages')
+          .toList();
       details['Total de Voyages par Equipment'] = tripsByEquipment.join('\n');
-    } else if (typeLower.contains('engin') || typeLower.contains('machine') || typeLower.contains('arr')) {
+    } else if (typeLower.contains('engin') ||
+        typeLower.contains('machine') ||
+        typeLower.contains('arr')) {
       sheetName = 'Machines et engins à l\'arrêt';
       final machineStops = data['machineStops'] as List? ?? [];
       final categories = <String>[];
@@ -1625,9 +1662,15 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
 
       for (final ms in machineStops) {
         if (ms is Map) {
-          categories.add(ms['machineCategory']?.toString() ?? ms['mainCategory']?.toString() ?? '');
-          subCategories.add(ms['machineSubCategory']?.toString() ?? ms['subCategory']?.toString() ?? '');
-          equipments.add(ms['machineName']?.toString() ?? ms['equipment']?.toString() ?? '');
+          categories.add(ms['machineCategory']?.toString() ??
+              ms['mainCategory']?.toString() ??
+              '');
+          subCategories.add(ms['machineSubCategory']?.toString() ??
+              ms['subCategory']?.toString() ??
+              '');
+          equipments.add(ms['machineName']?.toString() ??
+              ms['equipment']?.toString() ??
+              '');
           reasons.add(ms['reason']?.toString() ?? '');
         }
       }
@@ -1656,7 +1699,9 @@ class _GoogleSheetsReportsScreenState extends State<GoogleSheetsReportsScreen> {
       date: report.date,
       dateLabel: DateFormat('yyyy-MM-dd').format(report.date),
       title: report.description,
-      searchableText: '${report.description} ${report.type} ${report.group} ${details.values.join(' ')}'.toLowerCase(),
+      searchableText:
+          '${report.description} ${report.type} ${report.group} ${details.values.join(' ')}'
+              .toLowerCase(),
     );
   }
 }
