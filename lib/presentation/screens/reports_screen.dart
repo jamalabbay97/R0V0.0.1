@@ -2656,6 +2656,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     ScaffoldMessengerState scaffoldMessenger,
     AppLocalizations l10n, {
     String? shiftKey,
+    bool includeTrips = true,
   }) {
     return Card(
       margin: EdgeInsets.zero,
@@ -2669,7 +2670,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    '${AppLocalizations.of(context)!.stocksLabel} & ${AppLocalizations.of(context)!.voyagesLabel}',
+                    includeTrips
+                        ? '${AppLocalizations.of(context)!.stocksLabel} & ${AppLocalizations.of(context)!.voyagesLabel}'
+                        : AppLocalizations.of(context)!.stockLabel,
                     style: Theme.of(context).textTheme.titleMedium,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -2677,11 +2680,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ElevatedButton.icon(
                   onPressed: _availableStockPostesFromData(data).isEmpty
                       ? null
-                      : () => _showAddStockEntryDialog(report, data,
-                          setDialogState, scaffoldMessenger, l10n),
+                      : () => _showAddStockEntryDialog(
+                            report,
+                            data,
+                            setDialogState,
+                            scaffoldMessenger,
+                            l10n,
+                            includeTrips: includeTrips,
+                          ),
                   icon: const Icon(Icons.add),
-                  label: Text(
-                      '${AppLocalizations.of(context)!.add} ${AppLocalizations.of(context)!.stocksLabel} & ${AppLocalizations.of(context)!.voyagesLabel}'),
+                  label: Text(includeTrips
+                      ? '${AppLocalizations.of(context)!.add} ${AppLocalizations.of(context)!.stocksLabel} & ${AppLocalizations.of(context)!.voyagesLabel}'
+                      : AppLocalizations.of(context)!.addStock),
                 ),
               ],
             ),
@@ -2709,8 +2719,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Poste: ${_getPosteString(stock['poste'], l10n)}'),
-                        Text('Voyages GAT: ${stock['gatTrips'] ?? '-'}'),
-                        Text('Voyages TEREX: ${stock['terexTrips'] ?? '-'}'),
+                        if (includeTrips) ...[
+                          Text('Voyages GAT: ${stock['gatTrips'] ?? '-'}'),
+                          Text('Voyages TEREX: ${stock['terexTrips'] ?? '-'}'),
+                        ],
                         Text(
                             'Quantité: ${_getComputedStockQuantity(Map<String, dynamic>.from(stock))}'),
                         Text('Parc: ${_getParkString(stock['park'], l10n)}'),
@@ -2737,7 +2749,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               index,
                               setDialogState,
                               scaffoldMessenger,
-                              l10n),
+                              l10n,
+                              includeTrips: includeTrips),
                           tooltip:
                               AppLocalizations.of(context)!.editStockEntryTitle,
                         ),
@@ -3457,11 +3470,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   // Add Stock Entry Dialog for Activity Report
   Future<void> _showAddStockEntryDialog(
-      Report report,
-      Map<String, dynamic> data,
-      StateSetter setDialogState,
-      ScaffoldMessengerState scaffoldMessenger,
-      AppLocalizations l10n) async {
+    Report report,
+    Map<String, dynamic> data,
+    StateSetter setDialogState,
+    ScaffoldMessengerState scaffoldMessenger,
+    AppLocalizations l10n, {
+    bool includeTrips = true,
+  }) async {
     final availablePostes = _availableStockPostesFromData(data);
     if (availablePostes.isEmpty) {
       scaffoldMessenger.showSnackBar(const SnackBar(
@@ -3480,7 +3495,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Text(AppLocalizations.of(context)!.addStockEntryTitle),
+          title: Text(includeTrips
+              ? AppLocalizations.of(context)!.addStockEntryTitle
+              : AppLocalizations.of(context)!.addStock),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -3497,24 +3514,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     .toList(),
                 onChanged: (value) => setState(() => selectedPoste = value),
               ),
-              const SizedBox(height: 16),
-              TextField(
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre de voyages GAT',
-                  border: OutlineInputBorder(),
+              if (includeTrips) ...[
+                const SizedBox(height: 16),
+                TextField(
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre de voyages GAT',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) => setState(() => gatTrips = value.trim()),
                 ),
-                onChanged: (value) => setState(() => gatTrips = value.trim()),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre de voyages TEREX',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 16),
+                TextField(
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre de voyages TEREX',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) =>
+                      setState(() => terexTrips = value.trim()),
                 ),
-                onChanged: (value) => setState(() => terexTrips = value.trim()),
-              ),
+              ],
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
                 initialValue: selectedPark,
@@ -3558,13 +3578,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 onChanged: (value) => setState(() => selectedType = value),
               ),
               const SizedBox(height: 16),
-              InputDecorator(
-                decoration: InputDecoration(
-                  labelText: AppLocalizations.of(context)!.quantityLabel,
-                  border: const OutlineInputBorder(),
+              if (includeTrips)
+                InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.quantityLabel,
+                    border: const OutlineInputBorder(),
+                  ),
+                  child: Text(_calculateTnbQuantity(gatTrips, terexTrips)),
+                )
+              else
+                TextField(
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.quantityLabel,
+                    border: const OutlineInputBorder(),
+                  ),
+                  onChanged: (value) => setState(() => gatTrips = value.trim()),
                 ),
-                child: Text(_calculateTnbQuantity(gatTrips, terexTrips)),
-              ),
             ],
           ),
           actions: [
@@ -3590,19 +3620,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   (updatedData['stock'] as List).add({
                     'id': DateTime.now().millisecondsSinceEpoch.toString(),
                     'poste': selectedPoste,
-                    'gatTrips': gatTrips,
-                    'terexTrips': terexTrips,
-                    'quantity': _calculateTnbQuantity(gatTrips, terexTrips),
+                    if (includeTrips) 'gatTrips': gatTrips,
+                    if (includeTrips) 'terexTrips': terexTrips,
+                    'quantity': includeTrips
+                        ? _calculateTnbQuantity(gatTrips, terexTrips)
+                        : gatTrips,
                     'park': selectedPark,
                     'type': selectedType,
                   });
 
-                  final syncedData =
-                      _syncTruckTripsFromStockEntries(updatedData);
-                  final recalculatedData = _recalculateActivityTotals(
-                    syncedData,
-                    reportDate: report.date,
-                  );
+                  final recalculatedData = includeTrips
+                      ? _recalculateActivityTotals(
+                          _syncTruckTripsFromStockEntries(updatedData),
+                          reportDate: report.date,
+                        )
+                      : updatedData;
 
                   final updatedReport = Report(
                     id: report.id,
@@ -3629,12 +3661,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   // Edit Stock Entry Dialog for Activity Report
   Future<void> _showEditStockEntryDialog(
-      Report report,
-      Map<String, dynamic> data,
-      int index,
-      StateSetter setDialogState,
-      ScaffoldMessengerState scaffoldMessenger,
-      AppLocalizations l10n) async {
+    Report report,
+    Map<String, dynamic> data,
+    int index,
+    StateSetter setDialogState,
+    ScaffoldMessengerState scaffoldMessenger,
+    AppLocalizations l10n, {
+    bool includeTrips = true,
+  }) async {
     final stock = (data['stock'] as List)[index];
     int? selectedPoste = _normalizePosteIndex(stock['poste']);
     final availablePostes =
@@ -3643,7 +3677,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       availablePostes.add(selectedPoste);
       availablePostes.sort();
     }
-    String gatTrips = (stock['gatTrips'] ?? '').toString();
+    String gatTrips = includeTrips
+        ? (stock['gatTrips'] ?? '').toString()
+        : (stock['quantity'] ?? '').toString();
     String terexTrips = (stock['terexTrips'] ?? '').toString();
     final gatTripsController = TextEditingController(text: gatTrips);
     final terexTripsController = TextEditingController(text: terexTrips);
@@ -3654,7 +3690,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Text(AppLocalizations.of(context)!.editStockEntryTitle),
+          title: Text(includeTrips
+              ? AppLocalizations.of(context)!.editStockEntryTitle
+              : AppLocalizations.of(context)!.editStock),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -3671,26 +3709,29 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     .toList(),
                 onChanged: (value) => setState(() => selectedPoste = value),
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: gatTripsController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre de voyages GAT',
-                  border: OutlineInputBorder(),
+              if (includeTrips) ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: gatTripsController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre de voyages GAT',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) => setState(() => gatTrips = value.trim()),
                 ),
-                onChanged: (value) => setState(() => gatTrips = value.trim()),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: terexTripsController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre de voyages TEREX',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: terexTripsController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre de voyages TEREX',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) =>
+                      setState(() => terexTrips = value.trim()),
                 ),
-                onChanged: (value) => setState(() => terexTrips = value.trim()),
-              ),
+              ],
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
                 initialValue: selectedPark,
@@ -3734,13 +3775,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 onChanged: (value) => setState(() => selectedType = value),
               ),
               const SizedBox(height: 16),
-              InputDecorator(
-                decoration: InputDecoration(
-                  labelText: AppLocalizations.of(context)!.quantityLabel,
-                  border: const OutlineInputBorder(),
+              if (includeTrips)
+                InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.quantityLabel,
+                    border: const OutlineInputBorder(),
+                  ),
+                  child: Text(_calculateTnbQuantity(gatTrips, terexTrips)),
+                )
+              else
+                TextField(
+                  controller: gatTripsController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.quantityLabel,
+                    border: const OutlineInputBorder(),
+                  ),
+                  onChanged: (value) => setState(() => gatTrips = value.trim()),
                 ),
-                child: Text(_calculateTnbQuantity(gatTrips, terexTrips)),
-              ),
             ],
           ),
           actions: [
@@ -3764,19 +3816,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   (updatedData['stock'] as List)[index] = {
                     'id': stock['id'],
                     'poste': selectedPoste,
-                    'gatTrips': gatTrips,
-                    'terexTrips': terexTrips,
-                    'quantity': _calculateTnbQuantity(gatTrips, terexTrips),
+                    if (includeTrips) 'gatTrips': gatTrips,
+                    if (includeTrips) 'terexTrips': terexTrips,
+                    'quantity': includeTrips
+                        ? _calculateTnbQuantity(gatTrips, terexTrips)
+                        : gatTrips,
                     'park': selectedPark,
                     'type': selectedType,
                   };
 
-                  final syncedData =
-                      _syncTruckTripsFromStockEntries(updatedData);
-                  final recalculatedData = _recalculateActivityTotals(
-                    syncedData,
-                    reportDate: report.date,
-                  );
+                  final recalculatedData = includeTrips
+                      ? _recalculateActivityTotals(
+                          _syncTruckTripsFromStockEntries(updatedData),
+                          reportDate: report.date,
+                        )
+                      : updatedData;
 
                   final updatedReport = Report(
                     id: report.id,
@@ -10382,6 +10436,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             scaffoldMessenger,
             l10n,
             shiftKey: shiftKey,
+            includeTrips: false,
           ),
         ],
       ),
