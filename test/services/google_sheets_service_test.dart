@@ -277,6 +277,63 @@ void main() {
     });
   });
 
+  group('GoogleSheetsService truck template rows', () {
+    final service = GoogleSheetsService();
+
+    test(
+        'places trip totals before truck details and preserves trips beyond 12',
+        () {
+      final reportDate = DateTime(2026, 5, 23, 19, 45);
+      final trips = List.generate(
+        18,
+        (index) => {
+          'time': '${index.toString().padLeft(2, '0')}:15',
+          'equipment': 'Chargeuse 994H',
+          'productQualityType': 'NORMAL',
+        },
+      );
+      final report = Report(
+        description: 'Truck Tracking',
+        date: reportDate,
+        group: '3ème',
+        type: 'Truck Tracking',
+        additionalData: {
+          'mine': 'Mine G',
+          'sortie': 'Sortie 2',
+          'equipment': 'Chargeuse 994H',
+          'distance': 'uelhs',
+          'selectedQualiteType': 'NORMAL',
+          'operationType': 'Reprise',
+          'selectedPoste': '3ème',
+          'totalTrips': 18,
+          'createdBy': 'mahdi',
+          'truckData': [
+            {
+              'truckNumber': 'TEREX 25',
+              'driver1': 'gwjxlxb',
+              'counts': trips,
+            },
+          ],
+        },
+      );
+
+      final rows = service.buildTemplateRowsForTest(report, reportDate);
+
+      expect(rows, hasLength(1));
+      expect(rows.first.sublist(8, 15), [
+        '3ème',
+        18,
+        'Chargeuse 994H (18 = 18 Nor)',
+        18,
+        'mahdi',
+        'TEREX 25',
+        'gwjxlxb',
+      ]);
+      expect(rows.first.length, 33);
+      expect(rows.first[32], contains('17:15'));
+    });
+  });
+
   group('GoogleSheetRecord date inheritance', () {
     test('uses fallback date when row date is blank', () {
       final inherited = DateTime(2026, 2, 14);

@@ -1531,13 +1531,13 @@ class GoogleSheetsService {
             includeSharedValues ? frenchOperationType : '',
             '',
             includeSharedValues ? frenchPoste : '',
-            truck['truckNumber'] ?? '',
-            truck['driver1'] ?? '',
-            ...tripCells.take(12),
             trips.length,
             includeSharedValues ? equipmentSummary : '',
             includeSharedValues ? totalTrips : '',
             includeSharedValues ? creator : '',
+            truck['truckNumber'] ?? '',
+            truck['driver1'] ?? '',
+            ...tripCells,
           ]);
         }
         if (rows.isEmpty) {
@@ -1551,20 +1551,20 @@ class GoogleSheetsService {
             frenchOperationType,
             '',
             frenchPoste,
-            '',
-            '',
-            ...List.filled(12, ''),
             0,
             equipmentSummary,
             totalTrips,
             creator,
+            '',
+            '',
+            ...List.filled(12, ''),
           ]);
         }
         final mergeRanges = <_TemplateMergeRange>[];
         if (rows.length > 1) {
           mergeRanges.addAll([
             const _TemplateMergeRange(startColumnIndex: 0, endColumnIndex: 9),
-            const _TemplateMergeRange(startColumnIndex: 24, endColumnIndex: 27),
+            const _TemplateMergeRange(startColumnIndex: 10, endColumnIndex: 13),
           ]);
         }
         return _TemplateRows(
@@ -3453,7 +3453,11 @@ class GoogleSheetsService {
           'Opération',
           'P pointeur',
           'Poste',
-          'Camions',
+          'Total de Voyages Camions',
+          'Total de Voyages par Equipment',
+          'Total de Voyages',
+          'Créé par',
+          'N° Camion',
           'Conducteur',
           'Voyage 1',
           'Voyage 2',
@@ -3467,10 +3471,18 @@ class GoogleSheetsService {
           'Voyage 10',
           'Voyage 11',
           'Voyage 12',
-          'Total de Voyages Camions',
-          'Total de Voyages par Equipment',
-          'Total de Voyages',
-          'Créé par',
+          'Voyage 13',
+          'Voyage 14',
+          'Voyage 15',
+          'Voyage 16',
+          'Voyage 17',
+          'Voyage 18',
+          'Voyage 19',
+          'Voyage 20',
+          'Voyage 21',
+          'Voyage 22',
+          'Voyage 23',
+          'Voyage 24',
           'Crée en',
         ];
       case _machinesSheet:
