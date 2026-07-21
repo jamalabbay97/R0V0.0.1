@@ -154,6 +154,44 @@ function mapReportSnapshot(snapshot: any): SerializableReport {
     };
 }
 
+function formatSubmitterContact(name: string, email: string, fallback: string): string {
+    const normalizedName = name.trim();
+    const normalizedEmail = email.trim();
+    if (normalizedName && normalizedEmail) {
+        return `${normalizedName} <${normalizedEmail}>`;
+    }
+    return normalizedName || normalizedEmail || fallback;
+}
+
+async function resolveSubmitterContact(uid: string): Promise<string> {
+    const [user, userDoc] = await Promise.all([
+        admin.auth().getUser(uid),
+        admin.firestore().collection(USERS_COLLECTION).doc(uid).get(),
+    ]);
+    const userData = userDoc.exists ? userDoc.data() || {} : {};
+    return formatSubmitterContact(
+        user.displayName || String(userData.displayName || ''),
+        user.email || String(userData.email || ''),
+        uid,
+    );
+}
+
+function isTruckTrackingSheet(sheetName: string): boolean {
+    return sheetName.toLowerCase().trim() === 'poser les camions';
+}
+
+function applyTruckSubmitterRows(rows: any[][], submitterContact: string): any[][] {
+    return rows.map((row, index) => {
+        const next = Array.isArray(row) ? [...row] : [];
+        while (next.length <= 12) next.push('');
+        if (index === 0) {
+            next[7] = submitterContact;
+        }
+        next[12] = '';
+        return next;
+    });
+}
+
 async function writeAuditLog(params: {
     actorUid: string;
     action: string;
@@ -493,12 +531,12 @@ function isSameReportDate(rawDate: string, targetDate: string): boolean {
 function tryNormalizeDate(val: string): string | null {
     const cleaned = val.trim();
     if (!cleaned) return null;
-    
+
     const match = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (match) {
         return `${match[1]}-${match[2]}-${match[3]}`;
     }
-    
+
     const parsed = Date.parse(cleaned);
     if (!isNaN(parsed)) {
         const dateObj = new Date(parsed);
@@ -507,7 +545,7 @@ function tryNormalizeDate(val: string): string | null {
         const d = String(dateObj.getDate()).padStart(2, '0');
         return `${y}-${m}-${d}`;
     }
-    
+
     return cleaned.toLowerCase().replace(/\s+/g, ' ');
 }
 
@@ -804,6 +842,7 @@ export const submitReportToSheets = functions.https.onCall<SubmitReportToSheetsR
             }
 
             const accessToken = await getAccessToken();
+            const submitterContact = await resolveSubmitterContact(uid);
 
             const spreadsheetMeta = await callSheetsApi(spreadsheetId, accessToken, '', 'GET');
             const sheets = spreadsheetMeta.sheets || [];
@@ -852,8 +891,11 @@ export const submitReportToSheets = functions.https.onCall<SubmitReportToSheetsR
                 }
 
                 if (taskType === 'appendTemplateRows') {
-                    const rows = task.rows;
+                    let rows = task.rows;
                     if (!rows || rows.length === 0) continue;
+                    if (isTruckTrackingSheet(resolvedSheetName)) {
+                        rows = applyTruckSubmitterRows(rows, submitterContact);
+                    }
 
                     const checkDuplicate = task.checkDuplicate;
                     if (checkDuplicate === 'date') {
@@ -905,6 +947,20 @@ export const submitReportToSheets = functions.https.onCall<SubmitReportToSheetsR
                     });
 
                     const requests: any[] = [];
+                    if (isTruckTrackingSheet(resolvedSheetName)) {
+                        requests.push({
+                            updateCells: {
+                                range: {
+                                    sheetId: sheetId,
+                                    startRowIndex: 5,
+                                    endRowIndex: 6,
+                                    startColumnIndex: 12,
+                                    endColumnIndex: 13
+                                },
+                                fields: 'userEnteredValue'
+                            }
+                        });
+                    }
                     const colorTheme = selectColorTheme(resolvedSheetName, startRowIndex);
 
                     let maxColCount = 0;
@@ -1053,8 +1109,11 @@ export const submitReportToSheets = functions.https.onCall<SubmitReportToSheetsR
                     }
 
                 } else if (taskType === 'appendFlatRows') {
-                    const rows = task.rows;
+                    let rows = task.rows;
                     if (!rows || rows.length === 0) continue;
+                    if (isTruckTrackingSheet(resolvedSheetName)) {
+                        rows = applyTruckSubmitterRows(rows, submitterContact);
+                    }
 
                     const headers = task.headers || [];
                     const dateColumnIndex = typeof task.dateColumnIndex === 'number' ? task.dateColumnIndex : 0;
@@ -1105,8 +1164,11 @@ export const submitReportToSheets = functions.https.onCall<SubmitReportToSheetsR
                         });
                     }
                 } else if (taskType === 'appendIfDowntimeRows') {
-                    const rows = task.rows;
+                    let rows = task.rows;
                     if (!rows || rows.length === 0) continue;
+                    if (isTruckTrackingSheet(resolvedSheetName)) {
+                        rows = applyTruckSubmitterRows(rows, submitterContact);
+                    }
 
                     const rangePrefix = ensureNonEmptyString(task.rangePrefix, 'rangePrefix');
                     const rangeSuffix = ensureNonEmptyString(task.rangeSuffix, 'rangeSuffix');

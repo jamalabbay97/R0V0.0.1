@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:googleapis/sheets/v4.dart';
@@ -892,6 +893,23 @@ class GoogleSheetsService {
     }
 
     final requests = <Request>[];
+    if (_normalizeHeaderKey(targetSheetName) ==
+        _normalizeHeaderKey(_truckSheet)) {
+      requests.add(
+        Request(
+          updateCells: UpdateCellsRequest(
+            range: GridRange(
+              sheetId: sheetId,
+              startRowIndex: 5,
+              endRowIndex: 6,
+              startColumnIndex: 12,
+              endColumnIndex: 13,
+            ),
+            fields: 'userEnteredValue',
+          ),
+        ),
+      );
+    }
     final colorTheme = _selectColorTheme(
       sheetName: targetSheetName,
       startRowIndex: rowBounds.startRowIndex,
@@ -1494,7 +1512,7 @@ class GoogleSheetsService {
         final trucks = _listOfMaps(data['truckData']);
         final totalTrips = _resolveTotalTrips(data, trucks);
         final equipmentSummary = _formatEquipmentTripsForTemplate(trucks);
-        final creator = _extractCreatorName(data);
+        final pointageSubmitter = _resolveSubmitterContact(data);
         final truckDate = DateFormat('dd-MM-yyyy HH:mm:ss', _frenchLocale)
             .format(reportDateLocal);
         final frenchPoste = _toFrenchPosteLabel(data['selectedPoste']);
@@ -1529,12 +1547,12 @@ class GoogleSheetsService {
             includeSharedValues ? data['distance'] ?? '' : '',
             includeSharedValues ? frenchQualityType : '',
             includeSharedValues ? frenchOperationType : '',
-            '',
+            includeSharedValues ? pointageSubmitter : '',
             includeSharedValues ? frenchPoste : '',
             trips.length,
             includeSharedValues ? equipmentSummary : '',
             includeSharedValues ? totalTrips : '',
-            includeSharedValues ? creator : '',
+            '',
             truck['truckNumber'] ?? '',
             truck['driver1'] ?? '',
             ...tripCells,
@@ -1549,12 +1567,12 @@ class GoogleSheetsService {
             data['distance'] ?? '',
             frenchQualityType,
             frenchOperationType,
-            '',
+            pointageSubmitter,
             frenchPoste,
             0,
             equipmentSummary,
             totalTrips,
-            creator,
+            '',
             '',
             '',
             ...List.filled(12, ''),
@@ -1564,7 +1582,7 @@ class GoogleSheetsService {
         if (rows.length > 1) {
           mergeRanges.addAll([
             const _TemplateMergeRange(startColumnIndex: 0, endColumnIndex: 9),
-            const _TemplateMergeRange(startColumnIndex: 10, endColumnIndex: 13),
+            const _TemplateMergeRange(startColumnIndex: 10, endColumnIndex: 12),
           ]);
         }
         return _TemplateRows(
@@ -1870,6 +1888,50 @@ class GoogleSheetsService {
       }
     }
     return '';
+  }
+
+  String _extractCreatorEmail(Map<String, dynamic> data) {
+    for (final key in const [
+      'createdByEmail',
+      'created_by_email',
+      'userEmail',
+      'email',
+      'authorEmail',
+    ]) {
+      final value = data[key];
+      if (value != null && value.toString().trim().isNotEmpty) {
+        return value.toString().trim();
+      }
+    }
+    return '';
+  }
+
+  String _extractCreatorContact(Map<String, dynamic> data) {
+    final name = _extractCreatorName(data);
+    final email = _extractCreatorEmail(data);
+    return _formatSubmitterContact(name: name, email: email);
+  }
+
+  String _resolveSubmitterContact(Map<String, dynamic> data) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      final authContact = _formatSubmitterContact(
+        name: currentUser.displayName?.trim() ?? '',
+        email: currentUser.email?.trim() ?? '',
+      );
+      if (authContact.isNotEmpty) {
+        return authContact;
+      }
+    }
+    return _extractCreatorContact(data);
+  }
+
+  String _formatSubmitterContact(
+      {required String name, required String email}) {
+    if (name.isNotEmpty && email.isNotEmpty) {
+      return '$name <$email>';
+    }
+    return name.isNotEmpty ? name : email;
   }
 
   String _posteLabel(dynamic value) {
@@ -3456,7 +3518,7 @@ class GoogleSheetsService {
           'Total de Voyages Camions',
           'Total de Voyages par Equipment',
           'Total de Voyages',
-          'Créé par',
+          '',
           'N° Camion',
           'Conducteur',
           'Voyage 1',

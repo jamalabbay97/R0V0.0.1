@@ -1,23 +1,23 @@
 "use strict";
 /// <reference path="./firebase-functions-shims.d.ts" />
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function (o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
     if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
+        desc = { enumerable: true, get: function () { return m[k]; } };
     }
     Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
+}) : (function (o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
 }));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function (o, v) {
     Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
+}) : function (o, v) {
     o["default"] = v;
 });
 var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
+    var ownKeys = function (o) {
         ownKeys = Object.getOwnPropertyNames || function (o) {
             var ar = [];
             for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
@@ -107,6 +107,37 @@ function mapReportSnapshot(snapshot) {
             ? data.additionalData
             : {},
     };
+}
+function formatSubmitterContact(name, email, fallback) {
+    const normalizedName = name.trim();
+    const normalizedEmail = email.trim();
+    if (normalizedName && normalizedEmail) {
+        return `${normalizedName} <${normalizedEmail}>`;
+    }
+    return normalizedName || normalizedEmail || fallback;
+}
+async function resolveSubmitterContact(uid) {
+    const [user, userDoc] = await Promise.all([
+        admin.auth().getUser(uid),
+        admin.firestore().collection(USERS_COLLECTION).doc(uid).get(),
+    ]);
+    const userData = userDoc.exists ? userDoc.data() || {} : {};
+    return formatSubmitterContact(user.displayName || String(userData.displayName || ''), user.email || String(userData.email || ''), uid);
+}
+function isTruckTrackingSheet(sheetName) {
+    return sheetName.toLowerCase().trim() === 'poser les camions';
+}
+function applyTruckSubmitterRows(rows, submitterContact) {
+    return rows.map((row, index) => {
+        const next = Array.isArray(row) ? [...row] : [];
+        while (next.length <= 12)
+            next.push('');
+        if (index === 0) {
+            next[7] = submitterContact;
+        }
+        next[12] = '';
+        return next;
+    });
 }
 async function writeAuditLog(params) {
     var _a, _b, _c;
@@ -551,7 +582,7 @@ function selectColorTheme(sheetName, startRowIndex) {
     return colorThemes[paletteIndex];
 }
 exports.submitReportToSheets = functions.https.onCall(async (data, context) => {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e, _f;
     try {
         const uid = assertSignedIn(context);
         const reportId = ensureNonEmptyString(data === null || data === void 0 ? void 0 : data.reportId, 'reportId');
@@ -573,11 +604,12 @@ exports.submitReportToSheets = functions.https.onCall(async (data, context) => {
         if (!isOwner && !isManagerOrAdmin) {
             throw new functions.https.HttpsError('permission-denied', 'You do not have permission to sync this report.');
         }
-        const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+        const spreadsheetId = (_c = functions.config().sheets) === null || _c === void 0 ? void 0 : _c.spreadsheet_id;
         if (!spreadsheetId) {
             throw new functions.https.HttpsError('failed-precondition', 'Spreadsheet ID is not configured.');
         }
         const accessToken = await getAccessToken();
+        const submitterContact = await resolveSubmitterContact(uid);
         const spreadsheetMeta = await callSheetsApi(spreadsheetId, accessToken, '', 'GET');
         const sheets = spreadsheetMeta.sheets || [];
         const sheetNames = sheets.map((s) => s.properties.title);
@@ -607,10 +639,10 @@ exports.submitReportToSheets = functions.https.onCall(async (data, context) => {
             if (sheetId === null) {
                 const addResult = await callSheetsApi(spreadsheetId, accessToken, ':batchUpdate', 'POST', {
                     requests: [{
-                            addSheet: { properties: { title: rawSheetName } }
-                        }]
+                        addSheet: { properties: { title: rawSheetName } }
+                    }]
                 });
-                const newSheetProp = (_e = (_d = (_c = addResult.replies) === null || _c === void 0 ? void 0 : _c[0]) === null || _d === void 0 ? void 0 : _d.addSheet) === null || _e === void 0 ? void 0 : _e.properties;
+                const newSheetProp = (_f = (_e = (_d = addResult.replies) === null || _d === void 0 ? void 0 : _d[0]) === null || _e === void 0 ? void 0 : _e.addSheet) === null || _f === void 0 ? void 0 : _f.properties;
                 if (newSheetProp) {
                     sheetIdsByName[newSheetProp.title] = newSheetProp.sheetId;
                     sheetNames.push(newSheetProp.title);
@@ -622,9 +654,12 @@ exports.submitReportToSheets = functions.https.onCall(async (data, context) => {
                 }
             }
             if (taskType === 'appendTemplateRows') {
-                const rows = task.rows;
+                let rows = task.rows;
                 if (!rows || rows.length === 0)
                     continue;
+                if (isTruckTrackingSheet(resolvedSheetName)) {
+                    rows = applyTruckSubmitterRows(rows, submitterContact);
+                }
                 const checkDuplicate = task.checkDuplicate;
                 if (checkDuplicate === 'date') {
                     const targetDate = ensureNonEmptyString(task.date, 'date');
@@ -657,21 +692,35 @@ exports.submitReportToSheets = functions.https.onCall(async (data, context) => {
                 const endRowIndex = startRowIndex + rows.length;
                 await callSheetsApi(spreadsheetId, accessToken, ':batchUpdate', 'POST', {
                     requests: [{
-                            insertDimension: {
-                                range: {
-                                    sheetId: sheetId,
-                                    dimension: 'ROWS',
-                                    startIndex: startRowIndex,
-                                    endIndex: endRowIndex
-                                },
-                                inheritFromBefore: startRowIndex > 6
-                            }
-                        }]
+                        insertDimension: {
+                            range: {
+                                sheetId: sheetId,
+                                dimension: 'ROWS',
+                                startIndex: startRowIndex,
+                                endIndex: endRowIndex
+                            },
+                            inheritFromBefore: startRowIndex > 6
+                        }
+                    }]
                 });
                 await callSheetsApi(spreadsheetId, accessToken, `/values/${encodeURIComponent(resolvedSheetName)}!A${insertStartRowNumber}?valueInputOption=RAW`, 'PUT', {
                     values: rows
                 });
                 const requests = [];
+                if (isTruckTrackingSheet(resolvedSheetName)) {
+                    requests.push({
+                        updateCells: {
+                            range: {
+                                sheetId: sheetId,
+                                startRowIndex: 5,
+                                endRowIndex: 6,
+                                startColumnIndex: 12,
+                                endColumnIndex: 13
+                            },
+                            fields: 'userEnteredValue'
+                        }
+                    });
+                }
                 const colorTheme = selectColorTheme(resolvedSheetName, startRowIndex);
                 let maxColCount = 0;
                 for (const r of rows) {
@@ -813,9 +862,12 @@ exports.submitReportToSheets = functions.https.onCall(async (data, context) => {
                 }
             }
             else if (taskType === 'appendFlatRows') {
-                const rows = task.rows;
+                let rows = task.rows;
                 if (!rows || rows.length === 0)
                     continue;
+                if (isTruckTrackingSheet(resolvedSheetName)) {
+                    rows = applyTruckSubmitterRows(rows, submitterContact);
+                }
                 const headers = task.headers || [];
                 const dateColumnIndex = typeof task.dateColumnIndex === 'number' ? task.dateColumnIndex : 0;
                 const firstDataRowNumber = typeof task.firstDataRowNumber === 'number' ? task.firstDataRowNumber : 2;
@@ -840,16 +892,16 @@ exports.submitReportToSheets = functions.https.onCall(async (data, context) => {
                     const endRowIndex = startRowIndex + 1;
                     await callSheetsApi(spreadsheetId, accessToken, ':batchUpdate', 'POST', {
                         requests: [{
-                                insertDimension: {
-                                    range: {
-                                        sheetId: sheetId,
-                                        dimension: 'ROWS',
-                                        startIndex: startRowIndex,
-                                        endIndex: endRowIndex
-                                    },
-                                    inheritFromBefore: startRowIndex > (firstDataRowNumber - 1)
-                                }
-                            }]
+                            insertDimension: {
+                                range: {
+                                    sheetId: sheetId,
+                                    dimension: 'ROWS',
+                                    startIndex: startRowIndex,
+                                    endIndex: endRowIndex
+                                },
+                                inheritFromBefore: startRowIndex > (firstDataRowNumber - 1)
+                            }
+                        }]
                     });
                     await callSheetsApi(spreadsheetId, accessToken, `/values/${encodeURIComponent(resolvedSheetName)}!A${insertRowNumber}?valueInputOption=RAW`, 'PUT', {
                         values: [r]
@@ -857,9 +909,12 @@ exports.submitReportToSheets = functions.https.onCall(async (data, context) => {
                 }
             }
             else if (taskType === 'appendIfDowntimeRows') {
-                const rows = task.rows;
+                let rows = task.rows;
                 if (!rows || rows.length === 0)
                     continue;
+                if (isTruckTrackingSheet(resolvedSheetName)) {
+                    rows = applyTruckSubmitterRows(rows, submitterContact);
+                }
                 const rangePrefix = ensureNonEmptyString(task.rangePrefix, 'rangePrefix');
                 const rangeSuffix = ensureNonEmptyString(task.rangeSuffix, 'rangeSuffix');
                 // Check if layout needs initializing
