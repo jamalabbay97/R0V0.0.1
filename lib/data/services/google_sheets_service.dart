@@ -1549,10 +1549,9 @@ class GoogleSheetsService {
             includeSharedValues ? frenchOperationType : '',
             includeSharedValues ? pointageSubmitter : '',
             includeSharedValues ? frenchPoste : '',
-            trips.length,
-            includeSharedValues ? equipmentSummary : '',
             includeSharedValues ? totalTrips : '',
-            '',
+            includeSharedValues ? equipmentSummary : '',
+            trips.length,
             truck['truckNumber'] ?? '',
             truck['driver1'] ?? '',
             ...tripCells,
@@ -1569,10 +1568,9 @@ class GoogleSheetsService {
             frenchOperationType,
             pointageSubmitter,
             frenchPoste,
-            0,
-            equipmentSummary,
             totalTrips,
-            '',
+            equipmentSummary,
+            0,
             '',
             '',
             ...List.filled(12, ''),
@@ -1582,7 +1580,7 @@ class GoogleSheetsService {
         if (rows.length > 1) {
           mergeRanges.addAll([
             const _TemplateMergeRange(startColumnIndex: 0, endColumnIndex: 9),
-            const _TemplateMergeRange(startColumnIndex: 10, endColumnIndex: 12),
+            const _TemplateMergeRange(startColumnIndex: 9, endColumnIndex: 11),
           ]);
         }
         return _TemplateRows(
@@ -3515,10 +3513,9 @@ class GoogleSheetsService {
           'Opération',
           'P pointeur',
           'Poste',
-          'Total de Voyages Camions',
-          'Total de Voyages par Equipment',
           'Total de Voyages',
-          '',
+          'Total de Voyages par Equipment',
+          'Total de Voyages Camions',
           'N° Camion',
           'Conducteur',
           'Voyage 1',
@@ -4392,7 +4389,8 @@ class _TemplateGroupedRecordBuilder {
   }
 
   void _addTruckRow(Map<String, String> rowDetails) {
-    final truckNumber = (rowDetails['Camions'] ?? '').trim();
+    final truckNumber =
+        _readField(rowDetails, ['N° Camion', 'N Camion', 'Camions']);
     final driver = (rowDetails['Conducteur'] ?? '').trim();
     final trips = <_TruckTemplateTrip>[];
 
