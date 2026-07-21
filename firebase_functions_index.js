@@ -716,7 +716,10 @@ exports.submitReportToSheets = functions.https.onCall(async (data, context) => {
                                 startIndex: startRowIndex,
                                 endIndex: endRowIndex
                             },
-                            inheritFromBefore: startRowIndex > 6
+                            // Do not inherit from the row above: if that row is part of a
+                            // previous multi-row report merge, Google Sheets expands the
+                            // old merge into the inserted rows and corrupts the saved report.
+                            inheritFromBefore: false
                         }
                     }]
                 });
