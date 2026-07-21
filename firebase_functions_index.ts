@@ -550,7 +550,17 @@ function tryNormalizeDate(val: string): string | null {
 }
 
 function normalizePosteValue(value: unknown): string {
-    return String(value ?? '').trim().toLowerCase();
+    const normalized = String(value ?? '').trim().toLowerCase();
+    if (!normalized) return '';
+    const compact = normalized
+        .replace(/\s+/g, ' ')
+        .replace(/\b(shift|poste)\b/g, '')
+        .replace(/\s+/g, '')
+        .trim();
+    if (/^(3|3e|3eme|3ème|3rd|troisieme|troisième)$/.test(compact)) return '3ème';
+    if (/^(1|1er|1st|premier)$/.test(compact)) return '1er';
+    if (/^(2|2e|2eme|2ème|2nd|2rd|deuxieme|deuxième)$/.test(compact)) return '2ème';
+    return normalized;
 }
 
 function parseDateTime(val: unknown): Date | null {
@@ -829,6 +839,9 @@ export const submitReportToSheets = functions.https.onCall<SubmitReportToSheetsR
                 throw new functions.https.HttpsError('not-found', 'Report not found.');
             }
             const reportData = reportDoc.data()!;
+            if (reportData.sheetsSynced === true || reportData.isSentToSheets === true || reportData.sheets_synced === true || reportData.sheets_synced === 1) {
+                return { success: true };
+            }
             const isOwner = reportData.userId === uid;
             const role = context.auth?.token?.role;
             const isManagerOrAdmin = role === 'admin' || role === 'manager';

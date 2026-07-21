@@ -313,12 +313,10 @@ class FirestoreService {
           report,
           creatorAllowedCreationReportKeys: creatorAllowedCreationReportKeys,
         );
-        // Do not await to allow immediate offline completion
-        _firestore
+        await _firestore
             .collection(_reportsCollection)
             .doc(report.firestoreId)
-            .update(reportData)
-            .ignore();
+            .update(reportData);
         return report.firestoreId!;
       } else {
         final reportData = _reportToFirestoreForCreate(
@@ -326,8 +324,7 @@ class FirestoreService {
           creatorAllowedCreationReportKeys: creatorAllowedCreationReportKeys,
         );
         final docRef = _firestore.collection(_reportsCollection).doc();
-        // Do not await to allow immediate offline completion
-        docRef.set(reportData).ignore();
+        await docRef.set(reportData);
         return docRef.id;
       }
     } catch (e) {
