@@ -77,6 +77,7 @@ class GoogleSheetsService {
     'H.A',
   ];
   static const String _truckSheet = 'Poser les camions';
+  static const int _truckTemplateVoyageColumnCount = 24;
   static const String _machinesSheet = 'Machines et engins à l\'arrêt';
   static const String _r0Sheet = 'R0';
   static const String _frenchLocale = 'fr_FR';
@@ -124,7 +125,8 @@ class GoogleSheetsService {
           reportLocalDate: reportLocalDate,
         );
 
-        final templateRows = _buildTemplateRows(report, reportLocalDate);
+        final templateRows =
+            _buildTemplateRows(report, reportLocalDate, savedAt);
         return await _recordReportSnapshotViaBackend(
           report,
           action: action,
@@ -146,7 +148,7 @@ class GoogleSheetsService {
         reportLocalDate: reportLocalDate,
       );
 
-      final templateRows = _buildTemplateRows(report, reportLocalDate);
+      final templateRows = _buildTemplateRows(report, reportLocalDate, savedAt);
       if (templateRows != null) {
         final shouldCheckForDuplicateDate =
             templateRows.sheetName == _activitySheet ||
@@ -183,19 +185,6 @@ class GoogleSheetsService {
           }
         }
 
-        if (templateRows.sheetName == _truckSheet) {
-          final hasDuplicateTruckReport = await _sheetHasExistingTruckReport(
-            api,
-            reportDateLocal: reportLocalDate,
-            poste: data['selectedPoste']?.toString() ?? '',
-          );
-          if (hasDuplicateTruckReport) {
-            throw DuplicateReportDateException(
-              "Un rapport avec la date d'aujourd'hui existe déjà pour ce poste.",
-            );
-          }
-        }
-
         await _appendRowsToTemplate(api, templateRows);
         await _syncIfDowntimeDetailsSheet(
           api,
@@ -217,7 +206,7 @@ class GoogleSheetsService {
         api,
         sheetName: payload.sheetName,
         rows: [payload.row],
-        dateColumnIndex: 11,
+        dateColumnIndex: 12,
         firstDataRowNumber: 2,
       );
 
@@ -807,43 +796,6 @@ class GoogleSheetsService {
     return false;
   }
 
-  Future<bool> _sheetHasExistingTruckReport(
-    SheetsApi api, {
-    required DateTime reportDateLocal,
-    required String poste,
-  }) async {
-    await _loadSheetNames(api);
-    final resolvedSheetName = _resolveSheetName(_truckSheet);
-    if (resolvedSheetName == null) {
-      return false;
-    }
-
-    final targetDate =
-        DateFormat('yyyy-MM-dd', _frenchLocale).format(reportDateLocal);
-    final targetPoste = _normalizePosteValue(poste);
-
-    final response = await api.spreadsheets.values.get(
-      _spreadsheetId,
-      '$resolvedSheetName!A7:I',
-    );
-    final values = response.values ?? const [];
-
-    for (final row in values) {
-      if (row.length < 9) {
-        continue;
-      }
-
-      final rowDate = row[0]?.toString().trim() ?? '';
-      final rowPoste = _normalizePosteValue(row[8]);
-
-      if (_isSameReportDate(rowDate, targetDate) && rowPoste == targetPoste) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
   Future<void> _appendRowsToTemplate(
     SheetsApi api,
     _TemplateRows templateRows,
@@ -1229,10 +1181,15 @@ class GoogleSheetsService {
     ),
   ];
 
-  _TemplateRows? _buildTemplateRows(Report report, DateTime reportDateLocal) {
+  _TemplateRows? _buildTemplateRows(
+    Report report,
+    DateTime reportDateLocal,
+    String savedAt,
+  ) {
     final data = report.additionalData ?? {};
     final category = _categorizeReport(report, data);
     final date = _formatSheetTimestamp(reportDateLocal);
+    final uniqueReportId = _reportUniqueId(report, savedAt);
 
     switch (category) {
       case _ReportCategory.dailyTsud:
@@ -1533,7 +1490,13 @@ class GoogleSheetsService {
                   ))
               .toList();
 
-          while (tripCells.length < 12) {
+          if (tripCells.length > _truckTemplateVoyageColumnCount) {
+            tripCells.removeRange(
+              _truckTemplateVoyageColumnCount,
+              tripCells.length,
+            );
+          }
+          while (tripCells.length < _truckTemplateVoyageColumnCount) {
             tripCells.add('');
           }
 
@@ -1555,6 +1518,8 @@ class GoogleSheetsService {
             truck['truckNumber'] ?? '',
             truck['driver1'] ?? '',
             ...tripCells,
+            savedAt,
+            uniqueReportId,
           ]);
         }
         if (rows.isEmpty) {
@@ -1573,7 +1538,9 @@ class GoogleSheetsService {
             0,
             '',
             '',
-            ...List.filled(12, ''),
+            ...List.filled(_truckTemplateVoyageColumnCount, ''),
+            savedAt,
+            uniqueReportId,
           ]);
         }
         final mergeRanges = <_TemplateMergeRange>[];
@@ -2372,6 +2339,7 @@ class GoogleSheetsService {
     final data = report.additionalData ?? {};
     final displayMineZone = _formatMineZone(data);
     final displayTotalTrips = _formatTotalTrips(data);
+    final uniqueReportId = _reportUniqueId(report, savedAt);
     final baseRow = [
       displayTitle,
       report.type,
@@ -2380,6 +2348,7 @@ class GoogleSheetsService {
       displayMineZone,
       displayTotalTrips,
       report.description,
+      uniqueReportId,
       savedAt,
       action,
       report.id?.toString() ?? '',
@@ -3083,6 +3052,23 @@ class GoogleSheetsService {
     return sanitized.length > 90 ? sanitized.substring(0, 90) : sanitized;
   }
 
+  String _reportUniqueId(Report report, String savedAt) {
+    final firestoreId = report.firestoreId?.trim();
+    if (firestoreId != null && firestoreId.isNotEmpty) {
+      return 'firestore:$firestoreId';
+    }
+
+    final localId = report.id;
+    if (localId != null) {
+      return 'local:$localId';
+    }
+
+    final raw = '${report.type}|${report.group}|'
+        '${report.date.toIso8601String()}|$savedAt|'
+        '${jsonEncode(report.additionalData ?? const {})}';
+    return 'generated:${raw.hashCode.toUnsigned(32).toRadixString(16)}';
+  }
+
   String _formatIsoTimestampWithSeconds(DateTime value) {
     final normalized = value.isUtc ? value : value.toLocal();
     final date = normalized.toIso8601String().split('T').first;
@@ -3266,14 +3252,24 @@ class GoogleSheetsService {
     Report report,
     DateTime reportDateLocal,
   ) =>
-      _buildTemplateRows(report, reportDateLocal)?.rows ?? const [];
+      _buildTemplateRows(
+        report,
+        reportDateLocal,
+        _formatIsoTimestampWithSeconds(_nowProvider()),
+      )?.rows ??
+      const [];
 
   @visibleForTesting
   List<Map<String, int>> buildTemplateMergeRangesForTest(
     Report report,
     DateTime reportDateLocal,
   ) =>
-      (_buildTemplateRows(report, reportDateLocal)?.mergeRanges ?? const [])
+      (_buildTemplateRows(
+                report,
+                reportDateLocal,
+                _formatIsoTimestampWithSeconds(_nowProvider()),
+              )?.mergeRanges ??
+              const [])
           .map(
             (range) => {
               'startColumnIndex': range.startColumnIndex,
@@ -3543,6 +3539,7 @@ class GoogleSheetsService {
           'Voyage 23',
           'Voyage 24',
           'Crée en',
+          'Report ID',
         ];
       case _machinesSheet:
         return const [
@@ -3878,6 +3875,7 @@ class GoogleSheetsService {
     'Mine/Zone (as shown in app)',
     'Total Trips (as shown in app)',
     'Description',
+    'Report ID',
     'Submitted At (ISO)',
     'Submission Source',
     'Local ID',
@@ -3929,9 +3927,7 @@ class GoogleSheetsService {
             ? 'date'
             : (templateRows.sheetName == _r0Sheet)
                 ? 'r0'
-                : (templateRows.sheetName == _truckSheet)
-                    ? 'truck'
-                    : null;
+                : null;
 
         final dateStr =
             DateFormat('yyyy-MM-dd', _frenchLocale).format(reportLocalDate);
@@ -4045,7 +4041,7 @@ class GoogleSheetsService {
           'sheetName': payload.sheetName,
           'headers': payload.headers,
           'rows': [payload.row],
-          'dateColumnIndex': 11,
+          'dateColumnIndex': 12,
           'firstDataRowNumber': 2,
         });
 

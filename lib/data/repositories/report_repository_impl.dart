@@ -74,6 +74,17 @@ class ReportRepositoryImpl implements ReportRepository {
 
   @override
   Future<void> sendReportToSheets(Report report) async {
+    if (report.isSentToSheets) {
+      throw Exception('This report has already been sent to Google Sheets');
+    }
+
+    if (report.id != null) {
+      final latestReport = await _databaseHelper.getReport(report.id!);
+      if (latestReport?.isSentToSheets == true) {
+        throw Exception('This report has already been sent to Google Sheets');
+      }
+      report = latestReport ?? report;
+    }
     // Ensure the report is synced to Firestore first if authenticated so that we have a firestoreId.
     // We intentionally trigger a direct upload pass for unsynced local reports
     // before trying Sheets submission.

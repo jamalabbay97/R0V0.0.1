@@ -9668,8 +9668,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -9839,36 +9837,28 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                                 return Slidable(
                                   key: ValueKey(report.id ?? index),
-                                  startActionPane: ActionPane(
-                                    motion: const DrawerMotion(),
-                                    extentRatio: 0.22,
-                                    children: [
-                                      SlidableAction(
-                                        onPressed: (_) {
-                                          if (isSentToSheets) {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              SnackBar(
-                                                content: Text(l10n
-                                                    .reportAlreadySentToSheets),
-                                              ),
-                                            );
-                                            return;
-                                          }
-                                          _sendReportToSheets(report);
-                                        },
-                                        backgroundColor: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                        foregroundColor: Theme.of(context)
-                                            .colorScheme
-                                            .onPrimary,
-                                        icon: Icons.send,
-                                        label: AppLocalizations.of(context)!
-                                            .sendToSheets,
-                                      ),
-                                    ],
-                                  ),
+                                  startActionPane: isSentToSheets
+                                      ? null
+                                      : ActionPane(
+                                          motion: const DrawerMotion(),
+                                          extentRatio: 0.22,
+                                          children: [
+                                            SlidableAction(
+                                              onPressed: (_) =>
+                                                  _sendReportToSheets(report),
+                                              backgroundColor: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary,
+                                              foregroundColor: Theme.of(context)
+                                                  .colorScheme
+                                                  .onPrimary,
+                                              icon: Icons.send,
+                                              label:
+                                                  AppLocalizations.of(context)!
+                                                      .sendToSheets,
+                                            ),
+                                          ],
+                                        ),
                                   child: Opacity(
                                     opacity: isSentToSheets ? 0.6 : 1,
                                     child: Card(

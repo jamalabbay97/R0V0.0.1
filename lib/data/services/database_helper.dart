@@ -202,6 +202,18 @@ class DatabaseHelper {
   }
 
   Future<void> sendReportToSheets(Report report) async {
+    if (report.isSentToSheets) {
+      throw Exception('This report has already been sent to Google Sheets');
+    }
+
+    if (report.id != null) {
+      final latestReport = await getReport(report.id!);
+      if (latestReport?.isSentToSheets == true) {
+        throw Exception('This report has already been sent to Google Sheets');
+      }
+      report = latestReport ?? report;
+    }
+
     final sent = await _sheetsService.recordReportSnapshot(
       report,
       action: 'explicit_submit',

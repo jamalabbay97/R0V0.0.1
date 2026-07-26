@@ -475,26 +475,6 @@ async function checkDuplicateR0Report(spreadsheetId, accessToken, resolvedSheetN
     }
     return false;
 }
-async function checkDuplicateTruckReport(spreadsheetId, accessToken, resolvedSheetName, targetDate, targetPoste) {
-    try {
-        const response = await callSheetsApi(spreadsheetId, accessToken, `/values/${encodeURIComponent(resolvedSheetName)}!A7:I`, 'GET');
-        const values = response.values || [];
-        const normPoste = normalizePosteValue(targetPoste);
-        for (const row of values) {
-            if (row && row.length >= 9) {
-                const rowDate = String(row[0]).trim();
-                const rowPoste = normalizePosteValue(row[8]);
-                if (isSameReportDate(rowDate, targetDate) && rowPoste === normPoste) {
-                    return true;
-                }
-            }
-        }
-    }
-    catch (e) {
-        console.warn(`Error reading sheet ${resolvedSheetName} for duplicate truck:`, e);
-    }
-    return false;
-}
 async function resolveTemplateInsertRowNumber(spreadsheetId, accessToken, sheetName, reportDateValue) {
     const targetDate = parseDateTime(reportDateValue) || new Date(0);
     try {
@@ -692,14 +672,6 @@ exports.submitReportToSheets = functions.https.onCall(async (data, context) => {
                     const isDup = await checkDuplicateR0Report(spreadsheetId, accessToken, resolvedSheetName, targetDate, targetPoste, targetModule);
                     if (isDup) {
                         throw new functions.https.HttpsError('already-exists', "Un rapport avec la date d'aujourd'hui existe déjà pour ce poste et ce module.");
-                    }
-                }
-                else if (checkDuplicate === 'truck') {
-                    const targetDate = ensureNonEmptyString(task.date, 'date');
-                    const targetPoste = String(task.poste || '');
-                    const isDup = await checkDuplicateTruckReport(spreadsheetId, accessToken, resolvedSheetName, targetDate, targetPoste);
-                    if (isDup) {
-                        throw new functions.https.HttpsError('already-exists', "Un rapport avec la date d'aujourd'hui existe déjà pour ce poste.");
                     }
                 }
                 const firstRow = rows[0];
