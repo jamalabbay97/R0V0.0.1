@@ -275,6 +275,98 @@ void main() {
         ),
       );
     });
+    test('synthesizes per-shift TNB counters for older saved reports', () {
+      final reportDate = DateTime(2026, 7, 27, 14, 8, 54);
+      final report = Report(
+        description: 'Activity TNB',
+        date: reportDate,
+        group: 'MIB/U/E/I',
+        type: 'Activity TNB',
+        additionalData: {
+          'vibrator Counters': [
+            {'poste': 'Vibreur', 'start': '17', 'end': '41'},
+          ],
+          'liaison Counters': [
+            {'poste': 'LN', 'start': '26', 'end': '50'},
+            {'poste': 'L', 'start': '116', 'end': '140'},
+            {'poste': 'G3', 'start': '216', 'end': '240'},
+            {'poste': 'G6', 'start': '61', 'end': '85'},
+          ],
+        },
+      );
+
+      final rows = service.buildTemplateRowsForTest(report, reportDate);
+
+      expect(rows, hasLength(3));
+      expect(rows.map((row) => row.sublist(10, 30)).toList(), [
+        [
+          '2ème',
+          '33',
+          '41',
+          '8',
+          '2ème',
+          '42',
+          '50',
+          '8',
+          '2ème',
+          '132',
+          '140',
+          '8',
+          '2ème',
+          '232',
+          '240',
+          '8',
+          '2ème',
+          '77',
+          '85',
+          '8',
+        ],
+        [
+          '1er',
+          '25',
+          '33',
+          '8',
+          '1er',
+          '34',
+          '42',
+          '8',
+          '1er',
+          '124',
+          '132',
+          '8',
+          '1er',
+          '224',
+          '232',
+          '8',
+          '1er',
+          '69',
+          '77',
+          '8',
+        ],
+        [
+          '3ème',
+          '17',
+          '25',
+          '8',
+          '3ème',
+          '26',
+          '34',
+          '8',
+          '3ème',
+          '116',
+          '124',
+          '8',
+          '3ème',
+          '216',
+          '224',
+          '8',
+          '3ème',
+          '61',
+          '69',
+          '8',
+        ],
+      ]);
+    });
   });
 
   group('GoogleSheetsService truck template rows', () {

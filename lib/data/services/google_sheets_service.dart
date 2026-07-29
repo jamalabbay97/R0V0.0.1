@@ -1312,6 +1312,7 @@ class GoogleSheetsService {
 
         final counterTable = _buildTnbCounterTable(
           data,
+          reportDateLocal: reportDateLocal,
           vibratorCounters: vibratorCounters,
           liaisonCounters: liaisonCounters,
         );
@@ -1594,6 +1595,7 @@ class GoogleSheetsService {
 
   _TnbCounterTable _buildTnbCounterTable(
     Map<String, dynamic> data, {
+    required DateTime reportDateLocal,
     required List<Map<String, dynamic>> vibratorCounters,
     required List<Map<String, dynamic>> liaisonCounters,
   }) {
@@ -1619,6 +1621,8 @@ class GoogleSheetsService {
         label: label,
         counter: counter,
         storedSegmentsByCounter: storedSegmentsByCounter,
+        reportDateLocal: reportDateLocal,
+        data: data,
       );
       rowCount = rowCount > segments.length ? rowCount : segments.length;
       totalHoursByLabel[label] = segments.fold<double>(
@@ -1647,6 +1651,8 @@ class GoogleSheetsService {
     required String label,
     required Map<String, dynamic>? counter,
     required Map<String, dynamic> storedSegmentsByCounter,
+    required DateTime reportDateLocal,
+    required Map<String, dynamic> data,
   }) {
     final storedSegmentsRaw = storedSegmentsByCounter[label];
     if (storedSegmentsRaw is List && storedSegmentsRaw.isNotEmpty) {
@@ -1677,13 +1683,136 @@ class GoogleSheetsService {
     if (start.isEmpty && end.isEmpty) {
       return const [];
     }
-    return [
-      _TnbCounterSegment(
-        shiftLabel: _normalizeTnbCounterLabel(counter['poste']),
-        start: start,
-        end: end,
+    return _synthesizeTnbCounterSegments(
+      startValue: start,
+      endValue: end,
+      reportDateLocal: reportDateLocal,
+      data: data,
+    );
+  }
+
+  List<_TnbCounterSegment> _synthesizeTnbCounterSegments({
+    required String startValue,
+    required String endValue,
+    required DateTime reportDateLocal,
+    required Map<String, dynamic> data,
+  }) {
+    final parsedStart = double.tryParse(startValue.replaceAll(',', '.'));
+    final parsedEnd = double.tryParse(endValue.replaceAll(',', '.'));
+    if (parsedStart == null || parsedEnd == null || parsedEnd < parsedStart) {
+      return [
+        _TnbCounterSegment(shiftLabel: '', start: startValue, end: endValue),
+      ];
+    }
+
+    final stops = _listOfMaps(data['Arrets']);
+    final cycleStart = DateTime(
+      reportDateLocal.year,
+      reportDateLocal.month,
+      reportDateLocal.day,
+      22,
+      30,
+    );
+    final shiftWindows = <({String label, DateTime start, DateTime end})>[
+      (
+        label: '3ème poste',
+        start: cycleStart,
+        end: cycleStart.add(const Duration(hours: 8)),
+      ),
+      (
+        label: '1er poste',
+        start: cycleStart.add(const Duration(hours: 8)),
+        end: cycleStart.add(const Duration(hours: 16)),
+      ),
+      (
+        label: '2ème poste',
+        start: cycleStart.add(const Duration(hours: 16)),
+        end: cycleStart.add(const Duration(hours: 24)),
       ),
     ];
+
+    var running = parsedStart;
+    final segments = shiftWindows.map((shift) {
+      final downtimeMinutes = _tnbDowntimeMinutesInWindow(
+        stops: stops,
+        windowStart: shift.start,
+        windowEnd: shift.end,
+        cycleStart: cycleStart,
+        cycleEnd: cycleStart.add(const Duration(hours: 24)),
+      );
+      final operatingHours =
+          ((shift.end.difference(shift.start).inMinutes - downtimeMinutes)
+                  .clamp(0, 24 * 60)) /
+              60.0;
+      final next = running + operatingHours;
+      final segment = _TnbCounterSegment(
+        shiftLabel: shift.label,
+        start: _formatTnbCounterNumber(running),
+        end: _formatTnbCounterNumber(next > parsedEnd ? parsedEnd : next),
+      );
+      running = next;
+      return segment;
+    }).toList(growable: false);
+    return segments.reversed.toList(growable: false);
+  }
+
+  int _tnbDowntimeMinutesInWindow({
+    required List<Map<String, dynamic>> stops,
+    required DateTime windowStart,
+    required DateTime windowEnd,
+    required DateTime cycleStart,
+    required DateTime cycleEnd,
+  }) {
+    var total = 0;
+    for (final stop in stops) {
+      final start = _parseTnbStopDateTime(
+        stop['startTime'] ?? stop['Début'],
+        cycleStart,
+        cycleEnd,
+      );
+      var end = _parseTnbStopDateTime(
+        stop['endTime'] ?? stop['Fin'],
+        cycleStart,
+        cycleEnd,
+      );
+      if (start == null || end == null) continue;
+      if (end.isBefore(start)) end = end.add(const Duration(days: 1));
+      final effectiveStart = start.isBefore(windowStart) ? windowStart : start;
+      final effectiveEnd = end.isAfter(windowEnd) ? windowEnd : end;
+      if (effectiveEnd.isAfter(effectiveStart)) {
+        total += effectiveEnd.difference(effectiveStart).inMinutes;
+      }
+    }
+    return total;
+  }
+
+  DateTime? _parseTnbStopDateTime(
+    Object? raw,
+    DateTime cycleStart,
+    DateTime cycleEnd,
+  ) {
+    final minutes = _clockTimeToMinutes(raw);
+    if (minutes == null) return null;
+    final sameDay = DateTime(
+      cycleStart.year,
+      cycleStart.month,
+      cycleStart.day,
+    ).add(Duration(minutes: minutes));
+    final nextDay = sameDay.add(const Duration(days: 1));
+    if (!sameDay.isBefore(cycleStart) && !sameDay.isAfter(cycleEnd)) {
+      return sameDay;
+    }
+    if (!nextDay.isBefore(cycleStart) && !nextDay.isAfter(cycleEnd)) {
+      return nextDay;
+    }
+    return sameDay.isBefore(cycleStart) ? nextDay : sameDay;
+  }
+
+  String _formatTnbCounterNumber(double value) {
+    final formatted = value.toStringAsFixed(2);
+    return formatted.endsWith('.00')
+        ? formatted.substring(0, formatted.length - 3)
+        : formatted.replaceFirst(RegExp(r'0$'), '');
   }
 
   String _normalizeTnbCounterLabel(Object? value) {
